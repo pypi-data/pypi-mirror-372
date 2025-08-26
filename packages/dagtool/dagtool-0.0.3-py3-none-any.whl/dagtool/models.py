@@ -1,0 +1,326 @@
+import os
+from datetime import datetime, timedelta
+from functools import partial
+from pathlib import Path
+from typing import Any, Literal, Union
+
+from airflow.configuration import conf as airflow_conf
+from airflow.models import DAG
+from airflow.models import Variable as AirflowVariable
+from pendulum import parse, timezone
+from pydantic import BaseModel, Field, ValidationError
+from pydantic.functional_validators import field_validator
+from typing_extensions import Self
+from yaml import safe_load
+from yaml.parser import ParserError
+
+from .conf import ASSET_DIR, YamlConf
+from .tasks import AnyTask, Context
+from .utils import TaskMapped, change_tz, format_dt, set_upstream
+
+
+class DefaultArgs(BaseModel):
+    """Default Args Model that will use with the `default_args` field."""
+
+    owner: str | None = Field(default=None)
+    depends_on_past: bool = Field(default=False)
+    retries: int = Field(default=1, description="A retry count.")
+    retry_delay: dict[str, int] | None = Field(default=None)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Making Python dict object without field that use default value."""
+        return self.model_dump(exclude_defaults=True)
+
+
+class DagModel(BaseModel):
+    """Base Dag Model for validate template config data support DagTool object.
+    This model will include necessary field for Airflow DAG object and custom
+    field for DagTool object together.
+    """
+
+    name: str = Field(description="A DAG name.")
+    type: Literal["dag"] = Field(description="A type of template config.")
+    desc: str | None = Field(default=None, description="A DAG description.")
+    docs: str | None = Field(
+        default=None,
+        description="A DAG document that allow to pass with markdown syntax.",
+    )
+    params: dict[str, str] = Field(default_factory=dict)
+    vars: dict[str, str] = Field(default_factory=dict)
+    tasks: list[AnyTask] = Field(
+        default_factory=list,
+        description="A list of any task, origin task or group task",
+    )
+
+    # NOTE: Runtime parameters that extract from YAML loader step.
+    filename: str | None = Field(
+        default=None,
+        description="A filename of the current position.",
+    )
+    parent_dir: Path | None = Field(
+        default=None, description="A parent dir path."
+    )
+    created_dt: datetime | None = Field(
+        default=None, description="A file created datetime."
+    )
+    updated_dt: datetime | None = Field(
+        default=None, description="A file modified datetime."
+    )
+    raw_data: str | None = Field(
+        default=None,
+        description="A raw data that load from template config path.",
+    )
+    raw_data_hash: str | None = Field(
+        default=None,
+        description="A hashed raw data with SHA256.",
+    )
+
+    # NOTE: Airflow DAG parameters.
+    owner: str = Field(default="dagtool")
+    tags: list[str] = Field(default_factory=list, description="A list of tags.")
+    schedule: str | None = Field(default=None)
+    start_date: datetime | None = Field(default=None)
+    end_date: str | None = Field(default=None)
+    concurrency: int | None = Field(default=None)
+    is_paused_upon_creation: bool = Field(default=True)
+    max_active_tasks: int = Field(
+        default_factory=partial(
+            airflow_conf.getint, "core", "max_active_tasks_per_dag"
+        )
+    )
+    max_active_runs: int = Field(
+        default_factory=partial(
+            airflow_conf.getint, "core", "max_active_runs_per_dag"
+        )
+    )
+    dagrun_timeout_sec: int | None = Field(
+        default=None,
+        description="A DagRun timeout in second value.",
+    )
+    default_args: DefaultArgs = Field(default_factory=DefaultArgs)
+
+    @field_validator(
+        "start_date",
+        "end_date",
+        mode="before",
+        json_schema_input_type=str | datetime | None,
+    )
+    def __prepare_datetime(cls, data: Any) -> Any:
+        """Prepare datetime if it passes with string value."""
+        if data and isinstance(data, str):
+            return parse(data).in_tz(timezone("Asia/Bangkok"))
+        return data
+
+    def build_docs(self, docs: str | None = None) -> str:
+        """Generated document string that merge between parent docs and template
+        docs together.
+
+        Args:
+            docs (str, default None): A parent documents that want to add on
+                the top.
+
+        Returns:
+            str: A document markdown string that prepared with parent docs.
+        """
+        if docs:
+            d: str = docs.rstrip("\n")
+            docs: str = f"{d}\n\n{self.docs}"
+
+        # TODO: Exclude jinja template until upgrade Airflow >= 2.9.3, This
+        #   version remove template render on the `doc_md` value.
+        raw_data: str = f"{{% raw %}}{self.raw_data}{{% endraw %}}"
+        if docs:
+            docs += f"\n\n### YAML Template\n\n````yaml\n{raw_data}\n````"
+        else:
+            docs += f"### YAML Template\n\n````yaml\n{raw_data}\n````"
+        return f"{docs}\n> Generated by DAG Tools HASH: `{self.raw_data_hash}`."
+
+    def build(
+        self,
+        prefix: str | None,
+        *,
+        docs: str | None = None,
+        default_args: dict[str, Any] | None = None,
+        user_defined_macros: dict[str, Any] | None = None,
+        user_defined_filters: dict[str, Any] | None = None,
+        template_searchpath: list[str] | None = None,
+        on_success_callback: list[Any] | Any | None = None,
+        on_failure_callback: list[Any] | Any | None = None,
+        context: Context | None = None,
+    ) -> DAG:
+        """Build Airflow DAG object from the current model field values that
+        passing from template and render via Jinja with variables.
+
+        Args:
+            prefix (str | None): A prefix of DAG name.
+            docs (str | None): A document string with Markdown syntax.
+            default_args: (dict[str, Any]): An override default arguments to the
+                Airflow DAG object.
+            user_defined_macros (dict[str, Any]): An extended user defined
+                macros in Jinja template.
+            user_defined_filters (dict[str, Any]): An extended user defined
+                filters in Jinja template.
+            template_searchpath (list[str], default None): An extended Jinja
+                template search path.
+            on_success_callback:
+            on_failure_callback:
+            context:
+
+        Returns:
+            DAG: An Airflow DAG object.
+        """
+        name: str = f"{prefix}_{self.name}" if prefix else self.name
+        variables: dict[str, Any] = pull_vars(
+            name=self.name, path=self.parent_dir, prefix=prefix
+        )
+        dag = DAG(
+            dag_id=name,
+            tags=self.tags,
+            description=self.desc,
+            doc_md=self.build_docs(docs),
+            schedule=self.schedule,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            concurrency=self.concurrency,
+            max_active_runs=self.max_active_runs,
+            max_active_tasks=self.max_active_tasks,
+            dagrun_timeout=(
+                timedelta(seconds=self.dagrun_timeout_sec)
+                if self.dagrun_timeout_sec
+                else None
+            ),
+            default_args=(
+                {"owner": self.owner}
+                | self.default_args.to_dict()
+                | DefaultArgs.model_validate(default_args or {}).to_dict()
+            ),
+            template_searchpath=[str((self.parent_dir / ASSET_DIR).absolute())]
+            + (template_searchpath or []),
+            user_defined_macros={
+                "env": os.getenv,
+                "vars": variables.get,
+            }
+            | (user_defined_macros or {}),
+            user_defined_filters={
+                "tz": change_tz,
+                "fmt": format_dt,
+            }
+            | (user_defined_filters or {}),
+            default_view="graph",
+            render_template_as_native_obj=True,
+            is_paused_upon_creation=self.is_paused_upon_creation,
+            on_success_callback=on_success_callback,
+            on_failure_callback=on_failure_callback,
+        )
+
+        # NOTE: Build Tasks.
+        tasks: dict[str, TaskMapped] = {}
+        for task in self.tasks:
+            tasks[task.iden] = {
+                "upstream": task.upstream,
+                "task": task.build(task_group=None, dag=dag, context=context),
+            }
+
+        # NOTE: Set upstream for each task.
+        set_upstream(tasks)
+
+        return dag
+
+
+Primitive = Union[str, int, float, bool]
+ValueType = Union[Primitive, list[Primitive], dict[Union[str, int], Primitive]]
+
+
+class Key(BaseModel):
+    """Key Model that use to store multi-stage variable with a specific key."""
+
+    key: str = Field(
+        description="A key name that will equal with the DAG name.",
+    )
+    desc: str | None = Field(
+        default=None,
+        description="A description of this variable.",
+    )
+    stages: dict[str, dict[str, ValueType]] = Field(
+        default=dict,
+        description="A stage mapping with environment and its pair of variable",
+    )
+
+
+class Variable(BaseModel):
+    """Variable Model."""
+
+    type: Literal["variable"] = Field(
+        description="A type of this variable model."
+    )
+    variables: list[Key] = Field(description="A list of Key model.")
+
+    @classmethod
+    def from_path(cls, path: Path) -> Self:
+        return cls.model_validate(YamlConf(path=path).read_vars())
+
+    def get_key(self, name: str) -> Key:
+        """Get the Key model with an input specific key name.
+
+        Args:
+            name (str): A key name.
+
+        Returns:
+            Key: A Key model.
+        """
+        for k in self.variables:
+            if name == k.key:
+                return k
+        raise ValueError(f"A key: {name} does not set on this variables.")
+
+
+def pull_vars(name: str, path: Path, prefix: str | None) -> dict[str, Any]:
+    """Pull Variable. This method try to pull variable from Airflow Variable
+    first. If it does not exist it will load from local file instead.
+
+    Args:
+        name (str): A name.
+        path (Path): A template path that want to search variable file.
+        prefix (str, default None): A prefix name that use to combine with name.
+
+    Returns:
+        dict[str, Any]: A variable mapping
+    """
+    try:
+        _name: str = f"{prefix}_{name}" if prefix else name
+        raw_var: str = AirflowVariable.get(_name, deserialize_json=False)
+        var: dict[str, Any] = safe_load(raw_var)
+        return var
+    except KeyError:
+        pass
+
+    try:
+        var: dict[str, Any] = get_variable_stage(path, name=name)
+        return var
+    except ParserError:
+        return {}
+    except ValidationError:
+        return {}
+
+
+def get_variable_stage(path: Path, name: str) -> dict[str, Any]:
+    """Get Variable stage from path.
+
+    Args:
+        path (Path): A template path.
+        name (str):
+    """
+    try:
+        return (
+            Variable.from_path(path=path)
+            .get_key(name)
+            .stages.get(os.getenv("AIRFLOW_ENV", "NOTSET"), {})
+        )
+    except FileNotFoundError:
+        return {}
+    except ParserError:
+        raise
+    except ValidationError:
+        raise
+    except ValueError:
+        return {}
