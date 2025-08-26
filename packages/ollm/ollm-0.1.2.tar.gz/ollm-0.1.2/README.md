@@ -1,0 +1,70 @@
+<!-- markdownlint-disable MD001 MD041 -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://ollm.s3.us-east-1.amazonaws.com/files/logo.png">
+    <img alt="vLLM" src="https://ollm.s3.us-east-1.amazonaws.com/files/logo.png" width=52%>
+  </picture>
+</p>
+
+<h3 align="center">
+LLM inference for large-context offline tasks
+</h3>
+
+---
+
+## About
+
+oLLM is an easy-to-use LLM inference python library for large context offline tasks. As an example, it's able to run 8B-parameter Llama3 model on 100k context on ~$200 consumer GPU with 8GB VRAM. The first token normally takes 20minutes to generate and 17 seconds for each following token.   oLLM uses fp16 without any quantization by offloading layers to Hard Drive (SSD). 
+
+###  8GB 3060 Ti 100k context inference results:
+
+| Model   | Weights | KV cache | Hidden states | Baseline VRAM (no offload) | oLLM GPU VRAM usage | oLLM Disk Usage (SSD) |
+| ------- | ------- | -------- | ------------- | ------------ | ---------------- | --------------- |
+| [llama3-1B-chat](meta-llama/Llama-3.2-1B-Instruct)  | 2 GB (fp16)    | 12.6 GB  | 0.4 GB        | ~16 GB   | ~5 GB       | 18 GB  |
+| [llama3-3B-chat](meta-llama/Llama-3.2-3B-Instruct)  | 7 GB (fp16)   | 34.1 GB  | 0.61 GB       | ~42 GB   | ~5.3 GB     | 45 GB |
+| [llama3-8B-chat](meta-llama/Llama-3.1-8B-Instruct)  | 16 GB (fp16)  | 52.4 GB  | 0.8 GB        | ~71 GB   | ~7.4 GB     | 75 GB  |
+| [gpt-oss-20B](openai/gpt-oss-20b) | 13 GB (MXFP4)   | ?  | ?        | ?   | Coming..       | Coming..  |
+
+
+
+Originally developed in the [Sky Computing Lab](https://sky.cs.berkeley.edu) at UC Berkeley, vLLM has evolved into a community-driven project with contributions from both academia and industry.
+
+How do we achieve this:
+
+- Loading layer weights from SSD directly to GPU one by one
+- Offloading KV cache to SSD and loading back directly to GPU, no quantization or PagedAttention
+- Chunked attention with online softmax. Full attention matrix is never materialized. 
+- Chunked MLP. intermediate upper project layers may get large, so we chunk MLP as well 
+
+
+## Getting Started
+
+Install vLLM with `pip` or [from source](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/index.html#build-wheel-from-source):
+
+```bash
+git clone https://github.com/Mega4alik/ollm.git
+cd ollm
+pip install -e .
+pip install kvikio-cu{cuda_version} Ex, kvikio-cu12
+```
+
+## Example
+
+Install vLLM with `pip` or [from source](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/index.html#build-wheel-from-source):
+
+```bash
+from ollm import Inference, KVCache, file_get_contents
+o = Inference("llama3-3B-chat", device="cuda:0")
+o.ini_model(models_dir="./models/", force_download=False)
+sm, um = "You are helpful AI assistant", "List planets"
+messages = [{"role":"system", "content":sm}, {"role":"user", "content":um}]
+prompt = o.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+inputs = o.tokenizer(prompt, return_tensors="pt").to(o.device)
+past_key_values = KVCache(cache_dir="./kv_cache/", stats=o.stats)
+outputs = o.model.generate(**inputs,  past_key_values=past_key_values, max_new_tokens=20).cpu()
+answer = o.tokenizer.decode(outputs[0][inputs.input_ids.shape[-1]:], skip_special_tokens=False)
+print(answer)
+```
+
+## Contact me
+If need , contact me at anuarsh@ailabs.us
