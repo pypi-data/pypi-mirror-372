@@ -1,0 +1,68 @@
+;DTU_10MW_RWT, version 9, 25-09-2017, mhha
+;
+  begin simulation;
+    time_stop	10.0;
+    solvertype	1;	(newmark)
+    on_no_convergence	continue;
+    convergence_limits	1000 1 1e-07;	
+;logfile ./log/DTU_10MW_RWT_ver09.log ;
+    log_deltat	1;
+    begin newmark;
+      deltat	0.01;
+    end newmark;
+  end simulation;
+;
+;----------------------------------------------------------------------------------------------------------------------------------------------------------------
+  begin new_htc_structure;
+;   beam_output_file_name  ./log/DTU_10MW_RWT_beam.dat;                    Optional - Calculated beam properties of the bodies are written to file
+;   body_output_file_name  ./log/DTU_10MW_RWT_body.dat;                    Optional - Body initial position and orientation are written to file
+;   body_eigenanalysis_file_name ./eig/DTU_10MW_RWT_body_eigen.dat;
+;   structure_eigenanalysis_file_name ./eig/DTU_10MW_RWT_strc_eigen.dat ;
+;-------------------------------------------------------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------------------------------------------------------
+    begin main_body;	tower 115m
+      name	tower;
+      type	timoschenko;
+      nbodies	3;
+      node_distribution	c2_def;
+      damping_posdef	0 0 0 0.00412 0.00412 0.00045;	Mx My Mz Kx Ky Kz , M´s raises overall level, K´s raises high freguency level "tuned by Larh"
+      begin timoschenko_input;
+        filename	./data/DTU_10MW_RWT_Tower_st.dat;
+        set	1 1;
+      end timoschenko_input;
+      begin c2_def;	Definition of centerline (main_body coordinates)
+        nsec	11;
+        sec	1 0 0 0 0;	x,y,z,twist
+        sec	2 0 0 -11.5 0;
+        sec	3 0 0 -23 0;
+        sec	4 0 0 -34.5 0;
+        sec	5 0 0 -46 0;
+        sec	6 0 0 -57.5 0;
+        sec	7 0 0 -69 0;
+        sec	8 0 0 -80.5 0;
+        sec	9 0 0 -92 0;
+        sec	10 0 0 -103.5 0;
+        sec	11 0 0 -115.63 0;
+      end c2_def;
+    end main_body;
+;
+    begin orientation;
+      begin base;
+        body	tower;
+        inipos	0 0 0;	initial position of node 1
+        body_eulerang	0 0 0;
+      end base;
+;
+    end orientation;
+;-------------------------------------------------------------------------------------------------------------------------------
+    begin constraint;
+;
+      begin fix0;	fixed to ground in translation and rotation of node 1
+        body	tower;
+      end fix0;
+;
+    end constraint;
+;
+  end new_htc_structure;
+;----------------------------------------------------------------------------------------------------------------------------------------------------------------
+exit;
