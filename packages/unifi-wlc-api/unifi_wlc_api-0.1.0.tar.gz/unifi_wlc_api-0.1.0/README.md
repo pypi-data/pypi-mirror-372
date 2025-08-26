@@ -1,0 +1,63 @@
+# UniFi WLC API
+
+Python API client for Ubiquiti UniFi Controller.
+
+## 安装
+
+```bash
+pip install unifi_wlc_api
+```
+
+## 使用方法
+
+```python
+from unifi_wlc_api import UnifiApi
+
+# 创建UniFi API客户端实例
+unifi = UnifiApi(
+    controller_url="https://your-controller-url:8443",
+    username="your-username",
+    password="your-password",
+    site="default",  # 可选，默认为"default"
+    ssl_verify=False  # 生产环境应设置为True
+)
+
+# 登录
+if unifi.login():
+    try:
+        # 获取设备列表
+        devices = unifi.list_devices()
+        print(f"Found {len(devices)} devices")
+
+        # 获取客户端列表
+        clients = unifi.list_clients()
+        print(f"Found {len(clients)} online clients")
+
+        # 获取站点统计信息
+        site_stats = unifi.stat_sites()
+        print("Site statistics retrieved")
+
+    finally:
+        # 注销
+        unifi.logout()
+else:
+    print("Login failed")
+```
+
+## 主要功能
+
+- 客户端设备管理：查询、阻止、解除阻止、重新连接等
+- 设备管理：查询、重启、配置等
+- 站点管理：查询、创建、删除、重命名等
+- 统计数据：获取站点和用户的统计数据
+- 网络配置：查询、创建、更新、删除等
+- WLAN配置：查询、创建等
+- 标签管理：查询、创建、更新、删除等
+- 事件和警报管理：查询、归档等
+- 固件管理：查询、升级等
+- 系统日志：查询等
+
+## 许可证
+
+MIT
+
