@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vereqsyn"
+dynamic = ["version"]
+description = 'Bi-directional version.cfg <–> requirements.txt synchronization'
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Michael Howitz", email = "icemac@gmx.net" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+]
+dependencies = ['packaging']
+
+[project.urls]
+Documentation = "https://github.com/minddistrict/vereqsyn#readme"
+Issues = "https://github.com/minddistrict/vereqsyn/issues"
+Source = "https://github.com/minddistrict/vereqsyn"
+changelog = "https://github.com/minddistrict/vereqsyn/blob/master/CHANGES.md"
+
+[project.scripts]
+vereqsyn = "vereqsyn.__main__:main"
+
+[tool.hatch.version]
+path = "src/vereqsyn/__about__.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+  "coverage[toml]>=6.5",
+  "pytest",
+]
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+test-cov = "coverage run -m pytest {args:tests}"
+cov-report = [
+  "- coverage combine",
+  "coverage html",
+  "coverage report",
+]
+cov = [
+  "test-cov",
+  "cov-report",
+]
+
+[[tool.hatch.envs.all.matrix]]
+python = ["3.11", "3.12"]
+
+[tool.hatch.envs.types]
+dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/vereqsyn tests}"
+
+[tool.coverage.run]
+source_pkgs = ["vereqsyn", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/vereqsyn/__about__.py",
+]
+
+[tool.coverage.paths]
+vereqsyn = ["src/vereqsyn", "*/vereqsyn/src/vereqsyn"]
+tests = ["tests", "*/vereqsyn/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+skip_covered = true
+show_missing = true
+fail_under = 100
+
+[tool.ruff]
+# N802: Function name {name} should be lowercase
+# T201: `print` found
+ignore = ["N802", "T201"]
+line-length = 80
