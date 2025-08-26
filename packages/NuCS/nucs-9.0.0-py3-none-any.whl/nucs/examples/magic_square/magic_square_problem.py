@@ -1,0 +1,61 @@
+###############################################################################
+# __   _            _____    _____
+# | \ | |          / ____|  / ____|
+# |  \| |  _   _  | |      | (___
+# | . ` | | | | | | |       \___ \
+# | |\  | | |_| | | |____   ____) |
+# |_| \_|  \__,_|  \_____| |_____/
+#
+# Fast constraint solving in Python  - https://github.com/yangeorget/nucs
+#
+# Copyright 2024-2025 - Yan Georget
+###############################################################################
+from typing import List
+
+from nucs.problems.problem import Problem
+from nucs.propagators.propagators import ALG_ALLDIFFERENT, ALG_LEQ, ALG_SUM_EQ_C
+
+
+class MagicSquareProblem(Problem):
+    """
+    A simple model for magic squares.
+
+    CSPLIB problem #19 - https://www.csplib.org/Problems/prob019/
+    """
+
+    def __init__(self, n: int, symmetry_breaking: bool = True):
+        """
+        Initializes the problem.
+        :param n: the size of the square
+        :param symmetry_breaking: a boolean indicating if symmetry constraints should be added to the model
+        """
+        self.n = n
+        self.m = ((n**2 - 1) * n) // 2
+        super().__init__([(0, n**2 - 1)] * n**2)
+        for i in range(n):
+            self.add_propagator(ALG_SUM_EQ_C, self.row(i), [self.m])
+            self.add_propagator(ALG_SUM_EQ_C, self.column(i), [self.m])
+        self.add_propagator(ALG_SUM_EQ_C, self.first_diag(), [self.m])
+        self.add_propagator(ALG_SUM_EQ_C, self.second_diag(), [self.m])
+        self.add_propagator(ALG_ALLDIFFERENT, range(n**2))
+        if symmetry_breaking:
+            top_left = self.first_diag()[0]
+            bottom_right = self.first_diag()[-1]
+            top_right = self.second_diag()[0]
+            bottom_left = self.second_diag()[-1]
+            self.add_propagator(ALG_LEQ, [top_left, top_right], [-1])
+            self.add_propagator(ALG_LEQ, [top_left, bottom_left], [-1])
+            self.add_propagator(ALG_LEQ, [top_left, bottom_right], [-1])
+            self.add_propagator(ALG_LEQ, [top_right, bottom_left], [-1])
+
+    def row(self, i: int) -> List[int]:
+        return list(range(0 + i * self.n, self.n + i * self.n))
+
+    def column(self, j: int) -> List[int]:
+        return list(range(j, self.n**2, self.n))
+
+    def first_diag(self) -> List[int]:
+        return list(range(0, self.n**2, self.n + 1))
+
+    def second_diag(self) -> List[int]:
+        return list(range(self.n**2 - self.n, 0, 1 - self.n))
