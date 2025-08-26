@@ -1,0 +1,133 @@
+Metadata-Version: 2.4
+Name: desilofhe
+Version: 1.4.0
+Summary: The DESILO Fully Homomorphic Encryption (FHE) library
+Keywords: DESILO,python,cryptography,privacy,encryption,cuda,homomorphic encryption,homomorphic encryption library,fully homomorphic encryption,fhe,gpu accelerated
+Author-Email: Desilo Library Team <library@desilo.ai>, Eunmo Yang <eunmo.yang@desilo.ai>
+Maintainer-Email: Desilo Library Team <library@desilo.ai>, Eunmo Yang <eunmo.yang@desilo.ai>
+License-File: LICENSE
+Classifier: Environment :: GPU :: NVIDIA CUDA
+Classifier: Programming Language :: Python
+Classifier: Topic :: Software Development :: Libraries
+Project-URL: Homepage, https://desilo.ai/
+Project-URL: Documentation, https://fhe.desilo.dev/
+Requires-Python: >=3.9
+Requires-Dist: numpy>=1.26.0
+Description-Content-Type: text/markdown
+
+# The DESILO FHE Library
+
+## Welcome to the DESILO FHE library!
+
+The DESILO FHE library is a homomorphic encryption library that is fast and intuitive.
+It delivers state-of-the-art performance, maximum accuracy, and versatile usability.
+Designed to be accessible and efficient for everyone, from beginners unfamiliar with homomorphic encryption to experts developing advanced algorithms.
+
+Built on C++ and CUDA, the DESILO FHE library is optimized for both CPUs and NVIDIA GPUs.
+It includes a Python wrapper for easy use and seamless integration into existing AI workflows.
+Additionally, it supports CPU parallelization for environments without GPU access.
+
+Currently, the DESILO FHE library supports real and complex number operations based on the RNS-CKKS scheme, with plans to expand to various integer-based schemes in the future.
+It provides a powerful solution adaptable to diverse environments and requirements.
+
+## Documentation
+
+Please refer to the [official documentation](https://fhe.desilo.dev/) for detailed installation instructions, examples, and documentation.
+
+## Quickstart
+
+### Encrypt / Decrypt
+
+Encryption and decryption can be done with a secret key.
+You can encrypt and decrypt data as shown below.
+Note that CKKS is a real-number-based scheme, so a very small error is introduced during encryption and decryption.
+
+```py
+from desilofhe import Engine
+
+engine = Engine()
+
+secret_key = engine.create_secret_key()
+
+data = [1, 2, 3]
+encrypted = engine.encrypt(data, secret_key)
+decrypted = engine.decrypt(encrypted, secret_key)
+
+print(decrypted[:3]) # [1. 2. 3.]
+```
+
+Encryption can also be done with a public key, which is genereated from a secret key.
+
+```py
+from desilofhe import Engine
+
+engine = Engine()
+
+secret_key = engine.create_secret_key()
+public_key = engine.create_public_key(secret_key)
+
+data = [1, 2, 3]
+encrypted = engine.encrypt(data, public_key)
+decrypted = engine.decrypt(encrypted, secret_key)
+
+print(decrypted[:3]) # [1. 2. 3.]
+```
+
+### Add / Subtract
+
+To add or subtract ciphertext, no additional keys are required beyond the public and secret keys.
+You can encrypt data separately and then perform addition and subtraction as follows:
+
+```py
+from desilofhe import Engine
+
+engine = Engine()
+
+secret_key = engine.create_secret_key()
+
+data1 = [1, 2, 3]
+encrypted1 = engine.encrypt(data1, secret_key)
+
+data2 = [4, 5, 6]
+encrypted2 = engine.encrypt(data2, secret_key)
+
+added = engine.add(encrypted1, encrypted2)
+subtracted = engine.subtract(encrypted1, encrypted2)
+
+decrypted1 = engine.decrypt(added, secret_key)
+decrypted2 = engine.decrypt(subtracted, secret_key)
+
+print(decrypted1[:3], decrypted2[:3]) # [5. 7. 9.] [-3. -3. -3.]
+```
+
+### Multiply
+
+To multiply ciphertexts, a special key called the relinearization key is required due to the nature of homomorphic encryption.
+You can encrypt data and perform multiplication as shown below.
+Note that ciphertexts in homomorphic encryption have a maximum multiplication depth, which will decrease after multiplication.
+
+```py
+from desilofhe import Engine
+
+engine = Engine()
+
+secret_key = engine.create_secret_key()
+relinearization_key = engine.create_relinearization_key(secret_key)
+
+data1 = [1, 2, 3]
+encrypted1 = engine.encrypt(data1, secret_key)
+
+data2 = [4, 5, 6]
+encrypted2 = engine.encrypt(data2, secret_key)
+
+multiplied = engine.multiply(encrypted1, encrypted2, relinearization_key)
+
+decrypted = engine.decrypt(multiplied, secret_key)
+
+print(decrypted[:3]) # [~4 ~10 ~18]
+print(encrypted1.level, encrypted2.level, multiplied.level) # 7 7 6
+```
+
+## Contact
+
+If you have any questions, please contact us at library@desilo.ai.
