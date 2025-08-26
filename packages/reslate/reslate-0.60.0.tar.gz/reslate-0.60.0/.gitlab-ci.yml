@@ -1,0 +1,19 @@
+stages:
+  - publish
+
+publish:
+  rules:
+      - if: $CI_COMMIT_TAG
+  stage: publish
+  image: python:3.13
+  id_tokens:
+    # This is the token used by the trusted publisher, which is
+    # a generated JWT token with a lifespan of 15 minutes.
+    PYPI_ID_TOKEN:
+      aud: pypi
+  script:
+    - pip install build twine
+    - python -m build
+    - python -m twine check dist/*
+    - env
+    - python -m twine upload --verbose --non-interactive dist/*
