@@ -1,0 +1,172 @@
+{
+  "name": "wspr-ai-lite",
+  "version": "0.1.0",
+  "description": "Read-only WSPR analytics over DuckDB",
+  "tools": [
+    {
+      "name": "get_summary",
+      "description": "Counts and basic ranges for the dataset.",
+      "input_schema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "rows": { "type": "integer" },
+          "time_min": { "type": "string", "format": "date-time" },
+          "time_max": { "type": "string", "format": "date-time" },
+          "bands": { "type": "array", "items": { "type": "integer" } },
+          "reporters": { "type": "integer" },
+          "tx_calls": { "type": "integer" }
+        },
+        "required": ["rows","time_min","time_max","bands","reporters","tx_calls"]
+      }
+    },
+    {
+      "name": "query_spots",
+      "description": "Windowed fetch of spots (safe, paginated).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "time_from": { "type": "string", "format": "date-time" },
+          "time_to":   { "type": "string", "format": "date-time" },
+          "reporter":  { "type": "string", "minLength": 1, "maxLength": 10 },
+          "tx_call":   { "type": "string", "minLength": 1, "maxLength": 10 },
+          "band_code": { "type": "integer" },
+          "snr_min":   { "type": "integer" },
+          "snr_max":   { "type": "integer" },
+          "limit":     { "type": "integer", "minimum": 1, "maximum": 1000 },
+          "offset":    { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "spot_id": { "type": "integer" },
+                "timestamp": { "type": "string", "format": "date-time" },
+                "reporter": { "type": "string" },
+                "reporter_grid": { "type": "string" },
+                "snr_db": { "type": "integer" },
+                "freq_mhz": { "type": "number" },
+                "tx_call": { "type": "string" },
+                "tx_grid": { "type": "string" },
+                "power_dbm": { "type": "integer" },
+                "drift_hz_per_min": { "type": "integer" },
+                "distance_km": { "type": "integer" },
+                "azimuth_deg": { "type": "integer" },
+                "band_code": { "type": "integer" },
+                "rx_version": { "type": "string" },
+                "code": { "type": "integer" }
+              },
+              "required": ["spot_id","timestamp","reporter","tx_call","snr_db","freq_mhz","band_code"]
+            }
+          }
+        },
+        "required": ["rows"]
+      }
+    },
+    {
+      "name": "top_reporters",
+      "description": "Top reporting stations by count within an optional time window/band.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "time_from": { "type": "string", "format": "date-time" },
+          "time_to":   { "type": "string", "format": "date-time" },
+          "band_code": { "type": "integer" },
+          "limit":     { "type": "integer", "minimum": 1, "maximum": 200 }
+        },
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "type": "object",
+              "properties": { "reporter": { "type": "string" }, "count": { "type": "integer" } },
+              "required": ["reporter","count"]
+            }
+          }
+        },
+        "required": ["items"]
+      }
+    },
+    {
+      "name": "top_heard",
+      "description": "Most-heard TX calls by number of distinct reporters.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "time_from": { "type": "string", "format": "date-time" },
+          "time_to":   { "type": "string", "format": "date-time" },
+          "band_code": { "type": "integer" },
+          "limit":     { "type": "integer", "minimum": 1, "maximum": 200 }
+        },
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "type": "object",
+              "properties": { "tx_call": { "type": "string" }, "reporters": { "type": "integer" } },
+              "required": ["tx_call","reporters"]
+            }
+          }
+        },
+        "required": ["items"]
+      }
+    },
+    {
+      "name": "band_activity",
+      "description": "Counts per band, optionally grouped by day.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "time_from": { "type": "string", "format": "date-time" },
+          "time_to":   { "type": "string", "format": "date-time" },
+          "by_day":    { "type": "boolean" }
+        },
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "type": "object",
+              "properties": {
+                "band_code": { "type": "integer" },
+                "day": { "type": "string", "format": "date" },
+                "count": { "type": "integer" }
+              },
+              "required": ["band_code","count"]
+            }
+          }
+        },
+        "required": ["items"]
+      }
+    },
+    {
+      "name": "spot_by_id",
+      "description": "Fetch a single spot by primary key.",
+      "input_schema": {
+        "type": "object",
+        "properties": { "spot_id": { "type": "integer", "minimum": 1 } },
+        "required": ["spot_id"],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": { "row": { "type": ["object","null"] } },
+        "required": ["row"]
+      }
+    }
+  ]
+}
