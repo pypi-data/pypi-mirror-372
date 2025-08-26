@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workers - Jettask Monitor</title>
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Ant Design -->
+    <link rel="stylesheet" href="https://unpkg.com/antd@4.24.13/dist/antd.min.css" />
+    <script src="https://unpkg.com/moment@2.29.4/moment.js"></script>
+    <script src="https://unpkg.com/antd@4.24.13/dist/antd.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #177ddc;
+            --primary-gradient: linear-gradient(135deg, #1f1f1f 0%, #434343 100%);
+            --success-color: #49aa19;
+            --warning-color: #d89614;
+            --error-color: #a61d24;
+            --info-color: #177ddc;
+            --bg-primary: #000000;
+            --bg-secondary: #141414;
+            --bg-card: #1f1f1f;
+            --text-primary: #rgba(255, 255, 255, 0.85);
+            --text-secondary: rgba(255, 255, 255, 0.65);
+            --border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000000;
+            min-height: 100vh;
+            position: relative;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(23, 125, 220, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(73, 170, 25, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(216, 150, 20, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #root {
+            position: relative;
+            z-index: 1;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .nav-container {
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 16px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-title {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .main-content {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #177ddc 0%, #69c0ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        /* Ant Design 暗色主题覆盖 */
+        .ant-card {
+            background: rgba(31, 31, 31, 0.95) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-statistic-title {
+            color: rgba(255, 255, 255, 0.65) !important;
+        }
+
+        .ant-table {
+            background: transparent !important;
+        }
+
+        .ant-table-thead > tr > th {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-table-tbody > tr > td {
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-table-tbody > tr:hover > td {
+            background: rgba(255, 255, 255, 0.04) !important;
+        }
+
+        /* 修复导航按钮样式 */
+        .ant-btn-text {
+            color: rgba(255, 255, 255, 0.65) !important;
+        }
+
+        .ant-btn-text:hover {
+            color: rgba(255, 255, 255, 0.85) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-btn-primary {
+            background: #177ddc !important;
+            border-color: #177ddc !important;
+        }
+
+        .ant-btn-primary:hover {
+            background: #1890ff !important;
+            border-color: #1890ff !important;
+        }
+
+        /* 分页器样式 */
+        .ant-pagination-item {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .ant-pagination-item a {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .ant-pagination-item-active {
+            background: #177ddc !important;
+            border-color: #177ddc !important;
+        }
+
+        /* Input输入框样式 */
+        .ant-input {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .ant-input::placeholder {
+            color: rgba(255, 255, 255, 0.45) !important;
+        }
+
+        /* Select下拉框样式 */
+        .ant-select-selector {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        /* Switch开关样式 */
+        .ant-switch {
+            background: rgba(255, 255, 255, 0.25) !important;
+        }
+
+        .ant-switch-checked {
+            background: #177ddc !important;
+        }
+
+        .worker-card {
+            background: rgba(31, 31, 31, 0.8) !important;
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .worker-card:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            background: rgba(31, 31, 31, 0.95) !important;
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .main-content {
+                padding: 16px;
+            }
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+        const { 
+            Layout, Card, Row, Col, Table, Tag, Button, Input, Select, 
+            Statistic, Progress, Badge, Space, Typography, Tooltip, Divider,
+            Switch, message, Spin, Modal, Descriptions, ConfigProvider
+        } = antd;
+        
+        const { Title, Text } = Typography;
+        const { Search } = Input;
+        
+        function WorkersPage() {
+            const [loading, setLoading] = useState(false);
+            const [searchKeyword, setSearchKeyword] = useState('');
+            const [statusFilter, setStatusFilter] = useState('all');
+            const [showAllStats, setShowAllStats] = useState(true);
+            const [workers, setWorkers] = useState([]);
+            const [workerStats, setWorkerStats] = useState({
+                total_workers: 0,
+                online_workers: 0,
+                offline_workers: 0,
+                total_success_count: 0,
+                total_failed_count: 0,
+                total_running_tasks: 0,
+                avg_processing_time: 0
+            });
+            
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+            
+            // 格式化时间
+            const formatTime = useCallback((seconds) => {
+                if (!seconds || seconds === 0) return '-';
+                if (seconds < 1) return `${Math.round(seconds * 1000)}ms`;
+                if (seconds < 60) return `${seconds.toFixed(2)}s`;
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = (seconds % 60).toFixed(1);
+                return `${minutes}m${remainingSeconds}s`;
+            }, []);
+            
+            // 格式化日期时间
+            const formatDateTime = (timestamp) => {
+                if (!timestamp) return '-';
+                return new Date(parseFloat(timestamp) * 1000).toLocaleString('zh-CN');
+            };
+            
+            // 过滤Workers
+            const filteredWorkers = React.useMemo(() => {
+                let filtered = workers;
+                
+                if (searchKeyword) {
+                    filtered = filtered.filter(worker => 
+                        worker.consumer_id.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+                        worker.host.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+                        (worker.queues || []).some(q => q.toLowerCase().includes(searchKeyword.toLowerCase()))
+                    );
+                }
+                
+                if (statusFilter !== 'all') {
+                    filtered = filtered.filter(worker => {
+                        if (statusFilter === 'online') return worker.is_alive;
+                        if (statusFilter === 'offline') return !worker.is_alive;
+                        return true;
+                    });
+                }
+                
+                return filtered;
+            }, [workers, searchKeyword, statusFilter]);
+            
+            // 表格列定义
+            const columns = [
+                {
+                    title: 'Worker ID',
+                    dataIndex: 'consumer_id',
+                    key: 'consumer_id',
+                    width: 200,
+                    render: (id) => (
+                        <Tooltip title={id}>
+                            <code style={{fontSize: '0.8rem'}}>{id.substring(0, 16)}...</code>
+                        </Tooltip>
+                    )
+                },
+                {
+                    title: '状态',
+                    dataIndex: 'is_alive',
+                    key: 'is_alive',
+                    width: 100,
+                    align: 'center',
+                    render: (isAlive) => (
+                        <Tag color={isAlive ? 'success' : 'error'}>
+                            {isAlive ? '在线' : '离线'}
+                        </Tag>
+                    )
+                },
+                {
+                    title: '主机',
+                    dataIndex: 'host',
+                    key: 'host',
+                    width: 150,
+                },
+                {
+                    title: '处理队列',
+                    dataIndex: 'queues',
+                    key: 'queues',
+                    render: (queues) => (
+                        <Space size="small" wrap>
+                            {(queues || []).map((queue, idx) => (
+                                <Tag key={idx} color="blue" size="small">{queue}</Tag>
+                            ))}
+                        </Space>
+                    )
+                },
+                {
+                    title: '成功/失败',
+                    key: 'stats',
+                    width: 150,
+                    render: (_, record) => (
+                        <Space>
+                            <Tag color="green">{record.success_count || 0}</Tag>
+                            <span>/</span>
+                            <Tag color="red">{record.failed_count || 0}</Tag>
+                        </Space>
+                    )
+                },
+                {
+                    title: '执行中',
+                    dataIndex: 'running_tasks',
+                    key: 'running_tasks',
+                    width: 100,
+                    align: 'center',
+                    render: (count) => (
+                        <Tag color="orange">{count || 0}</Tag>
+                    )
+                },
+                {
+                    title: '平均耗时',
+                    dataIndex: 'avg_processing_time',
+                    key: 'avg_processing_time',
+                    width: 100,
+                    render: (time) => formatTime(time)
+                },
+                {
+                    title: '最后心跳',
+                    dataIndex: 'last_heartbeat',
+                    key: 'last_heartbeat',
+                    width: 180,
+                    render: (time) => formatDateTime(time)
+                },
+                {
+                    title: '操作',
+                    key: 'action',
+                    width: 100,
+                    align: 'center',
+                    render: (_, record) => (
+                        <Button size="small" onClick={() => viewWorkerDetail(record)}>
+                            详情
+                        </Button>
+                    )
+                }
+            ];
+            
+            // 查看Worker详情
+            const viewWorkerDetail = (worker) => {
+                Modal.info({
+                    title: 'Worker详情',
+                    width: 800,
+                    content: (
+                        <Descriptions column={2} bordered size="small">
+                            <Descriptions.Item label="Worker ID" span={2}>
+                                <code>{worker.consumer_id}</code>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="状态">
+                                <Tag color={worker.is_alive ? 'success' : 'error'}>
+                                    {worker.is_alive ? '在线' : '离线'}
+                                </Tag>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="主机">
+                                {worker.host}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="处理队列" span={2}>
+                                {(worker.queues || []).join(', ')}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="成功任务">
+                                {worker.success_count || 0}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="失败任务">
+                                {worker.failed_count || 0}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="执行中任务">
+                                {worker.running_tasks || 0}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="平均处理时间">
+                                {formatTime(worker.avg_processing_time)}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="启动时间">
+                                {formatDateTime(worker.start_time)}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="最后心跳">
+                                {formatDateTime(worker.last_heartbeat)}
+                            </Descriptions.Item>
+                        </Descriptions>
+                    )
+                });
+            };
+            
+            // 加载数据
+            const loadData = async () => {
+                try {
+                    setLoading(true);
+                    
+                    const [workersResp, statsResp] = await Promise.all([
+                        fetch('/api/workers?stats_mode=' + (showAllStats ? 'all' : 'online')),
+                        fetch('/api/stats')
+                    ]);
+                    
+                    if (workersResp.ok) {
+                        const data = await workersResp.json();
+                        setWorkers(data.workers || []);
+                    }
+                    
+                    if (statsResp.ok) {
+                        const data = await statsResp.json();
+                        setWorkerStats({
+                            total_workers: data.total_workers || 0,
+                            online_workers: data.online_workers || 0,
+                            offline_workers: (data.total_workers || 0) - (data.online_workers || 0),
+                            total_success_count: data.total_success_count || 0,
+                            total_failed_count: data.total_failed_count || 0,
+                            total_running_tasks: data.total_running_tasks || 0,
+                            avg_processing_time: data.avg_processing_time || 0
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to load data:', error);
+                    message.error('加载数据失败');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            // 初始化图表
+            const initChart = () => {
+                if (chartRef.current && !chartInstance.current) {
+                    const ctx = chartRef.current.getContext('2d');
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['在线Workers', '离线Workers'],
+                            datasets: [{
+                                data: [workerStats.online_workers, workerStats.offline_workers],
+                                backgroundColor: ['#49aa19', '#a61d24'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        color: 'rgba(255, 255, 255, 0.85)',
+                                        padding: 20
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            };
+            
+            // 更新图表数据
+            useEffect(() => {
+                if (chartInstance.current) {
+                    chartInstance.current.data.datasets[0].data = [
+                        workerStats.online_workers,
+                        workerStats.offline_workers
+                    ];
+                    chartInstance.current.update();
+                }
+            }, [workerStats]);
+            
+            // 初始化
+            useEffect(() => {
+                loadData();
+                const timer = setTimeout(initChart, 100);
+                
+                // 定时刷新
+                const interval = setInterval(loadData, 5000);
+                
+                return () => {
+                    clearTimeout(timer);
+                    clearInterval(interval);
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+                };
+            }, [showAllStats]);
+            
+            return (
+                <div className="app-container">
+                    {/* 导航栏 */}
+                    <div className="nav-container">
+                        <div className="nav-content">
+                            <div className="nav-title">
+                                <i className="fas fa-rocket" style={{fontSize: '1.5rem'}} />
+                                Jettask Monitor
+                            </div>
+                            <Space size="large">
+                                <Button type="text" size="large" onClick={() => window.location.href = '/'}>
+                                    概览
+                                </Button>
+                                <Button type="text" size="large" onClick={() => window.location.href = '/queues.html'}>
+                                    队列
+                                </Button>
+                                <Button type="primary" size="large">
+                                    Workers
+                                </Button>
+                            </Space>
+                        </div>
+                    </div>
+                    
+                    {/* 主要内容 */}
+                    <div className="main-content">
+                        {/* 统计概览 */}
+                        <Row gutter={[24, 24]} style={{marginBottom: 30}}>
+                            <Col xs={24} lg={8}>
+                                <Card className="worker-card">
+                                    <Title level={4} className="gradient-text">Worker状态分布</Title>
+                                    <div style={{height: 250}}>
+                                        <canvas ref={chartRef}></canvas>
+                                    </div>
+                                </Card>
+                            </Col>
+                            <Col xs={24} lg={16}>
+                                <Row gutter={[16, 16]}>
+                                    <Col xs={12} md={8}>
+                                        <Card className="worker-card">
+                                            <Statistic 
+                                                title="总Workers"
+                                                value={workerStats.total_workers}
+                                                valueStyle={{color: '#177ddc'}}
+                                                prefix={<i className="fas fa-server" />}
+                                            />
+                                        </Card>
+                                    </Col>
+                                    <Col xs={12} md={8}>
+                                        <Card className="worker-card">
+                                            <Statistic 
+                                                title="在线Workers"
+                                                value={workerStats.online_workers}
+                                                valueStyle={{color: '#49aa19'}}
+                                                prefix={<i className="fas fa-check-circle" />}
+                                            />
+                                        </Card>
+                                    </Col>
+                                    <Col xs={12} md={8}>
+                                        <Card className="worker-card">
+                                            <Statistic 
+                                                title="离线Workers"
+                                                value={workerStats.offline_workers}
+                                                valueStyle={{color: '#a61d24'}}
+                                                prefix={<i className="fas fa-times-circle" />}
+                                            />
+                                        </Card>
+                                    </Col>
+                                    <Col xs={12} md={8}>
+                                        <Card className="worker-card">
+                                            <Statistic 
+                                                title="成功任务"
+                                                value={workerStats.total_success_count}
+                                                valueStyle={{color: '#49aa19'}}
+                                                prefix={<i className="fas fa-check" />}
+                                            />
+                                        </Card>
+                                    </Col>
+                                    <Col xs={12} md={8}>
+                                        <Card className="worker-card">
+                                            <Statistic 
+                                                title="失败任务"
+                                                value={workerStats.total_failed_count}
+                                                valueStyle={{color: '#a61d24'}}
+                                                prefix={<i className="fas fa-times" />}
+                                            />
+                                        </Card>
+                                    </Col>
+                                    <Col xs={12} md={8}>
+                                        <Card className="worker-card">
+                                            <Statistic 
+                                                title="执行中任务"
+                                                value={workerStats.total_running_tasks}
+                                                valueStyle={{color: '#d89614'}}
+                                                prefix={<i className="fas fa-spinner" />}
+                                            />
+                                        </Card>
+                                    </Col>
+                                </Row>
+                            </Col>
+                        </Row>
+                        
+                        {/* Worker列表 */}
+                        <Card
+                            className="worker-card"
+                            title={
+                                <Title level={4} className="gradient-text">
+                                    <i className="fas fa-users" style={{marginRight: 12}} />
+                                    Worker列表
+                                </Title>
+                            }
+                            extra={
+                                <Space>
+                                    <Search
+                                        placeholder="搜索Worker..."
+                                        allowClear
+                                        value={searchKeyword}
+                                        onChange={e => setSearchKeyword(e.target.value)}
+                                        style={{width: 200}}
+                                    />
+                                    <Select
+                                        value={statusFilter}
+                                        onChange={setStatusFilter}
+                                        style={{width: 120}}
+                                    >
+                                        <Select.Option value="all">全部</Select.Option>
+                                        <Select.Option value="online">在线</Select.Option>
+                                        <Select.Option value="offline">离线</Select.Option>
+                                    </Select>
+                                    <Switch
+                                        checkedChildren="含历史"
+                                        unCheckedChildren="仅在线"
+                                        checked={showAllStats}
+                                        onChange={setShowAllStats}
+                                    />
+                                    <Button 
+                                        type="primary" 
+                                        icon={<i className="fas fa-sync-alt" />}
+                                        onClick={loadData}
+                                        loading={loading}
+                                    >
+                                        刷新
+                                    </Button>
+                                </Space>
+                            }
+                        >
+                            <Table
+                                columns={columns}
+                                dataSource={filteredWorkers}
+                                rowKey="consumer_id"
+                                loading={loading}
+                                pagination={{
+                                    defaultPageSize: 20,
+                                    showSizeChanger: true,
+                                    showQuickJumper: true,
+                                    showTotal: (total) => `共 ${total} 个Workers`
+                                }}
+                                size="middle"
+                            />
+                        </Card>
+                    </div>
+                </div>
+            );
+        }
+        
+        // 主应用组件
+        function App() {
+            return (
+                <ConfigProvider>
+                    <WorkersPage />
+                </ConfigProvider>
+            );
+        }
+        
+        // 渲染应用
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+    </script>
+</body>
+</html>
