@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Call Sentiment Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            width: 80px;
+            background: linear-gradient(180deg, #2b2d42, var(--secondary));
+        }
+        .upload-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        .sentiment-score {
+            font-weight: 600;
+        }
+        .positive { color: var(--success); }
+        .neutral { color: var(--warning); }
+        .negative { color: var(--danger); }
+        #downloadBtn {
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        #downloadBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .scheduled-time {
+            background-color: #e9f5ff;
+            border-left: 4px solid var(--primary);
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+        .file-list {
+            margin-top: 15px;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .file-status {
+            margin-left: auto;
+            font-weight: 500;
+        }
+        .analyzing {
+            color: var(--primary);
+        }
+        .completed {
+            color: var(--success);
+        }
+        .error {
+            color: var(--danger);
+        }
+        .current-file {
+            background-color: #e6f7ff;
+            border-left: 4px solid var(--primary);
+        }
+        .result-accordion {
+            margin-bottom: 20px;
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+        .file-results {
+            display: none;
+        }
+        .all-results {
+            margin-top: 30px;
+        }
+        .tab-content {
+            padding: 20px 0;
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+            border-bottom: 3px solid var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex min-vh-100">
+        <div class="sidebar d-flex flex-column align-items-center pt-4">
+            <img src="{{ url_for('static', filename='images/tcai_logo.webp') }}" alt="Logo" class="rounded-circle" width="50">
+        </div>
+        
+        <div class="flex-grow-1 p-4">
+            <h3 class="mb-4"><i class="fas fa-phone-alt me-2"></i> Sandesh</h3>
+            
+            <div class="upload-container p-4 mb-4">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Upload Audio Files (Max 3)</label>
+                        <input type="file" class="form-control" name="audiofiles" id="audiofiles" 
+                               accept=".mp3,.wav,.flac" multiple required>
+                        <div class="form-text">Select up to 3 audio files to analyze</div>
+                    </div>
+                    <div id="fileList" class="file-list"></div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-chart-line me-2"></i> Analyze Files
+                    </button>
+                    <div id="progressContainer" class="mt-3 d-none">
+                        <div class="progress">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+                        </div>
+                        <div id="fileProgress" class="mt-2 text-muted small"></div>
+                    </div>
+                </form>
+            </div>
+            
+            <div id="allResults" class="all-results d-none">
+                <h4 class="mb-4"><i class="fas fa-list-alt me-2"></i> Analysis Results</h4>
+                
+                <ul class="nav nav-tabs" id="resultsTabs" role="tablist">
+                    <!-- Tabs will be dynamically inserted here -->
+                </ul>
+                
+                <div class="tab-content" id="resultsTabContent">
+                    <!-- Tab panes will be dynamically inserted here -->
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12 text-center">
+                        <button id="downloadBtn" class="btn btn-success">
+                            <i class="fas fa-download me-2"></i> Download Full Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        // File selection handler
+        document.getElementById('audiofiles').addEventListener('change', function(e) {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            
+            // Limit to 3 files
+            const files = Array.from(e.target.files).slice(0, 3);
+            
+            files.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <i class="fas fa-file-audio me-2"></i>
+                    <span>${file.name}</span>
+                    <span class="file-status">Pending</span>
+                `;
+                fileList.appendChild(fileItem);
+            });
+        });
+
+        // Analysis function for a single file
+        async function analyzeSingleFile(file, index, totalFiles) {
+            const formData = new FormData();
+            formData.append('audiofile', file);
+            
+            const fileItems = document.querySelectorAll('.file-item');
+            fileItems[index].querySelector('.file-status').className = 'file-status analyzing';
+            fileItems[index].querySelector('.file-status').textContent = 'Analyzing...';
+            fileItems[index].classList.add('current-file');
+            
+            document.getElementById('fileProgress').textContent = 
+                `Processing file ${index + 1} of ${totalFiles}: ${file.name}`;
+            
+            try {
+                const response = await axios.post('/analyze', formData, {
+                    onUploadProgress: function(progressEvent) {
+                        const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+                        document.getElementById('progressBar').style.width = percent + '%';
+                    }
+                });
+                
+                fileItems[index].querySelector('.file-status').className = 'file-status completed';
+                fileItems[index].querySelector('.file-status').textContent = 'Completed';
+                fileItems[index].classList.remove('current-file');
+                
+                return {
+                    success: true,
+                    filename: file.name,
+                    data: response.data
+                };
+            } catch (error) {
+                fileItems[index].querySelector('.file-status').className = 'file-status error';
+                fileItems[index].querySelector('.file-status').textContent = 'Failed';
+                fileItems[index].classList.remove('current-file');
+                
+                return {
+                    success: false,
+                    filename: file.name,
+                    error: error.response?.data?.error || error.message
+                };
+            }
+        }
+
+        // Create result card for a single file
+        function createResultCard(result, index) {
+            const tabId = `resultTab${index}`;
+            const contentId = `resultContent${index}`;
+            
+            // Create tab
+            const tab = document.createElement('li');
+            tab.className = 'nav-item';
+            tab.innerHTML = `
+                <a class="nav-link ${index === 0 ? 'active' : ''}" id="${tabId}-tab" data-bs-toggle="tab" 
+                   href="#${contentId}" role="tab" aria-controls="${contentId}" 
+                   aria-selected="${index === 0 ? 'true' : 'false'}">
+                    ${result.filename}
+                </a>
+            `;
+            
+            // Create content
+            const content = document.createElement('div');
+            content.className = `tab-pane fade ${index === 0 ? 'show active' : ''}`;
+            content.id = contentId;
+            content.setAttribute('role', 'tabpanel');
+            content.setAttribute('aria-labelledby', `${tabId}-tab`);
+            
+            if (result.success) {
+                const data = result.data;
+                const starCount = Math.round(data.star_rating);
+                const emptyStars = 5 - starCount;
+                
+                content.innerHTML = `
+                    <div class="card mb-4">
+                        <div class="card-header bg-white">
+                            <i class="fas fa-file-alt me-2"></i> Transcription
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-light mb-0">${data.transcription}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-white">
+                                    <i class="fas fa-star me-2"></i> Star Rating
+                                </div>
+                                <div class="card-body">
+                                    <div class="fs-4 mb-2">
+                                        ${'<i class="fas fa-star text-warning"></i>'.repeat(starCount)}
+                                        ${'<i class="far fa-star text-secondary"></i>'.repeat(emptyStars)}
+                                    </div>
+                                    <div class="mb-3">Confidence: ${(data.star_score * 100).toFixed(1)}%</div>
+                                    <div class="progress">
+                                        <div class="progress-bar" style="width: ${data.star_score * 100}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-white">
+                                    <i class="fas fa-smile me-2"></i> Sentiment Analysis
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Positive</span>
+                                            <span class="sentiment-score positive">${(data.sentiment_scores.positive * 100).toFixed(1)}%</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" style="width: ${data.sentiment_scores.positive * 100}%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Neutral</span>
+                                            <span class="sentiment-score neutral">${(data.sentiment_scores.neutral * 100).toFixed(1)}%</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-warning" style="width: ${data.sentiment_scores.neutral * 100}%"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Negative</span>
+                                            <span class="sentiment-score negative">${(data.sentiment_scores.negative * 100).toFixed(1)}%</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-danger" style="width: ${data.sentiment_scores.negative * 100}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-white">
+                                    <i class="fas fa-microphone me-2"></i> Voice Analysis
+                                </div>
+                                <div class="card-body">
+                                    <div class="fs-4 mb-2">
+                                        Average Pitch: ${data.average_pitch.toFixed(1)} Hz
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-white">
+                                    <i class="fas fa-chart-line me-2"></i> Pitch Analysis
+                                </div>
+                                <div class="card-body">
+                                    <img src="${data.plot_path || ''}" class="img-fluid rounded">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" id="scheduledCallSection" style="${data.scheduled_times?.length ? '' : 'display: none;'}">
+                        <div class="col-12 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-white">
+                                    <i class="fas fa-calendar-alt me-2"></i> Scheduled Calls
+                                </div>
+                                <div class="card-body">
+                                    <div id="scheduledTimesList">
+                                        ${data.scheduled_times?.map(time => `
+                                            <div class="scheduled-time">
+                                                <i class="fas fa-clock me-2"></i>${time}
+                                            </div>
+                                        `).join('') || ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Analysis failed: ${result.error}
+                    </div>
+                `;
+            }
+            
+            return { tab, content };
+        }
+
+        // Form submission handler
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const files = document.getElementById('audiofiles').files;
+            if (files.length === 0) return;
+            
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const allResultsContainer = document.getElementById('allResults');
+            
+            // Reset UI
+            progressContainer.classList.remove('d-none');
+            progressBar.style.width = '0%';
+            allResultsContainer.classList.add('d-none');
+            
+            // Clear previous results
+            document.getElementById('resultsTabs').innerHTML = '';
+            document.getElementById('resultsTabContent').innerHTML = '';
+            
+            // Process files sequentially
+            const allResults = [];
+            const filesToProcess = Array.from(files).slice(0, 3);
+            
+            for (let i = 0; i < filesToProcess.length; i++) {
+                const result = await analyzeSingleFile(filesToProcess[i], i, filesToProcess.length);
+                allResults.push(result);
+                
+                // Update overall progress
+                progressBar.style.width = `${((i + 1) / filesToProcess.length) * 100}%`;
+            }
+            
+            // Store results for download
+            window.lastAnalysisResults = allResults;
+            
+            // Display all results in tabs
+            const tabsContainer = document.getElementById('resultsTabs');
+            const contentContainer = document.getElementById('resultsTabContent');
+            
+            allResults.forEach((result, index) => {
+                const { tab, content } = createResultCard(result, index);
+                tabsContainer.appendChild(tab);
+                contentContainer.appendChild(content);
+            });
+            
+            // Show all results
+            progressContainer.classList.add('d-none');
+            allResultsContainer.classList.remove('d-none');
+        });
+
+        // Download handler for multiple files
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            if (!window.lastAnalysisResults || window.lastAnalysisResults.length === 0) {
+                alert('No analysis results available to download');
+                return;
+            }
+            
+            let reportContent = `MULTI-FILE ANALYSIS REPORT\n`;
+            reportContent += `=========================\n\n`;
+            reportContent += `Generated on: ${new Date().toLocaleString()}\n\n`;
+            
+            window.lastAnalysisResults.forEach((result, index) => {
+                reportContent += `FILE ${index + 1}: ${result.filename}\n`;
+                reportContent += `--------------------------------\n`;
+                
+                if (result.success) {
+                    const data = result.data;
+                    const starCount = Math.round(data.star_rating);
+                    const emptyStars = 5 - starCount;
+                    
+                    reportContent += `TRANSCRIPTION:\n${data.transcription}\n\n`;
+                    reportContent += `SENTIMENT ANALYSIS:\n`;
+                    reportContent += `Star Rating: ${'★'.repeat(starCount)}${'☆'.repeat(emptyStars)}\n`;
+                    reportContent += `Confidence: ${(data.star_score * 100).toFixed(1)}%\n\n`;
+                    reportContent += `Positive: ${(data.sentiment_scores.positive * 100).toFixed(1)}%\n`;
+                    reportContent += `Neutral: ${(data.sentiment_scores.neutral * 100).toFixed(1)}%\n`;
+                    reportContent += `Negative: ${(data.sentiment_scores.negative * 100).toFixed(1)}%\n\n`;
+                    reportContent += `VOICE ANALYSIS:\n`;
+                    reportContent += `Average Pitch: ${data.average_pitch.toFixed(1)} Hz\n\n`;
+                    
+                    if (data.scheduled_times && data.scheduled_times.length > 0) {
+                        reportContent += `SCHEDULED CALL TIMES:\n`;
+                        data.scheduled_times.forEach(time => {
+                            reportContent += `- ${time}\n`;
+                        });
+                    } else {
+                        reportContent += `SCHEDULED CALL TIMES: None found\n`;
+                    }
+                } else {
+                    reportContent += `ANALYSIS FAILED:\n${result.error}\n`;
+                }
+                
+                reportContent += `\n\n`;
+            });
+            
+            // Create download
+            const blob = new Blob([reportContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `call_analysis_report_${new Date().toISOString().slice(0,10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
