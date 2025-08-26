@@ -1,0 +1,185 @@
+Metadata-Version: 2.4
+Name: addereq
+Version: 1.3.6.dev1
+Summary: 地震前兆数据自动处理框架
+Author-email: WANG Qinglin <chd_wql@qq.com>
+License: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pymysql
+Requires-Dist: cx_Oracle
+Requires-Dist: matplotlib
+Requires-Dist: numpy
+Requires-Dist: openpyxl
+Requires-Dist: pandas
+Requires-Dist: scipy
+Requires-Dist: seaborn
+Requires-Dist: SQLAlchemy==1.4.48
+Requires-Dist: python-pptx
+Requires-Dist: python-docx
+Dynamic: license-file
+
+# addereq（地震前兆数据自动分析框架）
+
+一个用于从地震系统Oracle数据库中便捷读取数据并批量绘图的工具包。
+
+## 主要功能
+
+从地震系统的Oracle前兆数据库中提取数据，生成可视化图形，并无缝集成各种地球物理分析方法，以便实现自动化操作。
+
+## 新增功能
+
+### v1.3.6.dev1
+
+1. 发布新版，自定义每条曲线类型
+
+### v1.3.5
+
+1. 发布新版，不再支持python 3.7
+
+### v1.3.4
+
+1. 升级支持python 3.13
+2. 修复绘图字体乱码
+
+### v1.3.3
+
+1. 永久性解决数据分割中存在非数值型的情况。
+
+### v1.3.0
+
+1. 更新了调用方式，同时兼容旧的调用方式
+```python
+plotter = plotting.TSPlotter(
+    conn,
+    mean_color='r',       # 均值线颜色
+    std_color='gray',     # 标准差线颜色
+    mean_linestyle='--',  # 均值线样式
+    std_linestyle=':'     # 标准差线样式
+)
+
+plotter.plot(
+    data,
+    groupby='item',           # 分组方式：'item' 或 'station'
+    show_mean=True,           # 显示均值线
+    show_std=True             # 显示标准差线
+)
+```
+
+2. 添加了地震标注功能
+
+```python
+plotter.plot(df, 
+             groupby='item', 
+             show_mean=False,
+             show_std=True,
+             set_zero=False,
+             plot_type='line',
+             std_multiplier=2.0,
+             eqt_dir='D:/tests/HuaBei.EQT',
+             eqt_filters=[(200, 4.5), (350, 5.0)]
+             )
+```
+
+### v1.2.0
+
+1. 使用Claude进行了代码重构，优化性能。
+
+### v1.1.1
+
+1. 修改了reindex算法；
+2. 修改了字符串分割逻辑，去除首尾字符，防止不符合规则的数据报错。
+
+## 安装
+
+1. Python环境安装
+
+建议安装Anaconda或者Miniconda，Anaconda安装参考[官网链接](https://www.anaconda.com/download/)，Miniconda安装参考[官网链接](https://docs.conda.io/en/latest/miniconda.html)，入门建议安装Anaconda，不需要太多配置，开箱即用。
+
+2. addereq包安装
+
+由于cx_Oracle在Windows系统下的安装需要Visual C++编译环境，配置起来比较复杂，建议先使用conda安装cx_Oracle，然后再安装addereq，安装命令如下：
+
+``` shell
+conda install cx_Oracle
+```
+
+安装好Python环境后，执行以下命令安装addereq。
+
+``` shell
+pip install addereq
+```
+
+
+
+## 安装 Oracle 即时客户端
+
+下载以及安装参见 Oracle Instant Client [官网链接](https://www.oracle.com/database/technologies/instant-client/downloads.html)
+
+## 数据库配置文件
+
+需要将常用的数据库配置到`default.conf`文件中，该文件可以存放在和脚本相同目录中，也可以存放在系统用户目录中，建议存放在系统用户目录中，目录需为`~/.adder/default.conf`。
+配置文件格式为：
+
+``` shell
+[db1]
+HOST = 192.168.181.12
+PORT = 1521
+USERNAME = test
+PASSWORD = test
+TNSNAME = pdbqz
+```
+
+建议将常用数据库全部配置进去，一劳永逸。
+
+## 主要模块功能说明
+
+### fetching 模块
+
+该模块为数据下载模块，可以提供快速批量的数据下载功能。
+
+1. 连接数据库
+
+参数只需要输入`default.conf`文件中配置的数据库名称即可。
+
+``` python
+from addereq import fetching as tsf
+conn = tsf.conn_to_Oracle('db1')
+```
+
+2. 数据下载
+
+``` python
+from addereq import fetching as tsf
+df = tsf.fetching_data(conn, '20230416', '20230416', '地电场', '北京', '分钟值', '原始库', gzip_flag=False)
+```
+
+### plotting 模块
+
+该模块为批量绘图模块，提供类MapSIS的功能，可以批量绘制多个台站或者多个测向的曲线。`df`变量中可以包含多个台站、多个测向的数据，可以一次性批量绘制，输出文件名自动生成。
+
+1. 按台站绘图
+
+``` python
+from addereq import plotting as tsp
+tsp.plot_by_stations(df, conn)
+```
+
+2. 按测向代码绘图
+
+``` python
+from addereq import plotting as tsp
+tsp.plot_by_items(df, conn)
+```
+
+## 联系作者
+
+<chd_wql@qq.com>
