@@ -1,0 +1,406 @@
+# JJ Multi-Database MCP Server
+
+[English](#english) | [中文](#中文)
+
+---
+
+## English
+
+A comprehensive MCP (Model Context Protocol) server supporting multiple databases and filesystem operations. Perfect for AI assistants like Claude to interact with your databases and files safely and efficiently.
+
+### 🚀 Features
+
+- **🗄️ SQL Server Support**: Complete SQL Server database operations with connection pooling
+- **🐬 MySQL Support**: Full MySQL database functionality with optimized queries
+- **🔶 Oracle Support**: Comprehensive Oracle database operations (optional dependency)
+- **🔴 Redis Support**: Key-value operations with Redis including TTL management
+- **📁 Filesystem Operations**: Safe file and directory operations with configurable restrictions
+- **⚙️ Environment-based Configuration**: Simple configuration via environment variables
+- **📦 uvx Compatible**: Designed for use with uvx package runner
+- **🔒 Security First**: Configurable access controls and safe defaults
+- **🔌 Optional Dependencies**: Install only what you need
+
+### 🚀 Quick Start
+
+#### Using uvx (Recommended)
+
+```bash
+# Install and run with specific database support
+uvx --from jj-multi-db-mcp[sqlserver,mysql,redis] jj-multi-db-mcp
+
+# Install with all database support
+uvx --from jj-multi-db-mcp[all] jj-multi-db-mcp
+
+# Basic installation (filesystem only)
+uvx jj-multi-db-mcp
+```
+
+#### Using pip
+
+```bash
+# Basic installation (filesystem operations only)
+pip install jj-multi-db-mcp
+
+# With specific database support
+pip install jj-multi-db-mcp[sqlserver,mysql,redis]
+
+# With all database support
+pip install jj-multi-db-mcp[all]
+
+# Run the server
+jj-multi-db-mcp
+```
+
+#### Available Optional Dependencies
+
+- `[sqlserver]` - SQL Server support (requires pyodbc, sqlalchemy)
+- `[mysql]` - MySQL support (requires pymysql, sqlalchemy)
+- `[oracle]` - Oracle support (requires oracledb, sqlalchemy)
+- `[redis]` - Redis support (requires redis)
+- `[all]` - All database support
+
+### ⚙️ Configuration
+
+Configure the server using environment variables:
+
+#### SQL Server Configuration
+```bash
+export SQLSERVER_ENABLED=true
+export SQLSERVER_HOST=localhost
+export SQLSERVER_PORT=1433
+export SQLSERVER_DATABASE=your_database
+export SQLSERVER_USERNAME=sa
+export SQLSERVER_PASSWORD=your_password
+export SQLSERVER_DRIVER="ODBC Driver 17 for SQL Server"  # optional
+```
+
+#### MySQL Configuration
+```bash
+export MYSQL_ENABLED=true
+export MYSQL_HOST=localhost
+export MYSQL_PORT=3306
+export MYSQL_DATABASE=your_database
+export MYSQL_USERNAME=root
+export MYSQL_PASSWORD=your_password
+export MYSQL_CHARSET=utf8mb4  # optional
+```
+
+#### Oracle Configuration
+```bash
+export ORACLE_ENABLED=true
+export ORACLE_HOST=localhost
+export ORACLE_PORT=1521
+export ORACLE_SERVICE_NAME=XE
+export ORACLE_USERNAME=system
+export ORACLE_PASSWORD=your_password
+```
+
+#### Redis Configuration
+```bash
+export REDIS_ENABLED=true
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+export REDIS_DB=0
+export REDIS_PASSWORD=your_password  # optional
+export REDIS_DECODE_RESPONSES=true   # optional
+```
+
+#### Filesystem Configuration
+```bash
+# Path restrictions (comma-separated or "*" for full access)
+export FS_ALLOWED_PATHS="/home/user/documents,/tmp"
+
+# Extension restrictions (comma-separated or "*" for all)
+export FS_ALLOWED_EXTENSIONS=".txt,.py,.json,.csv,.md"
+
+# Operation permissions
+export FS_ENABLE_WRITE=true
+export FS_ENABLE_DELETE=false
+
+# Size limit (in bytes)
+export FS_MAX_FILE_SIZE=104857600  # 100MB
+```
+
+### 🤖 Claude Desktop Configuration
+
+Add to your `claude_desktop_config.json`:
+
+#### Basic Configuration (Filesystem Only)
+```json
+{
+  "mcpServers": {
+    "jj-multi-db-mcp": {
+      "command": "uvx",
+      "args": ["jj-multi-db-mcp"],
+      "env": {
+        "FS_ALLOWED_PATHS": "/home/user/documents",
+        "FS_ALLOWED_EXTENSIONS": ".txt,.py,.json,.csv,.md"
+      }
+    }
+  }
+}
+```
+
+#### Full Configuration (All Databases)
+```json
+{
+  "mcpServers": {
+    "jj-multi-db-mcp": {
+      "command": "uvx",
+      "args": ["--from", "jj-multi-db-mcp[all]", "jj-multi-db-mcp"],
+      "env": {
+        "SQLSERVER_ENABLED": "true",
+        "SQLSERVER_HOST": "localhost",
+        "SQLSERVER_USERNAME": "sa",
+        "SQLSERVER_PASSWORD": "your_password",
+        "SQLSERVER_DATABASE": "your_database",
+        "MYSQL_ENABLED": "true",
+        "MYSQL_HOST": "localhost",
+        "MYSQL_USERNAME": "root",
+        "MYSQL_PASSWORD": "your_password",
+        "MYSQL_DATABASE": "your_database",
+        "REDIS_ENABLED": "true",
+        "REDIS_HOST": "localhost",
+        "FS_ALLOWED_PATHS": "/home/user/documents",
+        "FS_ALLOWED_EXTENSIONS": ".txt,.py,.json,.csv,.md"
+      }
+    }
+  }
+}
+```
+
+### 🛠️ Available Tools
+
+#### SQL Server Tools
+- `sqlserver_query` - Execute SELECT queries with parameters
+- `sqlserver_execute` - Execute INSERT/UPDATE/DELETE queries
+- `sqlserver_list_tables` - List all tables in database
+- `sqlserver_table_schema` - Get detailed table schema information
+
+#### MySQL Tools
+- `mysql_query` - Execute SELECT queries with parameters
+- `mysql_execute` - Execute INSERT/UPDATE/DELETE queries
+- `mysql_list_tables` - List all tables in database
+- `mysql_table_schema` - Get detailed table schema information
+
+#### Oracle Tools
+- `oracle_query` - Execute SELECT queries with parameters
+- `oracle_execute` - Execute INSERT/UPDATE/DELETE queries
+- `oracle_list_tables` - List all tables in user schema
+- `oracle_table_schema` - Get detailed table schema information
+
+#### Redis Tools
+- `redis_get` - Get value by key
+- `redis_set` - Set key-value pair with optional TTL
+- `redis_delete` - Delete key from Redis
+- `redis_keys` - List keys matching pattern (supports wildcards)
+
+#### Filesystem Tools
+- `read_file` - Read file contents (respects extension restrictions)
+- `write_file` - Write content to file (creates directories if needed)
+- `list_directory` - List directory contents with metadata
+
+### 📊 Resources
+
+- `status://databases` - Get current database connection status and health
+
+### 🔒 Security Features
+
+- **Path Restrictions**: Limit filesystem access to specific directories
+- **Extension Filtering**: Control which file types can be accessed
+- **Size Limits**: Prevent large file operations (default: 100MB)
+- **Connection Validation**: Secure database connections with pooling
+- **Environment Isolation**: Separate configuration per environment
+- **Write Protection**: Configurable write and delete permissions
+- **Connection Pooling**: Automatic connection management and cleanup
+
+### 🚨 Troubleshooting
+
+#### Common Issues
+
+**1. "Dependencies not installed" error**
+```bash
+# Install specific database support
+pip install jj-multi-db-mcp[sqlserver]  # for SQL Server
+pip install jj-multi-db-mcp[mysql]     # for MySQL
+pip install jj-multi-db-mcp[oracle]    # for Oracle
+pip install jj-multi-db-mcp[redis]     # for Redis
+pip install jj-multi-db-mcp[all]       # for all databases
+```
+
+**2. SQL Server connection issues**
+- Ensure SQL Server is running and accessible
+- Check firewall settings (port 1433)
+- Verify ODBC driver is installed: `ODBC Driver 17 for SQL Server`
+- Test connection string format
+
+**3. MySQL connection issues**
+- Verify MySQL server is running (port 3306)
+- Check user permissions: `GRANT ALL PRIVILEGES ON database.* TO 'user'@'%';`
+- Ensure charset is compatible (utf8mb4 recommended)
+
+**4. Filesystem permission errors**
+- Check `FS_ALLOWED_PATHS` includes the target directory
+- Verify `FS_ALLOWED_EXTENSIONS` includes the file type
+- Ensure `FS_ENABLE_WRITE=true` for write operations
+
+**5. "Full access mode" warning**
+- Set `FS_ALLOWED_PATHS` to restrict filesystem access
+- This warning appears when `FS_ALLOWED_PATHS` is not set or is "*"
+
+#### Debug Mode
+Enable detailed logging by setting environment variable:
+```bash
+export PYTHONPATH=DEBUG
+```
+
+### 🔧 Development
+
+```bash
+# Clone the repository
+git clone https://github.com/ppengit/jj-multi-db-mcp.git
+cd jj-multi-db-mcp
+
+# Install in development mode with all dependencies
+pip install -e .[all]
+
+# Run the server for testing
+python -m jj_multi_db_mcp
+
+# Build package
+python -m build
+```
+
+### 📄 License
+
+MIT License - see LICENSE file for details.
+
+### 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### 📞 Support
+
+- GitHub Issues: [Report bugs or request features](https://github.com/ppengit/jj-multi-db-mcp/issues)
+- Documentation: [Full documentation](https://github.com/ppengit/jj-multi-db-mcp)
+
+### 🙏 Acknowledgments
+
+- Built with [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol)
+- Inspired by [mcp-sqlserver-filesystem](https://github.com/ppengit/mcp-sqlserver-filesystem)
+
+---
+
+## 中文
+
+一个全面的MCP（模型上下文协议）服务器，支持多种数据库和文件系统操作。非常适合AI助手如Claude安全高效地与您的数据库和文件进行交互。
+
+### 🚀 特性
+
+- **🗄️ SQL Server支持**：完整的SQL Server数据库操作，支持连接池
+- **🐬 MySQL支持**：完整的MySQL数据库功能，优化查询性能
+- **🔶 Oracle支持**：全面的Oracle数据库操作（可选依赖）
+- **🔴 Redis支持**：键值对操作，支持TTL管理
+- **📁 文件系统操作**：安全的文件和目录操作，可配置访问限制
+- **⚙️ 环境变量配置**：通过环境变量进行简单配置
+- **📦 uvx兼容**：专为uvx包运行器设计
+- **🔒 安全优先**：可配置的访问控制和安全默认设置
+- **🔌 可选依赖**：只安装您需要的组件
+
+### 🚀 快速开始
+
+#### 使用uvx（推荐）
+
+```bash
+# 安装并运行特定数据库支持
+uvx --from jj-multi-db-mcp[sqlserver,mysql,redis] jj-multi-db-mcp
+
+# 安装所有数据库支持
+uvx --from jj-multi-db-mcp[all] jj-multi-db-mcp
+
+# 基础安装（仅文件系统）
+uvx jj-multi-db-mcp
+```
+
+#### 使用pip
+
+```bash
+# 基础安装（仅文件系统操作）
+pip install jj-multi-db-mcp
+
+# 安装特定数据库支持
+pip install jj-multi-db-mcp[sqlserver,mysql,redis]
+
+# 安装所有数据库支持
+pip install jj-multi-db-mcp[all]
+
+# 运行服务器
+jj-multi-db-mcp
+```
+
+### ⚙️ 配置
+
+使用环境变量配置服务器：
+
+#### SQL Server配置
+```bash
+export SQLSERVER_ENABLED=true
+export SQLSERVER_HOST=localhost
+export SQLSERVER_PORT=1433
+export SQLSERVER_DATABASE=your_database
+export SQLSERVER_USERNAME=sa
+export SQLSERVER_PASSWORD=your_password
+```
+
+#### MySQL配置
+```bash
+export MYSQL_ENABLED=true
+export MYSQL_HOST=localhost
+export MYSQL_PORT=3306
+export MYSQL_DATABASE=your_database
+export MYSQL_USERNAME=root
+export MYSQL_PASSWORD=your_password
+```
+
+#### 文件系统配置
+```bash
+# 路径限制（逗号分隔或"*"表示完全访问）
+export FS_ALLOWED_PATHS="/home/user/documents,/tmp"
+
+# 扩展名限制（逗号分隔或"*"表示所有）
+export FS_ALLOWED_EXTENSIONS=".txt,.py,.json,.csv,.md"
+
+# 操作权限
+export FS_ENABLE_WRITE=true
+export FS_ENABLE_DELETE=false
+```
+
+### 🚨 故障排除
+
+#### 常见问题
+
+**1. "依赖未安装"错误**
+```bash
+# 安装特定数据库支持
+pip install jj-multi-db-mcp[sqlserver]  # SQL Server
+pip install jj-multi-db-mcp[mysql]     # MySQL
+pip install jj-multi-db-mcp[all]       # 所有数据库
+```
+
+**2. SQL Server连接问题**
+- 确保SQL Server正在运行且可访问
+- 检查防火墙设置（端口1433）
+- 验证ODBC驱动已安装
+
+**3. 文件系统权限错误**
+- 检查`FS_ALLOWED_PATHS`包含目标目录
+- 验证`FS_ALLOWED_EXTENSIONS`包含文件类型
+- 确保写操作时`FS_ENABLE_WRITE=true`
+
+### 📄 许可证
+
+MIT许可证 - 详见LICENSE文件。
+
+### 🤝 贡献
+
+欢迎贡献！请随时提交Pull Request。
