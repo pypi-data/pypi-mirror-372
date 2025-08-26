@@ -1,0 +1,57 @@
+"""
+Guest requests crampons and gaiters for icy trail conditions.
+
+ROLES: user (guest preparing for icy hike), assistant (adventure desk renting gear and advising hours)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "rent_hiking_gear",
+    "description": "Arrange rental of hiking gear items.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "gear_items": {"type": "array", "items": {"type": "string"}},
+        "return_date": {"type": "string", "format": "date"}
+      },
+      "required": ["reservation_id", "gear_items", "return_date"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the adventure desk attendant at Glacier Crest Lodge (hotel_id: glacier_crest_mt). Address: 6 Icefall Rd, West Glacier, MT 59936. Timezone: America/Denver. Rental shop hours: 6 AM–8 PM; microspikes, crampons, and gaiters available. Nightly trail briefings at 7 PM in the lobby.
+
+user:
+Morning! Trail talk last night was great. Could I rent crampons and gaiters for tomorrow?
+
+assistant channel=analysis:
+Thank them; ask for reservation ID and return date; include gear list of ["crampons","gaiters"].
+
+assistant channel=final:
+Thanks for joining the briefing! I can set that up—what’s your reservation ID, and what date will you return the gear?
+
+user:
+RSV88442. I’ll return them on 2025-12-28.
+
+assistant channel=analysis:
+Proceed with rental for crampons and gaiters, return date 2025-12-28.
+
+assistant channel=commentary to=tool.rent_hiking_gear:
+{"reservation_id":"RSV88442","gear_items":["crampons","gaiters"],"return_date":"2025-12-28"}
+
+tool.rent_hiking_gear channel=commentary to=assistant:
+{"status":"rented","rental_id":"HIKE-88"}
+
+assistant channel=analysis:
+Confirm rental and mention pickup window.
+
+assistant channel=final:
+All set—crampons and gaiters reserved under HIKE-88, due back 2025-12-28. Pickup anytime after 6 AM at the rental counter.
+

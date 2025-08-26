@@ -1,0 +1,88 @@
+"""
+Guest complains about a loud air conditioner making sleep difficult.
+ROLES: user (guest lodging a complaint), assistant (duty manager resolving issues)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "log_incident",
+    "description": "Log a service incident with time, location, and description.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "description": { "type": "string" },
+        "occurred_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["room_number", "description"]
+    },
+    "strict": true
+  },
+  {
+    "name": "notify_security",
+    "description": "Notify security to patrol a floor for noise issues.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "floor": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["floor"]
+    },
+    "strict": true
+  },
+  {
+    "name": "offer_room_change",
+    "description": "Offer a room change and hold a quiet alternative.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "preferred_features": { "type": "array", "items": { "type": "string", "enum": ["high_floor", "away_from_elevator", "courtyard_view"] } }
+      },
+      "required": ["reservation_id"]
+    },
+    "strict": true
+  },
+  {
+    "name": "issue_service_recovery",
+    "description": "Issue service recovery (points, discount, or amenity).",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "recovery_type": { "type": "string", "enum": ["points", "discount", "amenity"] },
+        "amount": { "type": "integer", "minimum": 1 },
+        "note": { "type": "string" }
+      },
+      "required": ["reservation_id", "recovery_type", "amount"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the duty manager at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Apologize sincerely, act promptly, and only use tools to log incidents, notify security, arrange room changes, and issue service recovery.
+
+user:
+The AC in room 803 rattles loudly all night. Can something be done?
+assistant channel=analysis:
+Log incident, offer quieter room on higher floor away from elevator.
+assistant channel=commentary to=tool.log_incident:
+{"room_number":"803","description":"AC unit rattling loudly","occurred_at":"2025-07-11T00:20:00-04:00"}
+tool.log_incident channel=commentary to=assistant:
+{"incident_id":"INC-803-9822","status":"logged"}
+assistant channel=commentary to=tool.offer_room_change:
+{"reservation_id":"RSV-2025-0711-5566","preferred_features":["high_floor","away_from_elevator"]}
+tool.offer_room_change channel=commentary to=assistant:
+{"status":"held","new_room":"1704","expires_at":"2025-07-12T23:59:00-04:00"}
+assistant channel=final:
+I've logged the issue and held room 1704 for you, which is quieter and on a higher floor. Shall I finalize the move?

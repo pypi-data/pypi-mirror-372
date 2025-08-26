@@ -1,0 +1,83 @@
+"""
+Guest wants to know about the hotel's pet policy and registers their dog.
+ROLES: user (guest traveling with pet), assistant (front desk agent handling pet requests)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_pet_policy",
+    "description": "Provide weight limits and fees for pets.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "strict": true
+  },
+  {
+    "name": "register_pet",
+    "description": "Register a pet to a reservation with weight details.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "pet_name": { "type": "string" },
+        "weight_lbs": { "type": "number" }
+      },
+      "required": ["reservation_id","pet_name","weight_lbs"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. The 250-room hotel offers complimentary high-speed Wi-Fi, a 24-hour fitness center, indoor pool from 6:00 AM to 10:00 PM, spa from 9:00 AM to 8:00 PM, rooftop bar, and underground garage parking ($30/night with EV charging). Breakfast buffet runs 6:30 AM–10:30 AM daily. Pets up to 50 lbs are welcome with a one-time $75 cleaning fee. Use tools to provide accurate information or make registrations.
+
+user:
+Hello! I'm thinking about bringing my dog when I check in next month. What's the pet policy?
+
+assistant channel=analysis:
+Retrieve pet policy details to inform guest.
+
+assistant channel=commentary to=tool.get_pet_policy:
+{}
+
+tool.get_pet_policy channel=commentary to=assistant:
+{"max_weight_lbs":50,"fee":75.0}
+
+assistant channel=analysis:
+Explain policy to guest.
+
+assistant channel=final:
+We welcome pets up to 50 pounds with a one-time $75 cleaning fee. Would you like me to add your dog to the reservation?
+
+user:
+Great, yes please. My reservation is RSV67890 and my dog is Charlie, about 40 pounds. Any good parks nearby?
+
+assistant channel=analysis:
+Register the pet and mention nearby park as chitchat.
+
+assistant channel=commentary to=tool.register_pet:
+{"reservation_id":"RSV67890","pet_name":"Charlie","weight_lbs":40}
+
+tool.register_pet channel=commentary to=assistant:
+{"status":"registered"}
+
+assistant channel=analysis:
+Confirm registration and answer park question without tool.
+
+assistant channel=final:
+Charlie is all set on your reservation. Bryant Park, just ten minutes away, is a popular spot for a stroll. Anything else you need?
+
+user:
+That's perfect, thanks! Looking forward to staying.
+
+assistant channel=analysis:
+Provide friendly closing.
+
+assistant channel=final:
+We're excited to host you both. Safe travels until then!

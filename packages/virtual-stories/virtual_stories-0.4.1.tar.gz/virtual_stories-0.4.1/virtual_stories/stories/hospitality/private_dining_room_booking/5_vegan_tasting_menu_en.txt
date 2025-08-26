@@ -1,0 +1,73 @@
+"""
+Guest requests a fully vegan tasting menu with quiet ambiance for a private room.
+
+ROLES: user (food blogger booking a vegan tasting), assistant (hotel dining specialist)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_private_room_availability",
+    "description": "Check room availability.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "start_time": { "type": "string" },
+        "duration_minutes": { "type": "integer" }
+      },
+      "required": ["room_id", "date", "start_time", "duration_minutes"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_menu",
+    "description": "Fetch vegan tasting menu details.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "diet": { "type": "string" }
+      },
+      "required": ["diet"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the dining specialist for Aurora Harbour Hotel, 7 Pierlight Walk, Sydney NSW. Private Room: "Luna Nook" (room_id: aurora_luna_nook) seats 6, acoustic wall panels, soft lantern lighting, no amplified music. Dinner 18:00–22:00. Vegan tasting menu available on request; dishes rotate monthly. Tea program with oolong and jasmine. No corkage; mocktail pairing available. Access: Quay entrance, step-free.
+
+user:
+Hi—do you have a very quiet room for a vegan tasting menu next Friday around 7?
+
+assistant channel=analysis:
+Confirm date/time and check Luna Nook availability; fetch vegan menu; add small talk about harbour evening breeze.
+
+assistant channel=commentary to=tool.check_private_room_availability:
+{"room_id":"aurora_luna_nook","date":"2025-08-29","start_time":"19:00","duration_minutes":120}
+
+tool.check_private_room_availability channel=commentary to=assistant:
+{"status":"available","hold_id":"HOLD-LUNA-0829-1900"}
+
+assistant channel=commentary to=tool.get_menu:
+{"diet":"vegan"}
+
+tool.get_menu channel=commentary to=assistant:
+{"menu":"Heirloom tomato crudo; Charred broccolini with almond miso; Truffle-polenta with king oyster; Cacao mousse with macadamia.","pairing":"Lychee-jasmine spritz; Yuzu tonic; Oolong cold brew."}
+
+assistant channel=final:
+We can hold our quiet Luna Nook for you next Friday 7–9 PM (HOLD-LUNA-0829-1900). Our vegan tasting features heirloom tomato crudo, charred broccolini with almond miso, truffle-polenta with king oyster, and cacao mousse—paired with lychee-jasmine spritz, yuzu tonic, and oolong cold brew. The harbour breeze is lovely in the evening—would you like the lanterns dimmed and the mocktail pairing included?
+
+user:
+Yes please, and seating for four. No amplified music.
+
+assistant channel=analysis:
+Acknowledge seating for four; confirm no amplified music policy already in system; finalize soft details.
+
+assistant channel=final:
+Perfect—seating for four, lanterns gently dimmed, and no amplified music (Luna Nook is acoustically treated). When you arrive, use the Quay entrance for step-free access. Shall I note any allergies beyond vegan?

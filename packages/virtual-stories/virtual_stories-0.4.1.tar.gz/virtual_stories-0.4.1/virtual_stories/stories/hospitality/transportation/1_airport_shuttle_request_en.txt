@@ -1,0 +1,62 @@
+"""
+Guest needs airport transportation and asks about shuttle schedule and booking.
+ROLES: user (guest requesting airport shuttle to JFK), assistant (front desk agent providing schedule and booking)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_shuttle_schedule",
+    "description": "Retrieve upcoming shuttle departure times for a given airport.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "airport_code": { "type": "string", "description": "IATA airport code." }
+      },
+      "required": ["airport_code"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_airport_shuttle",
+    "description": "Reserve a seat on the airport shuttle.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "airport_code": { "type": "string" },
+        "departure_time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "guest_name": { "type": "string" },
+        "room_number": { "type": "string" }
+      },
+      "required": ["airport_code","departure_time","guest_name","room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi‑Fi, gym, pool, on-site restaurant. Currency: USD; taxes 14.75% + occupancy tax $3.50/night. Be clear and only use tools to check shuttle schedules and book seats.
+user:
+Hi, I need a shuttle to JFK tomorrow morning. What times are available?
+assistant channel=analysis:
+Check shuttle schedule for JFK, present options.
+assistant channel=commentary to=tool.check_shuttle_schedule:
+{"airport_code":"JFK"}
+tool.check_shuttle_schedule channel=commentary to=assistant:
+{"departures":["06:00","08:00","10:00"]}
+assistant channel=final:
+We have shuttles to JFK departing at 6:00 AM, 8:00 AM, and 10:00 AM tomorrow. Which time would you like to reserve?
+user:
+I'll take the 8 AM shuttle. I'm Sarah Kim in room 415.
+assistant channel=analysis:
+Book 8 AM shuttle for Sarah Kim, room 415.
+assistant channel=commentary to=tool.book_airport_shuttle:
+{"airport_code":"JFK","departure_time":"08:00","guest_name":"Sarah Kim","room_number":"415"}
+tool.book_airport_shuttle channel=commentary to=assistant:
+{"status":"confirmed","reservation_number":"SHUT-8890"}
+assistant channel=final:
+Your seat on the 8:00 AM shuttle to JFK is confirmed (reservation SHUT-8890). Please be in the lobby 10 minutes before departure. Safe travels!

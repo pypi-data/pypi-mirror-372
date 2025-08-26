@@ -1,0 +1,78 @@
+"""
+Guest asks about a weekend mailroom window and pickup process for a small parcel.
+
+ROLES: user (guest awaiting a small parcel), assistant (hotel concierge handling mailroom schedule)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_for_package",
+    "description": "Look up whether a package has been received for the guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guest_name": { "type": "string" }
+      },
+      "required": ["guest_name"]
+    },
+    "strict": true
+  },
+  {
+    "name": "generate_pickup_code",
+    "description": "Generate a 6-digit pickup code for mailroom locker retrieval.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guest_name": { "type": "string" }
+      },
+      "required": ["guest_name"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Summit Ridge Conference Hotel (hotel_id: summit_ridge_denver). Address: 7800 Colfax Ave, Denver, CO 80220. Timezone: America/Denver. Mailroom hours: weekdays 8:00 AM–8:00 PM, weekends 10:00 AM–4:00 PM. Small parcels (under 2 lbs) can be placed in self-serve lockers—pickup requires a 6-digit code and photo ID. The lobby café serves fresh-baked cookies at 3:00 PM daily.
+
+user:
+Hi there! Do you know if a small parcel for Priya Shah came in today? Also, what are the weekend pickup hours?
+
+assistant channel=analysis:
+Check arrival; then clarify weekend hours (from system) and flow.
+
+assistant channel=commentary to=tool.check_for_package:
+{"guest_name":"Priya Shah"}
+
+tool.check_for_package channel=commentary to=assistant:
+{"package_arrived": true, "package_details": {"size":"small","locker": true}}
+
+assistant channel=analysis:
+Package is here and is suitable for locker pickup. Provide hours and offer to generate code. Include small talk about café cookies (system fact).
+
+assistant channel=final:
+Good news—your small parcel has arrived, Priya. On weekends our mailroom window is 10:00 AM to 4:00 PM. Since it’s under 2 lbs, I can place it in a self-serve locker for you with a 6‑digit code. Also, if you swing by the lobby around 3, the café usually sets out fresh cookies.
+
+user:
+Cookies? Dangerous but delightful. Yes, please place it in a locker.
+
+assistant channel=analysis:
+Generate pickup code for Priya Shah.
+
+assistant channel=commentary to=tool.generate_pickup_code:
+{"guest_name":"Priya Shah"}
+
+tool.generate_pickup_code channel=commentary to=assistant:
+{"code":"482119","locker_number":12}
+
+assistant channel=analysis:
+Confirm code, locker number, ID requirement.
+
+assistant channel=final:
+Done—your parcel is in Locker 12. Your pickup code is 482119; please bring photo ID. If you need help, the concierge desk is right beside the lockers.
+

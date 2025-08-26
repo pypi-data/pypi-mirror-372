@@ -1,0 +1,62 @@
+"""
+Guest asks for help booking local theater tickets.
+
+ROLES: user (guest interested in a show), assistant (concierge arranging theater tickets)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_theater_tickets",
+    "description": "Reserve tickets for a theater show.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "show_name": {"type": "string"},
+        "show_time": {"type": "string", "format": "date-time"},
+        "seats": {"type": "integer", "minimum": 1, "maximum": 8}
+      },
+      "required": ["reservation_id", "show_name", "show_time", "seats"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Broadway Central Hotel (hotel_id: broadway_central_nyc).
+Address: 210 Theater Row, New York, NY 10036. Phone: (212) 555-0195.
+The hotel features 220 rooms, an in-house ticket desk open 9 AM - 9 PM, a jazz lounge,
+complimentary continental breakfast, and same-day laundry service.
+Check-in 3 PM, check-out 12 PM. Timezone: America/New_York.
+
+user:
+Hi! The jazz in the lobby is great. Could you help me get tickets to a show tonight?
+
+assistant channel=analysis:
+Reply enthusiastically, ask for reservation ID, show name, time, and number of seats.
+
+assistant channel=final:
+I'm glad you're enjoying the tunes! I'd be happy to assist. Could you share your reservation ID, the show you'd like to see, the time, and how many seats you need?
+
+user:
+Thanks! My reservation ID is RSV99999. I'd like two seats for "Hamilton" at 8 PM tonight.
+
+assistant channel=analysis:
+Reserve theater tickets for Hamilton at 2025-08-20 20:00 for 2 seats.
+
+assistant channel=commentary to=tool.reserve_theater_tickets:
+{"reservation_id":"RSV99999","show_name":"Hamilton","show_time":"2025-08-20T20:00:00","seats":2}
+
+tool.reserve_theater_tickets channel=commentary to=assistant:
+{"status":"confirmed","ticket_ids":["TIX-45","TIX-46"]}
+
+assistant channel=analysis:
+Confirm ticket reservation with IDs.
+
+assistant channel=final:
+Your tickets for "Hamilton" at 8 PM tonight are confirmed.
+Ticket numbers TIX-45 and TIX-46 will be ready for pickup at our ticket desk. Enjoy the show!

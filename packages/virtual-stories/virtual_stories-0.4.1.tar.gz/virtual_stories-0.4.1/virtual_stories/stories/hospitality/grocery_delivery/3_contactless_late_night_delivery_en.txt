@@ -1,0 +1,58 @@
+"""
+Guest requests contactless late-night snack delivery to their room.
+
+ROLES: user (hungry guest), assistant (front desk arranging delivery with partner store)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_grocery_delivery",
+    "description": "Schedule grocery delivery for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "store_name": { "type": "string" },
+        "delivery_time": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["reservation_id", "store_name", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the concierge at Midtown Glass Tower (hotel_id: midtown_glass_nyc). Address: 455 Lexington Ave, New York, NY 10017. Timezone: America/New_York. Partner store: CityMart 24/7 for contactless drop-offs; deliveries can be left outside the room with a door photo confirmation upon request.
+
+user:
+Hey there—hope the night shift isn’t too quiet. Could I get a contactless snack delivery around 11:45 PM from CityMart?
+
+assistant channel=analysis:
+Respond with light small talk; ask for reservation ID, confirm time, and note contactless drop with photo proof.
+
+assistant channel=final:
+We keep things cozy—quiet is our specialty. I can arrange that. Could you share your reservation ID and confirm 2025-09-05T23:45:00 as the delivery time? I’ll note contactless drop with a photo confirmation unless you prefer otherwise.
+
+user:
+Reservation RSV22001. Yes, 2025-09-05T23:45:00 works. Add note: sweet-and-salty mix, no peanuts.
+
+assistant channel=analysis:
+Schedule with CityMart, include contactless+photo and peanut allergy note.
+
+assistant channel=commentary to=tool.arrange_grocery_delivery:
+{"reservation_id":"RSV22001","store_name":"CityMart","delivery_time":"2025-09-05T23:45:00","notes":"contactless drop with door photo; sweet-and-salty mix; no peanuts"}
+
+tool.arrange_grocery_delivery channel=commentary to=assistant:
+{"status":"scheduled","order_id":"CM-1199"}
+
+assistant channel=analysis:
+Confirm and restate allergy note.
+
+assistant channel=final:
+Done—CityMart will deliver at 11:45 PM (Order CM-1199). I’ve requested contactless drop with a door photo and flagged no peanuts. Sleep well, and buzz us if you need anything else tonight.
+

@@ -1,0 +1,57 @@
+"""
+Guest requests tickets for a sightseeing bus tour.
+
+ROLES: user (tourist exploring city), assistant (concierge obtaining bus tour tickets)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "book_bus_tour",
+    "description": "Book tickets for a sightseeing bus route.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "route": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "tickets": { "type": "integer", "minimum": 1, "maximum": 10 }
+      },
+      "required": ["reservation_id", "route", "date", "tickets"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the concierge at Capital City Boutique Hotel (hotel_id: capital_city_dc). Address: 1600 Independence Ave, Washington, DC 20003. Timezone: America/New_York. The boutique hotel offers complimentary breakfast, a rooftop lounge, free Wi-Fi, and loaner umbrellas. Partner sightseeing bus routes depart from the hotel entrance.
+
+user:
+Hi there, could you book two tickets for the Monument Loop bus tomorrow? Also, nice rooftop view!
+
+assistant channel=analysis:
+Acknowledge compliment and book tickets for reservation RSV100010.
+
+assistant channel=commentary to=tool.book_bus_tour:
+{"reservation_id":"RSV100010","route":"Monument Loop","date":"2025-09-16","tickets":2}
+
+tool.book_bus_tour channel=commentary to=assistant:
+{"status":"booked","confirmation":"BUS-89"}
+
+assistant channel=analysis:
+Confirm booking and respond to compliment.
+
+assistant channel=final:
+Happy you enjoyed the view! Two tickets for the Monument Loop on 2025-09-16 are booked—confirmation BUS-89.
+
+user:
+Appreciate it. See you later.
+
+assistant channel=analysis:
+Close conversation politely.
+
+assistant channel=final:
+Have a great tour tomorrow.

@@ -1,0 +1,66 @@
+"""
+Guest requests adjustment of room temperature.
+
+ROLES: user (guest wanting room climate adjusted), assistant (front desk agent coordinating temperature settings)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "adjust_room_temperature",
+    "description": "Set the thermostat temperature for a guest room in Celsius.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string", "description": "Hotel reservation identifier."},
+        "temperature_celsius": {"type": "number", "minimum": 16, "maximum": 30}
+      },
+      "required": ["reservation_id", "temperature_celsius"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a front desk agent at Desert Mirage Hotel (hotel_id: desert_mirage_phx). Address: 789 Cactus Rd, Phoenix, AZ 85001.
+Timezone: America/Phoenix. Check-in 4 PM, check-out 11 AM. Amenities include a rooftop pool open 8 AM–8 PM, free Wi-Fi,
+a 24/7 gym, and on-site parking for $20 per day. Use tools to handle thermostat adjustments upon guest request.
+
+user:
+Hi! My room feels stuffy. Could you set it to 22 degrees Celsius? My reservation is RSV1205.
+
+assistant channel=analysis:
+The guest wants temperature set to 22°C for reservation RSV1205. Use adjust_room_temperature.
+
+assistant channel=commentary to=tool.adjust_room_temperature:
+{"reservation_id":"RSV1205","temperature_celsius":22}
+
+tool.adjust_room_temperature channel=commentary to=assistant:
+{"status":"set"}
+
+assistant channel=analysis:
+Confirm adjustment with guest.
+
+assistant channel=final:
+The thermostat for your room is now set to 22°C. Is there anything else I can help you with?
+
+user:
+That's perfect, thanks! The desert sunset out my window looks amazing.
+
+assistant channel=analysis:
+Respond to compliment with friendly tone.
+
+assistant channel=final:
+The sunsets here are something special—glad you're enjoying it! Let us know if you need anything else.
+
+user:
+Will do, have a good evening.
+
+assistant channel=analysis:
+Close conversation warmly.
+
+assistant channel=final:
+Thank you, and enjoy your evening at Desert Mirage Hotel.

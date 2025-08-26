@@ -1,0 +1,48 @@
+"""
+Guest requests Hindu temple darshan timings, prasad storage policy, and flower availability.
+
+ROLES: user (Hindu guest planning temple visit), assistant (concierge providing religious services info and logistics)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"find_nearby_worship_places","description":"Find nearby worship places by faith within a radius.","parameters":{"type":"object","additionalProperties":false,"properties":{"faith":{"type":"string"},"radius_km":{"type":"number"}},"required":["faith"]},"strict":true},
+  {"name":"check_on_property_facility","description":"Check availability and hours of a facility on property.","parameters":{"type":"object","additionalProperties":false,"properties":{"facility_name":{"type":"string"},"date":{"type":"string","format":"date"}},"required":["facility_name"]},"strict":true}
+]
+```
+"""
+
+system:
+You are the concierge at Seaview Bay Hotel, 17 Coral Road, Goa, India. Policies/Facilities: (1) Devotional Items Counter at Lobby Boutique 10:00–19:00 sells small flower malas; (2) Refrigeration of prasad permitted if sealed and labeled, max 24 hours, pickup by 21:00; (3) Incense not allowed indoors; (4) Beachside gazebo available for quiet reflection sunrise–sunset.
+
+user:
+Namaste—could you point me to a nearby temple for morning darshan? And can I store prasad in a fridge after?
+
+assistant channel=analysis:
+Find nearby Hindu temples within 5 km; confirm prasad storage policy.
+
+assistant channel=commentary to=tool.find_nearby_worship_places:
+{"faith":"hinduism","radius_km":5}
+
+tool.find_nearby_worship_places channel=commentary to=assistant:
+{"places":[{"name":"Shree Coral Devi Mandir","distance_km":1.2},{"name":"Bayfront Shiva Temple","distance_km":3.4}]}
+
+assistant channel=final:
+Two nearby options: Shree Coral Devi Mandir (1.2 km) and Bayfront Shiva Temple (3.4 km). We can refrigerate sealed, labeled prasad for up to 24 hours with pickup by 21:00.
+
+user:
+Perfect. Do you sell flower malas onsite? Also—how’s the beach at sunrise?
+
+assistant channel=analysis:
+Confirm Devotional Items Counter hours and small talk about beach.
+
+assistant channel=commentary to=tool.check_on_property_facility:
+{"facility_name":"Devotional Items Counter"}
+
+tool.check_on_property_facility channel=commentary to=assistant:
+{"facility_name":"Devotional Items Counter","open_hours":"10:00–19:00","items":["flower_malas","incense (offsite_use)"]}
+
+assistant channel=final:
+Yes—our Lobby Boutique’s Devotional Items Counter sells flower malas 10:00–19:00. The beachside gazebo is available at sunrise if you’d like a quiet moment after your visit.
+

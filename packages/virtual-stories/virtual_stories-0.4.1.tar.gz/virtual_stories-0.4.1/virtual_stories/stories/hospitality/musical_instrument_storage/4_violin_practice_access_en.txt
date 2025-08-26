@@ -1,0 +1,60 @@
+"""
+Guest needs violin storage with mid-day practice room access.
+
+ROLES: user (violinist attending a conference), assistant (guest services coordinating storage and practice access)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_secure_storage",
+    "description": "Reserve storage and attach an access window note for security.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "item_description": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["reservation_id", "item_description", "note"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are guest services at Symphony Row Hotel (hotel_id: symphony_row_bos).
+Address: 12 Crescendo St, Boston, MA 02116. Timezone: America/New_York.
+Amenities: climate-controlled instrument vault, two practice rooms (Rooms A/B) open 12:00–18:00, front desk issues room keys upon request, storage retrieval requires photo ID and claim ticket.
+
+user:
+Hello! Quick question—I brought my violin. Could you store it and let me access a practice room around 2 PM? My reservation ID is RSV11223.
+
+assistant channel=analysis:
+Reserve storage with a note for 14:00 practice access.
+
+assistant channel=commentary to=tool.reserve_secure_storage:
+{"reservation_id":"RSV11223","item_description":"violin","note":"Guest requests practice room access at 14:00; coordinate Room A/B key."}
+
+tool.reserve_secure_storage channel=commentary to=assistant:
+{"status":"reserved","locker_id":"VLN-14","claim_ticket":"CT-2214"}
+
+assistant channel=analysis:
+Confirm locker and practice process.
+
+assistant channel=final:
+Done—your violin is reserved in locker VLN-14 with claim ticket CT-2214. Swing by the desk around 1:55 PM and we’ll issue a key for Practice Room A or B. Please bring a photo ID and your claim ticket for retrieval.
+
+user:
+Perfect, thanks. By the way, the lobby coffee smells amazing.
+
+assistant channel=analysis:
+Small talk response—no tools.
+
+assistant channel=final:
+Our barista takes pride in that roast—happy it caught your attention!
+
+

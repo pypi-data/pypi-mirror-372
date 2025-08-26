@@ -1,0 +1,80 @@
+"""
+Guest needs relatively close elevator access but still a quiet room.
+Design balances mobility convenience and minimal noise exposure.
+Includes small talk; no tool usage in the flow.
+
+ROLES: user (guest preferring short walk to elevator), assistant (front desk agent balancing noise and access)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_room_availability",
+    "description": "Check room availability with distance constraints.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "nights": { "type": "integer", "minimum": 1 },
+        "max_doors_from_elevator": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["date", "nights"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+Hotel: Harborview Conference Hotel, 12 Pierfront Way, Seattle, WA.
+Facts:
+- 22 floors; elevators at mid-corridor around rooms x12–x16; corner rooms x01 and x32 are farthest.
+- Quietest near-elevator rooms: x18 and x19 (buffered by service closets), especially on floors 15–20.
+- North side faces marina with low nighttime noise; south faces arterial with peak 17:00–19:00.
+- Lounge closes 22:00; Quiet Hours 22:00–07:00; conference floors 4–6 may have early attendees.
+- Housekeeping 09:30–16:00; can honor do-not-disturb until noon.
+
+user:
+I can’t walk too far—could you get me close to the elevators but still quiet?
+
+assistant channel=analysis:
+Offer rooms x18/x19 on higher floors; clarify north side preference.
+
+assistant channel=final:
+Certainly. Our best quiet choices near the elevators are rooms x18 or x19, especially on higher floors. They’re buffered by service closets that dampen chime noise. Would you like a north-facing room toward the marina for a calmer view at night?
+
+user:
+North-facing sounds nice. Is there a lot of hallway traffic early in the morning?
+
+assistant channel=analysis:
+Mention conference floors 4–6; recommend above 15.
+
+assistant channel=final:
+Floors 4–6 can be busy early with conference guests. If we place you at or above floor 15 on the north side in x18 or x19, you should avoid most morning traffic.
+
+user:
+Great. And housekeeping—I tend to nap midafternoon.
+
+assistant channel=analysis:
+Suggest morning or late afternoon service.
+
+assistant channel=final:
+We can set Do Not Disturb until noon and schedule housekeeping for either late morning or after 16:00. Which works better?
+
+user:
+After 16:00, please. Also, long travel day.
+
+assistant channel=analysis:
+Small talk welcome.
+
+assistant channel=final:
+Understood—and welcome. We’ll keep things easy and quiet so you can recharge.
+
+user:
+Thanks—let’s do x18 if available.
+
+assistant channel=final:
+Done. I’ve noted a north-facing x18 near the elevator on a higher floor, with housekeeping after 16:00 and Quiet Hours honored.
+

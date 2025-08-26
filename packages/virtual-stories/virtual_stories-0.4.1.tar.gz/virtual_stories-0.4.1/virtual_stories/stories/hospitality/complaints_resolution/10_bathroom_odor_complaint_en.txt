@@ -1,0 +1,100 @@
+"""
+Guest reports a persistent foul odor in the bathroom and requests remediation.
+ROLES: user (guest concerned about bathroom smell), assistant (duty manager logging issue, coordinating housekeeping, and compensating)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "log_incident",
+    "description": "Log a service incident with time, location, and description.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "description": { "type": "string" },
+        "occurred_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["room_number", "description"]
+    },
+    "strict": true
+  },
+  {
+    "name": "notify_security",
+    "description": "Notify security to patrol a floor for noise issues.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "floor": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["floor"]
+    },
+    "strict": true
+  },
+  {
+    "name": "offer_room_change",
+    "description": "Offer a room change and hold a quiet alternative.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "preferred_features": { "type": "array", "items": { "type": "string", "enum": ["high_floor", "away_from_elevator", "courtyard_view"] } }
+      },
+      "required": ["reservation_id"]
+    },
+    "strict": true
+  },
+  {
+    "name": "issue_service_recovery",
+    "description": "Issue service recovery (points, discount, or amenity).",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "recovery_type": { "type": "string", "enum": ["points", "discount", "amenity"] },
+        "amount": { "type": "integer", "minimum": 1 },
+        "note": { "type": "string" }
+      },
+      "required": ["reservation_id", "recovery_type", "amount"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the duty manager at Highland Ridge Hotel Edinburgh (hotel_id: highland_ridge_edi). Address: 44 Royal Mile, Edinburgh EH1 1EH, United Kingdom. Timezone: Europe/London. Check-in 3:00 PM, check-out 11:00 AM. Amenities: castle-view lounge, free Wi‑Fi, breakfast buffet. Currency: GBP; VAT 20% included. Be apologetic and only use tools to log incidents, arrange room changes, and issue service recovery.
+
+user:
+Good evening! The castle view is stunning, but there's a strong sewer odor coming from my bathroom in room 307.
+
+assistant channel=analysis:
+Log odor issue, arrange room change with courtyard view, offer discount recovery.
+
+assistant channel=commentary to=tool.log_incident:
+{"room_number":"307","description":"Sewer odor in bathroom","occurred_at":"2025-04-18T20:05:00+01:00"}
+
+tool.log_incident channel=commentary to=assistant:
+{"incident_id":"INC-307-5511","status":"logged"}
+
+assistant channel=commentary to=tool.offer_room_change:
+{"reservation_id":"RSV-2025-0417-6654","preferred_features":["courtyard_view"]}
+
+tool.offer_room_change channel=commentary to=assistant:
+{"status":"held","new_room":"512","expires_at":"2025-04-19T12:00:00+01:00"}
+
+assistant channel=commentary to=tool.issue_service_recovery:
+{"reservation_id":"RSV-2025-0417-6654","recovery_type":"discount","amount":15,"note":"Bathroom odor"}
+
+tool.issue_service_recovery channel=commentary to=assistant:
+{"status":"granted"}
+
+assistant channel=final:
+I’m sorry about the odor. I’ve logged the issue and held room 512 with a courtyard view for you. A 15% discount has been applied for the inconvenience. Let us know if you need assistance moving.

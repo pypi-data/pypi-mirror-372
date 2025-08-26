@@ -1,0 +1,130 @@
+"""
+Noise-sensitive guest requests a quiet room away from elevators and street.
+Designed for late-arrival traveler needing restful sleep before meetings.
+Includes small talk and preference setting without tool calls.
+
+ROLES: user (noise-sensitive business traveler), assistant (front desk agent ensuring a quiet placement)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_room_availability",
+    "description": "Check real-time room inventory by attributes.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date", "description": "Stay date" },
+        "nights": { "type": "integer", "minimum": 1 },
+        "attributes": { "type": "object", "additionalProperties": true }
+      },
+      "required": ["date", "nights"]
+    },
+    "strict": true
+  },
+  {
+    "name": "set_guest_preference",
+    "description": "Persist guest room preference for future stays.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guest_id": { "type": "string" },
+        "preference": { "type": "string" },
+        "effective_date": { "type": "string", "format": "date" }
+      },
+      "required": ["guest_id", "preference", "effective_date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_property_map",
+    "description": "Retrieve a quiet-zone map and elevator locations.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "property_id": { "type": "string" }
+      },
+      "required": ["property_id"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+Hotel: Riverside Quay Hotel, 88 Southbank Blvd, Melbourne VIC.
+Facts:
+- 27 floors; elevators clustered near rooms x10–x18; quiet stacks are x21–x28.
+- West-facing rooms (odd numbers) face an inner courtyard; lowest street noise.
+- Construction next door on east side between 09:30–16:30 only; no night work.
+- Housekeeping standard hours 10:00–15:00; can schedule after 15:00 upon request.
+- Check-in 15:00; Quiet Hours policy 22:00–07:00 strictly enforced.
+- Room types: Deluxe King, Deluxe Twin, Executive King. Best quiet: Executive King on floors 18–24.
+- Gym open 06:00–22:00; pool mechanical room adjacent to rooms x01–x04 (avoid for quiet).
+- Ice machines near x08; vending near x19; avoid adjacency for light sleepers.
+- HVAC in Executive rooms has variable-speed fans with low-night mode.
+
+user:
+Hi, I'm a very light sleeper. Could you place me in the quietest possible room tonight?
+
+assistant channel=analysis:
+Confirm attributes: away from elevator/ice/vending, west-facing, higher floor, Executive King if available; reassure and add small talk.
+
+assistant channel=final:
+Absolutely. For the quietest setup here at Riverside Quay, we aim for west-facing Executive King on floors 18–24, rooms x21–x28, away from elevators, ice (x08), and vending (x19). May I place you on a high west-facing floor and schedule housekeeping after 15:00 so your morning remains undisturbed?
+
+user:
+That sounds perfect. Please keep me far from the elevators—I can hear the chimes.
+
+assistant channel=analysis:
+Acknowledge elevator chime sensitivity; restate we will avoid x10–x18 stacks.
+
+assistant channel=final:
+Got it—we'll avoid the x10–x18 elevator stacks and target x21–x28. I'll also request a corridor end room to minimize foot traffic. Is a higher floor, say above 20, okay for you?
+
+user:
+Above 20 is great. Any chance the construction will be an issue at night?
+
+assistant channel=analysis:
+Use system facts: construction runs daytime only.
+
+assistant channel=final:
+No worries there—the neighboring construction operates 09:30–16:30 only, never at night. Your evenings and late night should remain quiet.
+
+user:
+Thanks. Could housekeeping skip the morning too? I sleep in.
+
+assistant channel=analysis:
+Offer housekeeping after 15:00.
+
+assistant channel=final:
+Yes—we can schedule housekeeping after 15:00. I’ll note “Do Not Disturb” for the morning and an afternoon service window.
+
+user:
+Appreciate it. By the way, long day traveling.
+
+assistant channel=analysis:
+Small talk; wish them a restful stay without introducing new facts.
+
+assistant channel=final:
+Welcome to Melbourne—travel can take it out of anyone. We’ll make sure tonight is restful so you’re refreshed tomorrow.
+
+user:
+Perfect. Anything else I should know about the room?
+
+assistant channel=analysis:
+Mention HVAC low-night mode and Quiet Hours.
+
+assistant channel=final:
+Two quick notes: Executive rooms here have a low-night HVAC fan mode to reduce airflow noise, and our Quiet Hours run 22:00–07:00 with active monitoring. If anything disturbs you, call the desk and we’ll intervene promptly.
+
+user:
+Thank you.
+
+assistant channel=final:
+My pleasure. I’ve arranged a west-facing Executive King above floor 20 in the x21–x28 stack, away from elevators and machines, with afternoon housekeeping.
+

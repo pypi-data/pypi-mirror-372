@@ -1,0 +1,64 @@
+"""
+Casting to in‑room Smart TV over Wi‑Fi; verify mDNS and VLAN.
+ROLES: user (guest attempting to cast to TV), assistant (IT enabling casting traffic)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "mdns_probe",
+    "description": "Probe mDNS discovery for casting devices from a room network.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "service": {"type": "string"}
+      },
+      "required": ["room_number", "service"]
+    },
+    "strict": true
+  },
+  {
+    "name": "enable_cast_vlan_routing",
+    "description": "Enable cross‑VLAN mDNS reflector for room casting.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"}
+      },
+      "required": ["room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+Property: Cityline Suites, 18th Street
+Wi‑Fi: SSID "Cityline_Guest"; in‑room Smart TVs on IoT VLAN with mDNS reflector
+Help: Dial 77 for IT
+
+user:
+I can’t see my room TV when I try to cast from my phone in 1820.
+
+assistant channel=analysis:
+Probe mDNS; if blocked, enable reflector for room; provide brief tip.
+
+assistant channel=commentary to=tool.mdns_probe:
+{"room_number":"1820","service":"_googlecast._tcp"}
+
+tool.mdns_probe channel=commentary to=assistant:
+{"devices_found":0}
+
+assistant channel=commentary to=tool.enable_cast_vlan_routing:
+{"room_number":"1820"}
+
+tool.enable_cast_vlan_routing channel=commentary to=assistant:
+{"status":"ok"}
+
+assistant channel=final:
+Casting is now enabled for your room. Please reopen your casting app and look for the TV again on "Cityline_Guest". If it doesn’t appear right away, toggling Wi‑Fi off/on helps.
