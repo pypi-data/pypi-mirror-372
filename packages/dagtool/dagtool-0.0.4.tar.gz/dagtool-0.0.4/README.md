@@ -1,0 +1,227 @@
+from airflow.utils.task_group import TaskGroupfrom airflow import DAG
+
+# DAG Tool
+
+A **Friendly Airflow DAG Build Tool** for Data Engineer with YAML file template.
+
+> [!WARNING]
+> This project will reference the DAG generate code from the [Astronomer: DAG-Factory](https://github.com/astronomer/dag-factory).
+> But I replace some logic that fit with ETL propose for Data Engineer.
+
+> [!NOTE]
+> **Disclaimer**: This project will override all necessary parameters that should
+> pass to Airflow object with ETL context for Data Engineer use-case. So, if you
+> want to use and enhance this project, you can fork this project anytime without
+> notice me.
+
+**Feature Supported**:
+
+- ✅ JSON Schema Validation
+- 🔐 Passing environment variable
+- 💚 Allow Passing Airflow Template
+
+From my opinion, a data Engineer should focus on the user requirement instead of
+focusing on the Python code when it need creates a new DAG in our Airflow application.
+
+So, this project focus for this plain to make sure that all DAG can readable and easy to
+maintain with the same standard when we want to scale up and out the Airflow application
+support 10 to 1000 DAGs.
+
+<p align="center">
+  <img src="./docs/img/overview.png" width="720" height="360">
+</p>
+
+**File Structure**:
+
+```text
+dags/
+├── { domain }/
+│     ├── { module-dags }/
+│     │     ├── __init__.py
+│     │     ├── dag.yml
+│     │     ├── variables.yml
+│     │     └── assets/
+│     │         ├── dag-schema-mapping.json
+│     │         └── dag-transform-query.sql
+│     │
+│     └── { module-dags }/
+│           ├── __init__.py
+```
+
+> [!NOTE]
+> I think this project should support multiple DAGs structure like:
+>
+> ```text
+> dags/
+> ├── { domain }/
+> │     ├── { module-dags }/
+> │     │     ├── __init__.py
+> │     │     ├── dag-{ name-1 }.yml
+> │     │     ├── dag-{ name-2 }.yml
+> │     │     ├── variables.yml
+> │     │     └── assets/
+> │     │         ├── dag-case-1-schema-mapping.json
+> │     │         ├── dag-case-1-transform-query.sql
+> │     │         ├── dag-case-2-schema-mapping.json
+> │     │         └── dag-case-2-transform-query.sql
+> │     │
+> │     └── { module-dags }/
+> │           ├── __init__.py
+> ```
+
+**Execution Flow**:
+
+The flow of this project provide the interface Pydantic Model before
+passing it to Airflow objects.
+
+```text
+S --> Template --> Pydantic Model --> DAG/Operator Objects --> Execute --> E
+```
+
+**CI Flow**:
+
+```text
+S --> DAGs      --> GitSync     --> Airflow K8s Pod
+  --> Variables --> API Sync    --> Airflow Variables
+  --> Assets    --> CI Merge
+```
+
+## 📦 Installation
+
+> [!WARNING]
+> This package does not publish to PyPI yet.
+
+```shell
+uv pip install -U dagtool
+```
+
+| Airflow Version  | Supported | Noted                                                          |
+|:----------------:|:---------:|----------------------------------------------------------------|
+|     `2.7.1`      |     ✅     | This is the first Airflow version that this project supported. |
+| `>=2.7.1,<3.0.0` |     ❌     | Common version support for Airflow version `2.x.x`             |
+|    `>=3.x.x`     |     ❌     | Common version support for Airflow version `3.x.x`             |
+
+## 🎯 Usage
+
+This DAG generator engine need you define the `dag.yml` file and set engine
+object to get the current path on `__init__.py` file.
+
+### DAG Template
+
+> [!NOTE]
+> If you want to dynamic environment config on the `dag.yaml` file, you can use a
+> `variable.yaml` file for dynamic value that marking on config template via macro
+> function, `{{ vars('keystore-on-dag-name') }}`.
+
+On the `dag-transaction.yml` file:
+
+```yaml
+name: transaction
+schedule: "@daily"
+owner: "de-oncall@email.com,de@email.com"
+catchup: "{{ vars('catchup') }}"
+tags:
+  - "domain:sales"
+  - "tier:1"
+  - "schedule:daily"
+tasks:
+  - task: start
+    op: empty
+
+  - group: etl_master
+    upstream: start
+    tasks:
+      - type: extract
+        op: python
+        caller: get_api_data
+        params:
+          path: gcs://{{ vars("PROJECT_ID") }}/sales/master/date/{ exec_date:%y }
+
+      - task: transform
+        upstream: extract
+        op: operator
+        uses: gcs_transform_data
+        params:
+          path: gcs://{{ vars("PROJECT_ID") }}/landing/master/date/{ exec_date:%y }
+
+      - task: sink
+        upstream: transform
+        op: custom
+        uses: write_iceberg
+        params:
+          path: gcs://{{ vars("PROJECT_ID") }}
+
+  - task: end
+    upstream: etl_master
+    op: empty
+```
+
+On the `__inti__.py` file:
+
+```python
+"""# SALES DAG
+
+This DAG will extract data from Google Cloud Storage to Google BigQuery LakeHouse
+via DuckDB engine.
+
+> This DAG is the temp DAG for ingest data to GCP.
+"""
+from dagtool import DagTool, BaseTask, Context
+
+from airflow.models import DAG
+from airflow.utils.dates import days_ago
+from airflow.utils.task_group import TaskGroup
+from airflow.operators.empty import EmptyOperator
+
+# NOTE: Some external provider operator object.
+from airflow.providers.google.cloud.operators import GCSTransformData
+
+# NOTE: Some function that want to use with PythonOperator
+def get_api_data(path: str):
+    return {}
+
+# NOTE: Some custom task that create any Airflow Task instance object.
+class WriteIceberg(BaseTask):
+    path: str
+
+    def build(
+        self,
+        dag: DAG | None = None,
+        task_group: TaskGroup | None = None,
+        context: Context | None = None,
+    ) -> TaskGroup:
+        with TaskGroup(
+            group_id="write_iceberg",
+            parent_group=task_group,
+            dag=dag,
+        ) as tg:
+            t1 = EmptyOperator(task_id="prepare", dag=dag)
+            t2 = EmptyOperator(task_id="write", dag=dag)
+            t2.set_upstream(t1)
+        return tg
+
+
+tool = DagTool(
+    name="sales",
+    path=__file__,
+    docs=__doc__,
+    operators={"gcs_transform_data": GCSTransformData},
+    python_callers={"get_api_data": get_api_data},
+    tasks={"write_iceberg": WriteIceberg},
+)
+tool.build_airflow_dags_to_globals(
+    gb=globals(),
+    default_args={"start_date": days_ago(2)},
+)
+```
+
+**Output**:
+
+The DAG that was built from this package will have the name is, `sales_transaction`.
+
+## 💬 Contribute
+
+I do not think this project will go around the world because it has specific propose,
+and you can create by your coding without this project dependency for long term
+solution. So, on this time, you can open [the GitHub issue on this project :raised_hands:](https://github.com/ddeutils/dagtool/issues)
+for fix bug or request new feature if you want it.

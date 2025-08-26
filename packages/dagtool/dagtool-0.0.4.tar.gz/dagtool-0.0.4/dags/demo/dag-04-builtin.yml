@@ -1,0 +1,73 @@
+name: 04_builtin
+type: dag
+desc: Builtin DAG that use for call builtin operator.
+docs: |
+  ## Builtin DAG
+
+  This is the demo dag for using builtin task to DAG object.
+start_date: "2025-01-01"
+owner: "de-oncall@email.com"
+tags:
+  - "group:demo"
+  - "tool:true"
+  - "domain:demo"
+tasks:
+  - task: start
+    op: empty
+
+  - group: call_bash_group
+    upstream: start
+    tasks:
+      - task: call_cmd
+        op: bash
+        command: "echo \"${AIRFLOW_ENV}\""
+
+      - task: call_file
+        op: bash
+        # NOTE: This task allow to search jinja template from the `assets/` path.
+        command: "dag-04-bash-script.sh"
+        append_env: true
+        env:
+#          PROJECT_ID: "{{ vars('project_id') }}"
+          PROJECT_ID: "Direct-project-id"
+          BUCKET_ID: "Direct-bucket-id"
+          NEW_ENV: "{{ env('AIRFLOW_ENV') }}-prepare"
+
+  - group: call_python_group
+    upstream: start
+    tasks:
+      - task: call_python
+        op: python
+        caller: say_hi
+        params:
+          name: "World"
+
+      - task: call_python_via_render
+        op: python
+        caller: say_hi
+
+      - task: check_result
+        upstream: call_python
+        op: debug
+        params:
+          # NOTE: Pull Xcom does not support when use task ids `call_python`
+          #   without group ids prefix.
+          result: "{{ task_instance.xcom_pull(task_ids='call_python_group.call_python') }}"
+
+  - group: call_custom_group
+    upstream: start
+    tasks:
+
+      - task: call_custom
+        op: custom_task
+        uses: demo_task
+        params:
+          name: "Jerry"
+
+      - task: call_operator
+        op: operator
+        from: import_debug
+        params:
+          debug:
+            foo: bar
+            test: "{{ env('AIRFLOW_ENV') }}"
