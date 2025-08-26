@@ -1,0 +1,72 @@
+FROM python:3.11-slim
+
+# Mark as preserved
+LABEL cli-arena.preserve=true
+
+# Install system deps including Go
+RUN apt-get update && apt-get install -y \
+    git curl bash wget \
+    && wget -q https://golang.org/dl/go1.21.5.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz \
+    && rm go1.21.5.linux-amd64.tar.gz \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/usr/local/go/bin:$PATH"
+ENV GOPATH="/go"
+ENV PATH="$GOPATH/bin:$PATH"
+
+# Install Python packages
+RUN pip install --no-cache-dir \
+    anthropic \
+    google-generativeai \
+    openai \
+    requests \
+    PyYAML \
+    python-dotenv \
+    pytest \
+    httpx \
+    fastapi \
+    uvicorn \
+    sqlalchemy \
+    python-jose \
+    passlib \
+    python-multipart \
+    bcrypt
+
+# Create claude-code CLI wrapper
+RUN cat > /usr/local/bin/claude-code << 'EOF' && chmod +x /usr/local/bin/claude-code
+#!/usr/bin/env python3
+import os
+import sys
+import json
+
+# Check for API key
+api_key = os.environ.get('ANTHROPIC_API_KEY')
+if not api_key:
+    print("Error: ANTHROPIC_API_KEY not set", file=sys.stderr)
+    sys.exit(1)
+
+# Read instruction from stdin
+instruction = sys.stdin.read()
+
+try:
+    from anthropic import Anthropic
+    client = Anthropic(api_key=api_key)
+    
+    # Add JSON output instruction
+    full_prompt = instruction + "\n\nReturn your response as raw JSON with a 'commands' array like: {\"commands\":[\"cmd1\",\"cmd2\"]}"
+    
+    message = client.messages.create(
+        model='claude-3-5-sonnet-20241022',
+        max_tokens=4000,
+        messages=[{"role": "user", "content": full_prompt}]
+    )
+    
+    print(message.content[0].text)
+    
+except Exception as e:
+    print(f"Error: {e}", file=sys.stderr)
+    sys.exit(1)
+EOF
+
+WORKDIR /app
