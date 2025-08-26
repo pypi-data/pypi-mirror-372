@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  shellhorn-monitor:
+    image: ghcr.io/mitchins/shellhorn/monitor:latest
+    container_name: shellhorn-monitor
+    restart: unless-stopped
+    
+    # Environment variables (override in .env file)
+    environment:
+      - MQTT_BROKER=${MQTT_BROKER:-localhost}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_TOPIC_PREFIX=${MQTT_TOPIC_PREFIX:-shellhorn}
+      - SHELLHORN_TIMEOUT_MINUTES=${SHELLHORN_TIMEOUT_MINUTES:-30}
+      - SHELLHORN_CHECK_INTERVAL=${SHELLHORN_CHECK_INTERVAL:-60}
+      - SHELLHORN_STATUS_INTERVAL=${SHELLHORN_STATUS_INTERVAL:-300}
+    
+    # Mount config directory (recommended approach)
+    volumes:
+      - ./config:/config:ro
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s = socket.socket(); s.settimeout(5); result = s.connect_ex(('${MQTT_BROKER:-localhost}', int('${MQTT_PORT:-1883}'))); s.close(); exit(result)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    
+    # Security settings
+    user: "1001:1001"
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=10m
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
+        reservations:
+          memory: 16M
+          cpus: '0.05'
+    
+    # Network
+    networks:
+      - shellhorn-network
+
+networks:
+  shellhorn-network:
+    driver: bridge
