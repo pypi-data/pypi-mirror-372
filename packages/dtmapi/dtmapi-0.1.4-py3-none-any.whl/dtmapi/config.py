@@ -1,0 +1,5 @@
+IDP_ADMIN_0_API="https://dtm-apim.iom.int/v3/displacement/admin0"
+IDP_ADMIN_1_API="https://dtm-apim.iom.int/v3/displacement/admin1"
+IDP_ADMIN_2_API="https://dtm-apim.iom.int/v3/displacement/admin2"
+COUNTRY_LIST_API="https://dtm-apim.iom.int/v3/displacement/country-list"
+OPERATION_LIST_API="https://dtm-apim.iom.int/v3/displacement/operation-List"
