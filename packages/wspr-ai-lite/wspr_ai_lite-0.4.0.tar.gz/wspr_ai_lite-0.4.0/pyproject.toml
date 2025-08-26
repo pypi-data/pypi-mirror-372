@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=70"]  # removed setuptools-scm since version is static
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wspr-ai-lite"
+version = "0.4.0"
+requires-python = ">=3.11"
+readme = "README.md"
+description = "Lightweight WSPR analytics: DuckDB ingest + Streamlit dashboard."
+license = "MIT"
+authors = [{ name = "Greg Beam (KI7MT)" }]
+keywords = ["wspr", "ham radio", "duckdb", "streamlit", "amateur radio", "analytics"]
+
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Environment :: Console",
+]
+
+# Runtime deps
+dependencies = [
+    "duckdb>=1.3.0",          # you tested against 1.3.2 in CI
+    "streamlit>=1.48.0",      # aligns with smoke/pypi runs
+    "pandas>=2.2",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pre-commit",
+    "build",          # so: python -m build works in dev
+    "hatchling>=1.25" # handy if you use hatch locally
+]
+
+mcp = [
+  # add the libs your MCP server actually uses, e.g.:
+  # "fastapi>=0.110",
+  # "uvicorn>=0.29",
+  # "mcp>=0.1",
+]
+
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-macros-plugin",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wspr_ai_lite"]
+
+[project.scripts]
+wspr-ai-lite = "wspr_ai_lite.cli:cli"
+wspr-ai-lite-mcp = "wspr_ai_lite.mcp.server:cli"
+wspr-ai-lite-tools = "wspr_ai_lite.tools:cli"
+wspr-ai-lite-fetch = "wspr_ai_lite.fetch:cli"
+wspr-lite = "wspr_ai_lite.cli:deprecated_entrypoint"
+
+[project.urls]
+Homepage = "https://github.com/KI7MT/wspr-ai-lite"
+Documentation = "https://ki7mt.github.io/wspr-ai-lite/"
+Source = "https://github.com/KI7MT/wspr-ai-lite"
+Issues = "https://github.com/KI7MT/wspr-ai-lite/issues"
+Changelog = "https://github.com/KI7MT/wspr-ai-lite/blob/main/CHANGELOG.md"
+
+[tool.interrogate]
+fail-under = 70
+verbose = true
+ignore-init-method = true
+ignore-magic = true
+ignore-private = true
+exclude = [".venv", "data", "site", "build", "dist", "tmp", "temp", ".pytest_cache", "__pycache__"]
+color = true
+
+[tool.setuptools.package-data]
+"wspr_ai_lite.mcp" = ["manifest.json"]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.0.0"            # Commitizen needs a version; it won’t bump unless you use cz bump
+tag_format = "v$version"
+# Optional: restrict scopes you commonly use
+# allowed_scopes = ["ui","ingest","tools","docs","mcp","build","ci"]
