@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>队列 - Jettask Monitor</title>
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Ant Design -->
+    <link rel="stylesheet" href="https://unpkg.com/antd@4.24.13/dist/antd.min.css" />
+    <script src="https://unpkg.com/moment@2.29.4/moment.js"></script>
+    <script src="https://unpkg.com/antd@4.24.13/dist/antd.min.js"></script>
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #177ddc;
+            --primary-gradient: linear-gradient(135deg, #1f1f1f 0%, #434343 100%);
+            --success-color: #49aa19;
+            --warning-color: #d89614;
+            --error-color: #a61d24;
+            --info-color: #177ddc;
+            --bg-primary: #000000;
+            --bg-secondary: #141414;
+            --bg-card: #1f1f1f;
+            --text-primary: #rgba(255, 255, 255, 0.85);
+            --text-secondary: rgba(255, 255, 255, 0.65);
+            --border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000000;
+            min-height: 100vh;
+            position: relative;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(23, 125, 220, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(73, 170, 25, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(216, 150, 20, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #root {
+            position: relative;
+            z-index: 1;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .nav-container {
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 16px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-title {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .main-content {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #177ddc 0%, #69c0ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        /* Ant Design 暗色主题覆盖 */
+        .ant-card {
+            background: rgba(31, 31, 31, 0.95) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-statistic-title {
+            color: rgba(255, 255, 255, 0.65) !important;
+        }
+
+        .ant-table {
+            background: transparent !important;
+        }
+
+        .ant-table-thead > tr > th {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-table-tbody > tr > td {
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-table-tbody > tr:hover > td {
+            background: rgba(255, 255, 255, 0.04) !important;
+        }
+
+        /* 修复导航按钮样式 */
+        .ant-btn-text {
+            color: rgba(255, 255, 255, 0.65) !important;
+        }
+
+        .ant-btn-text:hover {
+            color: rgba(255, 255, 255, 0.85) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-btn-primary {
+            background: #177ddc !important;
+            border-color: #177ddc !important;
+        }
+
+        .ant-btn-primary:hover {
+            background: #1890ff !important;
+            border-color: #1890ff !important;
+        }
+
+        /* 分页器样式 */
+        .ant-pagination-item {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .ant-pagination-item a {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .ant-pagination-item-active {
+            background: #177ddc !important;
+            border-color: #177ddc !important;
+        }
+
+        /* Input输入框样式 */
+        .ant-input {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .ant-input::placeholder {
+            color: rgba(255, 255, 255, 0.45) !important;
+        }
+
+        .queue-card {
+            background: rgba(31, 31, 31, 0.8) !important;
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .queue-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            background: rgba(31, 31, 31, 0.95) !important;
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .main-content {
+                padding: 16px;
+            }
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+        const { 
+            Layout, Card, Row, Col, Table, Tag, Button, Input, Select, 
+            Statistic, Progress, Badge, Space, Typography, Tooltip, Empty,
+            message, Spin, ConfigProvider
+        } = antd;
+        
+        const { Title, Text } = Typography;
+        const { Search } = Input;
+        
+        function QueuesPage() {
+            const [loading, setLoading] = useState(false);
+            const [searchKeyword, setSearchKeyword] = useState('');
+            const [queues, setQueues] = useState([]);
+            const [globalStats, setGlobalStats] = useState({
+                total_queues: 0,
+                messages: 0,
+                messages_ready: 0,
+                messages_unacknowledged: 0,
+                consumers: 0
+            });
+            
+            // 格式化时间
+            const formatTime = useCallback((seconds) => {
+                if (!seconds || seconds === 0) return '-';
+                if (seconds < 1) return `${Math.round(seconds * 1000)}ms`;
+                if (seconds < 60) return `${seconds.toFixed(2)}s`;
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = (seconds % 60).toFixed(1);
+                return `${minutes}m${remainingSeconds}s`;
+            }, []);
+            
+            // 过滤队列
+            const filteredQueues = React.useMemo(() => {
+                if (!searchKeyword) return queues;
+                return queues.filter(queue => 
+                    queue.name.toLowerCase().includes(searchKeyword.toLowerCase())
+                );
+            }, [queues, searchKeyword]);
+            
+            // 表格列定义
+            const columns = [
+                {
+                    title: '队列名称',
+                    dataIndex: 'name',
+                    key: 'name',
+                    render: (name) => (
+                        <Space>
+                            <Tag color="blue">Q</Tag>
+                            <Text strong style={{color: '#1890ff', cursor: 'pointer'}} 
+                                  onClick={() => window.location.href = `/queue.html?name=${encodeURIComponent(name)}`}>
+                                {name}
+                            </Text>
+                        </Space>
+                    ),
+                },
+                {
+                    title: '消息总数',
+                    dataIndex: 'messages',
+                    key: 'messages',
+                    align: 'center',
+                    render: (value) => <Tag color="blue">{value || 0}</Tag>,
+                },
+                {
+                    title: '就绪消息',
+                    dataIndex: 'messages_ready',
+                    key: 'messages_ready',
+                    align: 'center',
+                    render: (value) => <Tag color="cyan">{value || 0}</Tag>,
+                },
+                {
+                    title: '未确认消息',
+                    dataIndex: 'messages_unacknowledged',
+                    key: 'messages_unacknowledged',
+                    align: 'center',
+                    render: (value) => <Tag color="orange">{value || 0}</Tag>,
+                },
+                {
+                    title: '消费者',
+                    dataIndex: 'consumers',
+                    key: 'consumers',
+                    align: 'center',
+                    render: (value) => <Tag color="green">{value || 0}</Tag>,
+                },
+                {
+                    title: '任务成功/失败',
+                    key: 'task_stats',
+                    align: 'center',
+                    render: (_, record) => (
+                        <Space>
+                            <Text type="success">{record.success_count || 0}</Text>
+                            <span>/</span>
+                            <Text type="danger">{record.failed_count || 0}</Text>
+                        </Space>
+                    ),
+                },
+                {
+                    title: '平均处理时间',
+                    dataIndex: 'avg_processing_time',
+                    key: 'avg_processing_time',
+                    align: 'center',
+                    render: (time) => formatTime(time),
+                },
+                {
+                    title: '操作',
+                    key: 'action',
+                    align: 'center',
+                    render: (_, record) => (
+                        <Button 
+                            type="primary" 
+                            size="small"
+                            onClick={() => window.location.href = `/queue.html?name=${encodeURIComponent(record.name)}`}
+                        >
+                            查看详情
+                        </Button>
+                    ),
+                },
+            ];
+            
+            // 加载数据
+            const loadData = async () => {
+                try {
+                    setLoading(true);
+                    
+                    const [queuesResp, statsResp] = await Promise.all([
+                        fetch('/api/queues'),
+                        fetch('/api/stats')
+                    ]);
+                    
+                    if (queuesResp.ok) {
+                        const data = await queuesResp.json();
+                        setQueues(data.queues || []);
+                    }
+                    
+                    if (statsResp.ok) {
+                        const data = await statsResp.json();
+                        setGlobalStats({
+                            total_queues: data.total_queues || 0,
+                            messages: data.messages || 0,
+                            messages_ready: data.messages_ready || 0,
+                            messages_unacknowledged: data.messages_unacknowledged || 0,
+                            consumers: data.consumers || 0
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to load data:', error);
+                    message.error('加载数据失败');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            // 初始化
+            useEffect(() => {
+                loadData();
+                
+                // 定时刷新
+                const interval = setInterval(loadData, 5000);
+                
+                return () => {
+                    clearInterval(interval);
+                };
+            }, []);
+            
+            
+            return (
+                <div className="app-container">
+                    {/* 导航栏 */}
+                    <div className="nav-container">
+                        <div className="nav-content">
+                            <div className="nav-title">
+                                <i className="fas fa-rocket" style={{fontSize: '1.5rem'}} />
+                                Jettask Monitor
+                            </div>
+                            <Space size="large">
+                                <Button type="text" size="large" onClick={() => window.location.href = '/'}>
+                                    概览
+                                </Button>
+                                <Button type="primary" size="large">
+                                    队列
+                                </Button>
+                                <Button type="text" size="large" onClick={() => window.location.href = '/workers.html'}>
+                                    Workers
+                                </Button>
+                            </Space>
+                        </div>
+                    </div>
+                    
+                    {/* 主要内容 */}
+                    <div className="main-content">
+                        {/* 统计概览 */}
+                        <Row gutter={[24, 24]} style={{marginBottom: 30}}>
+                            <Col xs={24} sm={12} md={6}>
+                                <Card className="queue-card">
+                                    <Statistic 
+                                        title="总队列数"
+                                        value={globalStats.total_queues}
+                                        valueStyle={{color: '#177ddc'}}
+                                        prefix={<i className="fas fa-layer-group" />}
+                                    />
+                                </Card>
+                            </Col>
+                            <Col xs={24} sm={12} md={6}>
+                                <Card className="queue-card">
+                                    <Statistic 
+                                        title="消息总数"
+                                        value={globalStats.messages}
+                                        valueStyle={{color: '#722ed1'}}
+                                        prefix={<i className="fas fa-envelope" />}
+                                    />
+                                </Card>
+                            </Col>
+                            <Col xs={24} sm={12} md={6}>
+                                <Card className="queue-card">
+                                    <Statistic 
+                                        title="就绪消息"
+                                        value={globalStats.messages_ready}
+                                        valueStyle={{color: '#13c2c2'}}
+                                        prefix={<i className="fas fa-inbox" />}
+                                    />
+                                </Card>
+                            </Col>
+                            <Col xs={24} sm={12} md={6}>
+                                <Card className="queue-card">
+                                    <Statistic 
+                                        title="未确认消息"
+                                        value={globalStats.messages_unacknowledged}
+                                        valueStyle={{color: '#faad14'}}
+                                        prefix={<i className="fas fa-hourglass-half" />}
+                                    />
+                                </Card>
+                            </Col>
+                        </Row>
+                        
+                        {/* 队列列表 */}
+                        <Card
+                            title={
+                                <Title level={4} className="gradient-text">
+                                    <i className="fas fa-list" style={{marginRight: 12}} />
+                                    队列列表
+                                </Title>
+                            }
+                            extra={
+                                <Space>
+                                    <Search
+                                        placeholder="搜索队列..."
+                                        allowClear
+                                        value={searchKeyword}
+                                        onChange={e => setSearchKeyword(e.target.value)}
+                                        style={{width: 200}}
+                                    />
+                                    <Button 
+                                        type="primary" 
+                                        icon={<i className="fas fa-sync-alt" />}
+                                        onClick={loadData}
+                                        loading={loading}
+                                    >
+                                        刷新
+                                    </Button>
+                                </Space>
+                            }
+                            style={{
+                                background: 'rgba(31, 31, 31, 0.8)',
+                                backdropFilter: 'blur(20px)',
+                                borderRadius: '20px',
+                                border: '1px solid rgba(255, 255, 255, 0.08)'
+                            }}
+                        >
+                            {loading ? (
+                                <div style={{textAlign: 'center', padding: '50px'}}>
+                                    <Spin size="large" />
+                                </div>
+                            ) : filteredQueues.length === 0 ? (
+                                <Empty description="暂无队列" />
+                            ) : (
+                                <Table
+                                    columns={columns}
+                                    dataSource={filteredQueues}
+                                    rowKey="name"
+                                    pagination={{
+                                        defaultPageSize: 20,
+                                        showSizeChanger: true,
+                                        showQuickJumper: true,
+                                        showTotal: (total) => `共 ${total} 个队列`
+                                    }}
+                                    size="middle"
+                                />
+                            )}
+                        </Card>
+                    </div>
+                </div>
+            );
+        }
+        
+        // 主应用组件
+        function App() {
+            return (
+                <ConfigProvider>
+                    <QueuesPage />
+                </ConfigProvider>
+            );
+        }
+        
+        // 渲染应用
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+    </script>
+</body>
+</html>
