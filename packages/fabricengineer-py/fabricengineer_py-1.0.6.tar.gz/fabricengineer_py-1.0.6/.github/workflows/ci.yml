@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/merge
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - "src/tests/api/"
+          - "src/tests/logging/ src/tests/tests/ src/tests/transform/"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies via uv
+        run: uv sync
+
+      - name: Run tests (${{ matrix.shard }})
+        run: uv run pytest ${{ matrix.shard }} -v
+        env:
+          WORKSPACE_ID: ${{ secrets.WORKSPACE_ID }}
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          SVC_MICROSOFT_FABRIC_CLIENT_ID: ${{ secrets.SVC_MICROSOFT_FABRIC_CLIENT_ID }}
+          SVC_MICROSOFT_FABRIC_SECRET_VALUE: ${{ secrets.SVC_MICROSOFT_FABRIC_SECRET_VALUE }}
