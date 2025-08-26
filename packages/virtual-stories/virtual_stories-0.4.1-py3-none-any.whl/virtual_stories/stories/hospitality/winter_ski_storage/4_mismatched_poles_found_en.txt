@@ -1,0 +1,38 @@
+"""
+Mismatched poles found during pickup; reconcile items.
+ROLES: user (guest discovering mismatched poles), assistant (attendant checking inventory and fixing issue)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"inventory_check","description":"Check stored item details for a reservation.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"}},"required":["reservation_id"]},"strict":true},
+  {"name":"correct_item_label","description":"Fix labeling and attach correct poles to skis.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"}},"required":["reservation_id"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Snowcrest Chalet
+Procedure: If mismatch occurs, verify locker record and correct labels before release
+
+user:
+These poles don’t look like mine when I came to pick up—res SC901.
+
+assistant channel=analysis:
+Check inventory; if mismatch, correct label; reassure guest.
+
+assistant channel=commentary to=tool.inventory_check:
+{"reservation_id":"SC901"}
+
+tool.inventory_check channel=commentary to=assistant:
+{"locker":"C-14","record":{"skis":1,"poles":"black_110cm"}}
+
+assistant channel=commentary to=tool.correct_item_label:
+{"reservation_id":"SC901"}
+
+tool.correct_item_label channel=commentary to=assistant:
+{"status":"corrected","poles":"black_110cm"}
+
+assistant channel=final:
+Thanks for pointing that out—we’ve corrected the label and matched the black 110 cm poles to your skis from locker C‑14. You’re good to go.

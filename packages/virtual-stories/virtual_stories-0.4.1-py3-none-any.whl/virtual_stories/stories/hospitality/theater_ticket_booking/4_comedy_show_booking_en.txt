@@ -1,0 +1,112 @@
+"""
+Guest wants comedy tickets and engages in casual conversation.
+
+ROLES: user (business traveler seeking entertainment), assistant (concierge arranging comedy show tickets)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "find_comedy_shows",
+    "description": "Search for available comedy performances and stand-up shows.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": {"type": "string", "format": "date"},
+        "venue_type": {"type": "string", "enum": ["theater", "club", "comedy_club", "improvisation"]},
+        "comedy_style": {"type": "string", "enum": ["stand_up", "improv", "sketch", "musical_comedy"]}
+      },
+      "required": ["date", "venue_type"]
+    },
+    "strict": true
+  },
+  {
+    "name": "reserve_comedy_tickets",
+    "description": "Book tickets for comedy shows and performances.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "show_name": {"type": "string"},
+        "show_time": {"type": "string", "format": "date-time"},
+        "seats": {"type": "integer", "minimum": 1, "maximum": 6},
+        "ticket_type": {"type": "string", "enum": ["regular", "VIP", "premium"]}
+      },
+      "required": ["reservation_id", "show_name", "show_time", "seats"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Empire State Entertainment Hotel (hotel_id: empire_state_entertainment_nyc).
+Address: 350 5th Avenue, New York, NY 10118. Phone: (212) 555-0789.
+The hotel features 320 rooms with Empire State Building views, comedy club partnerships, late-night entertainment booking service, rooftop comedy hours, and exclusive access to premier comedy venues.
+Check-in 3 PM, check-out 12 PM. Timezone: America/New_York.
+
+user:
+Hey there! I've had a long day of meetings and could really use some laughs. Any good comedy shows available tonight? I'm traveling solo.
+
+assistant channel=analysis:
+Solo business traveler wants comedy for stress relief. Should look for evening comedy shows that are suitable for solo attendees.
+
+assistant channel=final:
+I totally understand - sometimes you just need a good laugh after a long day! We have several comedy options tonight. Could you share your reservation ID so I can check what's available for you?
+
+user:
+Sure thing! My reservation ID is SOLO2025003. I'm up for anything that's funny - stand-up, improv, whatever works. Just want to unwind.
+
+assistant channel=analysis:
+Search for comedy shows tonight, focusing on different styles since the guest is open to various types of comedy.
+
+assistant channel=commentary to=tool.find_comedy_shows:
+{"date":"2025-08-20","venue_type":"comedy_club","comedy_style":"stand_up"}
+
+tool.find_comedy_shows channel=commentary to=assistant:
+{"available_shows":[{"name":"Dave Chappelle Special","time":"21:00","price":"$85","venue":"Comedy Cellar","style":"stand_up","rating":"adult"},{"name":"Improv Night","time":"20:00","price":"$45","venue":"UCB Theater","style":"improv","rating":"general"},{"name":"Saturday Night Live Alumni","time":"22:00","price":"$95","venue":"Second City","style":"sketch","rating":"adult"}]}
+
+assistant channel=analysis:
+The guest wants to unwind, so the Improv Night at 8:00 PM seems most appropriate - it's earlier, less expensive, and general audience. The Chappelle show might be too late and intense for unwinding.
+
+assistant channel=final:
+Perfect! For unwinding after a long day, I recommend the "Improv Night" at UCB Theater at 8:00 PM. It's hilarious, interactive comedy that's perfect for solo travelers, and it's more affordable at $45. The Dave Chappelle show is later and more intense. Would you like me to book that?
+
+user:
+The improv show sounds perfect! I love spontaneous comedy - you never know what's going to happen. Let's do that!
+
+assistant channel=analysis:
+Reserve one ticket for the Improv Night at 8:00 PM for reservation SOLO2025003.
+
+assistant channel=commentary to=tool.reserve_comedy_tickets:
+{"reservation_id":"SOLO2025003","show_name":"Improv Night","show_time":"2025-08-20T20:00:00","seats":1,"ticket_type":"regular"}
+
+tool.reserve_comedy_tickets channel=commentary to=assistant:
+{"status":"confirmed","ticket_id":"IMPROV-2025-112","total_cost":"$45","venue_location":"UCB Theater - 5-minute walk from hotel"}
+
+assistant channel=analysis:
+Confirm the reservation and engage in casual conversation about comedy preferences since this is a good opportunity for small talk.
+
+assistant channel=final:
+You're all set! Ticket IMPROV-2025-112 for tonight's Improv Night at 8:00 PM is confirmed. The UCB Theater is just a 5-minute walk from here. You know, improv comedy is so refreshing - the performers have to think on their feet and react to the audience. It's always different!
+
+user:
+Exactly! That's why I love it. No scripts, just pure comedic genius in the moment. Thanks for the recommendation - this is going to be great.
+
+assistant channel=analysis:
+The guest appreciates the recommendation and is excited. This is perfect small talk about comedy preferences - no tools needed.
+
+assistant channel=final:
+Couldn't agree more! The element of surprise makes improv so special. Have a fantastic time tonight - I hope you get some good laughs that make your whole trip worthwhile! 🎭😄
+
+user:
+I appreciate that! You know, it's the little things like this that make a business trip enjoyable. Have a good evening!
+
+assistant channel=analysis:
+The guest is reflecting on how entertainment enhances business travel. This is casual conversation about travel experiences - no tool calling required.
+
+assistant channel=final:
+You're absolutely right - entertainment definitely makes business travel more enjoyable! I'm glad we could help make your stay memorable. If you need any other recommendations during your trip, just let us know. Enjoy the show! 🌟

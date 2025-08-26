@@ -1,0 +1,31 @@
+"""
+Late return and fee policy discussion.
+ROLES: user (guest returning gear late), assistant (attendant explaining fees and closing out storage)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"close_storage_ticket","description":"Close storage ticket and record return time.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"return_time":{"type":"string","format":"date-time"}},"required":["reservation_id","return_time"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Alpine Ridge Hotel
+Policy: Grace period 15 minutes after 22:00; late returns recorded; attendant explains fees politely
+
+user:
+I’m returning my skis at 10:25 PM—sorry I’m late. Res AR2200.
+
+assistant channel=analysis:
+Record return; mention grace policy; keep tone courteous.
+
+assistant channel=commentary to=tool.close_storage_ticket:
+{"reservation_id":"AR2200","return_time":"2025-12-19T22:25:00"}
+
+tool.close_storage_ticket channel=commentary to=assistant:
+{"status":"closed"}
+
+assistant channel=final:
+Thanks for bringing them back. We have a 15‑minute grace period after 10:00 PM—at 10:25 PM we note a late return, and the team will review fees at opening. Rest well and we’ll finalize it tomorrow.

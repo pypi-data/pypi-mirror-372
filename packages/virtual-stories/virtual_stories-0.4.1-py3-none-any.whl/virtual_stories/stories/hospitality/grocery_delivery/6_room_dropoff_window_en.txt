@@ -1,0 +1,58 @@
+"""
+Guest coordinates drop-off during a meeting window.
+
+ROLES: user (guest in meetings), assistant (front desk optimizing delivery time window)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_grocery_delivery",
+    "description": "Schedule grocery delivery for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "store_name": { "type": "string" },
+        "delivery_time": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["reservation_id", "store_name", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the front office supervisor at Harborview Business Hotel (hotel_id: harborview_bos). Address: 88 Seaport Blvd, Boston, MA 02210. Timezone: America/New_York. Partner: New England Grocer. We can request a specific 15-minute drop window and bell staff can accept on guest’s behalf.
+
+user:
+Hello! Busy day here. I need a small order to drop exactly between 1:15–1:30 PM if possible.
+
+assistant channel=analysis:
+Ask for reservation ID, confirm a single timestamp closest to 1:15 for the tool, add note about 15-minute window and bell acceptance.
+
+assistant channel=final:
+I hear you—conference season is in full swing. Could you share your reservation ID? I’ll target 2025-09-09T13:15:00 and note a 15-minute drop window; bell staff can accept if you’re tied up.
+
+user:
+RSV56565 works. Please include sparkling water and fruit.
+
+assistant channel=analysis:
+Schedule with New England Grocer at 13:15, include note with items.
+
+assistant channel=commentary to=tool.arrange_grocery_delivery:
+{"reservation_id":"RSV56565","store_name":"New England Grocer","delivery_time":"2025-09-09T13:15:00","notes":"15-minute drop window (1:15–1:30 PM); include sparkling water and fruit; bell desk may accept"}
+
+tool.arrange_grocery_delivery channel=commentary to=assistant:
+{"status":"scheduled","order_id":"NEG-042"}
+
+assistant channel=analysis:
+Confirm and restate window.
+
+assistant channel=final:
+Booked—delivery will target 1:15–1:30 PM (Order NEG-042). We’ll brief bell staff to accept if needed and send it right up to your room.
+

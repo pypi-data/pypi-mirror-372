@@ -1,0 +1,58 @@
+"""
+Guest requests allergy-safe items and delivery window coordination.
+
+ROLES: user (guest with allergies), assistant (front desk coordinating safe delivery notes)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_grocery_delivery",
+    "description": "Schedule grocery delivery for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "store_name": { "type": "string" },
+        "delivery_time": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["reservation_id", "store_name", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the guest services agent at Desert Star Lodge (hotel_id: desert_star_phx). Address: 505 Camelback Rd, Phoenix, AZ 85018. Timezone: America/Phoenix. Partner: SunGrocer. We can coordinate a 30-minute delivery window and note allergy requirements to the shopper.
+
+user:
+Hi! The pool looks amazing. Could you help with a grocery delivery that avoids sesame and shellfish?
+
+assistant channel=analysis:
+Respond positively to the compliment; ask for reservation ID, desired delivery time, and include allergy notes.
+
+assistant channel=final:
+Thank you—we’ll have the cabanas ready for sunset! I can help. What’s your reservation ID and preferred delivery time? I’ll flag sesame and shellfish allergies on the order.
+
+user:
+Reservation RSV77712. Let’s do 2025-09-03T10:30:00. Please ask them to knock softly.
+
+assistant channel=analysis:
+Schedule with SunGrocer at 10:30 AM, include allergies and knock softly.
+
+assistant channel=commentary to=tool.arrange_grocery_delivery:
+{"reservation_id":"RSV77712","store_name":"SunGrocer","delivery_time":"2025-09-03T10:30:00","notes":"Avoid sesame and shellfish; knock softly; 30-minute window if possible"}
+
+tool.arrange_grocery_delivery channel=commentary to=assistant:
+{"status":"scheduled","order_id":"SG-320"}
+
+assistant channel=analysis:
+Confirm the window and allergy note.
+
+assistant channel=final:
+All set—SunGrocer will deliver around 10:30 AM (Order SG-320). I’ve added sesame and shellfish allergy notes and a gentle knock request. We’ll keep an eye out within a 30-minute window.
+

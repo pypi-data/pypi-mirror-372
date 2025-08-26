@@ -1,0 +1,33 @@
+"""
+Conference organizer confirms multiple incoming boxes and asks about storage limits.
+
+ROLES: user (conference organizer with bulk parcels), assistant (events coordinator/front desk)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"check_for_package","description":"Check logged parcels for an organization or guest.","parameters":{"type":"object","additionalProperties":false,"properties":{"guest_name":{"type":"string"}},"required":["guest_name"]},"strict":true},
+  {"name":"reserve_storage_space","description":"Reserve back-of-house storage cages for bulk shipments.","parameters":{"type":"object","additionalProperties":false,"properties":{"organization":{"type":"string"},"boxes":{"type":"integer"}},"required":["organization","boxes"]},"strict":true}
+]
+```
+"""
+
+system:
+You are at Harbor Convention Hotel (hotel_id: harbor_convention_boston). Address: 1 Seaport Blvd, Boston, MA 02210. Timezone: America/New_York. For conferences, up to 25 boxes can be stored complimentary for 72 hours; additional boxes are $3/day each. Pallets must be scheduled with loading dock.
+
+user:
+Hi—it’s the TechForward Summit team. About 30 boxes are arriving for our registration desk. Can you handle that many?
+
+assistant channel=analysis:
+Reserve storage for 30 boxes and note policy.
+
+assistant channel=commentary to=tool.reserve_storage_space:
+{"organization":"TechForward Summit","boxes":30}
+
+tool.reserve_storage_space channel=commentary to=assistant:
+{"status":"reserved","cages":2}
+
+assistant channel=final:
+We’ve reserved space in two storage cages for your 30 boxes. The first 25 are complimentary for 72 hours; the remaining 5 will be $3/day each. If a pallet is involved, we’ll coordinate the loading dock schedule. Welcome to the Seaport—great coffee spots all around if your team needs fuel.
+

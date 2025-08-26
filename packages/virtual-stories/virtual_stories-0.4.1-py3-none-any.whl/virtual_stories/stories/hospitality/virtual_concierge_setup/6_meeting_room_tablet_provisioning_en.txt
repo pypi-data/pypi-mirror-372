@@ -1,0 +1,84 @@
+"""
+Meeting room tablet provisioning and screen share setup at the Grand Meridian Hotel.
+
+Hotel facts (authoritative for this dialogue only):
+- Property: Grand Meridian Hotel
+- Address: 710 Market Street, San Francisco, CA 94103, USA
+- Time zone: America/Los_Angeles
+- Front desk: +1-415-555-0120; Events hotline: +1-415-555-0177
+- Wi‑Fi SSID: "GMH_Conference"; password: "Meridian#0825"
+- Check-in 3:00 PM; Check-out 11:00 AM
+- Facilities: Conference level L3, rooms Atlas A–D; Projectors support AirPlay and Miracast
+- Room Atlas C devices: iPad mini controller, Barco ClickShare CX-20, Epson projector
+- Support: On-site AV 07:00–19:00
+
+ROLES: user (event organizer needing to provision tablet for Atlas C and enable screen share), assistant (hotel virtual concierge provisioning and testing)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "provision_event_tablet",
+    "description": "Provision a conference tablet for a specific meeting room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": {"type": "string"},
+        "device_serial": {"type": "string"}
+      },
+      "required": ["room_name", "device_serial"]
+    },
+    "strict": true
+  },
+  {
+    "name": "enable_screen_share",
+    "description": "Enable AirPlay and Miracast for the room projector and return join codes.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": {"type": "string"}
+      },
+      "required": ["room_name"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the virtual concierge for Grand Meridian Hotel events. Use only listed facts and tool outputs. Keep replies crisp and supportive.
+
+user:
+Hi—Atlas C here. Could you provision the iPad mini controller SN GMH-AC-1127 and turn on screen sharing?
+
+assistant channel=analysis:
+Provision the tablet, then enable screen share. Include brief small talk about the venue’s view.
+
+assistant channel=commentary to=tool.provision_event_tablet:
+{"room_name":"Atlas C","device_serial":"GMH-AC-1127"}
+
+tool.provision_event_tablet channel=commentary to=assistant:
+{"status":"provisioned","room":"Atlas C","device_serial":"GMH-AC-1127"}
+
+assistant channel=commentary to=tool.enable_screen_share:
+{"room_name":"Atlas C"}
+
+tool.enable_screen_share channel=commentary to=assistant:
+{"status":"enabled","room":"Atlas C","airplay_code":"AC-4152","miracast_code":"AC-9184"}
+
+assistant channel=final:
+All set—tablet GMH-AC-1127 is provisioned. Screen share is on: AirPlay AC-4152, Miracast AC-9184. The skyline from L3 is looking great today.
+
+user:
+Perfect. What’s AV support timing if something goes wrong?
+
+assistant channel=analysis:
+Answer with support hours from facts.
+
+assistant channel=final:
+On-site AV is available 07:00–19:00—dial the Events hotline at +1-415-555-0177.
+

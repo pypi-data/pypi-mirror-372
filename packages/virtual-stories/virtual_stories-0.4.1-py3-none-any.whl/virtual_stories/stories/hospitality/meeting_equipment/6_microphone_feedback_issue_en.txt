@@ -1,0 +1,54 @@
+"""
+Microphone feedback during panel setup.
+
+ROLES: user (panel moderator prepping sound), assistant (A/V engineer adjusting setup)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_sound_check",
+    "description": "Schedule a sound check and adjust mic gains and speaker placement.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room": { "type": "string" },
+        "panelist_count": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "start_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["room", "panelist_count", "start_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are A/V at Capitol View Hotel (hotel_id: capitol_view_dca). Address: 20 Massachusetts Ave NW, Washington, DC 20001. Timezone: America/New_York.
+Amenities: skyline terrace, quiet prep rooms, broadcast-grade mics. Standard practice: reduce gain, reposition speakers, run quick sound check.
+
+user:
+Hi—getting squeal in Potomac Ballroom while we set up four mics. Terrace looks amazing today.
+
+assistant channel=analysis:
+Acknowledge terrace; schedule sound check at 2025-09-10T13:30:00 for 4 panelists.
+
+assistant channel=commentary to=tool.schedule_sound_check:
+{"room":"Potomac Ballroom","panelist_count":4,"start_time":"2025-09-10T13:30:00"}
+
+tool.schedule_sound_check channel=commentary to=assistant:
+{"status":"scheduled","engineer_id":"DCA-AV-5"}
+
+assistant channel=analysis:
+Confirm with brief guidance.
+
+assistant channel=final:
+It’s crystal today. Engineer DCA-AV-5 is scheduled for 1:30 PM to lower gains and adjust speaker angles. We’ll run a quick check with all four mics before doors open.
+
+user:
+Sounds good—thanks.
+
+assistant channel=final:
+We’ll be ready. Radio us if you change layout last minute.

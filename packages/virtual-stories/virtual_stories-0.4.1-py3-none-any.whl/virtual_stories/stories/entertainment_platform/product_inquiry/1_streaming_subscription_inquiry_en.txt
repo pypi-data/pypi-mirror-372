@@ -1,0 +1,103 @@
+"""
+Customer explores plans and perks, comparing 4K and multi-device options.
+
+ROLES: user (curious streamer comparing plans), assistant (friendly StreamFlix specialist)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_subscription_plans",
+    "description": "List subscription plans with price and key features for a market.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "country_code": { "type": "string", "description": "ISO 3166-1 alpha-2 code, e.g., US" },
+        "currency_code": { "type": "string", "description": "ISO 4217 currency code, e.g., USD" }
+      },
+      "required": ["country_code", "currency_code"]
+    },
+    "strict": true
+  },
+  {
+    "name": "check_device_streaming_availability",
+    "description": "Check if a plan supports a requested number of simultaneous devices and highest quality at a location.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plan_id": { "type": "string", "description": "Internal plan identifier" },
+        "zip_code": { "type": "string", "description": "Postal/ZIP code for regional content rules" },
+        "desired_device_count": { "type": "integer", "description": "Simultaneous devices needed" },
+        "desired_quality": { "type": "string", "enum": ["SD", "HD", "UHD_4K"], "description": "Target video quality" }
+      },
+      "required": ["plan_id", "zip_code", "desired_device_count", "desired_quality"]
+    },
+    "strict": true
+  },
+  {
+    "name": "apply_promo_preview",
+    "description": "Preview monthly price after applying a promo code (no changes applied).",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plan_id": { "type": "string", "description": "Internal plan identifier" },
+        "promo_code": { "type": "string", "description": "Promo/coupon code to preview" }
+      },
+      "required": ["plan_id"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a helpful customer service representative for StreamFlix, a streaming entertainment platform. Be friendly, concise, and a bit conversational.
+
+user:
+Hi, I'm interested in your streaming service. What subscription plans do you offer?
+
+assistant channel=analysis:
+Greet warmly, ask for country and currency to query plans. Offer help choosing between HD/4K and device counts. Encourage a promo code if any.
+
+assistant channel=final:
+Great to meet you—and welcome! Quick question so I tailor options: what country are you in and what currency do you prefer seeing prices in? Also, do you care more about 4K quality or watching on multiple devices at once? If you have a promo code, I can check how it affects pricing.
+
+user:
+I'm in the US, USD is fine. I usually watch on two TVs, and 4K would be nice if it's not too pricey.
+
+assistant channel=commentary to=tool.get_subscription_plans:
+{"country_code": "US", "currency_code": "USD"}
+
+tool.get_subscription_plans channel=commentary to=assistant:
+{"plans":[{"plan_id":"basic_us","name":"Basic","price_monthly":"9.99","quality":"SD","devices":1},{"plan_id":"standard_us","name":"Standard","price_monthly":"15.99","quality":"HD","devices":2},{"plan_id":"premium_us","name":"Premium","price_monthly":"19.99","quality":"UHD_4K","devices":4}],"currency":"USD"}
+
+assistant channel=analysis:
+Present options, highlight Standard meets two devices HD; Premium gives 4K and more devices. Add friendly tone. Invite promo preview.
+
+assistant channel=final:
+Thanks! Here are the best-fit options in USD:
+
+- Standard — $15.99/mo: HD quality, watch on 2 devices (checks both your TVs)
+- Premium — $19.99/mo: 4K Ultra HD, watch on up to 4 devices (future‑proof + 4K)
+
+If you want 4K today, Premium is the one. If HD is okay, Standard saves a bit. Do you want me to compare totals with any promo code you might have?
+
+user:
+If I go Premium, can two devices stream in 4K at the same time in ZIP 94107?
+
+assistant channel=commentary to=tool.check_device_streaming_availability:
+{"plan_id": "premium_us", "zip_code": "94107", "desired_device_count": 2, "desired_quality": "UHD_4K"}
+
+tool.check_device_streaming_availability channel=commentary to=assistant:
+{"supported": true, "max_devices": 4, "max_quality": "UHD_4K", "notes": "Regional catalog available; bandwidth of 25+ Mbps per device recommended for 4K."}
+
+assistant channel=analysis:
+Confirm support, add bandwidth tip, invite promo preview for Premium.
+
+assistant channel=final:
+Yes—Premium supports up to 4 devices and full 4K in 94107. For two simultaneous 4K streams, we recommend at least ~25 Mbps per device. If you share a promo code, I can preview your monthly price before you decide. Want me to set up a 7‑day free trial on Premium and email you the details?

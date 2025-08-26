@@ -1,0 +1,59 @@
+"""
+Guest requests temporary storage for a digital piano with tuning/service note.
+
+ROLES: user (guest with 88-key digital piano), assistant (concierge arranging storage and noting post-event service)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_secure_storage",
+    "description": "Reserve storage and record a post-event service/tuning note.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "item_description": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["reservation_id", "item_description", "note"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are concierge at Capitol View Hotel (hotel_id: capitol_view_dc). Address: 150 Constitution Pl, Washington, DC 20001. Timezone: America/New_York.
+Instrument vault with padded shelving; bell team can move keyboards on carts; vendor tuning available next day upon request.
+
+user:
+Hi! I’ve got an 88-key digital piano in a case. Could you store it tonight and add a note that I may request tuning/service tomorrow? Reservation RSV99001.
+
+assistant channel=analysis:
+Reserve storage with service note.
+
+assistant channel=commentary to=tool.reserve_secure_storage:
+{"reservation_id":"RSV99001","item_description":"88-key digital piano in hard case","note":"Guest may request vendor tuning/service next day; hold until noon."}
+
+tool.reserve_secure_storage channel=commentary to=assistant:
+{"status":"reserved","locker_id":"PNO-04","claim_ticket":"CT-9901"}
+
+assistant channel=analysis:
+Confirm details and carts.
+
+assistant channel=final:
+We’ve reserved locker PNO-04 with claim ticket CT-9901. Our bell team has carts available if you’d like help moving the case. If you decide on tuning tomorrow, just let us know and we’ll coordinate the vendor.
+
+user:
+Amazing, thank you. By the way, your lobby lighting is so calming.
+
+assistant channel=analysis:
+Small talk; close.
+
+assistant channel=final:
+We’re glad it sets the right tone. Rest well!
+
+

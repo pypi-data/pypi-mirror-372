@@ -1,0 +1,54 @@
+"""
+Guest reports flickering room lights.
+
+ROLES: user (guest experiencing intermittent light flicker), assistant (engineering dispatcher coordinating fix)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "create_engineering_ticket",
+    "description": "Create an engineering work order for an in-room electrical issue.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_number": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "required": ["reservation_id", "room_number", "priority"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the engineering dispatcher at Redwood Canopy Hotel (hotel_id: redwood_sfo). Address: 299 Grove St, San Francisco, CA 94102. Timezone: America/Los_Angeles.
+Amenities: rooftop herb garden, complimentary bikes, bottle‑fill stations. Engineering response times: high 15 min, medium 30–60 min, low within same day.
+
+user:
+Hi—light in 1217 keeps flickering. Cool rooftop garden by the way.
+
+assistant channel=analysis:
+Acknowledge small talk; create ticket priority medium for safety/comfort. Reservation RSV1217.
+
+assistant channel=commentary to=tool.create_engineering_ticket:
+{"reservation_id":"RSV1217","room_number":"1217","priority":"medium"}
+
+tool.create_engineering_ticket channel=commentary to=assistant:
+{"status":"created","ticket_id":"ENG-RED-4021","eta_minutes":45}
+
+assistant channel=analysis:
+Share ETA and next steps.
+
+assistant channel=final:
+Thank you—we love the basil up there in the afternoon sun. I’ve logged ticket ENG-RED-4021 with a 45‑minute ETA. Please leave the switch off until our technician arrives, and we’ll resolve the flicker.
+
+user:
+Got it—thanks for the quick response.
+
+assistant channel=final:
+You’re welcome. If your plans change, text us and we’ll coordinate access.

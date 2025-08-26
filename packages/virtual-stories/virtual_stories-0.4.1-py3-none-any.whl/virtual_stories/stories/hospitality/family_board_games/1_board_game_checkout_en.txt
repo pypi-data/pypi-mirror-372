@@ -1,0 +1,56 @@
+"""
+Guest borrows board games for family time.
+
+ROLES: user (guest seeking entertainment), assistant (recreation desk clerk lending games)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_board_game",
+    "description": "Check out a board game to a guest room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "game_name": { "type": "string" },
+        "return_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "game_name", "return_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the recreation desk clerk at Riverfront Plaza Hotel (hotel_id: riverfront_plaza_chi). Address: 455 W Water St, Chicago, IL 60601. Timezone: America/Chicago. Guests enjoy a riverside terrace, indoor pool, free Wi-Fi, and evening jazz in the lobby. Board games can be borrowed from the recreation desk and are due back by 10 PM.
+
+user:
+Hi! Do you have any board games we can borrow? Maybe Settlers of Catan? Oh, the jazz downstairs sounds great.
+
+assistant channel=analysis:
+Acknowledge jazz compliment and reserve requested game for reservation RSV40004.
+
+assistant channel=commentary to=tool.reserve_board_game:
+{"reservation_id":"RSV40004","game_name":"Settlers of Catan","return_time":"2025-09-12T22:00:00"}
+
+tool.reserve_board_game channel=commentary to=assistant:
+{"status":"reserved","item_id":"GAME-7"}
+
+assistant channel=analysis:
+Confirm reservation and reply to compliment.
+
+assistant channel=final:
+The band is swinging tonight! Settlers of Catan (GAME-7) is reserved for you—please return it by 10:00 PM.
+
+user:
+Thank you! We'll return it after dinner.
+
+assistant channel=analysis:
+Close politely with no further action.
+
+assistant channel=final:
+Enjoy your game night and the music!

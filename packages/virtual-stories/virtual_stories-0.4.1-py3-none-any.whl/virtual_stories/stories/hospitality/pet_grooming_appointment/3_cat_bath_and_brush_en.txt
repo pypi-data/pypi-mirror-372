@@ -1,0 +1,60 @@
+"""
+Guest schedules a gentle bath-and-brush for a shy cat.
+
+ROLES: user (guest with a shy indoor cat), assistant (concierge coordinating grooming with low-stress handling)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_grooming",
+    "description": "Book a pet grooming appointment at the onsite salon.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "pet_name": { "type": "string" },
+        "service_type": { "type": "string", "enum": ["bath", "full_groom"] },
+        "appointment_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "pet_name", "service_type", "appointment_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Paws & Relax Lodge (hotel_id: paws_relax_seattle), 77 Tail Wag Way, Seattle, WA 98101. Timezone: America/Los_Angeles.
+Onsite grooming salon hours 09:00–17:00; quiet room available for shy pets upon request.
+
+user:
+Hi! My cat, Luna, is a bit timid. Could we do a bath and brush tomorrow around 1 PM? Reservation RSV70007.
+
+assistant channel=analysis:
+Book a bath for Luna at 13:00.
+
+assistant channel=commentary to=tool.schedule_pet_grooming:
+{"reservation_id":"RSV70007","pet_name":"Luna","service_type":"bath","appointment_time":"2025-08-20T13:00:00"}
+
+tool.schedule_pet_grooming channel=commentary to=assistant:
+{"status":"scheduled","appointment_id":"GROOM-21"}
+
+assistant channel=analysis:
+Confirm quiet room option.
+
+assistant channel=final:
+Luna is booked for a gentle bath and brush tomorrow at 1:00 PM—your appointment ID is GROOM-21. We’ll place her in our quiet room to keep things calm. Anything else she prefers, like a favorite towel?
+
+user:
+She loves warm towels. Also, your lobby plants look so healthy!
+
+assistant channel=analysis:
+Small talk reply.
+
+assistant channel=final:
+Perfect—we’ll have a warm towel ready. And thank you—we’ve got a green-thumbed team!
+
+

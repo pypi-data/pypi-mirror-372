@@ -1,0 +1,48 @@
+"""
+Guest wants an upgrade bundled with a spa package credit.
+
+ROLES: user (guest seeking spa-oriented upgrade), assistant (front desk agent coordinating spa credit)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"check_room_upgrade_options","description":"Check upgrade room types.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"}},"required":["reservation_id"]},"strict":true},
+  {"name":"process_room_upgrade","description":"Apply upgrade and attach spa credit note.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"room_type":{"type":"string"}},"required":["reservation_id","room_type"]},"strict":true}
+]
+```
+"""
+
+system:
+You are at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Spa is open 9:00 AM–8:00 PM. Promotional upgrades sometimes include a $25 spa credit—front desk can note eligibility.
+
+user:
+If I upgrade, can I get that $25 spa credit I saw on the sign? Reservation RSV66770.
+
+assistant channel=analysis:
+Check upgrade types; confirm we can note the credit.
+
+assistant channel=commentary to=tool.check_room_upgrade_options:
+{"reservation_id":"RSV66770"}
+
+tool.check_room_upgrade_options channel=commentary to=assistant:
+{"available":["executive_suite","skyline_suite"],"rates":{"executive_suite":120.0,"skyline_suite":180.0}}
+
+assistant channel=final:
+We can upgrade you to an executive suite for $120/night or a skyline suite for $180/night. I can also note the $25 spa credit on your folio with either option. Would you like to proceed?
+
+user:
+Executive suite, please.
+
+assistant channel=analysis:
+Process executive_suite and confirm credit.
+
+assistant channel=commentary to=tool.process_room_upgrade:
+{"reservation_id":"RSV66770","room_type":"executive_suite"}
+
+tool.process_room_upgrade channel=commentary to=assistant:
+{"status":"confirmed","new_room_type":"executive_suite"}
+
+assistant channel=final:
+Done—executive suite confirmed, and I’ve noted the $25 spa credit. Spa is open 9 AM–8 PM if you’d like to book.
+

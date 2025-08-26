@@ -1,0 +1,123 @@
+"""
+A guest wants to rent a movie to watch in their room.
+
+ROLES: user (a guest looking for a relaxing evening in), assistant (a hotel staff member assisting with a movie rental)
+CHANNELS: analysis, commentary, final
+TOOLS:
+```json
+[
+  {
+    "name": "get_movie_genres",
+    "description": "Get the list of available movie genres.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_movies_by_genre",
+    "description": "Get a list of movies within a specific genre.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "genre": {
+          "type": "string",
+          "description": "The genre of movies to retrieve."
+        }
+      },
+      "required": ["genre"]
+    }
+  },
+  {
+    "name": "rent_movie",
+    "description": "Rent a movie for a guest.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "guest_name": {
+          "type": "string",
+          "description": "The name of the guest."
+        },
+        "movie_title": {
+          "type": "string",
+          "description": "The title of the movie to rent."
+        }
+      },
+      "required": ["guest_name", "movie_title"]
+    }
+  }
+]
+```
+"""
+
+system:
+You are a staff member at the 'Cinema Suites Hotel', which offers a wide selection of in-room movies for rent.
+
+user:
+I'm in the mood for a movie night. What kind of movies do you have available?
+
+assistant channel=analysis:
+The user is asking about our movie selection. I should first provide them with the available genres.
+
+assistant channel=commentary to=tool.get_movie_genres:
+{}
+
+tool.get_movie_genres channel=commentary to=assistant:
+{"genres": ["Action", "Comedy", "Drama", "Family", "Sci-Fi"]}
+
+assistant channel=analysis:
+I have the list of genres. I will present them to the user.
+
+assistant channel=final:
+A movie night sounds like a perfect way to unwind! We have a great selection of movies in several genres:
+
+*   Action
+*   Comedy
+*   Drama
+*   Family
+*   Sci-Fi
+
+Do any of those genres sound good to you?
+
+user:
+I think a comedy would be great. What comedies do you have?
+
+assistant channel=analysis:
+The user has chosen the comedy genre. I will now get a list of comedy movies.
+
+assistant channel=commentary to=tool.get_movies_by_genre:
+{"genre": "Comedy"}
+
+tool.get_movies_by_genre channel=commentary to=assistant:
+{"movies": [{"title": "The Grand Budapest Hotel", "price": 8}, {"title": "Booksmart", "price": 7}, {"title": "Paddington 2", "price": 6}]}
+
+assistant channel=analysis:
+I have the list of comedies. I will present them to the user.
+
+assistant channel=final:
+Excellent choice! Here are a few of the comedies we have available:
+
+*   The Grand Budapest Hotel for $8
+*   Booksmart for $7
+*   Paddington 2 for $6
+
+Would you like to rent one of those?
+
+user:
+I've heard great things about Paddington 2. I'll take that one. My name is Maria Garcia. There's nothing like a good movie and a comfy hotel bed!
+
+assistant channel=analysis:
+The user wants to rent Paddington 2. I will use the `rent_movie` tool to process their request and also respond to their comment.
+
+assistant channel=commentary to=tool.rent_movie:
+{"guest_name": "Maria Garcia", "movie_title": "Paddington 2"}
+
+tool.rent_movie channel=commentary to=assistant:
+{"confirmation_message": "Paddington 2 has been rented to Maria Garcia."}
+
+assistant channel=analysis:
+The movie has been rented. I will now inform the user.
+
+assistant channel=final:
+We couldn't agree more! I've just rented Paddington 2 for you, Ms. Garcia. You can access it through the 'On-Demand' menu on your TV. The charge will be added to your room bill. Enjoy the movie!

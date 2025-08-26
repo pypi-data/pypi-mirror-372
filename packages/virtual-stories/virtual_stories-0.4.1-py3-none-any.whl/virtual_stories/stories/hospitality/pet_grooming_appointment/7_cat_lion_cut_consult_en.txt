@@ -1,0 +1,59 @@
+"""
+Guest requests consultation for cat lion cut style before grooming.
+
+ROLES: user (guest with long-haired cat), assistant (concierge arranging pre-groom consult and booking)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_grooming",
+    "description": "Book a pet grooming appointment at the onsite salon.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "pet_name": { "type": "string" },
+        "service_type": { "type": "string", "enum": ["bath", "full_groom"] },
+        "appointment_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "pet_name", "service_type", "appointment_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are concierge at Paws & Relax Lodge (hotel_id: paws_relax_seattle). Stylists can consult 10 minutes before appointments.
+
+user:
+Hi! Could we do a quick consult for a lion cut for my cat, Miso, then a full groom at 2 PM? Reservation RSV45454.
+
+assistant channel=analysis:
+Book full groom at 14:00; note that consultation occurs 10 minutes prior (verbal note only per schema).
+
+assistant channel=commentary to=tool.schedule_pet_grooming:
+{"reservation_id":"RSV45454","pet_name":"Miso","service_type":"full_groom","appointment_time":"2025-08-21T14:00:00"}
+
+tool.schedule_pet_grooming channel=commentary to=assistant:
+{"status":"scheduled","appointment_id":"GROOM-36"}
+
+assistant channel=analysis:
+Confirm consult timing.
+
+assistant channel=final:
+Miso is set for a full groom at 2:00 PM (ID GROOM-36). Your stylist will meet you at 1:50 PM for a quick lion-cut consult to confirm length and face trim preferences.
+
+user:
+Perfect, thanks! Also, the front desk team is so friendly.
+
+assistant channel=analysis:
+Small talk.
+
+assistant channel=final:
+That means a lot—we’ll pass the compliment along!
+
+

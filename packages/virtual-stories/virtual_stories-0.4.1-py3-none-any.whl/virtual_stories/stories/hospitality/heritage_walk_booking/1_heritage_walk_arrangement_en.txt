@@ -1,0 +1,62 @@
+"""
+Guest inquires about booking a guided heritage walk.
+
+ROLES: user (guest eager to explore historic district), assistant (concierge arranging heritage walk)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "book_heritage_walk",
+    "description": "Reserve spots on a historic heritage walking tour.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "walk_time": {"type": "string", "format": "date-time"},
+        "walkers": {"type": "integer", "minimum": 1, "maximum": 10}
+      },
+      "required": ["reservation_id", "walk_time", "walkers"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Heritage Grand Inn (hotel_id: heritage_grand_boston).
+Address: 12 Freedom Trail Ln, Boston, MA 02108. Phone: (617) 555-0133.
+The inn offers 75 colonial-style rooms, complimentary breakfast, a fireplace lounge,
+and daily guided heritage walks at 10 AM and 3 PM. Check-in 3 PM, check-out 12 PM.
+Timezone: America/New_York.
+
+user:
+Good afternoon! I'm loving the historic charm here. Could you help me book a heritage walk tomorrow?
+
+assistant channel=analysis:
+Reply with friendly tone, ask for reservation ID, preferred time, and number of walkers.
+
+assistant channel=final:
+We're thrilled you're enjoying the history! I'd be glad to arrange a tour.
+Could you provide your reservation ID, the time you'd prefer, and how many will join?
+
+user:
+Sure, my reservation ID is RSV44444. We'd like to join the 10 AM walk tomorrow for three people.
+
+assistant channel=analysis:
+Book heritage walk for 2025-08-20 at 10:00 for 3 walkers.
+
+assistant channel=commentary to=tool.book_heritage_walk:
+{"reservation_id":"RSV44444","walk_time":"2025-08-20T10:00:00","walkers":3}
+
+tool.book_heritage_walk channel=commentary to=assistant:
+{"status":"booked","tour_id":"HIST-310"}
+
+assistant channel=analysis:
+Confirm booking with tour ID.
+
+assistant channel=final:
+Your spots on tomorrow's 10 AM heritage walk are confirmed for three guests.
+Your tour ID is HIST-310. Enjoy stepping back in time!

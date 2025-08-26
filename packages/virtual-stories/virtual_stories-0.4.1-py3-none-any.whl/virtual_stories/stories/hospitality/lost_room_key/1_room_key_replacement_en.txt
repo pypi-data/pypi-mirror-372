@@ -1,0 +1,56 @@
+"""
+Guest reports a lost room key and requests a replacement.
+
+ROLES: user (guest who misplaced their key), assistant (front desk verifying identity and issuing a new key)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "issue_replacement_key",
+    "description": "Issue a replacement key card for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_number": { "type": "string" },
+        "id_present": { "type": "boolean", "description": "Guest has photo ID" }
+      },
+      "required": ["reservation_id", "room_number", "id_present"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Harborfront Hotel (hotel_id: harborfront_hotel_bos). Address: 12 Dock St, Boston, MA 02109. For security, replacement keys require government-issued photo identification.
+
+user:
+Hi, I seem to have misplaced my room key. By the way, the harbor view is lovely!
+
+assistant channel=analysis:
+Acknowledge small talk, then request reservation ID, room number, and confirm the guest has photo ID.
+
+assistant channel=final:
+The harbor is beautiful today! I'll help you with a new key. Could you share your reservation ID, room number, and confirm you have your photo ID with you?
+
+user:
+Thanks! It's reservation RSV44556, room 804, and yes, I have my ID.
+
+assistant channel=analysis:
+Issue replacement key for room 804.
+
+assistant channel=commentary to=tool.issue_replacement_key:
+{"reservation_id":"RSV44556","room_number":"804","id_present":true}
+
+tool.issue_replacement_key channel=commentary to=assistant:
+{"status":"issued","keycard_id":"K804-2"}
+
+assistant channel=analysis:
+Inform guest where to pick up key.
+
+assistant channel=final:
+A new key has been prepared for room 804. Please stop by the front desk with your ID to pick it up, and enjoy that harbor view!

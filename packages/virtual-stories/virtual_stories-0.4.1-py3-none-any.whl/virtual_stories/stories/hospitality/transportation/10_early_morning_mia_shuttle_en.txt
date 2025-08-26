@@ -1,0 +1,64 @@
+"""
+Guest confirms an early morning shuttle to Miami International Airport (MIA).
+ROLES: user (guest needing dawn transfer), assistant (front desk agent checking schedule and booking)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_shuttle_schedule",
+    "description": "Retrieve upcoming shuttle departure times for a given airport.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "airport_code": { "type": "string" }
+      },
+      "required": ["airport_code"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_airport_shuttle",
+    "description": "Reserve a seat on the airport shuttle.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "airport_code": { "type": "string" },
+        "departure_time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "guest_name": { "type": "string" },
+        "room_number": { "type": "string" }
+      },
+      "required": ["airport_code","departure_time","guest_name","room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Ocean View Resort Miami (hotel_id: ocean_view_mia). Address: 800 Collins Ave, Miami Beach, FL 33139. Timezone: America/New_York. Check-in 4:00 PM, check-out 11:00 AM. Amenities: beachfront pool, free Wi‑Fi, cabana rentals. Currency: USD; taxes 14% + resort fee $28/night. Be clear and only use tools to check shuttle schedules and book seats.
+
+user:
+Morning! The sunrise over the ocean is incredible. I have a 6 AM flight from MIA and need the earliest shuttle. I'm Priya in room 518.
+
+assistant channel=analysis:
+Check schedule for MIA; book earliest time (04:00) if available.
+
+assistant channel=commentary to=tool.check_shuttle_schedule:
+{"airport_code":"MIA"}
+
+tool.check_shuttle_schedule channel=commentary to=assistant:
+{"departures":["04:00","05:00","07:00"]}
+
+assistant channel=commentary to=tool.book_airport_shuttle:
+{"airport_code":"MIA","departure_time":"04:00","guest_name":"Priya","room_number":"518"}
+
+tool.book_airport_shuttle channel=commentary to=assistant:
+{"status":"confirmed","reservation_number":"SHUT-MIA04"}
+
+assistant channel=final:
+You're booked on the 4:00 AM shuttle to MIA (reservation SHUT-MIA04). Please meet us in the lobby by 3:50 AM. Have a smooth flight!

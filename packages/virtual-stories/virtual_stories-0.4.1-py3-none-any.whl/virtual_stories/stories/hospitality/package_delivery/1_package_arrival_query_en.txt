@@ -1,0 +1,47 @@
+"""
+Guest checks whether a package has arrived at the hotel.
+
+ROLES: user (guest expecting a delivery), assistant (front desk agent tracking packages)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "track_package",
+    "description": "Look up the status of a package delivered to the hotel.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tracking_number": { "type": "string", "description": "Carrier tracking number." }
+      },
+      "required": ["tracking_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001.
+Timezone: America/New_York. Packages are logged upon arrival and stored at the front desk.
+Be courteous and verify tracking numbers.
+
+user:
+Hi, could you check if my package with tracking number 1Z999AA10123456784 has arrived?
+
+assistant channel=analysis:
+Use tool to track package status.
+
+assistant channel=commentary to=tool.track_package:
+{"tracking_number":"1Z999AA10123456784"}
+
+tool.track_package channel=commentary to=assistant:
+{"status":"delivered","received_by":"Front Desk","timestamp":"2025-08-18T14:20:00-04:00"}
+
+assistant channel=analysis:
+Inform guest package is at front desk and ready for pickup.
+
+assistant channel=final:
+Yes—your package was delivered today at 2:20 PM and is waiting for you at the front desk. Just bring your ID to collect it.

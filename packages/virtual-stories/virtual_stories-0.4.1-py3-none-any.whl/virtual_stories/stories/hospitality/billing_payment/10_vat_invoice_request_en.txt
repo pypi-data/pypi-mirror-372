@@ -1,0 +1,95 @@
+"""
+Guest requests a VAT-compliant invoice for business reimbursement.
+ROLES: user (business traveler asking for VAT invoice), assistant (billing specialist generating invoice and sending receipt)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_folio",
+    "description": "Retrieve the guest folio with line-item charges.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier." },
+        "reservation_id": { "type": "string", "description": "Reservation identifier." },
+        "last_name": { "type": "string", "description": "Guest last name for verification." }
+      },
+      "required": ["hotel_id", "reservation_id", "last_name"]
+    },
+    "strict": true
+  },
+  {
+    "name": "explain_charge",
+    "description": "Provide an explanation and source details for a specific folio charge.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "folio_id": { "type": "string", "description": "Folio identifier or reservation id." },
+        "charge_code": { "type": "string", "description": "System code for the charge (e.g., MINIBAR, LATECO).", "minLength": 3 }
+      },
+      "required": ["folio_id", "charge_code"]
+    },
+    "strict": true
+  },
+  {
+    "name": "issue_refund",
+    "description": "Issue a partial or full refund to the original payment method.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "amount": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string", "enum": ["CHF"] },
+        "reason": { "type": "string", "minLength": 3 }
+      },
+      "required": ["reservation_id", "amount", "currency", "reason"]
+    },
+    "strict": true
+  },
+  {
+    "name": "send_receipt",
+    "description": "Email an updated folio or receipt to the guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "to_email": { "type": "string", "format": "email" },
+        "reservation_id": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["to_email", "reservation_id"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a billing specialist at Alpine Retreat Hotel Zurich (hotel_id: alpine_retreat_zrh). Address: 14 Bahnhofstrasse, Zurich 8001, Switzerland. Timezone: Europe/Zurich. Check-in 3:00 PM, check-out 12:00 PM. Amenities: spa, free breakfast, lake view lounge. Currency: CHF; VAT 7.7% included. Flexible rate: free cancel until 48 hours before arrival; Advance Purchase: non-refundable, 15% off. Incidental hold: CHF 100/night. Parking: CHF 40/night. Pets: small dogs 25 CHF/night. Be clear, verify identity, and only use tools to retrieve folios, explain charges, process refunds, and send receipts.
+
+user:
+Grüezi! The mountains looked gorgeous this morning. Could you send me a VAT invoice for my stay? Reservation RSV-2025-0308-4412, last name Fischer. My email is fischer.biz@example.ch.
+
+assistant channel=analysis:
+Retrieve folio and email VAT invoice; no refund needed.
+
+assistant channel=commentary to=tool.get_folio:
+{"hotel_id":"alpine_retreat_zrh","reservation_id":"RSV-2025-0308-4412","last_name":"Fischer"}
+
+tool.get_folio channel=commentary to=assistant:
+{"folio_id":"RSV-2025-0308-4412","charges":[{"date":"2025-03-09","code":"ROOM","desc":"Room Charge","amount":220.00}]}
+
+assistant channel=commentary to=tool.send_receipt:
+{"to_email":"fischer.biz@example.ch","reservation_id":"RSV-2025-0308-4412","note":"VAT 7.7% included"}
+
+tool.send_receipt channel=commentary to=assistant:
+{"status":"sent"}
+
+assistant channel=final:
+I’ve emailed the VAT-compliant invoice for reservation RSV-2025-0308-4412 to fischer.biz@example.ch. Let me know if your company needs any additional details. Enjoy the alpine views!

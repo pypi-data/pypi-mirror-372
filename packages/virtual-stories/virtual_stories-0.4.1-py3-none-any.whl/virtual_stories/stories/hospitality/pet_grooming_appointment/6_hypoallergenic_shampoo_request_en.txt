@@ -1,0 +1,59 @@
+"""
+Guest requests hypoallergenic shampoo for sensitive-skin dog.
+
+ROLES: user (guest with sensitive-skin dog), assistant (concierge confirming product availability and booking)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_grooming",
+    "description": "Book a pet grooming appointment at the onsite salon.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "pet_name": { "type": "string" },
+        "service_type": { "type": "string", "enum": ["bath", "full_groom"] },
+        "appointment_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "pet_name", "service_type", "appointment_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are concierge at Paws & Relax Lodge (hotel_id: paws_relax_seattle). Salon carries hypoallergenic oatmeal shampoo on request.
+
+user:
+Hi, my beagle Olive has sensitive skin. Can we get a bath with hypoallergenic shampoo at 4 PM? Reservation RSV88881.
+
+assistant channel=analysis:
+Book a bath for Olive at 16:00.
+
+assistant channel=commentary to=tool.schedule_pet_grooming:
+{"reservation_id":"RSV88881","pet_name":"Olive","service_type":"bath","appointment_time":"2025-08-19T16:00:00"}
+
+tool.schedule_pet_grooming channel=commentary to=assistant:
+{"status":"scheduled","appointment_id":"GROOM-29"}
+
+assistant channel=analysis:
+Confirm hypoallergenic product verbally.
+
+assistant channel=final:
+Olive is booked for 4:00 PM (ID GROOM-29). We’ll use our hypoallergenic oatmeal shampoo and keep the rinse lukewarm for comfort. Anything else helps her relax—maybe a favorite toy?
+
+user:
+She likes a squeaky duck. And your dog park mural is adorable.
+
+assistant channel=analysis:
+Small talk.
+
+assistant channel=final:
+We’ll have a squeaky duck on standby—and glad you like the mural!
+
+

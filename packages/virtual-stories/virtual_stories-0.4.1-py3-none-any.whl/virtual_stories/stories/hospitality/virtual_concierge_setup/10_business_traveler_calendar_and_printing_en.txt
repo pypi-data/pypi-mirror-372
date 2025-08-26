@@ -1,0 +1,84 @@
+"""
+Business traveler calendar sync and secure printing at the Capital Square Hotel.
+
+Hotel facts (authoritative for this dialogue only):
+- Property: Capital Square Hotel
+- Address: 1600 Avenue NW, Washington, DC 20006, USA
+- Time zone: America/New_York
+- Front desk: +1-202-555-0137; Business Center L2
+- Wi‑Fi SSID: "CapitalSq_Guest"; password: "Square#0825"
+- Check-in 3:00 PM; Check-out 12:00 PM
+- Amenities: 24/7 fitness; Lobby café 6:00–14:00; Bar 17:00–23:00
+- Room 812 devices: Surface Go tablet, HP LaserJet Pro MFP on L2 (Pull‑Print PIN required)
+- Services: Calendar sync to show next meetings; Secure pull printing with PIN
+
+ROLES: user (business traveler in 812 wanting calendar sync and secure printing PIN), assistant (hotel virtual concierge configuring services)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "sync_calendar_preview",
+    "description": "Connect a guest temporary account to calendar and return next event summary only.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "provider": {"type": "string"}
+      },
+      "required": ["room_number", "provider"]
+    },
+    "strict": true
+  },
+  {
+    "name": "generate_pull_print_pin",
+    "description": "Generate a one-time 6-digit PIN for secure printing.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"}
+      },
+      "required": ["room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the virtual concierge at Capital Square Hotel. Use only the listed facts and tool outputs. Keep tone professional and concise. Do not expose full calendar details—summary only.
+
+user:
+Hi—812. Please sync my calendar (Microsoft) so the tablet shows the next meeting, and give me a secure print PIN for L2.
+
+assistant channel=analysis:
+Run calendar preview for Microsoft; generate print PIN. Add small talk about coffee hours.
+
+assistant channel=commentary to=tool.sync_calendar_preview:
+{"room_number":"812","provider":"Microsoft"}
+
+tool.sync_calendar_preview channel=commentary to=assistant:
+{"status":"connected","next_event_summary":"Team briefing tomorrow 09:30, Room Jefferson B"}
+
+assistant channel=commentary to=tool.generate_pull_print_pin:
+{"room_number":"812"}
+
+tool.generate_pull_print_pin channel=commentary to=assistant:
+{"status":"ok","pin":"428913"}
+
+assistant channel=final:
+Connected—your next event shows as “Team briefing tomorrow 09:30, Room Jefferson B.” Your secure pull‑print PIN is 428913 for the L2 printer. Lobby café pours coffee 6:00–14:00 if you need a pre‑meeting boost.
+
+user:
+Great—anything else I should know?
+
+assistant channel=analysis:
+Remind that PIN is one‑time and expires at checkout.
+
+assistant channel=final:
+The PIN is one‑time and expires at check‑out; you can generate another anytime.
+

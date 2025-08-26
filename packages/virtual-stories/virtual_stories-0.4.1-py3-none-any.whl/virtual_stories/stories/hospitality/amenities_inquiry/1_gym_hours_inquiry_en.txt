@@ -1,0 +1,48 @@
+"""
+Guest asks about gym operating hours.
+
+ROLES: user (guest curious about gym availability), assistant (front desk agent providing amenity information)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "get_amenity_hours",
+    "description": "Retrieve opening and closing times for a hotel amenity.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier." },
+        "amenity": { "type": "string", "enum": ["gym", "pool", "restaurant", "spa"], "description": "Amenity name." }
+      },
+      "required": ["hotel_id", "amenity"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001.
+Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi-Fi, gym, pool, and on-site restaurant.
+Provide accurate information and use tools for amenity hours.
+
+user:
+Hi! What time does the gym open and close?
+
+assistant channel=analysis:
+Use tool to fetch gym hours for Skyline City Hotel.
+
+assistant channel=commentary to=tool.get_amenity_hours:
+{"hotel_id":"skyline_city_hotel_nyc","amenity":"gym"}
+
+tool.get_amenity_hours channel=commentary to=assistant:
+{"open":"06:00","close":"22:00"}
+
+assistant channel=analysis:
+Share hours and offer additional help.
+
+assistant channel=final:
+Our gym is open daily from 6:00 AM to 10:00 PM. Let me know if you need anything else!

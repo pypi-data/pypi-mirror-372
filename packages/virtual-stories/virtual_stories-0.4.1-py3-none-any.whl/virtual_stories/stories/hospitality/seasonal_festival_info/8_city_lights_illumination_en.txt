@@ -1,0 +1,43 @@
+"""
+City Lights Illumination ceremony with viewing terraces and tram timing.
+Advise routes and accessibility.
+
+ROLES: user (guest asking about illumination time), assistant (concierge suggesting routes and terrace access)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"get_event_schedule","description":"Get illumination ceremony details.","parameters":{"type":"object","additionalProperties":false,"properties":{"event_name":{"type":"string"},"date":{"type":"string","format":"date"}},"required":["event_name","date"]},"strict":true},
+  {"name":"check_accessibility","description":"Check elevator access status at terraces.","parameters":{"type":"object","additionalProperties":false,"properties":{"location":{"type":"string"}},"required":["location"]},"strict":true}
+]
+```
+"""
+
+system:
+Hotel: Lumen Tower Hotel, 500 Skyline Blvd. 42 floors; Sky Deck for guests 18:00–22:00; north terrace elevator under maintenance intermittently. City tram stop at Skyline/5th.
+
+user:
+What time is the illumination tonight, and is the north terrace accessible?
+
+assistant channel=analysis:
+Confirm ceremony time; check accessibility for north terrace; offer Sky Deck option. Include a small talk line.
+
+assistant channel=commentary to=tool.get_event_schedule:
+{"event_name":"City Lights Illumination","date":"2025-12-01"}
+
+tool.get_event_schedule channel=commentary to=assistant:
+{"ceremony":"19:00","countdown":"18:55","locations":["Civic Plaza","Riverside Bridge"]}
+
+assistant channel=commentary to=tool.check_accessibility:
+{"location":"North Terrace Elevator"}
+
+tool.check_accessibility channel=commentary to=assistant:
+{"status":"operational","note":"Short queues expected"}
+
+assistant channel=final:
+The illumination ceremony starts at 19:00 (countdown at 18:55). The north terrace elevator is operational—expect short queues. If you’d prefer to avoid crowds, our Sky Deck is open to guests from 18:00 to 22:00.
+
+By the way, do you enjoy the view more with city music or in quiet?
+
+

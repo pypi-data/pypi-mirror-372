@@ -1,0 +1,55 @@
+"""
+Guest inquires about electric vehicle charging availability and rates.
+ROLES: user (guest needing to charge an electric car), assistant (front desk agent checking EV charger availability)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_ev_charging_availability",
+    "description": "Check availability and pricing for EV charging stations.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "date_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "date_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a front desk agent at Desert Palm Resort (hotel_id: desert_palm_resort_phoenix). Address: 1000 E Camelback Rd, Phoenix, AZ 85014.
+Timezone: America/Phoenix. The 220-room resort offers a desert-view pool, eight EV charging stations, a southwestern bistro,
+24-hour gym, and two meeting rooms. Check-in 4:00 PM, check-out 11:00 AM. Use tools to confirm EV charger availability and rates.
+
+user:
+Good afternoon! Hope your day is as sunny as mine. Do you have any EV charging spots open tonight around 8 PM? My reservation is RSV88888.
+
+assistant channel=analysis:
+Check charger availability for reservation RSV88888 at specified time.
+
+assistant channel=commentary to=tool.check_ev_charging_availability:
+{"reservation_id":"RSV88888","date_time":"2025-07-14T20:00:00"}
+
+tool.check_ev_charging_availability channel=commentary to=assistant:
+{"available_ports":2,"rate_per_hour":5}
+
+assistant channel=analysis:
+Inform guest of availability, rate, and ask about location if needed.
+
+assistant channel=final:
+Two charging ports are free tonight at 8 PM, and the rate is $5 per hour. Would you like one reserved under your room?
+
+user:
+Yes please, and is the station near the main entrance?
+
+assistant channel=analysis:
+Confirm reservation and answer location question with friendly tone.
+
+assistant channel=final:
+I've reserved a spot for you; the chargers are located just beyond the main entrance on the west side. Let us know if you need anything else!

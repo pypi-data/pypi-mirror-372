@@ -1,0 +1,74 @@
+"""
+Wi‑Fi device‑limit reached; handle gracefully with whitelist offer.
+ROLES: user (guest exceeding device cap), assistant (IT support applying policy and options)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_wifi_status",
+    "description": "Count devices registered for room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "as_of_utc": {"type": "string", "format": "date-time"}
+      },
+      "required": ["room_number", "as_of_utc"]
+    },
+    "strict": true
+  },
+  {
+    "name": "register_device",
+    "description": "Add device to whitelist within room cap override.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "device_mac": {"type": "string", "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"},
+        "guest_last_name": {"type": "string"}
+      },
+      "required": ["room_number", "device_mac", "guest_last_name"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+Property: Harborlight Hotel
+Address: 12 Marina Quay, Bayport, FL 33099
+SSIDs: Harbor_Guest_5G (primary), Harbor_Guest_2G (legacy)
+Policy: 3 devices/room standard; concierge may grant temporary +1 for business needs
+Coffee bar hours: 6:00–18:00 in lobby
+
+user:
+I can’t connect my work laptop; it says device limit reached in room 709.
+
+assistant channel=analysis:
+Check count; if at cap, offer temporary override; request MAC.
+
+assistant channel=commentary to=tool.get_wifi_status:
+{"room_number":"709","as_of_utc":"2025-08-25T12:00:00Z"}
+
+tool.get_wifi_status channel=commentary to=assistant:
+{"devices_registered":["9C:34:26:AA:11:01","84:2E:27:00:19:FE","D8:6C:63:0A:77:90"],"cap":3}
+
+assistant channel=final:
+You’re at the standard 3‑device cap. I can grant a temporary +1. Could you share the laptop’s MAC and confirm the last name on the room?
+
+user:
+MAC is 40:9F:38:22:11:55, last name Patel.
+
+assistant channel=commentary to=tool.register_device:
+{"room_number":"709","device_mac":"40:9F:38:22:11:55","guest_last_name":"Patel"}
+
+tool.register_device channel=commentary to=assistant:
+{"status":"ok","effective_until":"2025-08-26T12:00:00Z"}
+
+assistant channel=final:
+Done—your laptop is added until tomorrow noon. The lobby coffee bar is open 6:00–18:00 if you need a quiet spot for calls.

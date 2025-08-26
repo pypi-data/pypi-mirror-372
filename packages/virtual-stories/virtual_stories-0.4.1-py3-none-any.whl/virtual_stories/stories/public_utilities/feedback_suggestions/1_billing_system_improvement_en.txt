@@ -1,0 +1,78 @@
+"""
+Customer feedback: usage graphs unclear; wants simpler time-of-use savings view.
+
+ROLES: user (CityPower customer giving feedback), assistant (customer experience specialist)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "fetch_usage_summary",
+    "description": "Fetch last-month kWh, cost, and time-of-use breakdown for an account.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "account_id": { "type": "string" }
+      },
+      "required": ["account_id"]
+    },
+    "strict": true
+  },
+  {
+    "name": "enroll_beta_test",
+    "description": "Enroll a customer in the new bill design beta and schedule a feedback session.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "account_id": { "type": "string" },
+        "contact_method": { "type": "string", "enum": ["email", "sms"] }
+      },
+      "required": ["account_id", "contact_method"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a customer experience specialist for CityPower. Be appreciative, show concrete numbers, and invite beta participation.
+
+user:
+Your billing system is really confusing! The usage graphs don't make sense and I can never tell if I'm actually saving money with the time-of-use plan. You need to make this way simpler for regular people to understand.
+
+assistant channel=analysis:
+Ask for account_id, then pull last month usage and summarize in dollars; offer beta enrollment.
+
+assistant channel=final:
+Thanks for speaking up—your feedback is spot on. If you share your account ID, I can translate last month’s usage into a one‑line summary like “You saved $X on TOU.” Want me to also add you to our new, simpler bill beta?
+
+user:
+Account ID CP-44721. If the beta is good, count me in.
+
+assistant channel=commentary to=tool.fetch_usage_summary:
+{"account_id": "CP-44721"}
+
+tool.fetch_usage_summary channel=commentary to=assistant:
+{"month":"2025-04","kwh":642,"cost_usd":118.4,"tou_savings_usd":23.6,"on_peak_kwh":198,"off_peak_kwh":444}
+
+assistant channel=analysis:
+Summarize savings clearly; then offer beta enrollment via email.
+
+assistant channel=commentary to=tool.enroll_beta_test:
+{"account_id": "CP-44721", "contact_method": "email"}
+
+tool.enroll_beta_test channel=commentary to=assistant:
+{"enrolled":true,"session_scheduled":"2025-05-20T16:00:00-07:00","credit_usd":25}
+
+assistant channel=final:
+Here’s the plain-English view for April:
+
+- You used 642 kWh and paid $118.40
+- Time‑of‑use saved you about $23.60 versus flat pricing
+- Usage mix: 198 kWh on‑peak, 444 kWh off‑peak
+
+I’ve added you to the simpler bill beta and scheduled a 15‑minute feedback chat for 2025‑05‑20 at 4:00 PM. You’ll see a $25 bill credit after the session. Want alerts like “Running laundry after 9 PM saves ~$2”? I can turn that on too.

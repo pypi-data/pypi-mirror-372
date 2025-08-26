@@ -1,0 +1,100 @@
+"""
+Guest checks on an expedited courier envelope and requests a hold and in-room delivery.
+
+ROLES: user (guest awaiting DHL envelope), assistant (hotel front desk handling packages)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_for_package",
+    "description": "Check whether a package/envelope has arrived for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guest_name": { "type": "string" }
+      },
+      "required": ["guest_name"]
+    },
+    "strict": true
+  },
+  {
+    "name": "place_package_hold",
+    "description": "Place a hold label on an incoming package for a guest, with an optional hold-until date.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guest_name": { "type": "string" },
+        "hold_until": { "type": "string", "format": "date" }
+      },
+      "required": ["guest_name"]
+    },
+    "strict": true
+  },
+  {
+    "name": "schedule_in_room_delivery",
+    "description": "Schedule bell desk to deliver a package to a guest room at a specified time window.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guest_name": { "type": "string" },
+        "room_number": { "type": "string" },
+        "delivery_time": { "type": "string" }
+      },
+      "required": ["guest_name", "room_number", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Harborview Boutique Hotel (hotel_id: harborview_sf). Address: 18 Pier Esplanade, San Francisco, CA 94111. Timezone: America/Los_Angeles. Package policy: accepts parcels and envelopes daily 7:00 AM–10:00 PM, stores them in a secure cage near the loading dock; photo ID matching the reservation required for pickup; complimentary holding for 5 days, then $5/day storage. Bell desk can deliver to rooms between 8:00 AM–9:00 PM upon request. Hotel offers complimentary lobby espresso from 6:30 AM–11:00 AM.
+
+user:
+Hi there—could you check whether a DHL envelope for Alex Moreno has arrived? It was supposed to be here this afternoon.
+
+assistant channel=analysis:
+We have the guest name. Check package status.
+
+assistant channel=commentary to=tool.check_for_package:
+{"guest_name":"Alex Moreno"}
+
+tool.check_for_package channel=commentary to=assistant:
+{"package_arrived": false}
+
+assistant channel=analysis:
+Not yet arrived. Offer to place a hold and schedule in-room delivery later. Include a friendly small talk line about the espresso (from system).
+
+assistant channel=final:
+I don’t see it checked in just yet, Alex—couriers sometimes arrive closer to evening. If you like, I can place a hold label so we set it aside on arrival and even schedule bell desk to deliver it to your room later. And if you haven’t tried it yet, the lobby espresso bar is complimentary until 11:00 AM.
+
+user:
+Nice! The espresso was a pleasant surprise this morning. Please hold the envelope when it comes in and have it brought to room 1412 around 7:30 PM.
+
+assistant channel=analysis:
+Place hold; then schedule in-room delivery for 7:30 PM to room 1412.
+
+assistant channel=commentary to=tool.place_package_hold:
+{"guest_name":"Alex Moreno","hold_until":"2025-08-28"}
+
+tool.place_package_hold channel=commentary to=assistant:
+{"status":"hold_placed"}
+
+assistant channel=commentary to=tool.schedule_in_room_delivery:
+{"guest_name":"Alex Moreno","room_number":"1412","delivery_time":"19:30"}
+
+tool.schedule_in_room_delivery channel=commentary to=assistant:
+{"status":"scheduled","window":"19:30-20:00"}
+
+assistant channel=analysis:
+Confirm hold and delivery window; remind ID requirement per system.
+
+assistant channel=final:
+All set—your envelope will be held on arrival and scheduled for delivery to room 1412 between 7:30–8:00 PM. Please have a photo ID handy if you pick it up at the desk instead. I’ll keep an eye out and text your room the moment it’s scanned in.
+
