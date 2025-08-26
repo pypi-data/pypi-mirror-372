@@ -1,0 +1,28 @@
+name: documentation
+
+on: [push, pull_request]
+
+permissions:
+  contents: write
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - name: Install dependencies
+        run: |
+          pip install -r requirements-dev.txt
+      - name: Sphinx build
+        run: |
+          sphinx-multiversion docs/source/ docs/build/html
+          touch docs/build/html/.nojekyll
+          echo '<!DOCTYPE html><html>  <head>    <title>Redirecting to main branch</title>    <meta charset="utf-8">    <meta http-equiv="refresh" content="0; url=./main/index.html">    <link rel="canonical" href="https://acmo0.github.io/p4lantir/main/index.html">  </head></html>' > docs/build/html/index.html
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          publish_branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/build/html/
+          force_orphan: true
