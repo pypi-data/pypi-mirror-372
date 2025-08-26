@@ -1,0 +1,67 @@
+# -*- coding: utf-8 -*-
+"""Installer for the collective.documentgenerator package."""
+
+from setuptools import find_packages
+from setuptools import setup
+
+
+long_description = (
+    open("README.rst").read() + "\n\n" + open("CHANGES.rst").read() + "\n\n"
+)
+
+
+setup(
+    name="collective.documentgenerator",
+    version="4.0",
+    description="Desktop document generation (.odt, .pdf, .doc, ...) based on appy framework "
+    "(https://appyframe.work/tool/public) and OpenOffice/LibreOffice",
+    long_description=long_description,
+    # Get more from https://pypi.org/pypi?%3Aaction=list_classifiers
+    classifiers=[
+        "Environment :: Web Environment",
+        "Framework :: Plone",
+        "Framework :: Plone :: Addon",
+        "Framework :: Plone :: 6.0",
+        "Framework :: Plone :: 6.1",
+        "Framework :: Plone :: Addon",
+        "License :: OSI Approved :: GNU General Public License (GPL)",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.13",
+    ],
+    keywords="plone document generation generator odt word pdf libreoffice template",
+    author="Simon Delcourt",
+    author_email="simon.delcourt@imio.be",
+    url="https://pypi.org/project/collective.documentgenerator",
+    license="GPL",
+    packages=find_packages("src", exclude=["ez_setup"]),
+    namespace_packages=["collective"],
+    package_dir={"": "src"},
+    include_package_data=True,
+    zip_safe=False,
+    install_requires=[
+        "appy>=1.0.4",
+        "beautifulsoup4",
+        "collective.behavior.talcondition",
+        "collective.excelexport",
+        "collective.z3cform.datagridfield",
+        "future>=0.14.0",
+        "imio.migrator>=1.11",
+        "phonenumbers",
+        "plone.api>=1.3.3",
+        "plone.app.dexterity",
+        "plone.app.lockingbehavior",
+        "setuptools",
+        "z3c.table",
+        # fix about orderedselect
+        "z3c.form>=3.2.4",
+        "imio.helpers>=1.0",
+    ],
+    extras_require={
+        "test": ["plone.app.robotframework", "plone.app.testing", "imio.pyutils"],
+    },
+    entry_points="""
+    [z3c.autoinclude.plugin]
+    target = plone
+    """,
+)
