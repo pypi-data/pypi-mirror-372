@@ -1,0 +1,123 @@
+= Type des valeurs
+
+Environment varaibles contains only string as value.
+{page-component-name} convert this string value to python types (`int`, `float`, `list`)
+
+[[env_var_value_type_str]]
+== String
+
+Stay as is, no transformation is applied unless specified.
+
+[[env_var_value_type_boolean]]
+== Boolean
+
+Convert to a `bool`.
+
+`True` value are.
+
+* `"True"`
+* `"true"`
+* `"t"`
+* `"T"`
+* `"1"`
+
+explicit `False` value are.
+
+* `"False"`
+* `"false"`
+* `"f"`
+* `"F"`
+* `"0"`
+
+IMPORTANT: If documentation don't spécifiy `Explicit Boolean` then every not `True` value are used as `False`
+
+[[env_var_value_type_int]]
+== Int
+
+Convert to python `int`
+
+`int` value are :
+
+* `"123456"`
+* `"1.2"` -> `1`
+
+Otherwise a `ValueError` is raise.
+
+
+[[env_var_value_type_float]]
+== Float
+
+Convert to python `int`
+
+`int` value are :
+
+* `"123456"` -> `"123456.0"`
+* `"1.2"` -> `1.2`
+
+Otherwise a `ValueError` is raise.
+
+[[env_var_value_type_enum]]
+== Enum
+
+Enum are restricted `string` value.
+The possible value must be explicit in the doc.
+
+[[env_var_value_type_multi_tuple]]
+== Tuple
+
+The tuple (and Set) type can be declared in two format.
+
+. CSV value
+. Repeatable main key with suffix.
+
+This tow ways can be mix, like in the sample below.
+
+A repeatable env variable, for exemple `VAR_A="1" VAR_B="2"` will be converted to a python `tuple` of two element `VAR=("1", "2")`.
+
+IMPORTANT: The suffix is lost, if you want to keep-it, you need to use the <<env_var_value_type_multi_dict>>.
+
+
+NOTE: Each value is then converted to the wanted scalar type.
+
+.Sample
+[,shell]
+----
+VAR_1="1"
+VAR_2="2"
+VAR="1,5"
+# extract("VAR") -> ("1", "2", "1", "5")
+----
+
+
+[[env_var_value_type_multi_set]]
+== Set
+
+Like the <<env_var_value_type_multi_tuple>> but avoid duplicate value.
+
+.Sample
+[,shell]
+----
+VAR_1="1"
+VAR_2="2"
+VAR="1,5"
+# extract("VAR") -> {"1", "2", "5"}
+----
+
+
+[[env_var_value_type_multi_dict]]
+== Dict
+
+This type don't support `csv` values.
+Only 1 key equal 1 value.
+
+NOTE: A the main key is found without suffix, then `None` is used as key in the dict.
+
+.Sample
+[,shell]
+----
+# Main key is "VAR"
+VAR_A="1"
+VAR_B="2"
+VAR="1,5"
+# extract("VAR") -> {None: "1,5", "A": "1", "B": "2"}
+----
