@@ -1,0 +1,110 @@
+# abq_post_analytics_extension
+
+## 项目简介
+
+abaqus后处理数据分析操作扩展包，提供高效访问 Abaqus ODB 数据的解决方案，特别针对大规模后处理场景优化。
+
+本软件包封装了从Odb文件提取多帧多节点/单元场输出数据并进行后处理的完整流程，显著提升开发效率。
+
+## 项目文档
+
+完整的项目文档请访问：[https://abq-post-analytics-extension.readthedocs.io/zh-cn/latest/](https://abq-post-analytics-extension.readthedocs.io/zh-cn/latest/)
+
+## 项目地址
+
+代码仓库地址：[https://gitee.com/FeiI8/abq_post_analytics_extension](https://gitee.com/FeiI8/abq_post_analytics_extension)
+
+## 核心功能
+
+- **高效数据访问**：通过预构建索引字典实现 O(1) 复杂度的节点/单元数据快速定位
+- **数据自动关联**：自动关联几何数据与场输出数据
+- **批量处理优化**：封装复杂数据层级关系，简化多帧批量处理
+- **面向对象API**：提供简洁的API设计，避免重复实现底层逻辑
+
+## 软件架构
+```
+abq_post_analytics_extension/ 
+├── core/ # 核心业务模块
+│ ├── access.py # Abaqus ODB数据访问
+│ └── analysis/ # 数据分析子模块
+├── utils/ # 通用工具包
+│ ├── file_operations.py
+│ ├── logger_and_print.py
+│ ├── system_utilities.py
+│ └── scientific_computing.py
+└── default_config.py # 默认配置文件
+```
+
+## 安装说明
+
+### 系统要求
+
+- 支持运行SIMULIA Abaqus的系统环境（Windows/Linux/Unix）
+- 必须安装完整的Abaqus软件套件
+- Python 2.7（Abaqus内置Python版本）
+
+### 安装步骤
+
+1. 下载 setuptools:
+   访问 [setuptools官方页面](https://pypi.org/project/setuptools/#files) 下载最新的 setuptools 压缩包
+
+2. 解压 setuptools:
+   将下载的压缩包解压到一个临时目录中
+
+3. 安装 setuptools:
+
+```bash
+<Abaqus安装路径>\SIMULIA\EstProducts\2020\win_b64\tools\SMApy\python2.7\python.exe setup.py install
+```
+
+4. 安装本软件包:
+
+```bash
+<Abaqus安装路径>\SIMULIA\EstProducts\2020\win_b64\tools\SMApy\python2.7\python.exe setup.py install
+```
+
+## 使用示例
+
+以下是一个基础使用示例，展示如何分析网球拍和网球的仿真数据：
+
+```
+# -- coding: UTF-8 --
+from abq_post_analytics_extension.utils.system_utilities import AbqPostExtensionManager from abq_post_analytics_extension.core.analysis.base import PackagedOdbObjects, AllPackagedMeshObjectsSelector, LabelsPackagedMeshObjectsSelector, FieldOutputDatasGetter from abq_post_analytics_extension.core.analysis.analyzer import AllFrameAllFieldValueAnalyzer, ExtremaValueSelector, AverageCalculator, VarianceCalculator, SpecifyFieldHistoryValueAnalyzer
+packaged_odb_objects = PackagedOdbObjects() # 初始化ODB资源封装对象
+# 几何选择器对象初始化
+sphere = AllPackagedMeshObjectsSelector( # 网球球体选择器 packaged_odb_objects=packaged_odb_objects, instance_name="PART-1-1", set_name='SPHERE')
+# 分析器配置
+feature_algorithms1 = { "x_data": [ExtremaValueSelector(), AverageCalculator(), VarianceCalculator()], "y_data": [ExtremaValueSelector(), AverageCalculator(), VarianceCalculator()], "z_data": [ExtremaValueSelector(), AverageCalculator(), VarianceCalculator()], "magnitude_data": [ExtremaValueSelector(), AverageCalculator(), VarianceCalculator()]}
+sphere_ur_all_datas_handler = AllFrameAllFieldValueAnalyzer( name="sphere_ur_all_datas_handler", field_output_type="UR", packaged_meshes_handler=sphere, feature_algorithm=feature_algorithms1)
+# 数据处理执行
+all_max_field_output_datas_getter = FieldOutputDatasGetter(packaged_odb_objects=packaged_odb_objects) all_max_field_output_datas_getter.add_frame_handler(sphere_ur_all_datas_handler) all_max_field_output_datas_getter.get_field_output_datas()
+# 保存结果
+sphere_ur_all_datas_handler.save_datas()
+# 资源释放
+AbqPostExtensionManager().close()
+```
+
+## 适用场景
+
+- 自动化后处理
+- 多帧时程分析
+- 复杂数据关联分析
+- 大规模ODB数据分析
+
+## 版本兼容性
+
+| Abaqus版本 | 支持状态   |
+|------------|------------|
+| 2020       | 完全支持   |
+| 其他版本   | 理论支持   |
+
+## 参与贡献
+
+1. Fork 本仓库
+2. 新建 Feat_xxx 分支
+3. 提交代码
+4. 新建 Pull Request
+
+## 许可证
+
+本项目采用 GPL-3.0 License - 详见 [LICENSE](LICENSE) 文件
