@@ -1,0 +1,110 @@
+Metadata-Version: 2.4
+Name: itchi
+Version: 9.21.356.1
+Summary: TASKING itchi
+Author: TASKING Germany GmbH
+Project-URL: Homepage, https://www.tasking.com
+Project-URL: Support, https://support.tasking.com/T
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: Jinja2
+Requires-Dist: pydantic
+Requires-Dist: PySide6
+Provides-Extra: dev
+Requires-Dist: mypy; extra == "dev"
+Dynamic: license-file
+
+# iTCHi Developer Readme
+
+iTCHi is a helper tool closely tied to TASKING's [winIDEA](https://www.tasking.com/products/winidea).
+
+## Setup IDE
+
+To work on iTCHi using Visual Studio Code, you can use the provided workspace 
+`itchi.code-workspace`.
+
+If you are planning to use PyCharm, nothing special has to be done, just specify the correct venv and
+you are good to go. Note that there are no pre-made PyCharm run configurations, but tests can be
+executed directly.
+
+## Setup Virtual Environment
+
+You can use an existing venv or, even better, create a brand-new venv for this project.
+Using a separate venv will ensure that there is no clashing of packages, and all necessary 
+requirements are specified in this project, making it self-contained.
+
+Make sure that you are using the most recent version of Python that is used in TASKING 
+development.
+
+Creating a venv can be done using:
+
+`<path to python interpreter> -m venv <desired venv location>`
+
+To use this venv, we need to **activate it**. The location of the activate script is OS dependent.
+On Linux it is `source <venv root dir>/bin/activate` and
+on Windows `<venv root dir>/Scripts/activate.<ps1, bat, ...>`.
+
+Once the venv is activated for the first time, it is recommended to upgrade pip by running
+`python -m pip install --upgrade pip`.
+
+## Install the iTCHi Package
+
+Once the venv is created, you need to install the iTCHi package. If you plan to modify iTCHi sources,
+make sure that you install iTCHi in editable mode using the `-e` flag for pip.
+
+Installing iTCHi is simple:
+
+- Activate venv
+- Make sure that the `ISYSTEM_APPS` environment variable is configured
+- Navigate into the iTCHi root directory (where `pyproject.toml` is located)
+- install it using `python -m pip install -e .` to install it in editable mode.
+- if a wheel should be created, call `python -m pip wheel --no-deps .`
+
+  Note that in case that you want actual version stored in \_\_version\_\_, 
+  you have to define `WINIDEA_BUILD_VERSION` environmental variable, 
+  prior to building wheels.
+
+
+## Launching iTCHi
+
+Once the iTCHi package is installed in the venv, you can launch it using `python -m itchi.itchi_cli`
+or call `itchi-cli<.exe>` directly, since pip created an executable and added it to the PATH
+on venv activation. Because you installed iTCHi in venv, you can call this command from anywhere
+when the iTCHi venv is active.
+
+There is also a GUI version `itchi-gui`, which imports the CLI version under the hood.
+
+## Tests
+
+All tests are located in the `tests` directory. If new tests are created, make sure that you are not 
+importing the iTCHi components relative to the tests, but rather import them as installed packages 
+(no leading dots should be present in the imports!). This will ensure that the tests are testing 
+what will be deployed and not what is in editable mode.
+
+If some custom files are needed, specify them relative to the test file, for example:
+
+```py
+import os
+file_of_interest = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), 'file_of_interest.png')
+)
+```
+
+This will ensure that tests can be executed from arbitrary locations, and you do not need to change 
+the current working directory.
+
+Run `pytest .` in the itchi/tests directory to execute all tests. See the pytest manual for more info 
+on how to execute them.
+
+## Adding a New Command
+
+To add a new command, make sure to add it at the following locations:
+
+1. The command parser in `src/itchi/itchi_cli.py`
+2. The launch configuration in `itchi.code-workspace` (for easier development)
+3. The regression tests in `examples/test_examples`
+4. The documentation in `docs/readme.md`
