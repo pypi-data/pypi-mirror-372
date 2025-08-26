@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>队列详情 - Jettask Monitor</title>
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Ant Design -->
+    <link rel="stylesheet" href="https://unpkg.com/antd@4.24.13/dist/antd.min.css" />
+    <script src="https://unpkg.com/moment@2.29.4/moment.js"></script>
+    <script src="https://unpkg.com/antd@4.24.13/dist/antd.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #177ddc;
+            --primary-gradient: linear-gradient(135deg, #1f1f1f 0%, #434343 100%);
+            --success-color: #49aa19;
+            --warning-color: #d89614;
+            --error-color: #a61d24;
+            --info-color: #177ddc;
+            --bg-primary: #000000;
+            --bg-secondary: #141414;
+            --bg-card: #1f1f1f;
+            --text-primary: #rgba(255, 255, 255, 0.85);
+            --text-secondary: rgba(255, 255, 255, 0.65);
+            --border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000000;
+            min-height: 100vh;
+            position: relative;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(23, 125, 220, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(73, 170, 25, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(216, 150, 20, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #root {
+            position: relative;
+            z-index: 1;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+
+        .main-content {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #177ddc 0%, #69c0ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Ant Design 暗色主题覆盖 */
+        .ant-card {
+            background: rgba(31, 31, 31, 0.95) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-statistic-title {
+            color: rgba(255, 255, 255, 0.65) !important;
+        }
+
+        .ant-table {
+            background: transparent !important;
+        }
+
+        .ant-table-thead > tr > th {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-table-tbody > tr > td {
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-table-tbody > tr:hover > td {
+            background: rgba(255, 255, 255, 0.04) !important;
+        }
+
+        .ant-modal-content {
+            background: rgba(31, 31, 31, 0.95) !important;
+        }
+
+        .ant-modal-header {
+            background: transparent !important;
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-modal-title {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        /* 修复导航按钮样式 */
+        .ant-btn-text {
+            color: rgba(255, 255, 255, 0.65) !important;
+        }
+
+        .ant-btn-text:hover {
+            color: rgba(255, 255, 255, 0.85) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-btn-primary {
+            background: #177ddc !important;
+            border-color: #177ddc !important;
+        }
+
+        .ant-btn-primary:hover {
+            background: #1890ff !important;
+            border-color: #1890ff !important;
+        }
+
+        /* 分页器样式 */
+        .ant-pagination-item {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .ant-pagination-item a {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .ant-pagination-item-active {
+            background: #177ddc !important;
+            border-color: #177ddc !important;
+        }
+
+        /* Input输入框样式 */
+        .ant-input {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .ant-input::placeholder {
+            color: rgba(255, 255, 255, 0.45) !important;
+        }
+
+        /* Select下拉框样式 */
+        .ant-select-selector {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .main-content {
+                padding: 16px;
+            }
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { Card, Row, Col, Statistic, Table, Input, Select, Button, Tag, Modal, Descriptions, Space, Divider, Pagination, Spin, message, BackTop, ConfigProvider } = antd;
+        // Icons (using span with text as fallback)
+        const SearchIcon = () => React.createElement('span', null, '🔍');
+        const ReloadIcon = () => React.createElement('span', null, '🔄');
+        const ArrowLeftIcon = () => React.createElement('span', null, '←');
+        const MonitorIcon = () => React.createElement('span', null, '📺');
+        const LineChartIcon = () => React.createElement('span', null, '📈');
+        
+        function QueueDetail() {
+            // 从URL获取队列名称
+            const urlParams = new URLSearchParams(window.location.search);
+            const queueName = urlParams.get('name') || '';
+            
+            // 状态管理
+            const [loading, setLoading] = useState(false);
+            const [taskSearch, setTaskSearch] = useState('');
+            const [statusFilter, setStatusFilter] = useState('');
+            const [timeRange, setTimeRange] = useState('1h');
+            const [showAllStats, setShowAllStats] = useState(true);
+            const [currentPage, setCurrentPage] = useState(1);
+            const [pageSize, setPageSize] = useState(50);
+            const [totalTasks, setTotalTasks] = useState(0);
+            const [taskDetailVisible, setTaskDetailVisible] = useState(false);
+            const [selectedTask, setSelectedTask] = useState(null);
+            
+            // 数据状态
+            const [queueStats, setQueueStats] = useState({
+                messages: 0,
+                messages_ready: 0, 
+                messages_unacknowledged: 0,
+                consumers: 0,
+                length: 0
+            });
+            
+            const [messageStats, setMessageStats] = useState({
+                publish: 0,
+                deliver_get: 0,
+                ack: 0
+            });
+            
+            const [workerSummary, setWorkerSummary] = useState({
+                total_success_count: 0,
+                total_failed_count: 0,
+                total_running_tasks: 0,
+                avg_processing_time: 0
+            });
+            
+            const [workers, setWorkers] = useState([]);
+            const [tasks, setTasks] = useState([]);
+            
+            const chartRef = useRef(null);
+            const trendChart = useRef(null);
+            
+            // 计算属性
+            const onlineWorkers = useMemo(() => 
+                workers.filter(w => w.is_alive).length, [workers]
+            );
+            
+            const filteredTasks = useMemo(() => {
+                let filtered = tasks;
+                
+                if (taskSearch) {
+                    filtered = filtered.filter(task => 
+                        (task.task_name || '').toLowerCase().includes(taskSearch.toLowerCase()) ||
+                        (task.event_id || '').toLowerCase().includes(taskSearch.toLowerCase())
+                    );
+                }
+                
+                if (statusFilter) {
+                    filtered = filtered.filter(task => {
+                        const status = task.parsed_status?.status || '';
+                        return status.includes(statusFilter);
+                    });
+                }
+                
+                const start = (currentPage - 1) * pageSize;
+                const end = start + pageSize;
+                setTotalTasks(filtered.length);
+                return filtered.slice(start, end);
+            }, [tasks, taskSearch, statusFilter, currentPage, pageSize]);
+            
+            // 辅助函数
+            const formatTime = (seconds) => {
+                if (!seconds || seconds === 0) return '-';
+                if (seconds < 1) return `${Math.round(seconds * 1000)}ms`;
+                if (seconds < 60) return `${seconds.toFixed(2)}s`;
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = (seconds % 60).toFixed(1);
+                return `${minutes}m${remainingSeconds}s`;
+            };
+            
+            const formatDateTime = (timestamp) => {
+                if (!timestamp) return '-';
+                return new Date(parseFloat(timestamp) * 1000).toLocaleString('zh-CN');
+            };
+            
+            const getStatusType = (status) => {
+                if (!status) return 'default';
+                if (status.includes('completed') || status.includes('成功')) return 'success';
+                if (status.includes('failed') || status.includes('失败')) return 'error';
+                if (status.includes('running') || status.includes('执行')) return 'warning';
+                return 'default';
+            };
+            
+            const getStatusText = (status) => {
+                if (!status) return '未知';
+                if (status.includes('completed') || status.includes('成功')) return '已完成';
+                if (status.includes('failed') || status.includes('失败')) return '失败';
+                if (status.includes('running') || status.includes('执行')) return '执行中';
+                if (status.includes('pending') || status.includes('等待')) return '等待中';
+                return status;
+            };
+            
+            const goBack = () => {
+                window.location.href = '/';
+            };
+            
+            const viewTaskDetail = (task) => {
+                setSelectedTask(task);
+                setTaskDetailVisible(true);
+            };
+            
+            // 数据加载函数
+            const loadQueueStats = async () => {
+                try {
+                    const response = await fetch(`/api/queue/${encodeURIComponent(queueName)}/stats`);
+                    if (response.ok) {
+                        const stats = await response.json();
+                        setQueueStats(stats);
+                        setMessageStats(stats.message_stats || {});
+                    }
+                } catch (error) {
+                    console.error('加载队列统计失败:', error);
+                }
+            };
+            
+            const loadWorkers = async () => {
+                try {
+                    const [workersResponse, summaryResponse] = await Promise.all([
+                        fetch(`/api/queue/${encodeURIComponent(queueName)}/workers`),
+                        fetch(`/api/queue/${encodeURIComponent(queueName)}/worker-summary`)
+                    ]);
+                    
+                    if (workersResponse.ok) {
+                        const data = await workersResponse.json();
+                        setWorkers(data.workers || []);
+                    }
+                    
+                    if (summaryResponse.ok) {
+                        const summaryData = await summaryResponse.json();
+                        setWorkerSummary(summaryData.summary || {});
+                    }
+                } catch (error) {
+                    console.error('加载Workers失败:', error);
+                }
+            };
+            
+            const loadTasks = async () => {
+                try {
+                    setLoading(true);
+                    const response = await fetch(`/api/queue/${encodeURIComponent(queueName)}/tasks?limit=1000`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        setTasks(data.tasks || []);
+                    }
+                } catch (error) {
+                    console.error('加载任务失败:', error);
+                    message.error('加载任务失败');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const refreshData = async () => {
+                await Promise.all([
+                    loadQueueStats(),
+                    loadWorkers(),
+                    loadTasks()
+                ]);
+            };
+            
+            const initChart = () => {
+                if (chartRef.current && !trendChart.current) {
+                    const ctx = chartRef.current.getContext('2d');
+                    trendChart.current = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: Array.from({length: 12}, (_, i) => `${i * 2}:00`),
+                            datasets: [
+                                {
+                                    label: '成功任务',
+                                    data: Array.from({length: 12}, () => Math.floor(Math.random() * 50)),
+                                    borderColor: '#52c41a',
+                                    backgroundColor: 'rgba(82, 196, 26, 0.1)',
+                                    fill: true,
+                                    tension: 0.4
+                                },
+                                {
+                                    label: '失败任务',
+                                    data: Array.from({length: 12}, () => Math.floor(Math.random() * 10)),
+                                    borderColor: '#f5222d',
+                                    backgroundColor: 'rgba(245, 34, 45, 0.1)',
+                                    fill: true,
+                                    tension: 0.4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    labels: {
+                                        color: 'rgba(255, 255, 255, 0.85)'
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.08)'
+                                    },
+                                    ticks: {
+                                        color: 'rgba(255, 255, 255, 0.65)'
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.08)'
+                                    },
+                                    ticks: {
+                                        color: 'rgba(255, 255, 255, 0.65)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            };
+            
+            // 生命周期
+            useEffect(() => {
+                if (!queueName) {
+                    message.error('队列名称不能为空');
+                    return;
+                }
+                
+                refreshData();
+                setTimeout(initChart, 100);
+                
+                return () => {
+                    if (trendChart.current) {
+                        trendChart.current.destroy();
+                    }
+                };
+            }, []);
+            
+            // 表格列定义
+            const columns = [
+                {
+                    title: '任务ID',
+                    dataIndex: 'event_id',
+                    key: 'event_id',
+                    width: 200,
+                    render: (text) => (
+                        <code style={{fontSize: '0.75rem', background: '#f7fafc', padding: '4px 8px', borderRadius: '4px'}}>
+                            {text ? text.substring(0, 16) + '...' : 'N/A'}
+                        </code>
+                    ),
+                },
+                {
+                    title: '任务名称',
+                    dataIndex: 'task_name',
+                    key: 'task_name',
+                    minWidth: 120,
+                    render: (text) => (
+                        <div style={{display: 'flex', alignItems: 'center'}}>
+                            <Tag color="blue" size="small" style={{marginRight: '8px'}}>T</Tag>
+                            <strong>{text || 'unknown'}</strong>
+                        </div>
+                    ),
+                },
+                {
+                    title: '消费者',
+                    dataIndex: 'consumer',
+                    key: 'consumer',
+                    width: 150,
+                    render: (text) => <code style={{fontSize: '0.7rem'}}>{text || '-'}</code>,
+                },
+                {
+                    title: '状态',
+                    dataIndex: 'parsed_status',
+                    key: 'status',
+                    width: 100,
+                    align: 'center',
+                    render: (parsed_status) => (
+                        <Tag color={getStatusType(parsed_status?.status)} size="small">
+                            {getStatusText(parsed_status?.status)}
+                        </Tag>
+                    ),
+                },
+                {
+                    title: '创建时间',
+                    dataIndex: 'trigger_time',
+                    key: 'trigger_time',
+                    width: 160,
+                    render: (text) => formatDateTime(text),
+                },
+                {
+                    title: '参数',
+                    dataIndex: 'params_str',
+                    key: 'params_str',
+                    minWidth: 150,
+                    render: (text) => {
+                        const content = text || '无参数';
+                        return (
+                            <span style={{fontSize: '0.8rem', color: '#718096'}} title={content}>
+                                {content.length > 20 ? content.substring(0, 20) + '...' : content}
+                            </span>
+                        );
+                    },
+                },
+                {
+                    title: '操作',
+                    key: 'action',
+                    width: 120,
+                    align: 'center',
+                    render: (_, record) => (
+                        <Button 
+                            type="primary" 
+                            size="small" 
+                            onClick={() => viewTaskDetail(record)}
+                            style={{borderRadius: '6px'}}
+                        >
+                            详情
+                        </Button>
+                    ),
+                },
+            ];
+            
+            return (
+                <ConfigProvider>
+                    <div className="app-container">
+                    {/* 导航栏 */}
+                    <div style={{
+                        background: 'rgba(20, 20, 20, 0.8)',
+                        backdropFilter: 'blur(20px)',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                        padding: '16px 0',
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 1000
+                    }}>
+                        <div style={{
+                            maxWidth: 1400,
+                            margin: '0 auto',
+                            padding: '0 30px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                        }}>
+                            <div style={{
+                                color: 'white',
+                                fontSize: '1.5rem',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12
+                            }}>
+                                <i className="fas fa-rocket" style={{fontSize: '1.5rem'}} />
+                                Jettask Monitor
+                            </div>
+                            <Space size="large">
+                                <Button type="text" size="large" onClick={() => window.location.href = '/'}>
+                                    概览
+                                </Button>
+                                <Button type="primary" size="large">
+                                    队列
+                                </Button>
+                                <Button type="text" size="large" onClick={() => window.location.href = '/workers.html'}>
+                                    Workers
+                                </Button>
+                            </Space>
+                        </div>
+                    </div>
+                    
+                    {/* 队列标题 */}
+                    <div style={{
+                        background: 'rgba(20, 20, 20, 0.5)',
+                        padding: '20px 0',
+                        textAlign: 'center'
+                    }}>
+                        <h1 style={{
+                            color: 'white',
+                            fontSize: '2rem',
+                            fontWeight: 700,
+                            margin: 0
+                        }}>
+                            📊 队列详情 - {queueName}
+                        </h1>
+                        <div style={{
+                            color: 'rgba(255, 255, 255, 0.65)',
+                            marginTop: 8,
+                            fontSize: '0.9rem'
+                        }}>
+                            实时监控队列状态和任务执行情况
+                        </div>
+                    </div>
+                    
+                    {/* 主内容区域 */}
+                    <div className="main-content">
+                        <Row gutter={[24, 24]}>
+                            {/* 左侧统计面板 */}
+                            <Col xs={24} lg={8}>
+                                <Space direction="vertical" size="large" style={{width: '100%'}}>
+                                    {/* 队列概览 */}
+                                    <Card 
+                                        title={
+                                            <span style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.2rem', fontWeight: 700}}>
+                                                📊 队列概览
+                                            </span>
+                                        }
+                                        style={{
+                                            background: 'rgba(255, 255, 255, 0.95)',
+                                            backdropFilter: 'blur(20px)',
+                                            borderRadius: '16px',
+                                            border: '1px solid rgba(255, 255, 255, 0.3)'
+                                        }}
+                                    >
+                                        <Row gutter={[12, 12]}>
+                                            <Col span={12}>
+                                                <Statistic title="队列名称" value={queueName} />
+                                            </Col>
+                                            <Col span={12}>
+                                                <Statistic 
+                                                    title="消息总数" 
+                                                    value={queueStats.messages || 0} 
+                                                    valueStyle={{color: '#1890ff'}}
+                                                />
+                                            </Col>
+                                            <Col span={12}>
+                                                <Statistic 
+                                                    title="就绪消息" 
+                                                    value={queueStats.messages_ready || 0}
+                                                    valueStyle={{color: '#52c41a'}}
+                                                />
+                                            </Col>
+                                            <Col span={12}>
+                                                <Statistic 
+                                                    title="未确认消息" 
+                                                    value={queueStats.messages_unacknowledged || 0}
+                                                    valueStyle={{color: '#faad14'}}
+                                                />
+                                            </Col>
+                                            <Col span={12}>
+                                                <Statistic 
+                                                    title="消费者数量" 
+                                                    value={queueStats.consumers || 0}
+                                                    valueStyle={{color: '#722ed1'}}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        
+                                        <Divider>消息统计</Divider>
+                                        <Row gutter={[12, 12]}>
+                                            <Col span={8}>
+                                                <Statistic 
+                                                    title="发布数" 
+                                                    value={messageStats.publish || 0}
+                                                    valueStyle={{color: '#9b59b6'}}
+                                                />
+                                            </Col>
+                                            <Col span={8}>
+                                                <Statistic 
+                                                    title="消费数" 
+                                                    value={messageStats.deliver_get || 0}
+                                                    valueStyle={{color: '#3498db'}}
+                                                />
+                                            </Col>
+                                            <Col span={8}>
+                                                <Statistic 
+                                                    title="确认数" 
+                                                    value={messageStats.ack || 0}
+                                                    valueStyle={{color: '#27ae60'}}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        
+                                        <Divider>任务统计</Divider>
+                                        <Row gutter={[12, 12]}>
+                                            <Col span={12}>
+                                                <Statistic 
+                                                    title="成功数" 
+                                                    value={workerSummary.total_success_count || 0}
+                                                    valueStyle={{color: '#52c41a'}}
+                                                />
+                                            </Col>
+                                            <Col span={12}>
+                                                <Statistic 
+                                                    title="失败数" 
+                                                    value={workerSummary.total_failed_count || 0}
+                                                    valueStyle={{color: '#f5222d'}}
+                                                />
+                                            </Col>
+                                            <Col span={12}>
+                                                <Statistic 
+                                                    title="执行中" 
+                                                    value={workerSummary.total_running_tasks || 0}
+                                                    valueStyle={{color: '#faad14'}}
+                                                />
+                                            </Col>
+                                            <Col span={12}>
+                                                <Statistic 
+                                                    title="平均耗时" 
+                                                    value={formatTime(workerSummary.avg_processing_time)}
+                                                />
+                                            </Col>
+                                        </Row>
+                                    </Card>
+                                    
+                                    {/* Workers信息 */}
+                                    <Card 
+                                        title={
+                                            <span style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.2rem', fontWeight: 700}}>
+                                                👥 Workers ({onlineWorkers}/{workers.length})
+                                            </span>
+                                        }
+                                        style={{
+                                            background: 'rgba(255, 255, 255, 0.95)',
+                                            backdropFilter: 'blur(20px)',
+                                            borderRadius: '16px',
+                                            border: '1px solid rgba(255, 255, 255, 0.3)'
+                                        }}
+                                    >
+                                        {workers.length === 0 ? (
+                                            <div style={{textAlign: 'center', color: '#999', padding: '20px'}}>
+                                                暂无Worker
+                                            </div>
+                                        ) : (
+                                            <Space direction="vertical" size="small" style={{width: '100%'}}>
+                                                {workers.slice(0, 5).map(worker => (
+                                                    <div 
+                                                        key={worker.consumer_id}
+                                                        style={{
+                                                            padding: '12px',
+                                                            background: 'rgba(255, 255, 255, 0.5)',
+                                                            borderRadius: '8px',
+                                                            border: '1px solid rgba(255, 255, 255, 0.3)'
+                                                        }}
+                                                    >
+                                                        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px'}}>
+                                                            <div style={{display: 'flex', alignItems: 'center'}}>
+                                                                <Tag color={worker.is_alive ? 'success' : 'error'} size="small" style={{marginRight: '8px'}}>
+                                                                    {worker.is_alive ? '在线' : '离线'}
+                                                                </Tag>
+                                                                <code style={{fontSize: '0.7rem', background: '#f7fafc', padding: '2px 6px', borderRadius: '3px'}}>
+                                                                    {(worker.consumer_id || 'unknown').substring(0, 12)}...
+                                                                </code>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{fontSize: '0.75rem', color: '#718096'}}>
+                                                            {worker.host} | 成功: {worker.success_count || 0} | 失败: {worker.failed_count || 0}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {workers.length > 5 && (
+                                                    <Button type="link" size="small">
+                                                        查看全部 {workers.length} 个Workers
+                                                    </Button>
+                                                )}
+                                            </Space>
+                                        )}
+                                    </Card>
+                                    
+                                    {/* 任务趋势图 */}
+                                    <Card 
+                                        title={
+                                            <span style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.2rem', fontWeight: 700}}>
+                                                📈 任务趋势
+                                            </span>
+                                        }
+                                        style={{
+                                            background: 'rgba(255, 255, 255, 0.95)',
+                                            backdropFilter: 'blur(20px)',
+                                            borderRadius: '16px',
+                                            border: '1px solid rgba(255, 255, 255, 0.3)'
+                                        }}
+                                    >
+                                        <div style={{height: '250px'}}>
+                                            <canvas ref={chartRef}></canvas>
+                                        </div>
+                                    </Card>
+                                </Space>
+                            </Col>
+                            
+                            {/* 右侧任务列表 */}
+                            <Col xs={24} lg={16}>
+                                <Card
+                                    title={
+                                        <span style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.5rem', fontWeight: 700}}>
+                                            📝 任务列表
+                                        </span>
+                                    }
+                                    extra={
+                                        <Space>
+                                            <Input
+                                                placeholder="搜索任务..."
+                                                prefix={<SearchIcon />}
+                                                value={taskSearch}
+                                                onChange={(e) => setTaskSearch(e.target.value)}
+                                                style={{width: 200}}
+                                            />
+                                            <Select 
+                                                placeholder="状态筛选" 
+                                                value={statusFilter}
+                                                onChange={setStatusFilter}
+                                                style={{width: 120}}
+                                                allowClear
+                                            >
+                                                <Select.Option value="">全部</Select.Option>
+                                                <Select.Option value="pending">等待中</Select.Option>
+                                                <Select.Option value="running">执行中</Select.Option>
+                                                <Select.Option value="completed">已完成</Select.Option>
+                                                <Select.Option value="failed">失败</Select.Option>
+                                            </Select>
+                                            <Button.Group>
+                                                <Button 
+                                                    type={timeRange === '1h' ? 'primary' : 'default'}
+                                                    onClick={() => setTimeRange('1h')}
+                                                >
+                                                    1小时
+                                                </Button>
+                                                <Button 
+                                                    type={timeRange === '24h' ? 'primary' : 'default'}
+                                                    onClick={() => setTimeRange('24h')}
+                                                >
+                                                    24小时
+                                                </Button>
+                                                <Button 
+                                                    type={timeRange === '7d' ? 'primary' : 'default'}
+                                                    onClick={() => setTimeRange('7d')}
+                                                >
+                                                    7天
+                                                </Button>
+                                            </Button.Group>
+                                            <Button 
+                                                type="primary" 
+                                                icon={<ReloadIcon />}
+                                                loading={loading}
+                                                onClick={refreshData}
+                                            >
+                                                刷新
+                                            </Button>
+                                        </Space>
+                                    }
+                                    style={{
+                                        background: 'rgba(255, 255, 255, 0.95)',
+                                        backdropFilter: 'blur(20px)',
+                                        borderRadius: '20px',
+                                        border: '1px solid rgba(255, 255, 255, 0.3)'
+                                    }}
+                                >
+                                    <Table
+                                        columns={columns}
+                                        dataSource={filteredTasks}
+                                        rowKey="event_id"
+                                        loading={loading}
+                                        pagination={false}
+                                        scroll={{y: 500}}
+                                        size="middle"
+                                    />
+                                    
+                                    <div style={{padding: '16px 0', display: 'flex', justifyContent: 'center'}}>
+                                        <Pagination
+                                            current={currentPage}
+                                            pageSize={pageSize}
+                                            total={totalTasks}
+                                            showSizeChanger
+                                            showQuickJumper
+                                            showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
+                                            pageSizeOptions={['20', '50', '100', '200']}
+                                            onChange={(page, size) => {
+                                                setCurrentPage(page);
+                                                setPageSize(size);
+                                            }}
+                                        />
+                                    </div>
+                                </Card>
+                            </Col>
+                        </Row>
+                    </div>
+                    
+                    {/* 任务详情模态框 */}
+                    <Modal
+                        title="任务详情"
+                        open={taskDetailVisible}
+                        onCancel={() => {
+                            setTaskDetailVisible(false);
+                            setSelectedTask(null);
+                        }}
+                        footer={null}
+                        width="60%"
+                    >
+                        {selectedTask && (
+                            <>
+                                <Descriptions title="基本信息" column={2} bordered>
+                                    <Descriptions.Item label="任务ID">
+                                        <code>{selectedTask.event_id}</code>
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="任务名称">
+                                        {selectedTask.task_name}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="状态">
+                                        <Tag color={getStatusType(selectedTask.parsed_status?.status)}>
+                                            {getStatusText(selectedTask.parsed_status?.status)}
+                                        </Tag>
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="消费者">
+                                        {selectedTask.consumer}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="创建时间">
+                                        {formatDateTime(selectedTask.trigger_time)}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="队列">
+                                        {selectedTask.queue}
+                                    </Descriptions.Item>
+                                </Descriptions>
+                                
+                                <Divider>参数详情</Divider>
+                                <pre style={{
+                                    background: '#f5f5f5', 
+                                    padding: '16px', 
+                                    borderRadius: '8px', 
+                                    overflowX: 'auto', 
+                                    fontSize: '0.9rem'
+                                }}>
+                                    {selectedTask.params_str || '无参数'}
+                                </pre>
+                            </>
+                        )}
+                    </Modal>
+                    
+                    <BackTop />
+                </div>
+                </ConfigProvider>
+            );
+        }
+        
+        // 主应用组件
+        function App() {
+            return React.createElement(QueueDetail);
+        }
+        
+        // 渲染应用
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+    </script>
+</body>
+</html>
