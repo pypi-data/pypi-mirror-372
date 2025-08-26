@@ -1,0 +1,134 @@
+[project]
+name = "crossplane-function-pythonic"
+description = 'A Python centric Crossplane Function'
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = "Apache-2.0"
+keywords = []
+authors = [{ name = "Patrick J McNerthney", email = "pat@mcnerthney.com" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+dynamic = ["version"]
+
+dependencies = [
+  "crossplane-function-sdk-python==0.9.0",
+  "pyyaml==6.0.2",
+]
+
+[project.optional-dependencies]
+packages = ["kopf==1.38.0"]
+pip-install = ["pip==25.2"]
+
+[project.urls]
+Documentation = "https://github.com/fortra/function-pythonic#readme"
+Issues = "https://github.com/fortra/function-pythonic/issues"
+Source = "https://github.com/fortra/function-pythonic"
+
+[project.scripts]
+function-pythonic = "crossplane.pythonic.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "crossplane/pythonic/__version__.py"
+validate-bump = false
+
+[tool.hatch.build.targets.wheel]
+only-include = ["crossplane"]
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+  "crossplane",
+  "examples",
+]
+
+[tool.hatch.envs.default]
+type = "virtual"
+path = ".venv-default"
+dependencies = ["ipython==9.1.0"]
+packages = ["crossplane"]
+[tool.hatch.envs.default.scripts]
+production = "python -m crossplane.pythonic.main --insecure"
+development = "python -m crossplane.pythonic.main --insecure --debug"
+packages = "python -m crossplane.pythonic.main --insecure --debug --packages --packages-secrets"
+
+[tool.hatch.envs.lint]
+type = "virtual"
+detached = true
+path = ".venv-lint"
+dependencies = ["ruff==0.11.5"]
+packages = ["crossplane"]
+[tool.hatch.envs.lint.scripts]
+check = "ruff check crossplane tests && ruff format --diff crossplane tests"
+
+[tool.hatch.envs.test]
+type = "virtual"
+path = ".venv-test"
+dependencies = [
+  "pytest==8.4.1",
+  "pytest-asyncio==1.1.0",
+  "pytest-cov==6.2.1",
+]
+packages = ["crossplane"]
+[tool.hatch.envs.test.scripts]
+all = "python -m pytest tests/ --verbose --verbose --cov --cov-report=term --cov-report=html:reports"
+protobuf = "python -m pytest tests/test_protobuf*.py --verbose --verbose --cov --cov-report=term --cov-report=html:reports"
+ci = "python -m pytest tests --verbose --verbose --junitxml=reports/pytest-junit.xml --cov --cov-report=term --cov-report=xml:reports/pytest-coverage.xml"
+
+[tool.ruff]
+target-version = "py311"
+exclude = ["crossplane/pythonic/proto/*"]
+
+[tool.ruff.lint]
+select = [
+  "A",
+  "ARG",
+  "ASYNC",
+  "B",
+  "C",
+  "D",
+  "DTZ",
+  "E",
+  "EM",
+  "ERA",
+  "F",
+  "FBT",
+  "I",
+  "ICN",
+  "ISC",
+  "N",
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  "Q",
+  "RUF",
+  "S",
+  "T",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+ignore = ["ISC001"] # Ruff warns this is incompatible with ruff format.
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"] # Don't require docstrings for tests.
+
+[tool.ruff.lint.isort]
+known-first-party = ["crossplane"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pep8-naming]
+# gRPC requires this PascalCase function name.
+extend-ignore-names = ["RunFunction"]
