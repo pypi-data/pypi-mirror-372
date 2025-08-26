@@ -1,0 +1,218 @@
+Metadata-Version: 2.4
+Name: damast
+Version: 0.1.12
+Summary: Package to improve the development of transparent, replicable data processing pipelines
+Author-email: Thomas Roehr <roehr@simula.no>, "Jørgen S. Dokken" <dokken@simula.no>, Anne Fouilloux <annef@simula.no>, Pierre Bernabé <pierbernabe@simula.no>
+Maintainer-email: Thomas Roehr <roehr@simula.no>, "Jørgen S. Dokken" <dokken@simula.no>, Anne Fouilloux <annef@simula.no>
+License: 3-Clause BSD License / New BSD License
+        
+        Copyright (c) 2023-2025 Simula Research Laboratory, Oslo, Norway
+        
+        Redistribution and use in source and binary forms, with or without
+        modification, are permitted provided that the following conditions are met:
+        
+        1. Redistributions of source code must retain the above copyright notice, this
+        list of conditions and the following disclaimer.
+        
+        2. Redistributions in binary form must reproduce the above copyright notice,
+        this list of conditions and the following disclaimer in the documentation
+        and/or other materials provided with the distribution.
+        
+        3. Neither the name of the copyright holder nor the names of its contributors
+        may be used to endorse or promote products derived from this software without
+        specific prior written permission.
+        
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+        ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+        DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+        FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+        DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+        SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+        CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+        OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+        OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+        
+Project-URL: homepage, https://simula.github.io/damast
+Project-URL: documentation, https://simula.github.io/damast
+Project-URL: repository, https://github.com/simula/damast
+Keywords: data processing,pipeline,machine learning
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Development Status :: 3 - Alpha
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: License :: OSI Approved :: BSD License
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: astropy
+Requires-Dist: cloudpickle
+Requires-Dist: keras>=3.0
+Requires-Dist: matplotlib
+Requires-Dist: numba
+Requires-Dist: numpy>=2
+Requires-Dist: polars>=1.20
+Requires-Dist: psutil
+Requires-Dist: pyais
+Requires-Dist: pyarrow
+Requires-Dist: pydantic>=2.0
+Requires-Dist: ratarmount>=1.1
+Requires-Dist: scikit-learn
+Requires-Dist: tables
+Requires-Dist: torch
+Requires-Dist: tqdm
+Provides-Extra: dev
+Requires-Dist: astroid<3; extra == "dev"
+Requires-Dist: flake8-gl-codeclimate; extra == "dev"
+Requires-Dist: isort; extra == "dev"
+Requires-Dist: jupyter-book; extra == "dev"
+Requires-Dist: pre-commit; extra == "dev"
+Requires-Dist: pydot; extra == "dev"
+Requires-Dist: sphinx-autoapi<=3.3; extra == "dev"
+Requires-Dist: tox; extra == "dev"
+Provides-Extra: ml
+Requires-Dist: jax[cpu]; extra == "ml"
+Requires-Dist: tensorflow; extra == "ml"
+Provides-Extra: cuda
+Requires-Dist: cudf; extra == "cuda"
+Requires-Dist: polars[gpu]; extra == "cuda"
+Provides-Extra: test
+Requires-Dist: coverage; extra == "test"
+Requires-Dist: pandas>=2; extra == "test"
+Requires-Dist: pytest; extra == "test"
+Requires-Dist: pytest-console-scripts; extra == "test"
+Requires-Dist: pytest-cov; extra == "test"
+Requires-Dist: pytest-timeout; extra == "test"
+Requires-Dist: pydot; extra == "test"
+Requires-Dist: tox; extra == "test"
+Dynamic: license-file
+
+[![Supported Python Versions](https://img.shields.io/pypi/pyversions/damast)](https://pypi.org/project/damast/)
+![test workflow](https://github.com/simula/damast/actions/workflows/test.yml/badge.svg)
+![docs workflow](https://github.com/simula/damast/actions/workflows/gh-pages.yml/badge.svg)
+
+# damast: Creation of reproducible data processing pipelines
+
+The main purpose of this library is to faciliate the reusability of data and data processing pipelines.
+For this, damast introduces a means to associate metadata with data frames and enables consistency checking.
+
+To ensure semantic consistency, transformation steps in a pipeline can be annotated with
+allowed data ranges for inputs and outputs, as well as units.
+
+```
+class LatLonTransformer(PipelineElement):
+    """
+    The LatLonTransformer will consume a lat(itude) and a lon(gitude) column and perform
+    cyclic normalization. It will add four columns to a dataframe, namely lat_x, lat_y, lon_x, lon_y.
+    """
+    @damast.core.describe("Lat/Lon cyclic transformation")
+    @damast.core.input({
+        "lat": {"unit": "deg"},
+        "lon": {"unit": "deg"}
+    })
+    @damast.core.output({
+        "lat_x": {"value_range": MinMax(-1.0, 1.0)},
+        "lat_y": {"value_range": MinMax(-1.0, 1.0)},
+        "lon_x": {"value_range": MinMax(-1.0, 1.0)},
+        "lon_y": {"value_range": MinMax(-1.0, 1.0)}
+    })
+    def transform(self, df: AnnotatedDataFrame) -> AnnotatedDataFrame:
+        lat_cyclic_transformer = CycleTransformer(features=["lat"], n=180.0)
+        lon_cyclic_transformer = CycleTransformer(features=["lon"], n=360.0)
+
+        _df = lat_cyclic_transformer.fit_transform(df=df)
+        _df = lon_cyclic_transformer.fit_transform(df=_df)
+        return _df
+```
+
+For detailed examples, check the documentation at: https://simula.github.io/damast
+
+## Installation and Development Setup
+
+Firstly, you will want to create you an isolated development environment for Python, that being conda or venv-based.
+The following will go through a venv based setup.
+
+Let us assume you operate with a 'workspace' directory for this project:
+
+```
+    cd workspace
+```
+
+Here, you will create a virtual environment.
+Get an overview over venv (command):
+
+```
+    python -m venv --help
+```
+
+Create your venv and activate it:
+```
+    python -m venv damast-venv
+    source damast-venv/bin/activate
+```
+
+Clone the repo and install:
+
+```
+    git clone https://github.com/simula/damast
+    cd damast
+    pip install -e ".[test,dev]"
+```
+
+or alternatively:
+```
+    pip install damast[test,dev]
+```
+
+## Docker Container
+
+If you prefer to work or start with a docker container you can build it using the provided [Dockerfile](https://github.com/simula/damast/blob/main/Dockerfile)
+```
+    docker build -t damast:latest -f Dockerfile .
+```
+
+To enter the container:
+```
+    docker run -it --rm damast:latest /bin/bash
+```
+
+## Usage
+
+To get the usage documentation it is easiest to check the published documentation [here](https://simula.github.io/damast/README.html).
+
+Otherwise, you can also locally generate the latest documentation once you installed the package:
+```
+    tox -e build_docs
+```
+Then open the documentation with a browser:
+```
+    <yourbrowser> _build/html/index.html
+```
+
+
+## Testing
+
+Install the project and use the predefined default test environment:
+
+    tox -e py
+
+## Contributing
+
+This project is open to contributions. For details on how to contribute please check the [Contribution Guidelines](https://github.com/simula/damast/blob/main/CONTRIBUTING.md)
+
+## License
+This project is licensed under the [BSD-3-Clause License](https://github.com/simula/damast/blob/main/LICENSE).
+
+## Copyright
+
+Copyright (c) 2023-2025 [Simula Research Laboratory, Oslo, Norway](https://www.simula.no/research/research-departments)
+
+## Acknowledgments
+
+This work has been derived from work that is part of the [T-SAR project](https://www.simula.no/research/projects/t-sar)
+Some derived work is mainly part of the specific data processing for the 'maritime' domain.
+
+The development of this library is part of the EU-project [AI4COPSEC](https://ai4copsec.eu) which receives funding
+ from the Horizon Europe framework programme under Grant Agreement N. 101190021.
