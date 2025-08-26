@@ -1,0 +1,441 @@
+# 🔐 ghvault
+
+**GitHub Environment Secrets Management Tool** - Automate uploading secrets from .env files to GitHub environments
+
+[![PyPI version](https://badge.fury.io/py/ghvault.svg)](https://badge.fury.io/py/ghvault)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## 🚀 Features
+
+- **Bulk Upload**: Upload multiple secrets from `.env` or similar files to GitHub environments
+- **Individual Secret Management**: Create, update, and delete individual secrets
+- **Environment Support**: Manage secrets across different GitHub environments (staging, production, etc.)
+- **Secure Encryption**: Uses GitHub's public key encryption for secure secret storage
+- **Progress Tracking**: Visual progress bars for bulk operations
+- **Token Validation**: Automatic GitHub token validation and session management
+- **Cross-Platform**: Works on macOS, Linux, and Windows
+
+## 📦 Installation
+
+### From PyPI (Recommended)
+
+```bash
+pip install ghvault
+```
+
+### From Source
+
+```bash
+git clone https://github.com/aoamusat/ghvault.git
+cd ghvault
+pip install -e .
+```
+
+### Using uv (Development)
+
+```bash
+git clone https://github.com/aoamusat/ghvault.git
+cd ghvault
+uv sync
+```
+
+## 🔧 Setup
+
+### GitHub Token
+
+You need a GitHub Personal Access Token with the following permissions:
+- `repo` (Full control of private repositories)
+- `admin:repo_hook` (Read and write repository hooks)
+
+#### Option 1: Environment Variable (Recommended)
+
+```bash
+export GH_TOKEN=your_github_token_here
+```
+
+#### Option 2: Interactive Prompt
+
+If no token is found in environment variables, ghvault will prompt you to enter it interactively.
+
+### Repository Configuration
+
+Ensure your GitHub repository has environments configured:
+1. Go to your repository → Settings → Environments
+2. Create environments (e.g., `staging`, `production`)
+3. Configure environment protection rules as needed
+
+## 🎯 Usage
+
+### Command Overview
+
+```bash
+ghvault --help
+```
+
+### Set Individual Secret
+
+```bash
+ghvault set <environment> <secret_name> <secret_value> --owner <owner> --repo <repo>
+```
+
+**Example:**
+```bash
+ghvault set production DATABASE_URL "postgresql://user:pass@host:5432/db" --owner myorg --repo myapp
+```
+
+### Bulk Upload from .env File
+
+```bash
+ghvault bulk <environment> --env-file .env --owner <owner> --repo <repo>
+```
+
+**Example:**
+```bash
+ghvault bulk staging --env-file .env.staging --owner myorg --repo myapp
+```
+
+### List Environment Secrets
+
+```bash
+ghvault list <environment> --owner <owner> --repo <repo>
+```
+
+**Example:**
+```bash
+ghvault list production --owner myorg --repo myapp
+```
+
+### Delete Individual Secret
+
+```bash
+ghvault delete <environment> <secret_name> --owner <owner> --repo <repo>
+```
+
+**Example:**
+```bash
+ghvault delete staging OLD_API_KEY --owner myorg --repo myapp
+```
+
+### Bulk Delete Secrets
+
+```bash
+ghvault delete-bulk <environment> --secrets-file secrets_to_delete.txt --owner <owner> --repo <repo>
+```
+
+**Example:**
+```bash
+ghvault delete-bulk production --secrets-file cleanup.txt --owner myorg --repo myapp
+```
+
+## 📁 File Formats
+
+### .env File Format
+
+```bash
+# Database Configuration
+DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
+DATABASE_PASSWORD=super_secret_password
+
+# API Keys
+STRIPE_SECRET_KEY=sk_test_123456789
+SENDGRID_API_KEY=SG.abc123def456
+
+# Feature Flags
+ENABLE_FEATURE_X=true
+DEBUG_MODE=false
+```
+
+### Secrets List File Format (for bulk delete)
+
+```
+DATABASE_PASSWORD
+OLD_API_KEY
+DEPRECATED_SECRET
+TEMP_TOKEN
+```
+
+## 🔒 Security Features
+
+- **Encryption**: All secrets are encrypted using GitHub's public key before transmission
+- **Token Validation**: Automatic validation of GitHub tokens before operations
+- **Secure Input**: Hidden input for sensitive token entry
+- **No Local Storage**: Tokens are only stored in memory during session
+- **HTTPS Only**: All API communications use HTTPS
+
+## 🛠️ Development
+
+### Prerequisites
+
+- Python 3.10+
+- uv (recommended) or pip
+
+### Setup Development Environment
+
+```bash
+git clone https://github.com/aoamusat/ghvault.git
+cd ghvault
+uv sync
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
+
+### Run Tests
+
+#### Quick Start
+
+```bash
+# Install test dependencies
+uv sync --extra test
+
+# Run all tests
+pytest
+```
+
+#### Test Categories
+
+```bash
+# Run unit tests only
+pytest -m "unit or not integration"
+
+# Run integration tests only  
+pytest -m integration
+
+# Run with coverage report
+pytest --cov=ghvault --cov-report=html --cov-report=term-missing
+
+# Run specific test file
+pytest tests/test_api.py
+
+# Run specific test class
+pytest tests/test_api.py::TestTokenManagement
+
+# Run specific test method
+pytest tests/test_api.py::TestTokenManagement::test_set_github_token
+```
+
+#### Using Make (if available)
+
+```bash
+# Run all tests
+make test
+
+# Run with coverage
+make test-cov
+
+# Run unit tests only
+make test-unit
+
+# Run integration tests only
+make test-integration
+
+# Run fast (stop on first failure)
+make test-fast
+```
+
+#### Using the Test Runner Script
+
+```bash
+# Run all checks (format, lint, type-check, tests)
+python run_tests.py
+
+# Run specific test type
+python run_tests.py --type unit
+python run_tests.py --type integration
+python run_tests.py --type coverage
+python run_tests.py --type lint
+
+# Run in verbose mode
+python run_tests.py --verbose
+
+# Stop on first failure
+python run_tests.py --fast
+```
+
+#### Test Structure
+
+- `tests/test_api.py` - Tests for API functionality (GitHub API interactions)
+- `tests/test_cli.py` - Tests for CLI commands and user interface
+- `tests/test_integration.py` - End-to-end integration tests
+- `tests/conftest.py` - Shared fixtures and test configuration
+
+#### Coverage Reports
+
+After running tests with coverage, you can view detailed reports:
+
+```bash
+# Generate HTML coverage report
+pytest --cov=ghvault --cov-report=html
+
+# Open coverage report in browser (macOS)
+open htmlcov/index.html
+
+# View coverage in terminal
+pytest --cov=ghvault --cov-report=term-missing
+```
+
+### Code Quality
+
+```bash
+# Install development tools
+uv add --dev black isort flake8 mypy
+
+# Format code
+black .
+isort .
+
+# Lint code
+flake8 .
+mypy .
+```
+
+## 📊 Dependencies
+
+- **click** (>=8.2.1): Command-line interface creation
+- **httpx** (>=0.28.1): HTTP client for GitHub API calls
+- **pynacl** (>=1.5.0): Cryptographic library for secret encryption
+- **tqdm** (>=4.67.1): Progress bars for bulk operations
+- **typer** (>=0.16.1): Modern CLI framework
+
+## 🚀 CI/CD
+
+The project includes GitHub Actions workflows for:
+- **Automated Testing**: Run tests on multiple Python versions
+- **PyPI Publishing**: Automatic publishing to PyPI on tagged releases
+- **TestPyPI Publishing**: Publishing to TestPyPI on every push
+
+### Release Process
+
+1. Update version in `pyproject.toml`
+2. Create and push a git tag:
+   ```bash
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+3. GitHub Actions will automatically build and publish to PyPI
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass (`pytest`)
+6. Format code (`black . && isort .`)
+7. Commit your changes (`git commit -m 'Add amazing feature'`)
+8. Push to the branch (`git push origin feature/amazing-feature`)
+9. Open a Pull Request
+
+## 📝 Examples
+
+### Complete Workflow Example
+
+```bash
+# 1. Set up environment
+export GH_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+
+# 2. Create .env file
+cat > .env.production << EOF
+DATABASE_URL=postgresql://prod:secret@db.example.com:5432/app
+REDIS_URL=redis://redis.example.com:6379/0
+API_SECRET_KEY=prod-secret-key-12345
+STRIPE_LIVE_KEY=sk_live_abcdef123456
+EOF
+
+# 3. Upload all secrets to production environment
+ghvault bulk production --env-file .env.production --owner mycompany --repo myapp
+
+# 4. Verify secrets were uploaded
+ghvault list production --owner mycompany --repo myapp
+
+# 5. Update individual secret
+ghvault set production API_VERSION "v2.1" --owner mycompany --repo myapp
+
+# 6. Clean up old secrets
+echo "OLD_API_KEY" > cleanup.txt
+echo "DEPRECATED_TOKEN" >> cleanup.txt
+ghvault delete-bulk production --secrets-file cleanup.txt --owner mycompany --repo myapp
+```
+
+### Integration with CI/CD
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy Secrets
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install ghvault
+        run: pip install ghvault
+        
+      - name: Deploy secrets to staging
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          ghvault bulk staging --env-file .env.staging --owner ${{ github.repository_owner }} --repo ${{ github.event.repository.name }}
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Token Permission Error**
+```
+❌ Failed to validate token: 403 Forbidden
+```
+- Ensure your token has `repo` and `admin:repo_hook` permissions
+- Check that the repository exists and you have access
+
+**Environment Not Found**
+```
+❌ Environment 'production' not found
+```
+- Create the environment in GitHub: Repository → Settings → Environments
+- Ensure the environment name matches exactly (case-sensitive)
+
+**Invalid .env File**
+```
+❌ Failed to parse .env file
+```
+- Check file format: `KEY=value` (no spaces around `=`)
+- Ensure file exists and is readable
+- Avoid quotes unless they're part of the value
+
+### Debug Mode
+
+Set environment variable for verbose output:
+```bash
+export GHVAULT_DEBUG=1
+ghvault bulk production --env-file .env
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- GitHub API for providing robust secrets management
+- The Python community for excellent libraries
+- Contributors and users who help improve this tool
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/aoamusat/ghvault/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/aoamusat/ghvault/discussions)
+- **Documentation**: [Wiki](https://github.com/aoamusat/ghvault/wiki)
+
+---
+
+**Made with ❤️ for the GitHub community**
