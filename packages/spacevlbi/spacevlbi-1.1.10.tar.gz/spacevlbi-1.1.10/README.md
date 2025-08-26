@@ -1,0 +1,65 @@
+spacevlbi
+=========
+Python package for simulating and optimising a space-based Very Long Baseline Interferometry (VLBI) mission. This package enables multiple space telescopes to be modelled by propagating their orbital and attitude state. Elements of the spacecraft design that impact when observations can be performed can also be included in the simulation to assess and mitigate their impact on the science return of the mission (e.g. source visibility including Sun/Earth/Moon avoidance, star trackers, radiators, solar panels, ground station access times, etc.).
+
+A ground-based array of radio antenna can also be modelled, enabling the $(u,v)$ coverage that the full interferometer can achieve of a given source(s) to be calculated.
+
+Although the package has been developed specifically for space VLBI applications, it can also be used more generally for modelling other types of astronomy mission and assessing the impact of the spacecraft design on the science return.
+
+Installation
+------------
+spacevlbi requires the latest development version of the [poliastro](https://www.poliastro.space/) package. Ensure that pip is installed and run the following command before trying to install spacevlbi:
+
+`pip install https://github.com/poliastro/poliastro/archive/main.zip`
+
+The latest version of spacevlbi is available on [PyPi](https://pypi.org/project/spacevlbi/). Run the following command to install:
+
+`pip install spacevlbi`
+
+Installing with pip will install/update the other required libraries automatically ([numpy](http://www.numpy.org/), [matplotlib](http://www.matplotlib.org/), [astropy](http://www.astropy.org/) and [geopandas](https://geopandas.org/en/stable/index.html)).
+
+Structure
+---------
+In this repository you can find:
+- `spacevlbi/` directory containing the core Python libraries
+- `Examples/` directory containing example scripts to demonstrate the use of the package
+- `docs/` directory containing readthedocs configuration files
+
+Documentation
+-------------
+More detailed documentation for the package is available [here](https://spacevlbi.readthedocs.io/en/master/).
+
+Provided in the Examples folder is the script `ExampleSetup.py`. This script shows how the package can be used to model a VLBI array with a single space element. This example is based upon the preliminary concept for the [Black Hole Explorer (BHEX)](https://www.blackholeexplorer.org/) mission. The script `ExampleSpaceTelescope.py` shows how an object of the `SpaceTelescope` class can be defined.
+
+Running the provided example will produce the following figures in an `Output` folder:
+- `AttitudeSphere.pdf`
+- `GroundStationAccess.pdf`
+- `Orbit.pdf`
+- `UV.pdf`
+- `GroundStationContact.pdf`
+
+The terminal will show the simulation progress by printing the current timestep. Once the simulation is complete, additional print statements will confirm the generation of the four figures listed previously. The example script will also calculate the optimal position(s) for a star tracker to avoid Sun and Earth blinding.
+
+Citation
+--------
+If you use spacevlbi in your publication, please cite: [Hudson+ 2025](https://ui.adsabs.harvard.edu/abs/2025arXiv250320312H/abstract)
+
+Author(s)
+---------
+This software has been developed by
+**Ben Hudson** ![ORCID logo](https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png) [0000-0002-3368-1864](https://orcid.org/0000-0002-3368-1864), Technische Universiteit Delft
+
+License
+-------
+spacevlbi is licensed under GPLv3. See LICENSE.txt for more details.
+
+Technische Universiteit Delft hereby disclaims all copyright interest in the program "spacevlbi". spacevlbi is a python package to simulate space-based VLBI missions written by the Author(s).  
+Ben Hudson, Faculty of Aerospace Engineering, Technische Universiteit Delft.
+
+&copy; 2024, B. Hudson
+
+Would you like to contribute?
+-----------------------------
+If you have any comments, feedback, or recommendations, feel free to **reach out** by sending an email to benhudson@tudelft.nl
+
+If you would like to contribute directly, you are welcome to **fork** this repository.
