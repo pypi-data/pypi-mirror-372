@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jettask Monitor - 现代化监控平台</title>
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Ant Design -->
+    <link rel="stylesheet" href="https://unpkg.com/antd@4.24.13/dist/antd.min.css" />
+    <script src="https://unpkg.com/moment@2.29.4/moment.js"></script>
+    <script src="https://unpkg.com/antd@4.24.13/dist/antd.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #177ddc;
+            --primary-gradient: linear-gradient(135deg, #1f1f1f 0%, #434343 100%);
+            --success-color: #49aa19;
+            --warning-color: #d89614;
+            --error-color: #a61d24;
+            --info-color: #177ddc;
+            --bg-primary: #000000;
+            --bg-secondary: #141414;
+            --bg-card: #1f1f1f;
+            --text-primary: #rgba(255, 255, 255, 0.85);
+            --text-secondary: rgba(255, 255, 255, 0.65);
+            --border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000000;
+            min-height: 100vh;
+            position: relative;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(23, 125, 220, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(73, 170, 25, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(216, 150, 20, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #root {
+            position: relative;
+            z-index: 1;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+
+        .main-content {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stats-card {
+            background: rgba(31, 31, 31, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            position: relative;
+            height: 100%;
+        }
+
+        .stats-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+        }
+
+        .stats-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            background: rgba(31, 31, 31, 1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-card {
+            background: rgba(31, 31, 31, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .chart-card:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            background: rgba(31, 31, 31, 1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .table-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .table-card:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #177ddc 0%, #69c0ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        /* 暗色主题卡片样式 */
+        .stats-card {
+            background: rgba(31, 31, 31, 0.8) !important;
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            background: rgba(31, 31, 31, 0.95) !important;
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .chart-card {
+            background: rgba(31, 31, 31, 0.8) !important;
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: visible;
+            transition: all 0.3s ease;
+        }
+
+        .chart-card:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            background: rgba(31, 31, 31, 0.95) !important;
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .table-card {
+            background: rgba(31, 31, 31, 0.8) !important;
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .table-card:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            background: rgba(31, 31, 31, 0.95) !important;
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        /* Ant Design 组件暗色覆盖 */
+        .ant-card {
+            background: rgba(31, 31, 31, 0.95) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-statistic-title {
+            color: rgba(255, 255, 255, 0.65) !important;
+        }
+
+        .ant-table {
+            background: transparent !important;
+        }
+
+        .ant-table-thead > tr > th {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-table-tbody > tr > td {
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-table-tbody > tr:hover > td {
+            background: rgba(255, 255, 255, 0.04) !important;
+        }
+
+        /* 表格行条纹效果 */
+        .table-row-light {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .table-row-dark {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        /* 修复导航按钮样式 */
+        .ant-btn-text {
+            color: rgba(255, 255, 255, 0.65) !important;
+        }
+
+        .ant-btn-text:hover {
+            color: rgba(255, 255, 255, 0.85) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .ant-btn-primary {
+            background: #177ddc !important;
+            border-color: #177ddc !important;
+        }
+
+        .ant-btn-primary:hover {
+            background: #1890ff !important;
+            border-color: #1890ff !important;
+        }
+
+        /* 分页器样式 */
+        .ant-pagination-item {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .ant-pagination-item a {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .ant-pagination-item-active {
+            background: #177ddc !important;
+            border-color: #177ddc !important;
+        }
+
+        .ant-pagination-item-active a {
+            color: white !important;
+        }
+
+        /* Select下拉框样式 */
+        .ant-select-selector {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        /* Input输入框样式 */
+        .ant-input {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .ant-input::placeholder {
+            color: rgba(255, 255, 255, 0.45) !important;
+        }
+
+        /* Switch开关样式 */
+        .ant-switch {
+            background: rgba(255, 255, 255, 0.25) !important;
+        }
+
+        .ant-switch-checked {
+            background: #177ddc !important;
+        }
+
+        .connection-status {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+        }
+
+        .chart-container {
+            height: 300px;
+            padding: 16px;
+        }
+
+        .ant-table-thead > tr > th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+            border-bottom: none !important;
+            font-weight: 600 !important;
+            font-size: 0.8rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+        }
+
+        .ant-table-tbody > tr:hover > td {
+            background: rgba(24, 144, 255, 0.04) !important;
+        }
+
+        .ant-card {
+            background: rgba(31, 31, 31, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: none !important;
+        }
+        
+        /* 修复时间选择器被遮挡的问题 */
+        .chart-card .ant-card {
+            overflow: visible !important;
+        }
+        .chart-card .ant-card-head {
+            overflow: visible !important;
+        }
+        .chart-card .ant-card-body {
+            overflow: visible !important;
+        }
+        
+        .ant-card-head {
+            border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        
+        .ant-card-body {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .ant-statistic-title {
+            color: rgba(255, 255, 255, 0.65) !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+            margin-bottom: 12px !important;
+        }
+
+        .ant-statistic-content-value {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-size: 2.25rem !important;
+            font-weight: 700 !important;
+            line-height: 1.2 !important;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 16px;
+            }
+            .main-header {
+                font-size: 2rem;
+            }
+        }
+
+        /* 确保所有文字都清晰可见 */
+        .ant-typography {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        
+        .ant-tag {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        
+        /* 特定颜色的标签保持原色 */
+        .ant-tag-success {
+            background: rgba(73, 170, 25, 0.2) !important;
+            border-color: #49aa19 !important;
+            color: #49aa19 !important;
+        }
+        
+        .ant-tag-error {
+            background: rgba(166, 29, 36, 0.2) !important;
+            border-color: #a61d24 !important;
+            color: #ff4d4f !important;
+        }
+        
+        .ant-tag-warning {
+            background: rgba(216, 150, 20, 0.2) !important;
+            border-color: #d89614 !important;
+            color: #faad14 !important;
+        }
+        
+        .ant-tag-blue {
+            background: rgba(24, 144, 255, 0.2) !important;
+            border-color: #1890ff !important;
+            color: #1890ff !important;
+        }
+        
+        .ant-btn {
+            color: rgba(255, 255, 255, 0.85) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .ant-btn:hover {
+            color: rgba(255, 255, 255, 1) !important;
+            border-color: rgba(255, 255, 255, 0.4) !important;
+        }
+        
+        .ant-btn-primary {
+            background: #177ddc !important;
+            border-color: #177ddc !important;
+            color: white !important;
+        }
+        
+        .ant-btn-primary:hover {
+            background: #1890ff !important;
+            border-color: #1890ff !important;
+        }
+        
+        /* 表格文字颜色 */
+        .ant-table {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        
+        .ant-table-thead > tr > th {
+            color: rgba(255, 255, 255, 0.85) !important;
+            background: rgba(255, 255, 255, 0.04) !important;
+        }
+        
+        .ant-table-tbody > tr > td {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        
+        /* 确保标题可见 */
+        h1, h2, h3, h4, h5, h6 {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        
+        /* 修复按钮文字 */
+        .ant-btn-text {
+            color: rgba(255, 255, 255, 0.65) !important;
+            background: transparent !important;
+        }
+        
+        .ant-btn-text:hover {
+            color: rgba(255, 255, 255, 0.85) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+        
+        /* 分页器 */
+        .ant-pagination-item {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+        
+        .ant-pagination-item a {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        
+        .ant-pagination-item-active {
+            background: #177ddc !important;
+            border-color: #177ddc !important;
+        }
+        
+        /* 输入框 */
+        .ant-input {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        
+        .ant-input::placeholder {
+            color: rgba(255, 255, 255, 0.45) !important;
+        }
+        
+        /* 开关 */
+        .ant-switch {
+            background: rgba(255, 255, 255, 0.25) !important;
+        }
+        
+        .ant-switch-checked {
+            background: #177ddc !important;
+        }
+        
+        /* 动画效果 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+        const { 
+            Layout, Card, Row, Col, Table, Tag, Button, Input, Select, 
+            Statistic, Progress, Badge, Space, Typography, Tooltip, 
+            Switch, message, Spin, Modal, Descriptions, Divider, ConfigProvider,
+            DatePicker, Radio
+        } = antd;
+        
+        const { Header, Content } = Layout;
+        const { Title, Text } = Typography;
+        const { Search } = Input;
+        const { Option } = Select;
+
+        // 时间工具函数
+        const formatUTCToLocal = (utcTimeStr) => {
+            // 将 UTC 时间转换为本地时间显示
+            if (!utcTimeStr) return '-';
+            const date = new Date(utcTimeStr);
+            // 使用 moment 进行格式化，自动转换为本地时区
+            return moment(date).format('YYYY-MM-DD HH:mm:ss');
+        };
+        
+        const getUTCNow = () => {
+            // 获取当前 UTC 时间
+            return new Date().toISOString();
+        };
+        
+        const toUTCString = (localDate) => {
+            // 将本地时间转换为 UTC ISO 字符串
+            return new Date(localDate).toISOString();
+        };
+
+        // 主应用组件
+        const App = () => {
+            const [loading, setLoading] = useState(false);
+            const [connectionStatus, setConnectionStatus] = useState('disconnected');
+            const [searchKeyword, setSearchKeyword] = useState('');
+            const [showAllStats, setShowAllStats] = useState(true);
+            const [chartLoading, setChartLoading] = useState(false);
+            
+            // 图表时间范围选择
+            const [chartTimeRange, setChartTimeRange] = useState('1h'); // 默认1小时
+            const [customTimeRange, setCustomTimeRange] = useState(null); // 自定义时间范围
+            const [showCustomPicker, setShowCustomPicker] = useState(false); // 是否显示自定义时间选择器
+            const [pickerPosition, setPickerPosition] = useState({ top: 0, left: 0 }); // 时间选择器位置
+            
+            const [globalStats, setGlobalStats] = useState({
+                total_queues: 0,
+                messages: 0,
+                messages_ready: 0,
+                messages_unacknowledged: 0,
+                consumers: 0,
+                total_count: 0,
+                total_success_count: 0,
+                total_failed_count: 0,
+                total_running_tasks: 0,
+                online_workers: 0,
+                total_workers: 0,
+                message_stats: {
+                    publish: 0,
+                    deliver_get: 0,
+                    ack: 0
+                }
+            });
+
+            const [queues, setQueues] = useState([]);
+            const [workers, setWorkers] = useState([]);
+            
+            const wsRef = useRef(null);
+            const tasksChartRef = useRef(null);
+            const tasksChartInstance = useRef(null);
+
+            // 格式化时间
+            const formatTime = useCallback((seconds) => {
+                if (!seconds || seconds === 0) return '-';
+                if (seconds < 1) return `${Math.round(seconds * 1000)}ms`;
+                if (seconds < 60) return `${seconds.toFixed(2)}s`;
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = (seconds % 60).toFixed(1);
+                return `${minutes}m${remainingSeconds}s`;
+            }, []);
+
+            // 统计卡片数据
+            const statsCards = useMemo(() => [
+                {
+                    title: '总队列数',
+                    value: globalStats.total_queues,
+                    icon: <i className="fas fa-layer-group" style={{color: '#1890ff'}}/>,
+                    color: '#1890ff',
+                    trend: { type: 'success', text: '活跃', desc: '队列运行正常' }
+                },
+                {
+                    title: '消息总数',
+                    value: globalStats.messages,
+                    icon: <i className="fas fa-envelope" style={{color: '#722ed1'}}/>,
+                    color: '#722ed1',
+                    suffix: (
+                        <div style={{fontSize: '0.75rem', color: '#666', marginTop: '4px'}}>
+                            就绪: <Text type="secondary">{globalStats.messages_ready}</Text> | 
+                            未确认: <Text type="warning">{globalStats.messages_unacknowledged}</Text>
+                        </div>
+                    )
+                },
+                {
+                    title: '任务统计',
+                    value: globalStats.total_count,
+                    icon: <i className="fas fa-tasks" style={{color: '#52c41a'}}/>,
+                    color: '#52c41a',
+                    suffix: (
+                        <div style={{fontSize: '0.75rem', color: '#666', marginTop: '4px'}}>
+                            成功: <Text type="success">{globalStats.total_success_count}</Text> | 
+                            失败: <Text type="danger">{globalStats.total_failed_count}</Text>
+                        </div>
+                    )
+                },
+                {
+                    title: '消费者数量',
+                    value: globalStats.consumers,
+                    icon: <i className="fas fa-users" style={{color: '#faad14'}}/>,
+                    color: '#faad14',
+                    suffix: (
+                        <div style={{fontSize: '0.75rem', color: '#666', marginTop: '4px'}}>
+                            在线: <Text type="success">{globalStats.online_workers}</Text> | 
+                            离线: <Text type="secondary">{globalStats.total_workers - globalStats.online_workers}</Text>
+                        </div>
+                    )
+                },
+                {
+                    title: '执行中任务',
+                    value: globalStats.total_running_tasks,
+                    icon: <i className="fas fa-spinner" style={{color: '#faad14'}}/>,
+                    color: '#faad14'
+                }
+            ], [globalStats]);
+
+            // 过滤后的队列
+            const filteredQueues = useMemo(() => {
+                if (!searchKeyword) return queues;
+                return queues.filter(queue => 
+                    queue.name.toLowerCase().includes(searchKeyword.toLowerCase())
+                );
+            }, [queues, searchKeyword]);
+
+            // 在线Workers数量
+            const onlineWorkersCount = useMemo(() => 
+                workers.filter(w => w.is_alive).length, [workers]
+            );
+
+            // 队列表格列定义
+            const queueColumns = [
+                {
+                    title: '队列名称',
+                    dataIndex: 'name',
+                    key: 'name',
+                    render: (name) => (
+                        <Space>
+                            <Tag color="blue">Q</Tag>
+                            <Text strong style={{color: '#1890ff'}}>{name}</Text>
+                        </Space>
+                    ),
+                },
+                {
+                    title: '消息数',
+                    dataIndex: 'messages',
+                    key: 'messages',
+                    align: 'center',
+                    render: (value) => <Tag color="blue">{value || 0}</Tag>,
+                },
+                {
+                    title: '就绪',
+                    dataIndex: 'messages_ready',
+                    key: 'messages_ready',
+                    align: 'center',
+                    render: (value) => <Tag color="cyan">{value || 0}</Tag>,
+                },
+                {
+                    title: '未确认',
+                    dataIndex: 'messages_unacknowledged',
+                    key: 'messages_unacknowledged',
+                    align: 'center',
+                    render: (value) => <Tag color="orange">{value || 0}</Tag>,
+                },
+                {
+                    title: '成功',
+                    dataIndex: 'success_count',
+                    key: 'success_count',
+                    align: 'center',
+                    render: (value) => <Tag color="green">{value || 0}</Tag>,
+                },
+                {
+                    title: '失败',
+                    dataIndex: 'failed_count',
+                    key: 'failed_count',
+                    align: 'center',
+                    render: (value) => <Tag color="red">{value || 0}</Tag>,
+                },
+                {
+                    title: '执行中',
+                    dataIndex: 'running_tasks',
+                    key: 'running_tasks',
+                    align: 'center',
+                    render: (value) => <Tag color="orange">{value || 0}</Tag>,
+                },
+                {
+                    title: '消费者',
+                    dataIndex: 'consumers',
+                    key: 'consumers',
+                    align: 'center',
+                    render: (value) => (
+                        <Space>
+                            <Badge 
+                                status={value > 0 ? 'success' : 'error'} 
+                                color={value > 0 ? '#52c41a' : '#f5222d'}
+                            />
+                            {value || 0}
+                        </Space>
+                    ),
+                },
+                {
+                    title: '操作',
+                    key: 'action',
+                    align: 'center',
+                    render: (_, record) => (
+                        <Button 
+                            type="primary" 
+                            size="small"
+                            onClick={() => viewQueueDetails(record)}
+                            style={{borderRadius: '8px'}}
+                        >
+                            查看详情
+                        </Button>
+                    ),
+                },
+            ];
+
+            // Workers表格列定义
+            const workerColumns = [
+                {
+                    title: '状态',
+                    dataIndex: 'is_alive',
+                    key: 'is_alive',
+                    align: 'center',
+                    render: (isAlive) => (
+                        <Tag color={isAlive ? 'green' : 'red'}>
+                            {isAlive ? '在线' : '离线'}
+                        </Tag>
+                    ),
+                },
+                {
+                    title: 'Worker ID',
+                    dataIndex: 'consumer_id',
+                    key: 'consumer_id',
+                    render: (id) => (
+                        <code style={{
+                            fontSize: '0.75rem', 
+                            background: '#f7fafc', 
+                            padding: '4px 8px', 
+                            borderRadius: '4px'
+                        }}>
+                            {(id || 'unknown').substring(0, 20)}...
+                        </code>
+                    ),
+                },
+                {
+                    title: '主机',
+                    dataIndex: 'host',
+                    key: 'host',
+                },
+                {
+                    title: '队列',
+                    dataIndex: 'queue',
+                    key: 'queue',
+                },
+                {
+                    title: '成功',
+                    dataIndex: 'success_count',
+                    key: 'success_count',
+                    align: 'center',
+                    render: (value) => <Tag color="green">{value || 0}</Tag>,
+                },
+                {
+                    title: '失败',
+                    dataIndex: 'failed_count',
+                    key: 'failed_count',
+                    align: 'center',
+                    render: (value) => <Tag color="red">{value || 0}</Tag>,
+                },
+                {
+                    title: '执行中',
+                    dataIndex: 'running_tasks',
+                    key: 'running_tasks',
+                    align: 'center',
+                    render: (value) => <Tag color="orange">{value || 0}</Tag>,
+                },
+                {
+                    title: '平均耗时',
+                    dataIndex: 'avg_processing_time',
+                    key: 'avg_processing_time',
+                    align: 'center',
+                    render: (value) => formatTime(value),
+                },
+            ];
+
+            // 获取队列时间线数据 - 完全使用PostgreSQL
+            const fetchQueueTimelines = useCallback(async () => {
+                try {
+                    console.log('fetchQueueTimelines called with chartTimeRange:', chartTimeRange);
+                    
+                    // 计算时间范围
+                    let startTime, endTime;
+                    const now = new Date();
+                    
+                    if (customTimeRange) {
+                        // 使用自定义时间范围
+                        startTime = customTimeRange[0].toISOString();
+                        endTime = customTimeRange[1].toISOString();
+                    } else {
+                        // 使用预设时间范围
+                        endTime = now.toISOString();
+                        let millisAgo;
+                        switch (chartTimeRange) {
+                            case '15m': millisAgo = 15 * 60 * 1000; break;
+                            case '30m': millisAgo = 30 * 60 * 1000; break;
+                            case '1h': millisAgo = 60 * 60 * 1000; break;
+                            case '3h': millisAgo = 3 * 60 * 60 * 1000; break;
+                            case '6h': millisAgo = 6 * 60 * 60 * 1000; break;
+                            case '12h': millisAgo = 12 * 60 * 60 * 1000; break;
+                            case '24h': millisAgo = 24 * 60 * 60 * 1000; break;
+                            case '3d': millisAgo = 3 * 24 * 60 * 60 * 1000; break;
+                            case '7d': millisAgo = 7 * 24 * 60 * 60 * 1000; break;
+                            case '30d': millisAgo = 30 * 24 * 60 * 60 * 1000; break;
+                            default: millisAgo = 60 * 60 * 1000; // 默认1小时
+                        }
+                        startTime = new Date(now.getTime() - millisAgo).toISOString();
+                        
+                        console.log('Time range:', { startTime, endTime, chartTimeRange, millisAgo });
+                    }
+                    
+                    // 根据时间范围选择合适的间隔
+                    let interval = '5m';
+                    const minutes = (new Date(endTime) - new Date(startTime)) / (1000 * 60);
+                    if (minutes <= 30) interval = '1m';
+                    else if (minutes <= 60) interval = '5m';
+                    else if (minutes <= 180) interval = '10m';
+                    else if (minutes <= 360) interval = '15m';
+                    else if (minutes <= 720) interval = '30m';
+                    else if (minutes <= 1440) interval = '1h';
+                    else if (minutes <= 4320) interval = '3h';
+                    else if (minutes <= 10080) interval = '6h';
+                    else interval = '24h';
+                    
+                    // 只使用PostgreSQL API获取多个队列的数据
+                    const queueNames = queues.slice(0, 5).map(q => q.name).join(',');
+                    const response = await fetch(
+                        `/api/queues/timeline/pg?queues=${encodeURIComponent(queueNames)}&start_time=${startTime}&end_time=${endTime}&interval=${interval}`
+                    );
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        if (errorData.error === "PostgreSQL connection not configured") {
+                            message.error('PostgreSQL未配置，请设置数据库连接信息');
+                        } else {
+                            message.error('获取数据失败: ' + (errorData.error || 'Unknown error'));
+                        }
+                        throw new Error(errorData.error || 'Failed to fetch timeline data');
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Timeline data from PostgreSQL:', data);
+                    
+                    if (data.error) {
+                        message.warning('部分数据获取失败: ' + data.error);
+                    }
+                    
+                    return data.queues || [];
+                } catch (error) {
+                    console.error('Failed to fetch queue timelines:', error);
+                    message.error('获取队列趋势数据失败');
+                    return [];
+                }
+            }, [chartTimeRange, customTimeRange, queues]);
+            
+            // 初始化图表
+            const initCharts = useCallback(async () => {
+                // 任务趋势图表
+                if (tasksChartRef.current) {
+                    const ctx = tasksChartRef.current.getContext('2d');
+                    
+                    if (tasksChartInstance.current) {
+                        tasksChartInstance.current.destroy();
+                    }
+                    
+                    // 生成队列颜色
+                    const colors = [
+                        '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1',
+                        '#13c2c2', '#eb2f96', '#fa8c16', '#a0d911', '#fa541c'
+                    ];
+                    
+                    // 固定为1小时，每5分钟一个点
+                    const dataPoints = 12;
+                    const now = new Date();
+                    const labels = Array.from({length: dataPoints}, (_, i) => {
+                        const time = new Date(now.getTime() - (60 - i * 5) * 60 * 1000);
+                        return `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+                    });
+                    
+                    // 获取真实的时间线数据
+                    const timelines = await fetchQueueTimelines();
+                    
+                    // 处理时间线数据
+                    const queueDatasets = timelines.map((item, index) => {
+                        if (!item.timeline) {
+                            console.warn(`No timeline data for queue ${item.queue}`);
+                            return null;
+                        }
+                        
+                        const timelinePoints = item.timeline.timeline || [];
+                        console.log(`Processing ${item.queue}: ${timelinePoints.length} points`);
+                        
+                        // 提取数据点
+                        const dataPoints = timelinePoints.map(point => point.count || 0);
+                        console.log(`Data points for ${item.queue}:`, dataPoints);
+                        
+                        // 如果数据点不足，补充0
+                        while (dataPoints.length < labels.length) {
+                            dataPoints.unshift(0);
+                        }
+                        
+                        // 如果数据点过多，截取最后的数据
+                        if (dataPoints.length > labels.length) {
+                            dataPoints.splice(0, dataPoints.length - labels.length);
+                        }
+                        
+                        return {
+                            label: item.queue,
+                            data: dataPoints,
+                            borderColor: colors[index % colors.length],
+                            backgroundColor: 'transparent',
+                            fill: false,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        };
+                    }).filter(dataset => dataset !== null);
+                    
+                    // 自定义插件：显示垂直线
+                    const crosshairPlugin = {
+                        id: 'crosshair',
+                        afterDraw: (chart) => {
+                            if (chart.tooltip._active && chart.tooltip._active.length) {
+                                const activePoint = chart.tooltip._active[0];
+                                const ctx = chart.ctx;
+                                const x = activePoint.element.x;
+                                const topY = chart.scales.y.top;
+                                const bottomY = chart.scales.y.bottom;
+                                
+                                // 绘制垂直线
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.moveTo(x, topY);
+                                ctx.lineTo(x, bottomY);
+                                ctx.lineWidth = 1;
+                                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                                ctx.stroke();
+                                ctx.restore();
+                            }
+                        },
+                        afterEvent: (chart, args) => {
+                            const {inChartArea} = args;
+                            chart.canvas.style.cursor = inChartArea ? 'crosshair' : 'default';
+                        }
+                    };
+                    
+                    tasksChartInstance.current = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: queueDatasets
+                        },
+                        plugins: [crosshairPlugin],
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            animation: false, // 完全禁用动画
+                            transitions: {
+                                active: {
+                                    animation: {
+                                        duration: 0
+                                    }
+                                }
+                            },
+                            plugins: {
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false,
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                    titleColor: 'rgba(255, 255, 255, 0.9)',
+                                    bodyColor: 'rgba(255, 255, 255, 0.8)',
+                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    borderWidth: 1,
+                                    cornerRadius: 4,
+                                    displayColors: true,
+                                    callbacks: {
+                                        title: function(context) {
+                                            return context[0].label;
+                                        },
+                                        label: function(context) {
+                                            return context.dataset.label + ': ' + context.parsed.y + ' 任务';
+                                        }
+                                    }
+                                },
+                                legend: {
+                                    position: 'top',
+                                    labels: {
+                                        color: 'rgba(255, 255, 255, 0.85)'
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.08)'
+                                    },
+                                    ticks: {
+                                        color: 'rgba(255, 255, 255, 0.65)'
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    min: 0,
+                                    suggestedMax: 10, // 设置一个最小的Y轴范围，即使数据为0也能看到线条
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.08)'
+                                    },
+                                    ticks: {
+                                        color: 'rgba(255, 255, 255, 0.65)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+            }, [globalStats.online_workers, globalStats.total_workers, queues]);
+
+            // 更新图表数据
+            const updateChartsData = useCallback(async () => {
+                console.log('updateChartsData called, current chartTimeRange:', chartTimeRange);
+                
+                // 更新队列处理趋势图
+                if (tasksChartInstance.current && queues.length > 0) {
+                    const colors = [
+                        '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1',
+                        '#13c2c2', '#eb2f96', '#fa8c16', '#a0d911', '#fa541c'
+                    ];
+                    
+                    // 获取真实的时间线数据
+                    const timelines = await fetchQueueTimelines();
+                    
+                    if (timelines.length === 0) {
+                        console.warn('No timeline data available');
+                        return;
+                    }
+                    
+                    // 从第一个队列的时间线数据生成时间标签
+                    let labels = [];
+                    const firstTimeline = timelines[0]?.timeline?.timeline || [];
+                    if (firstTimeline.length > 0) {
+                        labels = firstTimeline.map(point => {
+                            const time = new Date(point.time);
+                            return `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+                        });
+                    } else {
+                        // 如果没有数据，生成默认标签
+                        const dataPoints = 12;
+                        const now = new Date();
+                        labels = Array.from({length: dataPoints}, (_, i) => {
+                            const time = new Date(now.getTime() - (60 - i * 5) * 60 * 1000);
+                            return `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+                        });
+                    }
+                    
+                    // 处理时间线数据
+                    const queueDatasets = timelines.map((item, index) => {
+                        if (!item.timeline || !item.timeline.timeline) {
+                            console.warn(`No timeline data for queue ${item.queue}`);
+                            return null;
+                        }
+                        
+                        const timelinePoints = item.timeline.timeline || [];
+                        console.log(`Processing ${item.queue}: ${timelinePoints.length} points`);
+                        
+                        // 提取数据点
+                        const dataPoints = timelinePoints.map(point => point.count || 0);
+                        console.log(`Data points for ${item.queue}:`, dataPoints);
+                        
+                        return {
+                            label: item.queue,
+                            data: dataPoints,
+                            borderColor: colors[index % colors.length],
+                            backgroundColor: 'transparent',
+                            fill: false,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        };
+                    }).filter(dataset => dataset !== null);
+                    
+                    tasksChartInstance.current.data.labels = labels;
+                    tasksChartInstance.current.data.datasets = queueDatasets;
+                    tasksChartInstance.current.update('none'); // 使用 'none' 模式避免动画
+                }
+            }, [globalStats.online_workers, globalStats.total_workers, queues, fetchQueueTimelines, chartTimeRange, customTimeRange]);
+
+            // WebSocket连接
+            const connectWebSocket = useCallback(() => {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsRef.current = new WebSocket(`${protocol}//${window.location.host}/ws`);
+                
+                wsRef.current.onopen = () => {
+                    setConnectionStatus('connected');
+                    message.success('连接已建立');
+                };
+                
+                wsRef.current.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        updateData(data);
+                    } catch (error) {
+                        console.error('WebSocket数据解析失败:', error);
+                    }
+                };
+                
+                wsRef.current.onclose = () => {
+                    setConnectionStatus('disconnected');
+                    message.warning('连接已断开，正在重连...');
+                    setTimeout(connectWebSocket, 5000);
+                };
+                
+                wsRef.current.onerror = (error) => {
+                    console.error('WebSocket错误:', error);
+                };
+            }, []);
+
+            // 更新数据
+            const updateData = async (data) => {
+                if (data.workers) {
+                    // 处理队列数据
+                    const allQueues = {};
+                    Object.entries(data.workers).forEach(([queueName, queueWorkers]) => {
+                        allQueues[queueName] = queueWorkers;
+                    });
+
+                    // 更新队列列表
+                    const queuePromises = Object.keys(allQueues).map(async (queueName) => {
+                        try {
+                            const [statsResponse, summaryResponse] = await Promise.all([
+                                fetch(`/api/queue/${encodeURIComponent(queueName)}/stats`),
+                                fetch(`/api/queue/${encodeURIComponent(queueName)}/worker-summary`)
+                            ]);
+
+                            let queueData = { 
+                                key: queueName,
+                                name: queueName, 
+                                messages: 0, 
+                                messages_ready: 0, 
+                                messages_unacknowledged: 0, 
+                                consumers: 0, 
+                                success_count: 0, 
+                                failed_count: 0, 
+                                running_tasks: 0 
+                            };
+
+                            if (statsResponse.ok) {
+                                const stats = await statsResponse.json();
+                                Object.assign(queueData, stats);
+                            }
+
+                            if (summaryResponse.ok) {
+                                const summary = await summaryResponse.json();
+                                Object.assign(queueData, summary.summary);
+                            }
+
+                            return queueData;
+                        } catch (error) {
+                            console.error(`获取队列 ${queueName} 数据失败:`, error);
+                            return { 
+                                key: queueName,
+                                name: queueName, 
+                                messages: 0, 
+                                messages_ready: 0, 
+                                messages_unacknowledged: 0, 
+                                consumers: 0, 
+                                success_count: 0, 
+                                failed_count: 0, 
+                                running_tasks: 0 
+                            };
+                        }
+                    });
+
+                    const queuesData = await Promise.all(queuePromises);
+                    setQueues(queuesData);
+
+                    // 更新Worker列表
+                    const allWorkers = [];
+                    Object.entries(allQueues).forEach(([queueName, queueWorkers]) => {
+                        queueWorkers.forEach((worker, index) => {
+                            allWorkers.push({
+                                key: `${queueName}-${index}`,
+                                ...worker,
+                                queue: queueName
+                            });
+                        });
+                    });
+                    setWorkers(allWorkers);
+                }
+
+                // 更新全局统计
+                try {
+                    const globalResponse = await fetch('/api/global-stats');
+                    if (globalResponse.ok) {
+                        const stats = await globalResponse.json();
+                        setGlobalStats(stats);
+                        updateChartsData();
+                    }
+                } catch (error) {
+                    console.error('获取全局统计失败:', error);
+                }
+            };
+
+            // 刷新数据
+            const refreshData = async () => {
+                setLoading(true);
+                try {
+                    // 获取队列列表
+                    const queuesResponse = await fetch('/api/queues');
+                    const queuesData = await queuesResponse.json();
+                    
+                    // 为每个队列获取详细信息
+                    const detailedQueues = await Promise.all(
+                        (queuesData.queues || []).map(async (queueName) => {
+                            const [workersResponse, statsResponse, summaryResponse] = await Promise.all([
+                                fetch(`/api/queue/${encodeURIComponent(queueName)}/workers`),
+                                fetch(`/api/queue/${encodeURIComponent(queueName)}/stats`),
+                                fetch(`/api/queue/${encodeURIComponent(queueName)}/worker-summary`)
+                            ]);
+
+                            let queueData = { key: queueName, name: queueName, workers: [] };
+                            
+                            if (workersResponse.ok) {
+                                const workersData = await workersResponse.json();
+                                queueData.workers = workersData.workers || [];
+                            }
+
+                            if (statsResponse.ok) {
+                                const stats = await statsResponse.json();
+                                Object.assign(queueData, stats);
+                            }
+
+                            if (summaryResponse.ok) {
+                                const summary = await summaryResponse.json();
+                                Object.assign(queueData, summary.summary);
+                            }
+
+                            return queueData;
+                        })
+                    );
+
+                    setQueues(detailedQueues);
+                    
+                    // 汇总所有Worker
+                    const allWorkers = [];
+                    detailedQueues.forEach(queue => {
+                        queue.workers.forEach((worker, index) => {
+                            allWorkers.push({
+                                key: `${queue.name}-${index}`,
+                                ...worker,
+                                queue: queue.name
+                            });
+                        });
+                    });
+                    setWorkers(allWorkers);
+
+                    // 获取全局统计
+                    const globalResponse = await fetch('/api/global-stats');
+                    if (globalResponse.ok) {
+                        const stats = await globalResponse.json();
+                        setGlobalStats(stats);
+                    }
+
+                } catch (error) {
+                    console.error('刷新数据失败:', error);
+                    message.error('数据加载失败');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // 查看队列详情
+            const viewQueueDetails = (queue) => {
+                window.location.href = `queue.html?name=${encodeURIComponent(queue.name)}`;
+            };
+
+            // 切换统计模式
+            const toggleStatsMode = (checked) => {
+                setShowAllStats(checked);
+                localStorage.setItem('statsMode', checked ? 'all' : 'online');
+                refreshData();
+            };
+
+
+            // 显示Worker历史
+            const showWorkerHistory = () => {
+                Modal.info({
+                    title: '提示',
+                    content: 'Worker历史记录功能开发中...',
+                });
+            };
+
+            // 组件初始化
+            useEffect(() => {
+                // 读取用户设置
+                setShowAllStats(localStorage.getItem('statsMode') !== 'online');
+                
+                // 连接WebSocket
+                connectWebSocket();
+                
+                // 初始化数据
+                refreshData();
+                
+                // 初始化图表
+                const timer = setTimeout(initCharts, 100);
+                
+                return () => {
+                    clearTimeout(timer);
+                    if (wsRef.current) {
+                        wsRef.current.close();
+                    }
+                    if (tasksChartInstance.current) {
+                        tasksChartInstance.current.destroy();
+                    }
+                };
+            }, []);
+
+            
+            // 初始化图表并设置定期更新
+            useEffect(() => {
+                if (queues.length > 0) {
+                    // 初次初始化图表
+                    const initTimer = setTimeout(async () => {
+                        await initCharts();
+                    }, 100);
+                    
+                    // 设置定期更新队列趋势图（每30秒更新一次）
+                    const updateInterval = setInterval(async () => {
+                        if (tasksChartInstance.current && !chartLoading) {
+                            try {
+                                const timelines = await fetchQueueTimelines();
+                                
+                                // 处理时间线数据并直接更新数据点
+                                timelines.forEach((item, index) => {
+                                    if (!item.timeline || !tasksChartInstance.current.data.datasets[index]) return;
+                                    
+                                    const timelinePoints = item.timeline.timeline || [];
+                                    let dataPoints = timelinePoints.map(point => point.count || 0);
+                                    
+                                    // 调整数据点数量
+                                    const labels = tasksChartInstance.current.data.labels;
+                                    while (dataPoints.length < labels.length) {
+                                        dataPoints.unshift(0);
+                                    }
+                                    if (dataPoints.length > labels.length) {
+                                        dataPoints.splice(0, dataPoints.length - labels.length);
+                                    }
+                                    
+                                    // 直接更新现有数据集的数据，而不是替换整个数据集
+                                    tasksChartInstance.current.data.datasets[index].data = dataPoints;
+                                });
+                                
+                                // 使用最小化的更新方式
+                                tasksChartInstance.current.update('none');
+                            } catch (error) {
+                                console.error('Failed to update queue timeline:', error);
+                            }
+                        }
+                    }, 30000); // 30秒更新一次
+                    
+                    return () => {
+                        clearTimeout(initTimer);
+                        clearInterval(updateInterval);
+                    };
+                }
+            }, [queues.length]); // 只依赖队列数量变化
+
+            // 监听时间范围变化并更新图表
+            useEffect(() => {
+                if (queues.length > 0 && tasksChartInstance.current) {
+                    const updateChartData = async () => {
+                        setChartLoading(true);
+                        try {
+                            await updateChartsData();
+                        } finally {
+                            setChartLoading(false);
+                        }
+                    };
+                    updateChartData();
+                }
+            }, [chartTimeRange, customTimeRange, queues.length]);
+
+            // 点击外部关闭时间选择器
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (showCustomPicker && !event.target.closest('.time-picker-container')) {
+                        setShowCustomPicker(false);
+                    }
+                };
+                
+                document.addEventListener('click', handleClickOutside);
+                return () => {
+                    document.removeEventListener('click', handleClickOutside);
+                };
+            }, [showCustomPicker]);
+
+            return (
+                <ConfigProvider>
+                    <div className="app-container">
+                        <Layout style={{ minHeight: '100vh', background: 'transparent' }}>
+                        {/* 导航栏 */}
+                        <div style={{
+                            background: 'rgba(20, 20, 20, 0.8)',
+                            backdropFilter: 'blur(20px)',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                            padding: '16px 0',
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 1000
+                        }}>
+                            <div style={{
+                                maxWidth: 1400,
+                                margin: '0 auto',
+                                padding: '0 30px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                            }}>
+                                <div style={{
+                                    color: 'white',
+                                    fontSize: '1.5rem',
+                                    fontWeight: 700,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 12
+                                }}>
+                                    <i className="fas fa-rocket" style={{fontSize: '1.5rem'}} />
+                                    Jettask Monitor
+                                </div>
+                                <Space size="large">
+                                    <Space size="large">
+                                        <Button type="primary" size="large">
+                                            概览
+                                        </Button>
+                                        <Button type="text" size="large" onClick={() => window.location.href = '/queues.html'}>
+                                            队列
+                                        </Button>
+                                        <Button type="text" size="large" onClick={() => window.location.href = '/workers.html'}>
+                                            Workers
+                                        </Button>
+                                    </Space>
+                                    <Button 
+                                        type="default" 
+                                        size="large"
+                                        icon={<i className="fas fa-sync-alt" style={{marginRight: 8}} />}
+                                        onClick={refreshData}
+                                        loading={loading}
+                                        style={{
+                                            background: 'rgba(255, 255, 255, 0.1)',
+                                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                                            color: 'rgba(255, 255, 255, 0.85)'
+                                        }}
+                                    >
+                                        刷新
+                                    </Button>
+                                </Space>
+                            </div>
+                        </div>
+
+                        <Content className="main-content">
+                            {/* 统计概览卡片 */}
+                            <Row gutter={[24, 24]} style={{ marginBottom: '40px' }}>
+                                {statsCards.map((stat, index) => (
+                                    <Col key={index} xs={24} sm={12} md={8} lg={6}>
+                                        <div className="stats-card fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
+                                            <Card style={{ height: '100%', border: 'none' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <Statistic
+                                                            title={stat.title}
+                                                            value={stat.value}
+                                                            valueStyle={{ color: stat.color }}
+                                                            suffix={stat.suffix}
+                                                        />
+                                                    </div>
+                                                    <div style={{
+                                                        background: stat.color,
+                                                        borderRadius: '12px',
+                                                        padding: '12px',
+                                                        color: 'white',
+                                                        fontSize: '24px',
+                                                        boxShadow: `0 4px 12px ${stat.color}30`
+                                                    }}>
+                                                        {stat.icon}
+                                                    </div>
+                                                </div>
+                                                {stat.trend && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem' }}>
+                                                        <Tag color={stat.trend.type} size="small" style={{ marginRight: '8px' }}>
+                                                            {stat.trend.text}
+                                                        </Tag>
+                                                        <Text type="secondary">{stat.trend.desc}</Text>
+                                                    </div>
+                                                )}
+                                            </Card>
+                                        </div>
+                                    </Col>
+                                ))}
+                            </Row>
+
+                            {/* 图表区域 */}
+                            <Row gutter={[24, 24]} style={{ marginBottom: '40px' }}>
+                                {/* 任务趋势图表 */}
+                                <Col xs={24}>
+                                    <div className="chart-card">
+                                        <Card 
+                                            title={
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Title level={4} className="gradient-text">
+                                                        📈 队列处理趋势
+                                                    </Title>
+                                                    <div className="time-picker-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', zIndex: 1050, overflow: 'visible' }}>
+                                                        <Button 
+                                                            size="small"
+                                                            icon={<i className="far fa-clock" />}
+                                                            onClick={(e) => {
+                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                setPickerPosition({
+                                                                    top: rect.bottom + 10,
+                                                                    left: rect.right - 320 // 320是下拉框的宽度
+                                                                });
+                                                                setShowCustomPicker(!showCustomPicker);
+                                                            }}
+                                                            style={{
+                                                                borderRadius: '4px',
+                                                                padding: '4px 12px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '6px',
+                                                                backgroundColor: customTimeRange ? '#1890ff' : 'transparent',
+                                                                color: customTimeRange ? '#fff' : 'inherit',
+                                                                border: '1px solid rgba(255, 255, 255, 0.2)'
+                                                            }}
+                                                        >
+                                                            {customTimeRange ? 
+                                                                `${moment(customTimeRange[0]).local().format('MM-DD HH:mm')} ~ ${moment(customTimeRange[1]).local().format('MM-DD HH:mm')}` :
+                                                                (chartTimeRange === '1h' ? '最近1小时' :
+                                                                 chartTimeRange === '3h' ? '最近3小时' :
+                                                                 chartTimeRange === '6h' ? '最近6小时' :
+                                                                 chartTimeRange === '12h' ? '最近12小时' :
+                                                                 chartTimeRange === '24h' ? '最近24小时' :
+                                                                 chartTimeRange === '3d' ? '最近3天' :
+                                                                 chartTimeRange === '7d' ? '最近7天' : '选择时间')
+                                                            }
+                                                            <i className="fas fa-chevron-down" style={{ fontSize: '10px' }} />
+                                                        </Button>
+                                                        
+                                                        {showCustomPicker && ReactDOM.createPortal(
+                                                            <div style={{
+                                                                position: 'fixed',
+                                                                top: `${pickerPosition.top}px`,
+                                                                left: `${pickerPosition.left}px`,
+                                                                zIndex: 99999,
+                                                                backgroundColor: 'rgba(31, 31, 31, 0.98)',
+                                                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                                                borderRadius: '8px',
+                                                                padding: '16px',
+                                                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+                                                                minWidth: '320px',
+                                                                backdropFilter: 'blur(10px)'
+                                                            }}>
+                                                                <div style={{ marginBottom: '12px' }}>
+                                                                    <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '12px' }}>快速选择</Text>
+                                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                                                                        {[
+                                                                            { value: '15m', label: '最近15分钟' },
+                                                                            { value: '30m', label: '最近30分钟' },
+                                                                            { value: '1h', label: '最近1小时' },
+                                                                            { value: '3h', label: '最近3小时' },
+                                                                            { value: '6h', label: '最近6小时' },
+                                                                            { value: '12h', label: '最近12小时' },
+                                                                            { value: '24h', label: '最近24小时' },
+                                                                            { value: '3d', label: '最近3天' },
+                                                                            { value: '7d', label: '最近7天' },
+                                                                            { value: '30d', label: '最近30天' }
+                                                                        ].map(item => (
+                                                                            <Button
+                                                                                key={item.value}
+                                                                                size="small"
+                                                                                type={chartTimeRange === item.value && !customTimeRange ? 'primary' : 'default'}
+                                                                                onClick={() => {
+                                                                                    setChartTimeRange(item.value);
+                                                                                    setCustomTimeRange(null);
+                                                                                    setShowCustomPicker(false);
+                                                                                }}
+                                                                                style={{
+                                                                                    fontSize: '12px',
+                                                                                    padding: '2px 8px',
+                                                                                    height: '24px'
+                                                                                }}
+                                                                            >
+                                                                                {item.label}
+                                                                            </Button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <Divider style={{ margin: '12px 0' }} />
+                                                                
+                                                                <div>
+                                                                    <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '12px' }}>自定义时间范围</Text>
+                                                                    <DatePicker.RangePicker
+                                                                        showTime={{
+                                                                            format: 'HH:mm'
+                                                                        }}
+                                                                        format="YYYY-MM-DD HH:mm"
+                                                                        size="small"
+                                                                        placeholder={['开始时间', '结束时间']}
+                                                                        value={customTimeRange}
+                                                                        onChange={(dates) => {
+                                                                            setCustomTimeRange(dates);
+                                                                            if (dates) {
+                                                                                setChartTimeRange('custom');
+                                                                                setShowCustomPicker(false);
+                                                                            }
+                                                                        }}
+                                                                        style={{ marginTop: '8px', width: '100%' }}
+                                                                    />
+                                                                </div>
+                                                            </div>,
+                                                            document.body
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            }
+                                            style={{ height: '100%', overflow: 'visible' }}
+                                        >
+                                            <div className="chart-container" style={{ position: 'relative', minHeight: '400px' }}>
+                                                <canvas ref={tasksChartRef} />
+                                                {chartLoading && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        right: 0,
+                                                        bottom: 0,
+                                                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        zIndex: 10
+                                                    }}>
+                                                        <Spin size="large" tip="加载中..." />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </Card>
+                                    </div>
+                                </Col>
+
+                            </Row>
+
+                        </Content>
+
+                        {/* 连接状态指示器 */}
+                        <div className="connection-status">
+                            <Tag 
+                                color={connectionStatus === 'connected' ? 'green' : 'red'}
+                                icon={connectionStatus === 'connected' ? 
+                                    <i className="fas fa-check-circle" /> : 
+                                    <i className="fas fa-times-circle" />
+                                }
+                                style={{ fontSize: '14px', padding: '8px 16px' }}
+                            >
+                                {connectionStatus === 'connected' ? '已连接' : '连接断开'}
+                            </Tag>
+                        </div>
+                    </Layout>
+                </div>
+                </ConfigProvider>
+            );
+        };
+
+        // 渲染应用
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+    </script>
+</body>
+</html>
