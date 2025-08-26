@@ -1,0 +1,138 @@
+name: Run tests
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+env:
+  apt_options: -o Acquire::Retries=3
+
+jobs:
+  build-linux-cpp:
+    name: Run tests on ubuntu-22.04
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        compiler:
+          - CC: clang
+            CXX: clang++
+          - CC: gcc
+            CXX: g++
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Install packages
+        run: |
+          sudo apt-get ${{env.apt_options}} update -y
+          sudo apt-get ${{env.apt_options}} install -y libhdf5-dev
+
+      - name: Build and run unittests
+        env:
+          CC: ${{ matrix.compiler.CC }}
+          CXX: ${{ matrix.compiler.CXX }}
+        run: |
+          ./ci/cpp_test.sh
+
+  build-linux-cpp-phdf5:
+    name: Run tests on ubuntu-22.04 with pHDF5.
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        compiler:
+          - CC: gcc
+            CXX: g++
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Install packages
+        run: |
+          sudo apt-get ${{env.apt_options}} update -y
+          sudo apt-get ${{env.apt_options}} install -y libhdf5-openmpi-dev
+
+      - name: Build and run unittests
+        env:
+          CC: mpicc
+          CXX: mpic++
+        run: |
+          ./ci/cpp_test.sh
+
+  build-linux-python:
+    name: Run python tests on ubuntu-22.04
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - uses: actions/setup-python@v5
+        name: Install Python
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install packages
+        run: |
+          sudo apt-get ${{env.apt_options}} update -y
+          sudo apt-get ${{env.apt_options}} install -y libhdf5-dev doxygen
+
+      - name: Build and run unittests
+        run: |
+            ./ci/python_test.sh
+
+  build-macos:
+    name: Run tests on macos
+    runs-on: macos-latest
+    env:
+      UNIXY_HDF5_VERSION: 1.14.3
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Cache HDF5 On Linux/macOS
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        uses: actions/cache@v3
+        id: cache-hdf5-posix
+        env:
+          cache-name: cache-hdf5-posix
+        with:
+          path: src-cache/
+          key: ${{ runner.os }}-build-${{ env.cache-name }}
+
+      - name: Install packages on MacOS
+        run: |
+            mkdir -p $PWD/src-cache
+            ln -s $PWD/src-cache /Users/runner/work/src-cache
+            bash ci/hdf5-build.sh /Users/runner/work/src-cache
+
+      - name: Build and run unittests C++ tests
+        run: |
+            : "${CIBW_ARCHS_MACOS:=$(uname -m)}"
+            export CMAKE_PREFIX_PATH=/Users/runner/work/src-cache/install-$CIBW_ARCHS_MACOS/install
+            export STATIC_HDF5=True
+
+            ./ci/cpp_test.sh
+
+      - name: Build and run unittests python tests
+        run: |
+            : "${CIBW_ARCHS_MACOS:=$(uname -m)}"
+            export CMAKE_PREFIX_PATH=/Users/runner/work/src-cache/install-$CIBW_ARCHS_MACOS/install
+            export STATIC_HDF5=True
+
+            ./ci/python_test.sh
