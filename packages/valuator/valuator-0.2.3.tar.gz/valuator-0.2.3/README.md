@@ -1,0 +1,50 @@
+# Valuator
+
+A lightweight Python library to fetch AI model pricing data and perform searches to retrieve input and output costs per token for matching models.
+
+## Installation
+
+```bash
+pip install valuator
+```
+
+## Usage
+
+```python
+import asyncio
+from valuator import Valuator
+
+async def main():
+    valuator = Valuator()
+    try:
+        # Initialize with default force_refresh=True to fetch latest data
+        await valuator.initialize()
+        print(valuator.get_model_costs("claude.*haiku"))
+        print(valuator.get_model_costs("gpt-4"))
+        # Use force_refresh=False to prefer cache if unchanged
+        await valuator.initialize(force_refresh=False)
+        print(valuator.get_model_costs("gpt.*"))
+    finally:
+        await valuator.close()
+
+asyncio.run(main())
+```
+
+## Features
+
+- Fetches model pricing data.
+- Automatically checks if the remote JSON has changed using ETag headers.
+- Defaults to fetching the latest data (`force_refresh=True`) to ensure up-to-date model prices.
+- Performs regex-based searches on model names for flexible matching.
+- Returns only `input_cost_per_token` and `output_cost_per_token` for matched models.
+- Optimized for low memory usage with efficient data structures (sets, cached regex).
+- Asynchronous HTTP requests for fast data retrieval.
+
+## Requirements
+
+- Python 3.8+
+- `aiohttp>=3.8.0`
+
+## License
+
+MIT License
