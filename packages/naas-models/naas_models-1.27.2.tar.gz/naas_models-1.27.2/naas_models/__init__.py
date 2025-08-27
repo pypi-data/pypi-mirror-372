@@ -1,0 +1,1 @@
+from naas_models.pydantic.registry_p2p import *
