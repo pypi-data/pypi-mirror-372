@@ -1,0 +1,1 @@
+from .pythagore import Pythagore
