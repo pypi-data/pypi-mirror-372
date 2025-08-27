@@ -1,0 +1,21 @@
+# ----------------------------------------------------------------------------------------------------
+# IBM Confidential
+# OCO Source Materials
+# 5900-A3Q, 5737-J33
+# Copyright IBM Corp. 2025
+# The source code for this program is not published or other-wise divested of its trade
+# secrets, irrespective of what has been deposited with the U.S.Copyright Office.
+# ----------------------------------------------------------------------------------------------------
+
+from enum import Enum
+
+
+class TrainingDataSourceType(Enum):
+    """Enumerated type for different types of sources."""
+    COS = "cos"
+    S3 = "s3"
+    DB2 = "db2"
+    POSTGRES = "postgresql"
+    DATASET = "dataset"
+    BLUEMIX_COS = "bluemixcloudobjectstorage"
+    DASHDB = "dashdb"
