@@ -1,0 +1,50 @@
+name: Testing
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+permissions:
+  checks: write
+  contents: read
+jobs:
+  unit_test:
+    runs-on: ubuntu-latest
+    container:
+      image: davevader/pymrm_linux:1.0
+# workaround, potentially leave the user as root in dockerfile
+# see here: https://github.com/actions/checkout/issues/956
+      options: --user root
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: pip install pytest
+
+    # Removed the 'Run pytest' step
+
+    - name: run unit tests
+      run: scripts/run_unit_tests.sh
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: test/pytest-results.xml
+
+    - name: Publish test results (only use the JUnit file)
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      with:
+        files: test/pytest-results.xml
+
+    - name: Upload coverage to Codecov
+      if: always()
+      uses: codecov/codecov-action@v4
+      with:
+        files: test/coverage.xml
