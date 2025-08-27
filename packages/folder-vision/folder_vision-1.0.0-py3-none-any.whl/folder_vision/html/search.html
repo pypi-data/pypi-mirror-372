@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #fff;
+        }
+        .google-logo {
+            width: 272px;
+            height: 92px;
+        }
+        .search-input-container {
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 584px;
+            height: 44px;
+            box-shadow: none;
+            transition: box-shadow 0.3s ease-in-out;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+        }
+        .search-input-container:hover {
+            box-shadow: 0 1px 6px rgba(32,33,36,.28);
+            border-color: rgba(223,225,229,0);
+        }
+        .search-input-container:focus-within {
+            box-shadow: 0 1px 6px rgba(32,33,36,.28);
+            border-color: rgba(223,225,229,0);
+        }
+        .search-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            flex: 1;
+            padding: 0 16px;
+            font-size: 16px;
+            color: #202124;
+        }
+        .search-icon {
+            padding: 0 14px;
+            color: #9aa0a6;
+        }
+        .folder-btn {
+            background-color: #1a73e8;
+            border: 1px solid #1a73e8;
+            border-radius: 4px;
+            color: #fff;
+            font-family: arial, sans-serif;
+            font-size: 14px;
+            padding: 0 20px;
+            line-height: 36px;
+            height: 36px;
+            min-width: 54px;
+            text-align: center;
+            cursor: pointer;
+            -webkit-user-select: none;
+            user-select: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 30px;
+        }
+        .folder-btn:hover {
+            background-color: #1557b0;
+            border-color: #1557b0;
+        }
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .logo-container {
+            margin-bottom: 30px;
+        }
+        .search-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 584px;
+        }
+        .folder-info {
+            margin-top: 20px;
+            text-align: center;
+            color: #5f6368;
+            font-size: 14px;
+        }
+        .indexing-status {
+            margin-top: 15px;
+            text-align: center;
+            color: #1a73e8;
+            font-size: 14px;
+            display: none;
+        }
+        .progress-bar {
+            width: 100%;
+            max-width: 300px;
+            height: 4px;
+            background-color: #f1f3f4;
+            border-radius: 2px;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #1a73e8;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .hidden {
+            display: none;
+        }
+        .folder-input-container {
+            margin-top: 15px;
+            width: 100%;
+            max-width: 584px;
+        }
+        .manual-path-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .path-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #dfe1e5;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+        }
+        .path-input:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+        .index-btn {
+            padding: 8px 16px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .index-btn:hover {
+            background-color: #1557b0;
+        }
+        .helper-text {
+            font-size: 12px;
+            color: #5f6368;
+            margin-top: 5px;
+            text-align: center;
+        }
+        .status-message {
+            color: #1a73e8;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .folder-details {
+            color: #5f6368;
+            font-size: 14px;
+        }
+        .folder-info-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        /* Top-k dropdown styles */
+        .top-k-selector {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            align-items: center;
+            font-size: 14px;
+            color: #5f6368;
+        }
+        .top-k-dropdown {
+            background-color: #f8f9fa;
+            border: 1px solid #dfe1e5;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 14px;
+            color: #202124;
+            cursor: pointer;
+            outline: none;
+        }
+        .top-k-dropdown:hover {
+            border-color: #dadce0;
+            box-shadow: 0 1px 3px rgba(32,33,36,.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="logo-container">
+            <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google" class="google-logo">
+        </div>
+        
+        <div class="search-container">
+            <div class="search-input-container">
+                <div class="search-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <input type="text" class="search-input" placeholder="Indexing images..." title="Search" aria-label="Search" id="searchInput">
+            </div>
+            
+            <div class="top-k-selector">
+                <label for="topK">Results:</label>
+                <select id="topK" class="top-k-dropdown">
+                    <option value="10">10</option>
+                    <option value="20" selected>20</option>
+                    <option value="30">30</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            
+            <div class="folder-info folder-info-container" id="folderInfo">
+                <div id="statusMessage" class="status-message">
+                    <i class="fas fa-spinner fa-spin"></i> Checking for images...
+                </div>
+                <div id="folderPath" class="folder-details"></div>
+                <div id="imageCount" class="folder-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isIndexed = false;
+        let currentFolder = null;
+        let lastResults = [];
+        let lastQuery = "";
+        let searchDebounceTimer = null;
+
+        // Check auto-indexing status on page load
+        async function checkAutoIndexStatus() {
+            try {
+                const response = await fetch('/auto-index-status');
+                const status = await response.json();
+                
+                if (status.status === 'ready' && status.total_images > 0) {
+                    // Auto-indexing successful
+                    isIndexed = true;
+                    currentFolder = status.indexed_folder;
+                    
+                    document.getElementById('statusMessage').innerHTML = 
+                        '<i class="fas fa-check-circle" style="color: #34a853;"></i> Ready to search!';
+                    document.getElementById('folderPath').textContent = 
+                        `Folder: ${status.current_directory}`;
+                    document.getElementById('imageCount').textContent = 
+                        `${status.total_images} images indexed`;
+                    
+                    document.getElementById('searchInput').disabled = false;
+                    document.getElementById('searchInput').placeholder = 'Search images...';
+                    document.getElementById('searchInput').focus();
+                    
+                } else if (status.status === 'ready' && status.total_images === 0) {
+                    // No images found in current directory
+                    document.getElementById('statusMessage').innerHTML = 
+                        '<i class="fas fa-info-circle" style="color: #fbbc04;"></i> No images found';
+                    document.getElementById('folderPath').textContent = 
+                        `Folder: ${status.current_directory}`;
+                    document.getElementById('imageCount').textContent = 
+                        'Try running the server from a folder containing images';
+                    
+                    document.getElementById('searchInput').disabled = true;
+                    document.getElementById('searchInput').placeholder = 'No images to search...';
+                    
+                } else {
+                    // Error or still indexing
+                    document.getElementById('statusMessage').innerHTML = 
+                        '<i class="fas fa-exclamation-triangle" style="color: #ea4335;"></i> Error during indexing';
+                    document.getElementById('folderPath').textContent = 
+                        `Folder: ${status.current_directory}`;
+                    document.getElementById('imageCount').textContent = 
+                        'Please check the server logs';
+                }
+                
+            } catch (error) {
+                console.error('Error checking auto-index status:', error);
+                document.getElementById('statusMessage').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle" style="color: #ea4335;"></i> Connection error';
+                document.getElementById('folderPath').textContent = 'Unable to connect to server';
+            }
+        }
+
+        // Handle search input with debounce
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            if (!isIndexed) return;
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                performSearch();
+                document.getElementById('searchInput').focus();
+            }, 400);
+        });
+
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && isIndexed) {
+                clearTimeout(searchDebounceTimer);
+                performSearch();
+                document.getElementById('searchInput').focus();
+            }
+        });
+
+        async function performSearch(queryOverride) {
+            const query = queryOverride !== undefined
+                ? queryOverride
+                : document.getElementById('searchInput').value.trim();
+            if (!query) {
+                // Optionally clear results if query is empty
+                return;
+            }
+            lastQuery = query;
+            
+            // Get the top_k value from the dropdown
+            const topK = document.getElementById('topK').value;
+            
+            try {
+                const response = await fetch(`/search/text?query=${encodeURIComponent(query)}&top_k=${topK}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+                const results = await response.json();
+                lastResults = results;
+                displaySearchResults(results, query);
+            } catch (error) {
+                console.error('Error searching:', error);
+                alert('Error searching: ' + error.message);
+            }
+        }
+
+        function displaySearchResults(results, query) {
+            if (results.length === 0) {
+                alert('No matching images found.');
+                return;
+            }
+            showSearchResultsPage(results, query);
+        }
+
+        function showSearchResultsPage(results, query) {
+            const mainContainer = document.querySelector('.main-container');
+            // Get the current top_k value to maintain it in the results page
+            const topK = document.getElementById('topK').value;
+            
+            mainContainer.innerHTML = `
+                <div class="w-full max-w-screen-xl mx-auto px-4">
+                    <!-- Search header -->
+                    <div class="flex items-center py-6 border-b border-gray-200 bg-white sticky top-0 z-10">
+                        <a href="/" class="flex-shrink-0">
+                            <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_92x30dp.png" alt="Google" class="h-8 mr-6">
+                        </a>
+                        <!-- Navigation -->
+                        <nav class="flex space-x-4 mr-6">
+                            <a href="/" class="text-gray-600 hover:text-blue-600 transition-colors">Home</a>
+                            <a href="/search" class="text-blue-600 font-medium">Search</a>
+                            <a href="/gallery" class="text-gray-600 hover:text-blue-600 transition-colors">Gallery</a>
+                            <a href="/cluster" class="text-gray-600 hover:text-blue-600 transition-colors">Clustering</a>
+                        </nav>
+                        <div class="flex-grow max-w-xl">
+                            <div class="search-input-container h-11">
+                                <div class="search-icon">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                                <input type="text" value="${query}" id="newSearchInput" class="search-input" placeholder="Search images..." autofocus>
+                                <button id="searchBtn" class="ml-2 p-2 rounded-full hover:bg-gray-100">
+                                    <i class="fas fa-arrow-right text-gray-600"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Add top_k selector in the header for results page -->
+                        <div class="ml-4">
+                            <select id="newTopK" class="top-k-dropdown" title="Number of results">
+                                <option value="10" ${topK === '10' ? 'selected' : ''}>10 results</option>
+                                <option value="20" ${topK === '20' ? 'selected' : ''}>20 results</option>
+                                <option value="30" ${topK === '30' ? 'selected' : ''}>30 results</option>
+                                <option value="50" ${topK === '50' ? 'selected' : ''}>50 results</option>
+                                <option value="100" ${topK === '100' ? 'selected' : ''}>100 results</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Results info -->
+                    <div class="text-gray-600 text-sm mt-4 mb-6">
+                        About ${results.length} results for <span class="font-semibold text-black">${query}</span>
+                    </div>
+                    <!-- Image results grid -->
+                    <div class="relative flex">
+                        <div id="imageResults" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 flex-1">
+                            ${results.map((result, index) => `
+                                <div class="image-result-card bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                                    onclick="openImageSidebar('${result.path}', '${result.filename}', ${result.score})">
+                                    <img src="/image/${encodeURIComponent(result.path)}" alt="${result.filename}" 
+                                         class="w-full h-48 object-cover">
+                                    <div class="p-3">
+                                        <div class="text-sm text-gray-800 font-medium truncate">
+                                            ${result.filename}
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            Score: ${result.score.toFixed(3)}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <!-- Sidebar for image details and similar images -->
+                        <div id="imageSidebar" class="fixed top-0 right-0 h-full w-[420px] bg-white shadow-2xl z-50 border-l border-gray-200 overflow-y-auto hidden">
+                            <button class="absolute top-4 right-6 text-gray-500 text-3xl font-semibold leading-none hover:text-gray-700" onclick="closeImageSidebar()">
+                                &times;
+                            </button>
+                            <div id="sidebarContent" class="pt-16 px-8 pb-8"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add search functionality to the new search bar
+            setTimeout(() => {
+                // Debounced search for result page input
+                let resultDebounceTimer = null;
+                const newSearchInput = document.getElementById('newSearchInput');
+                newSearchInput.addEventListener('input', function(e) {
+                    clearTimeout(resultDebounceTimer);
+                    resultDebounceTimer = setTimeout(() => {
+                        performNewSearch();
+                    }, 400);
+                });
+                newSearchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        clearTimeout(resultDebounceTimer);
+                        performNewSearch();
+                        newSearchInput.focus();
+                    }
+                });
+                document.getElementById('searchBtn').addEventListener('click', performNewSearch);
+                
+                // Add event listener for top_k dropdown on results page
+                document.getElementById('newTopK').addEventListener('change', performNewSearch);
+            }, 100);
+        }
+
+        function performNewSearch() {
+            const newQuery = document.getElementById('newSearchInput').value.trim();
+            if (!newQuery) return;
+
+            // Use the top_k from the new dropdown
+            const topK = document.getElementById('newTopK').value;
+
+            // Only set the value if the element exists
+            const topKElem = document.getElementById('topK');
+            if (topKElem) {
+                topKElem.value = topK;
+            }
+
+            performSearch(newQuery);
+        }
+
+        // Sidebar logic for image details and similar images
+        async function openImageSidebar(imagePath, filename, score) {
+            const sidebar = document.getElementById('imageSidebar');
+            const sidebarContent = document.getElementById('sidebarContent');
+            sidebarContent.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <img src="/image/${encodeURIComponent(imagePath)}" alt="${filename}" class="max-w-full max-h-[300px] object-contain rounded-lg shadow-lg mb-4">
+                    <div class="text-lg font-semibold text-gray-800">${filename}</div>
+                    <div class="text-sm text-gray-500 mb-4">Similarity Score: ${score.toFixed(3)}</div>
+                    <div class="w-full mt-4">
+                        <div class="text-base font-semibold text-gray-700 mb-2">Similar Images</div>
+                        <div id="similarImagesGrid" class="grid grid-cols-2 gap-3"></div>
+                    </div>
+                </div>
+            `;
+            sidebar.style.display = 'block';
+            // Fetch similar images
+            try {
+                const response = await fetch(`/search/similar?path=${encodeURIComponent(imagePath)}&top_k=8`);
+                if (!response.ok) throw new Error('Failed to fetch similar images');
+                const similarImages = await response.json();
+                const grid = document.getElementById('similarImagesGrid');
+                if (similarImages.length === 0) {
+                    grid.innerHTML = '<div class="text-gray-400 col-span-2">No similar images found.</div>';
+                } else {
+                    grid.innerHTML = similarImages.map(img => `
+                        <div class="bg-white rounded shadow cursor-pointer hover:shadow-lg transition"
+                             onclick="openImageSidebar('${img.path}', '${img.filename}', ${img.score})">
+                            <img src="/image/${encodeURIComponent(img.path)}" alt="${img.filename}" class="w-full h-24 object-cover rounded">
+                            <div class="text-xs text-gray-700 text-center mt-1 truncate">${img.filename}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                document.getElementById('similarImagesGrid').innerHTML = '<div class="text-red-400 col-span-2">Error loading similar images.</div>';
+            }
+        }
+
+        function closeImageSidebar() {
+            document.getElementById('imageSidebar').style.display = 'none';
+        }
+
+        // Initialize: Check auto-indexing status when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('searchInput').disabled = true;
+            checkAutoIndexStatus();
+            
+            // Check URL parameters for initial search
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryParam = urlParams.get('q');
+            if (queryParam) {
+                document.getElementById('searchInput').value = queryParam;
+                // Wait for indexing to complete, then perform search
+                const checkAndSearch = async () => {
+                    if (isIndexed) {
+                        await performSearch(queryParam);
+                    } else {
+                        // Wait a bit and check again
+                        setTimeout(checkAndSearch, 500);
+                    }
+                };
+                setTimeout(checkAndSearch, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

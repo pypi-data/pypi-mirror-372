@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cluster - Folder Vision</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <style>
+        /* Global list style reset */
+        * {
+            list-style: none;
+        }
+        ul, ol, li {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .cluster-card {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            background: white;
+            border: 1px solid #e5e7eb;
+        }
+        .cluster-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-color: #3b82f6;
+        }
+        .accordion-header {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .accordion-header:hover {
+            background: #f9fafb;
+        }
+        .accordion-header.active {
+            background: #f3f4f6;
+            border-color: #3b82f6;
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .accordion-content.active {
+            max-height: none;
+            overflow-y: auto;
+            max-height: 80vh;
+            transition: max-height 0.5s ease-in;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.75rem;
+            padding: 1rem;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .cluster-image {
+            aspect-ratio: 1;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .cluster-image:hover {
+            transform: scale(1.05);
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .cluster-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .cluster-stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .control-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            transition: all 0.2s ease;
+        }
+        .btn-secondary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
+        }
+        .visualization-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+            min-height: 500px;
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        .progress-bar-initial {
+            width: 0%;
+        }
+        .progress-bar-complete {
+            width: 100%;
+        }
+        .plot-container {
+            width: 100%;
+            height: 500px;
+        }
+        .cluster-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .method-selector {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .method-selector.active {
+            background: #ebf8ff;
+            border-color: #3182ce;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center py-4">
+                <!-- Logo -->
+                <a href="/" class="flex-shrink-0 mr-6">
+                    <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_92x30dp.png" alt="Google" class="h-8">
+                </a>
+                
+                <!-- Navigation -->
+                <nav class="flex space-x-4 mr-6">
+                    <a href="/" class="text-gray-600 hover:text-blue-600 transition-colors">Home</a>
+                    <a href="/search" class="text-gray-600 hover:text-blue-600 transition-colors">Search</a>
+                    <a href="/gallery" class="text-gray-600 hover:text-blue-600 transition-colors">Gallery</a>
+                    <a href="/cluster" class="text-blue-600 font-medium">Cluster</a>
+                </nav>
+                
+                <!-- Page Title -->
+                <div class="flex-grow">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Control Panel -->
+        <div class="control-panel p-6 mb-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Clustering Method -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Clustering Method</label>
+                    <div class="space-y-3">
+                        <div class="method-selector p-3 cursor-pointer active" id="methodAuto" onclick="selectMethod('auto')">
+                            <div class="flex items-center">
+                                <input type="radio" name="method" value="auto" checked class="mr-3" title="Automatic clustering method" aria-label="Auto clustering">
+                                <div>
+                                    <div class="font-medium">Auto</div>
+                                    <div class="text-sm text-gray-500">Automatic optimal clustering</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="method-selector p-3 cursor-pointer" id="methodKmeans" onclick="selectMethod('kmeans')">
+                            <div class="flex items-center">
+                                <input type="radio" name="method" value="kmeans" class="mr-3" title="K-means clustering method" aria-label="K-means clustering">
+                                <div>
+                                    <div class="font-medium">K-Means</div>
+                                    <div class="text-sm text-gray-500">Specify number of clusters</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="method-selector p-3 cursor-pointer" id="methodHierarchical" onclick="selectMethod('hierarchical')">
+                            <div class="flex items-center">
+                                <input type="radio" name="method" value="hierarchical" class="mr-3" title="Hierarchical clustering method" aria-label="Hierarchical clustering">
+                                <div>
+                                    <div class="font-medium">Hierarchical</div>
+                                    <div class="text-sm text-gray-500">Agglomerative clustering</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parameters -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Parameters</label>
+                    <div class="space-y-4">
+                        <div id="nClustersContainer">
+                            <label for="nClusters" class="block text-sm text-gray-600 mb-1">Number of Clusters</label>
+                            <input type="number" id="nClusters" min="2" max="50" value="5" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" disabled>
+                        </div>
+                        <div>
+                            <label for="minClusterSize" class="block text-sm text-gray-600 mb-1">Min Cluster Size</label>
+                            <input type="number" id="minClusterSize" min="1" max="100" value="5" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="outputDir" class="block text-sm text-gray-600 mb-1">Output Directory</label>
+                            <input type="text" id="outputDir" value="clusters" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Actions</label>
+                    <div class="space-y-3">
+                        <button id="clusterBtn" onclick="performClustering()" class="w-full btn-primary text-white px-4 py-3 rounded-lg font-medium hover:shadow-lg">
+                            <i class="fas fa-sitemap mr-2"></i>Start Clustering
+                        </button>
+                        <button onclick="getSuggestions()" class="w-full btn-secondary text-white px-4 py-3 rounded-lg font-medium hover:shadow-lg">
+                            <i class="fas fa-lightbulb mr-2"></i>Get Suggestions
+                        </button>
+                        <button onclick="loadLastClustering()" class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-gray-700">
+                            <i class="fas fa-history mr-2"></i>Load Last Results
+                        </button>
+                        <button onclick="show3DVisualization()" class="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-700">
+                            <i class="fas fa-cube mr-2"></i>3D t-SNE Visualization
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div id="progressContainer" class="hidden mt-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700">Clustering Progress</span>
+                    <span id="progressText" class="text-sm text-gray-500">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="progressBar" class="progress-bar h-2 rounded-full progress-bar-initial"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clustering Stats -->
+        <div id="statsContainer" class="hidden cluster-stats p-6 rounded-lg mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="text-center">
+                    <div class="text-3xl font-bold" id="totalClusters">0</div>
+                    <div class="text-sm opacity-90">Total Clusters</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold" id="totalImages">0</div>
+                    <div class="text-sm opacity-90">Images Clustered</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold" id="avgClusterSize">0</div>
+                    <div class="text-sm opacity-90">Avg Cluster Size</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold" id="clusteringTime">0s</div>
+                    <div class="text-sm opacity-90">Processing Time</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D Visualization -->
+        <div id="visualizationContainer" class="hidden visualization-container p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-gray-900">3D Embedding Visualization</h2>
+                <div class="flex space-x-2">
+                    <select id="vizMethod" class="px-3 py-2 text-sm border border-gray-300 rounded-md" title="Visualization method">
+                        <option value="tsne">t-SNE</option>
+                        <option value="pca">PCA</option>
+                    </select>
+                    <select id="vizDimension" class="px-3 py-2 text-sm border border-gray-300 rounded-md" title="Visualization dimension">
+                        <option value="3">3D</option>
+                        <option value="2">2D</option>
+                    </select>
+                    <button onclick="reset3DView()" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                        <i class="fas fa-refresh mr-1"></i>Reset View
+                    </button>
+                    <button onclick="export3DPlot()" class="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200">
+                        <i class="fas fa-download mr-1"></i>Export
+                    </button>
+                </div>
+            </div>
+            <div id="plot3d" class="plot-container"></div>
+        </div>
+
+        <!-- Cluster Results -->
+        <div id="clustersContainer" class="hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-semibold text-gray-900">Cluster Results</h2>
+                <div class="flex space-x-2">
+                    <button onclick="expandAllClusters()" class="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                        <i class="fas fa-expand-arrows-alt mr-1"></i>Expand All
+                    </button>
+                    <button onclick="collapseAllClusters()" class="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                        <i class="fas fa-compress-arrows-alt mr-1"></i>Collapse All
+                    </button>
+                </div>
+            </div>
+            <div id="clustersAccordion" class="space-y-4">
+                <!-- Clusters will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden flex items-center justify-center py-20">
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+                <p class="text-gray-600">Processing clusters...</p>
+                <p class="text-sm text-gray-500 mt-2">This may take a few minutes</p>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden flex items-center justify-center py-20">
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                <p class="text-gray-600" id="errorMessage">Clustering failed</p>
+                <button onclick="performClustering()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Try Again
+                </button>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="flex items-center justify-center py-20">
+            <div class="text-center">
+                <i class="fas fa-sitemap text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600">No clustering results available</p>
+                <p class="text-gray-500 text-sm mb-6">Start by clustering your images or loading previous results</p>
+                <div class="space-x-4">
+                    <button onclick="performClustering()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-play mr-2"></i>Start Clustering
+                    </button>
+                    <button onclick="getSuggestions()" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                        <i class="fas fa-lightbulb mr-2"></i>Get Suggestions
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentClusterResults = null;
+        let currentMethod = 'auto';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            setupVisualizationControls();
+            loadLastClustering();
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Method selection
+            document.querySelectorAll('input[name="method"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    selectMethod(this.value);
+                });
+            });
+        }
+
+        // Select clustering method
+        function selectMethod(method) {
+            currentMethod = method;
+            
+            // Update UI
+            document.querySelectorAll('.method-selector').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.getElementById(`method${method.charAt(0).toUpperCase() + method.slice(1)}`).classList.add('active');
+            
+            // Update radio buttons
+            document.querySelector(`input[value="${method}"]`).checked = true;
+            
+            // Show/hide number of clusters input
+            const nClustersContainer = document.getElementById('nClustersContainer');
+            const nClustersInput = document.getElementById('nClusters');
+            
+            if (method === 'kmeans' || method === 'hierarchical') {
+                nClustersInput.disabled = false;
+                nClustersContainer.classList.remove('opacity-50');
+            } else {
+                nClustersInput.disabled = true;
+                nClustersContainer.classList.add('opacity-50');
+            }
+        }
+
+        // Perform clustering
+        async function performClustering() {
+            const clusterBtn = document.getElementById('clusterBtn');
+            const originalText = clusterBtn.innerHTML;
+            
+            try {
+                // Show loading state
+                showLoadingState();
+                clusterBtn.disabled = true;
+                clusterBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Clustering...';
+                
+                // Start progress simulation
+                simulateProgress();
+                
+                // Prepare request data
+                const requestData = {
+                    method: currentMethod,
+                    min_cluster_size: parseInt(document.getElementById('minClusterSize').value) || 5,
+                    output_dir: document.getElementById('outputDir').value || 'clusters'
+                };
+                
+                // Add n_clusters for kmeans and hierarchical
+                if (currentMethod === 'kmeans' || currentMethod === 'hierarchical') {
+                    requestData.n_clusters = parseInt(document.getElementById('nClusters').value) || 5;
+                }
+                
+                console.log('Starting clustering with params:', requestData);
+                
+                // Perform clustering
+                const response = await fetch('/cluster', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    currentClusterResults = result;
+                    hideLoadingState();
+                    displayClusterResults(result);
+                    showStatsAndVisualization(result);
+                } else {
+                    throw new Error(result.detail || 'Clustering failed');
+                }
+                
+            } catch (error) {
+                console.error('Clustering error:', error);
+                hideLoadingState();
+                showErrorState(error.message);
+            } finally {
+                clusterBtn.disabled = false;
+                clusterBtn.innerHTML = originalText;
+                hideProgress();
+            }
+        }
+
+        // Get cluster suggestions
+        async function getSuggestions() {
+            try {
+                showLoadingState();
+                
+                const response = await fetch('/cluster/suggestions?top_k=5');
+                const suggestions = await response.json();
+                
+                if (response.ok) {
+                    hideLoadingState();
+                    displaySuggestions(suggestions);
+                } else {
+                    throw new Error(suggestions.detail || 'Failed to get suggestions');
+                }
+                
+            } catch (error) {
+                console.error('Suggestions error:', error);
+                hideLoadingState();
+                showErrorState(error.message);
+            }
+        }
+
+        // Load last clustering results
+        async function loadLastClustering() {
+            try {
+                const response = await fetch('/cluster/summary');
+                
+                if (response.ok) {
+                    const summary = await response.json();
+                    currentClusterResults = summary;
+                    displayClusterResults(summary);
+                    showStatsAndVisualization(summary);
+                } else {
+                    // No previous clustering results
+                    showEmptyState();
+                }
+                
+            } catch (error) {
+                console.error('Load clustering error:', error);
+                showEmptyState();
+            }
+        }
+
+        // Display cluster results
+        async function displayClusterResults(results) {
+            if (!results || !results.clusters) {
+                showEmptyState();
+                return;
+            }
+            
+            hideEmptyState();
+            hideErrorState();
+            
+            const container = document.getElementById('clustersAccordion');
+            container.innerHTML = '';
+            
+            // Sort clusters by size (largest first)
+            const sortedClusters = Object.entries(results.clusters).sort((a, b) => b[1].length - a[1].length);
+            
+            for (const [clusterId, clusterInfo] of sortedClusters) {
+                const clusterElement = await createClusterAccordion(clusterId, clusterInfo, results);
+                container.appendChild(clusterElement);
+            }
+            
+            document.getElementById('clustersContainer').classList.remove('hidden');
+        }
+
+        // Create cluster accordion element
+        async function createClusterAccordion(clusterId, clusterInfo, results) {
+            const clusterDiv = document.createElement('div');
+            clusterDiv.className = 'cluster-card';
+            
+            // Get cluster images
+            let images = [];
+            try {
+                const response = await fetch(`/cluster/${clusterId}/images`);
+                if (response.ok) {
+                    const data = await response.json();
+                    images = data.images || [];
+                }
+            } catch (error) {
+                console.error(`Error loading images for cluster ${clusterId}:`, error);
+            }
+            
+            const clusterSize = Array.isArray(clusterInfo) ? clusterInfo.length : (clusterInfo.size || 0);
+            const previewImages = images.slice(0, 4);
+            
+            clusterDiv.innerHTML = `
+                <div class="accordion-header p-4" onclick="toggleCluster('${clusterId}')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="cluster-badge bg-blue-100 text-blue-800">
+                                Cluster ${clusterId}
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">${clusterSize} images</div>
+                                <div class="text-sm text-gray-500">Click to expand</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <div class="flex -space-x-2">
+                                ${previewImages.map(img => `
+                                    <img src="/image/${encodeURIComponent(img.path)}" 
+                                         alt="Preview" 
+                                         class="w-10 h-10 rounded-full border-2 border-white object-cover">
+                                `).join('')}
+                                ${clusterSize > 4 ? `<div class="w-10 h-10 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">+${clusterSize - 4}</div>` : ''}
+                            </div>
+                            <i class="fas fa-chevron-down transition-transform duration-200" id="chevron-${clusterId}"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-content" id="content-${clusterId}">
+                    <div class="image-grid">
+                        ${images.map(img => `
+                            <div class="cluster-image" onclick="openImageViewer('${img.path}', '${img.filename}')">
+                                <img src="/image/${encodeURIComponent(img.path)}" 
+                                     alt="${img.filename}"
+                                     title="${img.filename}">
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${images.length === 0 ? '<div class="p-4 text-center text-gray-500">No images to display</div>' : ''}
+                </div>
+            `;
+            
+            return clusterDiv;
+        }
+
+        // Toggle cluster accordion
+        function toggleCluster(clusterId) {
+            const content = document.getElementById(`content-${clusterId}`);
+            const chevron = document.getElementById(`chevron-${clusterId}`);
+            const header = content.previousElementSibling;
+            
+            if (content.classList.contains('active')) {
+                content.classList.remove('active');
+                chevron.classList.remove('rotate-180');
+                header.classList.remove('active');
+            } else {
+                content.classList.add('active');
+                chevron.classList.add('rotate-180');
+                header.classList.add('active');
+            }
+        }
+
+        // Expand all clusters
+        function expandAllClusters() {
+            document.querySelectorAll('.accordion-content').forEach(content => {
+                const clusterId = content.id.replace('content-', '');
+                const chevron = document.getElementById(`chevron-${clusterId}`);
+                const header = content.previousElementSibling;
+                
+                content.classList.add('active');
+                chevron.classList.add('rotate-180');
+                header.classList.add('active');
+            });
+        }
+
+        // Collapse all clusters
+        function collapseAllClusters() {
+            document.querySelectorAll('.accordion-content').forEach(content => {
+                const clusterId = content.id.replace('content-', '');
+                const chevron = document.getElementById(`chevron-${clusterId}`);
+                const header = content.previousElementSibling;
+                
+                content.classList.remove('active');
+                chevron.classList.remove('rotate-180');
+                header.classList.remove('active');
+            });
+        }
+
+        // Show stats and 3D visualization
+        function showStatsAndVisualization(results) {
+            if (!results || !results.clusters) return;
+            
+            // Update stats
+            const clusters = results.clusters;
+            const totalClusters = Object.keys(clusters).length;
+            let totalImages = 0;
+            
+            Object.values(clusters).forEach(cluster => {
+                totalImages += Array.isArray(cluster) ? cluster.length : (cluster.size || 0);
+            });
+            
+            const avgClusterSize = totalClusters > 0 ? Math.round(totalImages / totalClusters) : 0;
+            const processingTime = results.execution_time || 0;
+            
+            document.getElementById('totalClusters').textContent = totalClusters;
+            document.getElementById('totalImages').textContent = totalImages;
+            document.getElementById('avgClusterSize').textContent = avgClusterSize;
+            document.getElementById('clusteringTime').textContent = `${processingTime.toFixed(1)}s`;
+            
+            document.getElementById('statsContainer').classList.remove('hidden');
+            
+            // Show 3D visualization
+            if (results.visualization_data) {
+                create3DVisualization(results.visualization_data);
+                document.getElementById('visualizationContainer').classList.remove('hidden');
+            }
+        }
+
+        // Create 3D visualization
+        function create3DVisualization(vizData) {
+            if (!vizData || !vizData.points || !vizData.clusters) {
+                console.log('No visualization data available');
+                return;
+            }
+            
+            const traces = [];
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'];
+            
+            // Create a trace for each cluster
+            Object.entries(vizData.clusters).forEach(([clusterId, indices], index) => {
+                const clusterPoints = indices.map(i => vizData.points[i]);
+                
+                const trace = {
+                    x: clusterPoints.map(p => p[0]),
+                    y: clusterPoints.map(p => p[1]),
+                    z: clusterPoints.map(p => p[2]),
+                    mode: 'markers',
+                    type: 'scatter3d',
+                    name: `Cluster ${clusterId}`,
+                    marker: {
+                        size: 5,
+                        color: colors[index % colors.length],
+                        opacity: 0.8
+                    },
+                    hovertemplate: '<b>Cluster %{text}</b><extra></extra>',
+                    text: Array(clusterPoints.length).fill(clusterId)
+                };
+                
+                traces.push(trace);
+            });
+            
+            const layout = {
+                title: {
+                    text: '3D Cluster Visualization',
+                    x: 0.5
+                },
+                scene: {
+                    xaxis: { 
+                        title: { text: 'Component 1' },
+                        showgrid: true,
+                        zeroline: false
+                    },
+                    yaxis: { 
+                        title: { text: 'Component 2' },
+                        showgrid: true,
+                        zeroline: false
+                    },
+                    zaxis: { 
+                        title: { text: 'Component 3' },
+                        showgrid: true,
+                        zeroline: false
+                    },
+                    camera: {
+                        eye: { x: 1.5, y: 1.5, z: 1.5 }
+                    }
+                },
+                margin: { l: 0, r: 0, b: 0, t: 50 },
+                showlegend: true,
+                legend: {
+                    x: 1,
+                    xanchor: 'left',
+                    y: 1
+                }
+            };
+            
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d']
+            };
+            
+            try {
+                Plotly.newPlot('plot3d', traces, layout, config);
+            } catch (error) {
+                console.error('Error creating 3D plot:', error);
+                showErrorState('Failed to create 3D visualization: ' + error.message);
+            }
+        }
+
+        // Display suggestions
+        function displaySuggestions(suggestions) {
+            console.log('Cluster suggestions:', suggestions);
+            
+            // For now, just show an alert with suggestions
+            // You can enhance this to show a modal or dedicated section
+            let message = 'Cluster Suggestions:\n\n';
+            
+            if (suggestions.suggested_clusters) {
+                message += `Suggested number of clusters: ${suggestions.suggested_clusters}\n`;
+            }
+            
+            if (suggestions.cluster_preview && suggestions.cluster_preview.length > 0) {
+                message += `\nPreview clusters found:\n`;
+                suggestions.cluster_preview.forEach((cluster, index) => {
+                    message += `- Cluster ${index + 1}: ${cluster.size} images\n`;
+                });
+            }
+            
+            alert(message);
+        }
+
+        // Reset 3D view
+        function reset3DView() {
+            const plotDiv = document.getElementById('plot3d');
+            if (plotDiv && plotDiv.data && plotDiv.data.length > 0) {
+                try {
+                    // Check if it's a 3D plot
+                    const is3D = plotDiv.data.some(trace => trace.type === 'scatter3d');
+                    
+                    if (is3D) {
+                        Plotly.relayout('plot3d', {
+                            'scene.camera': {
+                                eye: { x: 1.5, y: 1.5, z: 1.5 }
+                            }
+                        });
+                    } else {
+                        // For 2D plots, reset zoom
+                        Plotly.relayout('plot3d', {
+                            'xaxis.autorange': true,
+                            'yaxis.autorange': true
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error resetting view:', error);
+                }
+            }
+        }
+
+        // Export 3D plot
+        function export3DPlot() {
+            const plotDiv = document.getElementById('plot3d');
+            if (plotDiv && plotDiv.data && plotDiv.data.length > 0) {
+                try {
+                    Plotly.downloadImage('plot3d', {
+                        format: 'png',
+                        width: 1200,
+                        height: 800,
+                        filename: 'cluster_visualization'
+                    });
+                } catch (error) {
+                    console.error('Error exporting plot:', error);
+                    alert('Failed to export plot. Please try again.');
+                }
+            } else {
+                alert('No plot available to export.');
+            }
+        }
+
+        // Simulate progress for clustering
+        function simulateProgress() {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            progressContainer.classList.remove('hidden');
+            progressBar.classList.remove('progress-bar-initial');
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 90) progress = 90;
+                
+                progressBar.style.width = `${progress}%`;
+                progressText.textContent = `${Math.round(progress)}%`;
+                
+                if (progress >= 90) {
+                    clearInterval(interval);
+                }
+            }, 500);
+        }
+
+        // Hide progress
+        function hideProgress() {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            setTimeout(() => {
+                progressBar.classList.add('progress-bar-complete');
+                progressText.textContent = '100%';
+                
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    progressBar.classList.remove('progress-bar-complete');
+                    progressBar.classList.add('progress-bar-initial');
+                    progressText.textContent = '0%';
+                }, 500);
+            }, 200);
+        }
+
+        // Open image viewer (placeholder - integrate with existing viewer)
+        function openImageViewer(imagePath, filename) {
+            // You can integrate this with the existing image viewer from gallery.html
+            window.open(`/image/${encodeURIComponent(imagePath)}`, '_blank');
+        }
+
+        // State management functions
+        function showLoadingState() {
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+        }
+
+        function hideLoadingState() {
+            document.getElementById('loadingState').classList.add('hidden');
+        }
+
+        function showErrorState(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+        }
+
+        function hideErrorState() {
+            document.getElementById('errorState').classList.add('hidden');
+        }
+
+        function showEmptyState() {
+            document.getElementById('clustersContainer').classList.add('hidden');
+            document.getElementById('statsContainer').classList.add('hidden');
+            document.getElementById('visualizationContainer').classList.add('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
+        }
+
+        function hideEmptyState() {
+            document.getElementById('emptyState').classList.add('hidden');
+        }
+
+        // Show 3D visualization without clustering
+        async function show3DVisualization() {
+            try {
+                showLoadingState();
+                
+                const method = document.getElementById('vizMethod')?.value || 'tsne';
+                const dimension = parseInt(document.getElementById('vizDimension')?.value || '3');
+                
+                console.log(`Generating ${dimension}D ${method.toUpperCase()} visualization...`);
+                
+                const response = await fetch(`/visualize/embeddings?method=${method}&dim=${dimension}&perplexity=30&max_points=1000&include_clusters=true`);
+                
+                if (response.ok) {
+                    const vizData = await response.json();
+                    hideLoadingState();
+                    create3DVisualizationFromData(vizData);
+                    document.getElementById('visualizationContainer').classList.remove('hidden');
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to generate visualization');
+                }
+                
+            } catch (error) {
+                console.error('Visualization error:', error);
+                hideLoadingState();
+                showErrorState(error.message);
+            }
+        }
+
+        // Create 3D visualization from API data
+        function create3DVisualizationFromData(vizData) {
+            if (!vizData) {
+                console.log('No visualization data available');
+                return;
+            }
+            
+            const traces = [];
+            const colors = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', 
+                '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+                '#F1948A', '#82E0AA', '#85C1E9', '#F7DC6F', '#D7DBDD'
+            ];
+            
+            const is3D = vizData.dimension === 3;
+            
+            // Create traces for clusters
+            if (vizData.clusters && Object.keys(vizData.clusters).length > 0) {
+                Object.entries(vizData.clusters).forEach(([clusterId, points], index) => {
+                    if (points && points.length > 0) {
+                        const trace = {
+                            x: points.map(p => p.x),
+                            y: points.map(p => p.y),
+                            mode: 'markers',
+                            type: is3D ? 'scatter3d' : 'scatter',
+                            name: `Cluster ${clusterId}`,
+                            text: points.map(p => p.filename),
+                            hovertemplate: '<b>%{text}</b><br>Cluster: ' + clusterId + '<extra></extra>',
+                            marker: {
+                                size: is3D ? 6 : 8,
+                                color: colors[index % colors.length],
+                                opacity: 0.8
+                            }
+                        };
+                        
+                        if (is3D && points[0].z !== undefined) {
+                            trace.z = points.map(p => p.z);
+                        }
+                        
+                        traces.push(trace);
+                    }
+                });
+            }
+            
+            // Create trace for unclustered points
+            if (vizData.unclustered && vizData.unclustered.length > 0) {
+                const trace = {
+                    x: vizData.unclustered.map(p => p.x),
+                    y: vizData.unclustered.map(p => p.y),
+                    mode: 'markers',
+                    type: is3D ? 'scatter3d' : 'scatter',
+                    name: 'Unclustered',
+                    text: vizData.unclustered.map(p => p.filename),
+                    hovertemplate: '<b>%{text}</b><br>Unclustered<extra></extra>',
+                    marker: {
+                        size: is3D ? 5 : 7,
+                        color: '#95A5A6',
+                        opacity: 0.6
+                    }
+                };
+                
+                if (is3D && vizData.unclustered[0].z !== undefined) {
+                    trace.z = vizData.unclustered.map(p => p.z);
+                }
+                
+                traces.push(trace);
+            }
+            
+            // If no traces were created, show error
+            if (traces.length === 0) {
+                console.error('No data points found for visualization');
+                showErrorState('No data points available for visualization');
+                return;
+            }
+            
+            const layout = {
+                title: {
+                    text: `${is3D ? '3D' : '2D'} ${vizData.method ? vizData.method.toUpperCase() : 'Embedding'} Visualization`,
+                    x: 0.5
+                },
+                margin: { l: 0, r: 0, b: 0, t: 50 },
+                showlegend: true,
+                legend: {
+                    x: 1,
+                    xanchor: 'left',
+                    y: 1
+                }
+            };
+            
+            // Add scene configuration for 3D plots
+            if (is3D) {
+                layout.scene = {
+                    xaxis: { 
+                        title: { text: 'Component 1' },
+                        showgrid: true,
+                        zeroline: false
+                    },
+                    yaxis: { 
+                        title: { text: 'Component 2' },
+                        showgrid: true,
+                        zeroline: false
+                    },
+                    zaxis: { 
+                        title: { text: 'Component 3' },
+                        showgrid: true,
+                        zeroline: false
+                    },
+                    camera: {
+                        eye: { x: 1.5, y: 1.5, z: 1.5 }
+                    }
+                };
+            } else {
+                // Add axis configuration for 2D plots
+                layout.xaxis = { 
+                    title: { text: 'Component 1' },
+                    showgrid: true,
+                    zeroline: false
+                };
+                layout.yaxis = { 
+                    title: { text: 'Component 2' },
+                    showgrid: true,
+                    zeroline: false
+                };
+            }
+            
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
+            };
+            
+            try {
+                // Clear the plot div first
+                const plotDiv = document.getElementById('plot3d');
+                if (plotDiv) {
+                    Plotly.purge(plotDiv);
+                    Plotly.newPlot('plot3d', traces, layout, config);
+                    
+                    // Add click event to show image
+                    plotDiv.on('plotly_click', function(data) {
+                        if (data.points && data.points.length > 0) {
+                            const point = data.points[0];
+                            const filename = point.text;
+                            
+                            // Find the full path for this point
+                            let imagePath = null;
+                            if (vizData.clusters) {
+                                for (const [clusterId, points] of Object.entries(vizData.clusters)) {
+                                    const foundPoint = points.find(p => p.filename === filename);
+                                    if (foundPoint) {
+                                        imagePath = foundPoint.path;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            if (!imagePath && vizData.unclustered) {
+                                const foundPoint = vizData.unclustered.find(p => p.filename === filename);
+                                if (foundPoint) {
+                                    imagePath = foundPoint.path;
+                                }
+                            }
+                            
+                            if (imagePath) {
+                                openImageViewer(imagePath, filename);
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error creating plot:', error);
+                showErrorState('Failed to create visualization: ' + error.message);
+            }
+        }
+
+        // Setup event listeners for visualization controls
+        function setupVisualizationControls() {
+            const methodSelect = document.getElementById('vizMethod');
+            const dimensionSelect = document.getElementById('vizDimension');
+            
+            if (methodSelect) {
+                methodSelect.addEventListener('change', function() {
+                    if (!document.getElementById('visualizationContainer').classList.contains('hidden')) {
+                        show3DVisualization();
+                    }
+                });
+            }
+            
+            if (dimensionSelect) {
+                dimensionSelect.addEventListener('change', function() {
+                    if (!document.getElementById('visualizationContainer').classList.contains('hidden')) {
+                        show3DVisualization();
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>

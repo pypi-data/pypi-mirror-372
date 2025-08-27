@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Folder Vision - Multimodal Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #fff;
+        }
+        .google-logo {
+            width: 272px;
+            height: 92px;
+        }
+        .search-input-container {
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 584px;
+            height: 44px;
+            box-shadow: none;
+            transition: box-shadow 0.3s ease-in-out;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+        }
+        .search-input-container:hover {
+            box-shadow: 0 1px 6px rgba(32,33,36,.28);
+            border-color: rgba(223,225,229,0);
+        }
+        .search-input-container:focus-within {
+            box-shadow: 0 1px 6px rgba(32,33,36,.28);
+            border-color: rgba(223,225,229,0);
+        }
+        .search-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            flex: 1;
+            padding: 0 16px;
+            font-size: 16px;
+            color: #202124;
+        }
+        .search-icon {
+            padding: 0 14px;
+            color: #9aa0a6;
+        }
+        .folder-btn {
+            background-color: #f8f9fa;
+            border: 1px solid #f8f9fa;
+            border-radius: 4px;
+            color: #3c4043;
+            font-family: arial, sans-serif;
+            font-size: 14px;
+            padding: 0 20px;
+            line-height: 36px;
+            height: 36px;
+            min-width: 54px;
+            text-align: center;
+            cursor: pointer;
+            -webkit-user-select: none;
+            user-select: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 11px 4px;
+        }
+        .folder-btn:hover {
+            box-shadow: 0 1px 1px rgba(0,0,0,.1);
+            background-color: #f1f3f4;
+            border-color: #dadce0;
+        }
+        .folder-btn.primary {
+            background-color: #1a73e8;
+            border: 1px solid #1a73e8;
+            color: #fff;
+        }
+        .folder-btn.primary:hover {
+            background-color: #1557b0;
+            border-color: #1557b0;
+        }
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .logo-container {
+            margin-bottom: 30px;
+        }
+        .search-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 584px;
+        }
+        .folder-info {
+            margin-top: 20px;
+            text-align: center;
+            color: #5f6368;
+            font-size: 14px;
+        }
+        .indexing-status {
+            margin-top: 15px;
+            text-align: center;
+            color: #1a73e8;
+            font-size: 14px;
+            display: none;
+        }
+        .progress-bar {
+            width: 100%;
+            max-width: 300px;
+            height: 4px;
+            background-color: #f1f3f4;
+            border-radius: 2px;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #1a73e8;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .hidden {
+            display: none;
+        }
+        .buttons-container {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .status-message {
+            color: #1a73e8;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .folder-details {
+            color: #5f6368;
+            font-size: 14px;
+        }
+        .folder-info-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="logo-container">
+            <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google" class="google-logo">
+        </div>
+        
+        <div class="search-container">
+            <div class="search-input-container">
+                <div class="search-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <input type="text" class="search-input" placeholder="Search images..." title="Search" aria-label="Search" id="searchInput" disabled>
+            </div>
+            
+            <div class="buttons-container">
+                <a href="/search" class="folder-btn primary">
+                    <i class="fas fa-search"></i>
+                    Search Images
+                </a>
+                <a href="/gallery" class="folder-btn">
+                    <i class="fas fa-images"></i>
+                    Gallery
+                </a>
+                <a href="/cluster" class="folder-btn">
+                    <i class="fas fa-project-diagram"></i>
+                    Clustering
+                </a>
+            </div>
+            
+            <div class="folder-info folder-info-container" id="folderInfo">
+                <div id="statusMessage" class="status-message">
+                    <i class="fas fa-spinner fa-spin"></i> Checking for images...
+                </div>
+                <div id="folderPath" class="folder-details"></div>
+                <div id="imageCount" class="folder-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isIndexed = false;
+        let currentFolder = null;
+
+        // Check auto-indexing status on page load
+        async function checkAutoIndexStatus() {
+            try {
+                const response = await fetch('/auto-index-status');
+                const status = await response.json();
+                
+                if (status.status === 'ready' && status.total_images > 0) {
+                    // Auto-indexing successful
+                    isIndexed = true;
+                    currentFolder = status.indexed_folder;
+                    
+                    document.getElementById('statusMessage').innerHTML = 
+                        '<i class="fas fa-check-circle" style="color: #34a853;"></i> Ready to search!';
+                    document.getElementById('folderPath').textContent = 
+                        `Folder: ${status.current_directory}`;
+                    document.getElementById('imageCount').textContent = 
+                        `${status.total_images} images indexed`;
+                    
+                    document.getElementById('searchInput').disabled = false;
+                    document.getElementById('searchInput').placeholder = 'Search images...';
+                    
+                } else if (status.status === 'ready' && status.total_images === 0) {
+                    // No images found in current directory
+                    document.getElementById('statusMessage').innerHTML = 
+                        '<i class="fas fa-info-circle" style="color: #fbbc04;"></i> No images found';
+                    document.getElementById('folderPath').textContent = 
+                        `Folder: ${status.current_directory}`;
+                    document.getElementById('imageCount').textContent = 
+                        'Try running the server from a folder containing images';
+                    
+                    document.getElementById('searchInput').disabled = true;
+                    document.getElementById('searchInput').placeholder = 'No images to search...';
+                    
+                } else {
+                    // Error or still indexing
+                    document.getElementById('statusMessage').innerHTML = 
+                        '<i class="fas fa-exclamation-triangle" style="color: #ea4335;"></i> Error during indexing';
+                    document.getElementById('folderPath').textContent = 
+                        `Folder: ${status.current_directory}`;
+                    document.getElementById('imageCount').textContent = 
+                        'Please check the server logs';
+                }
+                
+            } catch (error) {
+                console.error('Error checking auto-index status:', error);
+                document.getElementById('statusMessage').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle" style="color: #ea4335;"></i> Connection error';
+                document.getElementById('folderPath').textContent = 'Unable to connect to server';
+            }
+        }
+
+        // Handle enter key for search
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && isIndexed && this.value.trim()) {
+                // Redirect to search page with query
+                window.location.href = `/search?q=${encodeURIComponent(this.value.trim())}`;
+            }
+        });
+
+        // Initialize: Check auto-indexing status when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAutoIndexStatus();
+        });
+    </script>
+</body>
+</html>

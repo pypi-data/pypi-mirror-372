@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Folder Vision</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Global list style reset */
+        * {
+            list-style: none;
+        }
+        ul, ol, li {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .image-card {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            background: white;
+            border: 1px solid #e5e7eb;
+        }
+        .image-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-color: #3b82f6;
+        }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        .list-view {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .list-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+            list-style: none;
+        }
+        .list-item:hover {
+            background: #f9fafb;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .list-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 1rem;
+            border: 2px solid #e5e7eb;
+        }
+        .list-item:hover img {
+            border-color: #3b82f6;
+        }
+        .list-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .list-item-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+        .list-item-path {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            word-break: break-all;
+        }
+        .list-item-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #9ca3af;
+            align-items: center;
+        }
+        .separator {
+            color: #d1d5db;
+            font-weight: 300;
+        }
+        .list-item-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: 1rem;
+        }
+        .action-btn {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .action-btn:hover {
+            background: #f3f4f6;
+            color: #374151;
+            border-color: #d1d5db;
+        }
+        .similar-images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .similar-image-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .similar-image-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+        }
+        .similar-image-card img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+        }
+        .similar-image-info {
+            padding: 0.5rem;
+        }
+        .similar-image-name {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .similar-image-score {
+            font-size: 0.7rem;
+            color: #6b7280;
+        }
+        .view-toggle {
+            display: flex;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .view-toggle button {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .view-toggle button.active {
+            background: #3b82f6;
+            color: white;
+        }
+        .view-toggle button:hover:not(.active) {
+            background: #f3f4f6;
+        }
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .image-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-viewer img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        .search-bar {
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            background: white;
+            transition: all 0.2s ease;
+        }
+        .search-bar:focus-within {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .search-bar input {
+            border: none;
+            outline: none;
+            flex: 1;
+            margin-left: 0.5rem;
+        }
+        .side-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 45%;
+            background: white;
+            box-shadow: -8px 0 32px rgba(0,0,0,0.1);
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            overflow-y: auto;
+            border-left: 2px solid #e5e7eb;
+        }
+        .side-drawer.open {
+            transform: translateX(0);
+        }
+        .side-drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+        .side-drawer-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .main-content-with-drawer {
+            transition: margin-right 0.3s ease-in-out;
+        }
+        .main-content-with-drawer.drawer-open {
+            margin-right: 45%;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e5e7eb;
+            background: white;
+            color: #374151;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+        }
+        .pagination button:hover:not(:disabled) {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .pagination button.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .pagination-info {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin: 0 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <div class="header">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo and Navigation -->
+                <div class="flex items-center space-x-6">
+                    <a href="/" class="flex items-center">
+                        <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_92x30dp.png" alt="Google" class="h-8">
+                    </a>
+                    <nav class="flex space-x-4">
+                        <a href="/" class="text-gray-600 hover:text-blue-600 transition-colors">Home</a>
+                        <a href="/search" class="text-gray-600 hover:text-blue-600 transition-colors">Search</a>
+                        <a href="/gallery" class="text-blue-600 font-medium">Gallery</a>
+                        <a href="/cluster" class="text-gray-600 hover:text-blue-600 transition-colors">Clustering</a>
+                    </nav>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="search-bar w-96">
+                    <i class="fas fa-search text-gray-400"></i>
+                    <input type="text" id="searchInput" placeholder="Filter images..." />
+                </div>
+
+                <!-- View Toggle -->
+                <div class="view-toggle">
+                    <button id="galleryViewBtn" class="active" onclick="setViewMode('gallery')">
+                        <i class="fas fa-th"></i>
+                        <span class="ml-2 hidden sm:inline">Gallery</span>
+                    </button>
+                    <button id="listViewBtn" onclick="setViewMode('list')">
+                        <i class="fas fa-list"></i>
+                        <span class="ml-2 hidden sm:inline">List</span>
+                    </button>
+                </div>
+
+                <!-- Page Size Selector -->
+                <div class="ml-4">
+                    <select id="pageSizeSelector" class="border border-gray-300 rounded px-3 py-1 text-sm" onchange="changePageSize()" title="Items per page">
+                        <option value="20">20 per page</option>
+                        <option value="50">50 per page</option>
+                        <option value="100">100 per page</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-6 main-content-with-drawer" id="mainContent">
+        <!-- Gallery Info -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Image Gallery</h1>
+                <p class="text-gray-600" id="imageCount">Loading images...</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button onclick="refreshGallery()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-sync-alt mr-2"></i>
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="flex items-center justify-center py-20">
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+                <p class="text-gray-600">Loading gallery...</p>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden flex items-center justify-center py-20">
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                <p class="text-gray-600">Failed to load images</p>
+                <button onclick="loadGallery()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Try Again
+                </button>
+            </div>
+        </div>
+
+        <!-- Gallery Content -->
+        <div id="galleryContent" class="hidden">
+            <!-- Gallery View -->
+            <div id="galleryView" class="gallery-grid">
+                <!-- Images will be loaded here -->
+            </div>
+
+            <!-- List View -->
+            <div id="listView" class="list-view hidden">
+                <!-- List items will be loaded here -->
+            </div>
+
+            <!-- Pagination -->
+            <div id="paginationContainer" class="pagination hidden">
+                <!-- Pagination will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden flex items-center justify-center py-20">
+            <div class="text-center">
+                <i class="fas fa-images text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600">No images found</p>
+                <p class="text-gray-500 text-sm">Index a folder to see images in the gallery</p>
+                <a href="/search" class="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Go to Search
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Viewer Modal -->
+    <div id="imageViewer" class="image-viewer">
+        <div class="absolute top-4 right-4">
+            <button onclick="closeImageViewer()" class="bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="absolute top-4 left-4">
+            <div class="bg-black bg-opacity-50 text-white px-3 py-1 rounded text-sm" id="imageInfo">
+                <!-- Image info will be displayed here -->
+            </div>
+        </div>
+        <img id="viewerImage" alt="Full size image">
+        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+            <div class="flex space-x-2">
+                <button onclick="downloadCurrentImage()" class="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg hover:bg-opacity-70 transition-colors">
+                    <i class="fas fa-download mr-2"></i>Download
+                </button>
+                <button onclick="shareCurrentImage()" class="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg hover:bg-opacity-70 transition-colors">
+                    <i class="fas fa-share mr-2"></i>Share
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Drawer Overlay -->
+    <div id="sideDrawerOverlay" class="side-drawer-overlay" onclick="closeSideDrawer()"></div>
+
+    <!-- Side Drawer -->
+    <div id="sideDrawer" class="side-drawer">
+        <div class="p-6">
+            <!-- Drawer Header -->
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Image Details</h2>
+                    <p class="text-sm text-gray-500" id="drawerImageName">Loading...</p>
+                </div>
+                <button onclick="closeSideDrawer()" class="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Close drawer">
+                    <i class="fas fa-times text-gray-600"></i>
+                </button>
+            </div>
+
+            <!-- Selected Image -->
+            <div class="mb-6">
+                <img id="drawerMainImage" class="w-full h-64 object-contain bg-gray-50 rounded-lg border" alt="Selected image">
+                <div class="mt-3 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">File:</span>
+                        <span class="text-gray-900 font-medium" id="drawerFileName">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Index:</span>
+                        <span class="text-gray-900" id="drawerImageIndex">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Path:</span>
+                        <span class="text-gray-900 text-xs break-all" id="drawerImagePath">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-2 mb-6">
+                <button onclick="downloadSelectedImage()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-download mr-2"></i>Download
+                </button>
+                <button onclick="shareSelectedImage()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-share mr-2"></i>Share
+                </button>
+            </div>
+
+            <!-- Similar Images Section -->
+            <div>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Similar Images</h3>
+                <div id="similarImagesContainer" class="space-y-3">
+                    <div class="flex items-center justify-center py-8">
+                        <i class="fas fa-spinner fa-spin text-gray-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allImages = [];
+        let filteredImages = [];
+        let currentViewMode = 'gallery';
+        let currentImage = null;
+        let currentPage = 1;
+        let pageSize = 20;
+        let selectedImageForDrawer = null;
+
+        // Load gallery on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGallery();
+            setupSearch();
+        });
+
+        // Load all images from the backend
+        async function loadGallery() {
+            showLoadingState();
+            
+            try {
+                const response = await fetch('/gallery/images');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    allImages = data.images;
+                    filteredImages = [...allImages];
+                    currentPage = 1;
+                    
+                    if (allImages.length === 0) {
+                        showEmptyState();
+                    } else {
+                        updateImageCount(allImages.length);
+                        renderGallery();
+                        showGalleryContent();
+                        renderPagination();
+                    }
+                } else {
+                    showErrorState();
+                }
+            } catch (error) {
+                console.error('Error loading gallery:', error);
+                showErrorState();
+            }
+        }
+
+        // Get paginated images
+        function getPaginatedImages() {
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            return filteredImages.slice(startIndex, endIndex);
+        }
+
+        // Render gallery based on current view mode
+        function renderGallery() {
+            if (currentViewMode === 'gallery') {
+                renderGalleryView();
+            } else {
+                renderListView();
+            }
+        }
+
+        // Render gallery view (grid of images)
+        function renderGalleryView() {
+            const container = document.getElementById('galleryView');
+            const paginatedImages = getPaginatedImages();
+            
+            container.innerHTML = paginatedImages.map(image => `
+                <div class="image-card cursor-pointer" onclick="openSideDrawer(${image.index}, '${image.path}', '${image.filename}')">
+                    <div class="aspect-square overflow-hidden">
+                        <img src="/image/${encodeURIComponent(image.path)}" 
+                             alt="${image.filename}"
+                             class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                             loading="lazy"/>
+                    </div>
+                    <div class="p-3">
+                        <div class="font-medium text-sm truncate" title="${image.filename}">
+                            ${image.filename}
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1 truncate" title="${image.path}">
+                            ${image.path}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render enhanced list view
+        function renderListView() {
+            const container = document.getElementById('listView');
+            const paginatedImages = getPaginatedImages();
+            
+            container.innerHTML = paginatedImages.map(image => `
+                <div class="list-item cursor-pointer" onclick="openSideDrawer(${image.index}, '${image.path}', '${image.filename}')">
+                    <img src="/image/${encodeURIComponent(image.path)}" 
+                         alt="${image.filename}"
+                         loading="lazy"/>
+                    <div class="list-item-content">
+                        <div class="list-item-title">${image.filename}</div>
+                        <div class="list-item-path">${image.path}</div>
+                        <div class="list-item-meta">
+                            <span>Index: ${image.index}</span>
+                            <span class="separator">|</span>
+                            <span>Click to view similar images</span>
+                        </div>
+                    </div>
+                    <div class="list-item-actions">
+                        <button class="action-btn" onclick="event.stopPropagation(); downloadImage('${image.path}', '${image.filename}')" title="Download">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="action-btn" onclick="event.stopPropagation(); shareImage('${image.path}', '${image.filename}')" title="Share">
+                            <i class="fas fa-share"></i>
+                        </button>
+                        <button class="action-btn" onclick="event.stopPropagation(); openImageViewer('${image.path}', '${image.filename}')" title="View full size">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Set view mode (gallery or list)
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            
+            // Update button states
+            document.getElementById('galleryViewBtn').classList.toggle('active', mode === 'gallery');
+            document.getElementById('listViewBtn').classList.toggle('active', mode === 'list');
+            
+            // Show/hide views
+            document.getElementById('galleryView').classList.toggle('hidden', mode !== 'gallery');
+            document.getElementById('listView').classList.toggle('hidden', mode !== 'list');
+            
+            // Re-render
+            renderGallery();
+        }
+
+        // Render pagination
+        function renderPagination() {
+            const container = document.getElementById('paginationContainer');
+            const totalPages = Math.ceil(filteredImages.length / pageSize);
+            
+            if (totalPages <= 1) {
+                container.classList.add('hidden');
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            
+            let paginationHTML = '';
+            
+            // Previous button
+            paginationHTML += `
+                <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left mr-1"></i>Previous
+                </button>
+            `;
+            
+            // Page numbers
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            if (startPage > 1) {
+                paginationHTML += `<button onclick="changePage(1)">1</button>`;
+                if (startPage > 2) {
+                    paginationHTML += `<span class="pagination-info">...</span>`;
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `
+                    <button onclick="changePage(${i})" ${i === currentPage ? 'class="active"' : ''}>
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHTML += `<span class="pagination-info">...</span>`;
+                }
+                paginationHTML += `<button onclick="changePage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            // Next button
+            paginationHTML += `
+                <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    Next<i class="fas fa-chevron-right ml-1"></i>
+                </button>
+            `;
+            
+            // Page info
+            const startItem = (currentPage - 1) * pageSize + 1;
+            const endItem = Math.min(currentPage * pageSize, filteredImages.length);
+            paginationHTML += `
+                <span class="pagination-info">
+                    ${startItem}-${endItem} of ${filteredImages.length}
+                </span>
+            `;
+            
+            container.innerHTML = paginationHTML;
+        }
+
+        // Change page
+        function changePage(page) {
+            const totalPages = Math.ceil(filteredImages.length / pageSize);
+            if (page < 1 || page > totalPages) return;
+            
+            currentPage = page;
+            renderGallery();
+            renderPagination();
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Change page size
+        function changePageSize() {
+            const selector = document.getElementById('pageSizeSelector');
+            pageSize = parseInt(selector.value);
+            currentPage = 1;
+            renderGallery();
+            renderPagination();
+        }
+
+        // Open side drawer with similar images
+        async function openSideDrawer(imageIndex, imagePath, filename) {
+            selectedImageForDrawer = { index: imageIndex, path: imagePath, filename: filename };
+            
+            // Update drawer content
+            document.getElementById('drawerImageName').textContent = filename;
+            document.getElementById('drawerMainImage').src = `/image/${encodeURIComponent(imagePath)}`;
+            document.getElementById('drawerFileName').textContent = filename;
+            document.getElementById('drawerImageIndex').textContent = imageIndex;
+            document.getElementById('drawerImagePath').textContent = imagePath;
+            
+            // Show drawer and adjust main content
+            document.getElementById('sideDrawerOverlay').classList.add('open');
+            document.getElementById('sideDrawer').classList.add('open');
+            document.getElementById('mainContent').classList.add('drawer-open');
+            document.body.style.overflow = 'hidden';
+            
+            // Load similar images
+            await loadSimilarImages(imageIndex);
+        }
+
+        // Close side drawer
+        function closeSideDrawer() {
+            document.getElementById('sideDrawerOverlay').classList.remove('open');
+            document.getElementById('sideDrawer').classList.remove('open');
+            document.getElementById('mainContent').classList.remove('drawer-open');
+            document.body.style.overflow = 'auto';
+            selectedImageForDrawer = null;
+        }
+
+        // Load similar images for the drawer
+        async function loadSimilarImages(imageIndex) {
+            const container = document.getElementById('similarImagesContainer');
+            
+            // Show loading state
+            container.innerHTML = `
+                <div class="flex items-center justify-center py-8">
+                    <i class="fas fa-spinner fa-spin text-gray-400 text-xl"></i>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`/gallery/images/similar/${imageIndex}?top_k=8`);
+                const data = await response.json();
+                
+                if (response.ok && data.similar_images.length > 0) {
+                    container.innerHTML = data.similar_images.map(image => `
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                             onclick="openSideDrawer(${image.index}, '${image.path}', '${image.filename}')">
+                            <img src="/image/${encodeURIComponent(image.path)}" 
+                                 alt="${image.filename}"
+                                 class="w-20 h-20 object-contain bg-white rounded-lg mr-3 border flex-shrink-0">
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-sm text-gray-900 truncate">${image.filename}</div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    Similarity: ${(image.score * 100).toFixed(1)}%
+                                </div>
+                            </div>
+                            <i class="fas fa-search text-gray-400 flex-shrink-0"></i>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-images text-2xl mb-2"></i>
+                            <p>No similar images found</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading similar images:', error);
+                container.innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p>Failed to load similar images</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Download selected image from drawer
+        function downloadSelectedImage() {
+            if (selectedImageForDrawer) {
+                downloadImage(selectedImageForDrawer.path, selectedImageForDrawer.filename);
+            }
+        }
+
+        // Share selected image from drawer
+        function shareSelectedImage() {
+            if (selectedImageForDrawer) {
+                shareImage(selectedImageForDrawer.path, selectedImageForDrawer.filename);
+            }
+        }
+
+        // Generic download function
+        function downloadImage(imagePath, filename) {
+            const a = document.createElement('a');
+            a.href = `/image/${encodeURIComponent(imagePath)}`;
+            a.download = filename;
+            a.click();
+        }
+
+        // Generic share function
+        function shareImage(imagePath, filename) {
+            const url = window.location.origin + `/image/${encodeURIComponent(imagePath)}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Image URL copied to clipboard!');
+            }).catch(() => {
+                alert('Failed to copy URL to clipboard');
+            });
+        }
+
+        // Setup search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            let searchTimeout;
+            
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    filterImages(this.value.trim());
+                }, 300);
+            });
+        }
+
+        // Filter images based on search query
+        function filterImages(query) {
+            if (!query) {
+                filteredImages = [...allImages];
+            } else {
+                const lowerQuery = query.toLowerCase();
+                filteredImages = allImages.filter(image => 
+                    image.filename.toLowerCase().includes(lowerQuery) ||
+                    image.path.toLowerCase().includes(lowerQuery)
+                );
+            }
+            
+            currentPage = 1; // Reset to first page when filtering
+            updateImageCount(filteredImages.length, allImages.length);
+            renderGallery();
+            renderPagination();
+        }
+
+        // Open image viewer
+        function openImageViewer(imagePath, filename) {
+            currentImage = { path: imagePath, filename: filename };
+            
+            const viewer = document.getElementById('imageViewer');
+            const img = document.getElementById('viewerImage');
+            const info = document.getElementById('imageInfo');
+            
+            img.src = `/image/${encodeURIComponent(imagePath)}`;
+            img.alt = filename;
+            info.textContent = filename;
+            
+            viewer.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close image viewer
+        function closeImageViewer() {
+            const viewer = document.getElementById('imageViewer');
+            viewer.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            currentImage = null;
+        }
+
+        // Download current image
+        function downloadCurrentImage() {
+            if (currentImage) {
+                const a = document.createElement('a');
+                a.href = `/image/${encodeURIComponent(currentImage.path)}`;
+                a.download = currentImage.filename;
+                a.click();
+            }
+        }
+
+        // Share current image
+        function shareCurrentImage() {
+            if (currentImage) {
+                const url = window.location.origin + `/image/${encodeURIComponent(currentImage.path)}`;
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('Image URL copied to clipboard!');
+                }).catch(() => {
+                    alert('Failed to copy URL to clipboard');
+                });
+            }
+        }
+
+        // Refresh gallery
+        function refreshGallery() {
+            currentPage = 1;
+            loadGallery();
+        }
+
+        // Update image count display
+        function updateImageCount(current, total = null) {
+            const countElement = document.getElementById('imageCount');
+            if (total !== null && current !== total) {
+                countElement.textContent = `Showing ${current} of ${total} images`;
+            } else {
+                countElement.textContent = `${current} images`;
+            }
+        }
+
+        // State management functions
+        function showLoadingState() {
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('galleryContent').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+        }
+
+        function showErrorState() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+            document.getElementById('galleryContent').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+        }
+
+        function showGalleryContent() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('galleryContent').classList.remove('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+        }
+
+        function showEmptyState() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('galleryContent').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
+        }
+
+        // Close viewer on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (document.getElementById('sideDrawer').classList.contains('open')) {
+                    closeSideDrawer();
+                } else {
+                    closeImageViewer();
+                }
+            }
+        });
+
+        // Close drawer when clicking outside
+        document.getElementById('sideDrawerOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSideDrawer();
+            }
+        });
+    </script>
+</body>
+</html>
