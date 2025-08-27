@@ -1,0 +1,25 @@
+mod geometry_model;
+mod map_edge_rtree_object;
+mod map_error;
+mod map_json_extensions;
+mod map_json_key;
+mod map_model;
+mod map_model_config;
+mod map_vertex_rtree_object;
+mod matching_type;
+mod nearest_search_result;
+mod spatial_index;
+pub mod spatial_index_ops;
+
+pub use geometry_model::GeometryModel;
+pub use map_edge_rtree_object::MapEdgeRTreeObject;
+pub use map_error::MapError;
+pub use map_json_extensions::MapJsonExtensions;
+pub use map_json_key::MapJsonKey;
+pub use map_model::MapModel;
+pub use map_model_config::DistanceTolerance;
+pub use map_model_config::MapModelConfig;
+pub use map_vertex_rtree_object::MapVertexRTreeObject;
+pub use matching_type::{MapInputResult, MatchingType};
+pub use nearest_search_result::NearestSearchResult;
+pub use spatial_index::SpatialIndex;
