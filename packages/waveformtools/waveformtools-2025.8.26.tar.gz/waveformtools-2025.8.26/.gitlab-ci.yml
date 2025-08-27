@@ -1,0 +1,193 @@
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Python.gitlab-ci.yml
+
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+
+
+
+stages:
+  - linting
+  - testing
+  - deploy
+  - publish
+
+isort:
+  stage: linting
+  image: registry.gitlab.com/mafda/python-linting
+  script:
+    - isort .
+  only:
+  - merge_requests
+  #- main
+
+black:
+  stage: linting
+  image: registry.gitlab.com/mafda/python-linting
+  script:
+    - black .
+  only:
+    - merge-requests
+    #- main
+
+flake8:
+  stage: linting
+  allow_failure: True 
+  image: registry.gitlab.com/mafda/python-linting
+  script:
+    - flake8 .
+  only:
+    - merge-requests
+    #- main
+
+pylint:
+  stage: linting
+  allow_failure: True 
+  image: registry.gitlab.com/mafda/python-linting
+  script:
+    - find . -type f -iname "*.py" | xargs pylint
+  only:
+    - merge_requests
+
+pytest:
+  stage: testing
+  image: continuumio/miniconda3:latest
+  before_script:
+    - uname -a
+    - python --version  # For debugging
+    - which python
+    # Setup conda environment
+    - conda update -y -n base conda
+    - conda update -y --all
+    - conda create -n test -c conda-forge -c defaults python=3 gxx_linux-64 fftw scipy numpy h5py matplotlib numba spherical recommonmark sphinx-rtd-theme termcolor -y
+    #  - conda env create -f docs/environment.yml
+    - conda init
+    - source ~/.bashrc
+    - conda activate test
+    #- pip install -r requirements.txt
+    - pip install .
+    - pip install spherical
+    - pip install pytest
+  script:
+    - pytest -vv --junitxml=report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+      
+#test:
+#  stage: testing
+#  image: continuumio/miniconda3:latest
+#  script:
+#    - uname -a
+#    - python --version  # For debugging
+#    - which python
+#    # Setup conda environment
+#    - conda update -y -n base conda
+#    - conda update -y --all
+#    - conda create -n test python=3.9 -y
+#    #  - conda env create -f docs/environment.yml
+#    - conda init
+#    - source ~/.bashrc
+#    - conda activate test
+#    - pip install -r requirements.txt
+#    - python3 -m unittest discover
+
+
+
+
+pages:
+  stage: deploy
+  image: continuumio/miniconda3:latest
+  #image: python:3.9-alpine
+  script:
+  # image: python:3.9-alpine
+  # Note: only 3.9 works with rinohtype
+  # Alternate image: python:3.7-alpine3.9
+    - uname -a
+    - python --version  # For debugging
+    - which python
+    #- apk update
+    #- apk add make
+    #- apk add git
+    #- apk add gcc 
+  #  Install Git
+    - apt-get update -q -y
+    - apt-get install -y build-essential git
+  #   Setup conda environment
+    - conda update -y -n base conda
+    - conda update -y --all
+    - conda create -n test -c conda-forge -c defaults python=3 gxx_linux-64 fftw scipy numpy h5py matplotlib numba spherical recommonmark sphinx-rtd-theme termcolor -y
+  #  - conda env create -f docs/environment.yml
+    - conda init
+    - source ~/.bashrc
+    - conda activate test
+  #  - pip install -r requirements.txt
+  #  - pip install quaternionic
+  #  - pip install spherical
+    #- pip install -r requirements.txt
+    - pip install .
+    - conda info --env
+    - which python
+    - which conda
+    - conda --version
+    - python --version
+    - which pip
+    - pip --version
+  #   Diagnostic
+    - git show -s --format=%ci >> date.txt
+    - pwd
+    - ls -l
+    - echo $PYTHONPATH
+  #  - export PYTHONPATH=$PYTHONPATH:"/builds/vaishakp/waveformtools"
+  #  - echo $PYTHONPATH
+  # - pip install pylint flake8
+  # - conda install pylint flake8
+    #- pip install -U sphinx sphinx-rtd-theme rinohtype numpydoc
+    #- pip install rinohtype numpydoc
+    #- pip install -r requirements.txt
+    - pip install -U sphinx sphinx-rtd-theme rinohtype numpydoc jinja2 statistics
+    #- conda install -y numpy
+    #- pip install sphinx-rtd-theme rinohtype
+    #- sphinx-build -b html docs/source public
+    #- which sphinx
+    - cd docs
+    - make html
+    #- sphinx-build -b html source ../build/html
+    - mv build/html ../public/
+    # Encode the version (just date)
+    - date +"%d-%m-%y" > ../public/date.txt   
+  artifacts:
+    paths:
+      - public
+  only:
+    - merge_requests
+
+build-package:
+  stage: publish
+  image: continuumio/miniconda3:latest
+  variables:
+    TWINE_USERNAME: $TWINE_USERNAME
+    TWINE_PASSWORD: $TWINE_PASSWORD
+  script:
+    - uname -a
+    - python --version  # For debugging
+    - which python 
+    # Setup conda environment
+    - conda update -y -n base conda
+    - conda update -y --all
+    - conda create -n build python=3.9 -y
+    #  - conda env create -f docs/environment.yml
+    - conda init
+    - source ~/.bashrc
+    - conda activate build
+    - python -m pip install --upgrade build
+    - ls
+    - pwd
+    - python -m build
+    - python -m pip install --upgrade twine
+    - python -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/* --verbose
+  only:
+    - main
