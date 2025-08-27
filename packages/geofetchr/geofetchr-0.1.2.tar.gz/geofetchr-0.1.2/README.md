@@ -1,0 +1,238 @@
+# GeoFetchr
+
+[![PyPI - Version](https://img.shields.io/pypi/v/geofetchr.svg)](https://pypi.org/project/geofetchr)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/geofetchr.svg)](https://pypi.org/project/geofetchr)
+
+---
+
+GeoFetchr is a Python package that helps you easily search, filter, fetch metadata, and download datasets from the NCBI Gene Expression Omnibus (GEO) database.  
+It provides functions to quickly explore GEO datasets by **keywords**, **organism**, **assay type**, **accession IDs**, and to **download GEO Family files** for visualization, getting the data and provides the link.
+
+---
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage Examples](#usage-examples)
+  - [1. Keyword Search](#1-keyword-search)
+  - [2. Group Results by Organism](#2-group-results-by-organism)
+  - [3. Filter by Assay Type](#3-filter-by-assay-type)
+  - [4. View Metadata by GEO ID](#4-view-metadata-by-geo-id)
+  - [5. Download GEO Family Data](#5-download-geo-family-data)
+- [Requirements](#requirements)
+- [License](#license)
+
+---
+
+## Installation
+
+```bash
+pip install geofetchr
+```
+
+---
+
+## Usage Examples
+
+**Try out this demo! Enter your input, and the code will automatically call the package functions to generate a neatly organized, visualized out**
+
+### 1. Keyword Search
+Search GEO datasets by keyword(s), and display organism counts and dataset counts.
+
+
+```python
+import geofetchr
+
+def main():
+    global all_results
+    while True:
+        keywords_input = input("\nEnter keywords (comma-separated, or type 'exit' to quit): ").strip()
+        if keywords_input.lower() == 'exit':
+            print("Exiting program.")
+            return
+
+        keywords = [k.strip() for k in keywords_input.split(",")]
+        print("\nFetching all GEO data...")
+        all_results = geofetchr.search_geo_data(keywords)
+
+        print("\n🔹 Top Organisms:")
+        for organism, count in all_results["ORGANISM_COUNTS"].items():
+            print(f"{organism} ({count})")
+
+        print("\n🔹 Dataset Counts:")
+        print(f"Total GDS results: {len(all_results['GDS'])}")
+        print(f"Total GPL results: {len(all_results['GPL'])}")
+        print(f"Total GSE results: {len(all_results['GSE'])}")
+
+if __name__ == "__main__":
+    main()
+```
+
+Sample output:
+```
+🔹 Top Organisms:
+Homo sapiens (1673)
+Mus musculus (274)
+Rattus; synthetic construct (1)
+
+🔹 Dataset Counts:
+Total GDS results: 64
+Total GPL results: 18
+Total GSE results: 2564
+```
+
+---
+
+### 2. Group Results by Organism
+Filter datasets for selected organisms, and view dataset link, PubMed references, and assay type.
+
+```python
+import geofetchr
+
+def main():
+    global grouped_results
+    while True:
+        selected_organisms_input = input(
+            "\nEnter organism(s) to filter (comma-separated) or 'exit' to quit: ").strip().lower()
+        if selected_organisms_input == 'exit':
+            print("Exiting program.")
+            return False
+
+        selected_organisms = [o.strip() for o in selected_organisms_input.split(",")]
+        grouped_results = geofetchr.group_results_by_organism(all_results, selected_organisms)
+
+        for organism, data in grouped_results.items():
+            print(f"\n🔹 Organism: {organism}")
+            for category, entries in data.items():
+                print(f"{category}: {len(entries)} results")
+                for entry, link, pubmed_links, assay_type in entries:
+                    pubmed_str = ", ".join(pubmed_links)
+                    print(f"{entry} - Dataset: {link} - PubMed: {pubmed_str}\nAssay Type: {assay_type}\n")
+
+if __name__ == "__main__":
+    main()
+```
+
+Sample output:
+```
+🔹 Organism: danio rerio
+GDS: 0 results
+GPL: 0 results
+GSE: 46 results
+GSE279773 - Dataset: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE279773
+PubMed: https://pubmed.ncbi.nlm.nih.gov/39832654
+Assay Type: Expression profiling by array
+```
+
+---
+
+### 3. Filter by Assay Type
+Show available assay types and datasets grouped by assay type.
+
+```python
+import geofetchr
+
+def main():
+    while True:
+        action = input("\nOptions:  'assay' to filter by assay type or 'exit' to quit: ").strip().lower()
+        if action == 'exit':
+            print("Exiting program.")
+            return False
+        elif action == 'assay':
+            geofetchr.filter_by_assay_type_across_all(grouped_results)
+        else:
+            print("Invalid option. Try again.")
+
+if __name__ == "__main__":
+    main()
+```
+
+Sample output:
+```
+🔹 Available Assay Types:
+Expression profiling by high throughput sequencing: 29 datasets
+Expression profiling by array: 6 datasets
+
+🔹 Datasets with Assay Type 'Expression profiling by high throughput sequencing':
+GSE281891 (rattus norvegicus) - Dataset: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE281891
+PubMed: No PubMed Link
+```
+
+---
+
+### 4. View Metadata by GEO ID
+Retrieve detailed metadata for any GEO accession (GSE, GDS, GPL).
+
+```python
+import geofetchr
+
+def main():
+    while True:
+        action = input("\nOptions:  'id' to view metadata or 'exit' to quit: ").strip().lower()
+        if action == 'exit':
+            print("Exiting program.")
+            return False
+        elif action == 'id':
+            geofetchr.view_metadata_by_id()
+        else:
+            print("Invalid option. Try again.")
+
+if __name__ == "__main__":
+    main()
+```
+
+Sample output:
+```
+🔹 Metadata for GSE108484:
+title: ['Transcriptome analysis of Chrdl1-treated RGCs']
+status: ['Public on Oct 29 2018']
+pubmed_id: ['30344043']
+summary: ['Chrdl1 treatment promotes formation of synapses...']
+type: ['Expression profiling by high throughput sequencing']
+contact_institute: ['Salk Institute for Biological Studies']
+```
+
+---
+
+### 5. Download GEO Family Data
+Download and store the full GEO Family (GSE) dataset for further processing and visualization.
+
+```python
+import geofetchr
+
+def main():
+    while True:
+        action = input("\nOptions:  'id' to download or 'exit' to quit: ").strip().lower()
+        if action == 'exit':
+            print("Exiting program.")
+            return False
+        elif action == 'id':
+            gse_number = input("\nEnter a GEO ID (e.g., GSE12345, GDS67890, GPL13579): ")
+            geofetchr.download_geo_family(gse_number)
+        else:
+            print("Invalid option. Try again.")
+
+if __name__ == "__main__":
+    main()
+```
+
+Sample output:
+```
+🔹 Downloading GEO Family file for GSE108484...
+Saved as: GSE108484_family.soft.gz
+```
+
+---
+
+## Requirements
+
+- Python >=3.10
+- GEOparse
+- pandas
+- requests
+
+---
+
+## License
+
+`geofetchr` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
