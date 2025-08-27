@@ -1,0 +1,1 @@
+Filewave is a module that will help you simplify reading and writing files. With it, you can easily, quickly read or write a file. You can also easily create a new folder or delete a file along the way. Another possibility is to run a console command.
