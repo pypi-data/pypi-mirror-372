@@ -1,0 +1,159 @@
+name: Python Package
+
+on:
+  push:
+    branches:
+     - main
+    tags:
+      - '*'
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build MARS patcher and Python Wheel
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: 'recursive'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install core Python packages
+        run: python -m pip install --upgrade pip setuptools build 
+      
+      - name: Install source python packages
+        run: python -m pip install -e ".[tooling]"
+
+      - name: Fetch the corresponding assembly patches
+        run: python pull-assembly-patches.py
+
+      - name: build
+        # Ideally, we'd have PYTHONWARNINGS=error here, but
+        # https://github.com/pypa/pip/issues/12243 is causing issues.
+        run: python -m build
+
+      - name: Store the packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist
+
+  test:
+    needs:
+      - build
+
+    runs-on: ubuntu-latest
+    name: Test Python ${{ matrix.python.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - {version: '3.10'}
+          - {version: '3.11'}
+          - {version: '3.12'}
+          - {version: '3.13'}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: remove code outside of wheel
+        run: rm -rf src
+        shell: bash
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python.version }}
+
+      - name: Download all the dists
+        uses: actions/download-artifact@v5
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Install Python packages
+        run: python -m pip install --upgrade pip
+
+      - name: install built wheel
+        run: python -m pip install "$(ls dist/*.whl)[test]"
+        shell: bash
+
+      # Repo currently does not have any tests
+      # - name: run pytest
+      #   run: python -m pytest --cov
+
+      - name: codecov
+        uses: codecov/codecov-action@v5
+
+  mypy:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python packages
+        run: |
+          python -m pip install -e ".[typing]"
+
+      - name: Mypy on modified files
+        uses: tsuyoshicho/action-mypy@v5
+        with:
+          github_token: ${{ secrets.github_token }}
+          # Change reviewdog reporter if you need [github-pr-check,github-check,github-pr-review].
+          reporter: github-check
+          setup_method: nothing
+          fail_on_error: false
+
+      - name: Mypy on required files
+        uses: tsuyoshicho/action-mypy@v5
+        with:
+          github_token: ${{ secrets.github_token }}
+          # Change reviewdog reporter if you need [github-pr-check,github-check,github-pr-review].
+          reporter: github-check
+          setup_method: nothing
+          target: --config-file=pyproject.toml
+          fail_on_error: true
+
+  pypi:
+    runs-on: 'ubuntu-latest'
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mars_patcher
+    needs:
+      - test
+
+    permissions:
+      id-token: write
+      
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v5
+        with:
+          name: python-package-distributions
+          path: dist/
+      
+      # Publish to PyPI on tag push.
+      - name: Publish 📦 to PyPI
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: pypa/gh-action-pypi-publish@release/v1
