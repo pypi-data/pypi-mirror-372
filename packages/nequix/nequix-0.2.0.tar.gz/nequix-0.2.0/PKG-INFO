@@ -1,0 +1,117 @@
+Metadata-Version: 2.4
+Name: nequix
+Version: 0.2.0
+Summary: Nequix source code
+Project-URL: Homepage, https://pypi.org/project/nequix/
+Project-URL: Repository, https://github.com/atomicarchitects/nequix
+Author-email: Teddy Koker <teddy.koker@gmail.com>
+License: MIT License
+        
+        Copyright (c) 2025 Teddy Koker
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Requires-Python: >=3.10
+Requires-Dist: ase>=3.24.0
+Requires-Dist: cloudpickle>=3.1.1
+Requires-Dist: e3nn-jax>=0.20.8
+Requires-Dist: equinox>=0.11.11
+Requires-Dist: h5py>=3.14.0
+Requires-Dist: jax>=0.4.34; sys_platform == 'darwin'
+Requires-Dist: jax[cuda12]>=0.4.34; sys_platform == 'linux'
+Requires-Dist: jraph>=0.0.6.dev0
+Requires-Dist: matscipy>=1.1.1
+Requires-Dist: optax>=0.2.5
+Requires-Dist: pyyaml>=6.0.2
+Requires-Dist: tqdm>=4.67.1
+Requires-Dist: wandb-osh>=1.2.2
+Requires-Dist: wandb>=0.19.11
+Description-Content-Type: text/markdown
+
+<h1 align='center'>Nequix</h1>
+
+See more information in our [preprint](https://arxiv.org/abs/2508.16067).
+
+## Usage
+
+### Installation
+
+```bash
+pip install nequix
+```
+
+### ASE calculator
+
+Using `nequix.calculator.NequixCalculator`, you can perform calculations in
+ASE with a pre-trained Nequix model.
+
+```python
+from nequix.calculator import NequixCalculator
+
+atoms = ...
+atoms.calc = NequixCalculator("nequix-mp-1")
+```
+
+
+### Training
+
+Models are trained with the `nequix_train` command using a single `.yml`
+configuration file:
+
+```bash
+nequix_train <config>.yml
+```
+
+To reproduce the training of Nequix-MP-1, first clone the repo and sync the environment:
+
+```bash
+git clone https://github.com/atomicarchitects/nequix.git
+cd nequix
+uv sync
+```
+
+
+Then download the MPtrj data from
+https://figshare.com/files/43302033 into `data/` then run the following to extract the data:
+
+```bash
+bash data/download_mptrj.sh
+```
+
+Then start the training run. The first time this is run it will preprocess the data into HDF5 files:
+
+```bash
+nequix_train configs/nequix-mp-1.yml
+```
+
+This will take less than 125 hours on a single 4 x A100 node. The `batch_size` in the
+config is per-device, so you should be able to run this on any number of GPUs
+(although hyperparameters like learning rate are often sensitive to global batch
+size, so keep in mind).
+
+## Citation
+
+```bibtex
+@article{koker2025training,
+  title={Training a foundation model for materials on a budget},
+  author={Koker, Teddy and Smidt, Tess},
+  journal={arXiv preprint arXiv:2508.16067},
+  year={2025}
+}
+```
