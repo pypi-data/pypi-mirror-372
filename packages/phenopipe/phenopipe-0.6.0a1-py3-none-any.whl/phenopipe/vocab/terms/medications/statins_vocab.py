@@ -1,0 +1,16 @@
+STATINS_TERMS = [
+    "atorvastatin",
+    "lipitor",
+    "simvastatin",
+    "zocor",
+    "rosuvastatin",
+    "crestor",
+    "pravastatin",
+    "pravachol",
+    "fluvastatin",
+    "lescol",
+    "lovastatin",
+    "mevacor",
+    "vytorin",
+    "caduet",
+]
