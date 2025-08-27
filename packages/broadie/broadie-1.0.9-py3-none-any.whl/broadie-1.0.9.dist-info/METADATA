@@ -1,0 +1,384 @@
+Metadata-Version: 2.4
+Name: broadie
+Version: 1.0.9
+Summary: A powerful multi-agent framework with persistence, API server, and agent-to-agent communication
+Author-email: Broad Institute <broadie@broadinstitute.org>
+License: MIT
+Project-URL: Homepage, https://github.com/broadinstitute/broadie
+Project-URL: Repository, https://github.com/broadinstitute/broadie
+Project-URL: Documentation, https://docs.broadie.ai
+Project-URL: Bug Tracker, https://github.com/broadinstitute/broadie/issues
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: langchain-google-genai>=2.1.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: langchain>=0.3.0
+Requires-Dist: langchain-core>=0.3.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: langgraph>=0.6.0
+Requires-Dist: typing_extensions>=4.0.0
+Requires-Dist: langsmith>=0.4.0
+Requires-Dist: pydantic_settings>=2.10.1
+Requires-Dist: fastapi>=0.95.0
+Requires-Dist: uvicorn[standard]>=0.22.0
+Requires-Dist: a2a-sdk[sql]
+Requires-Dist: click>=8.0.0
+Requires-Dist: sqlalchemy>=2.0.0
+Requires-Dist: aiosqlite>=0.19.0
+Requires-Dist: asyncpg>=0.28.0
+Requires-Dist: google-api-python-client>=2.100.0
+Requires-Dist: google-auth>=2.23.0
+Requires-Dist: google-auth-oauthlib>=1.1.0
+Requires-Dist: slack-sdk>=3.20.0
+Requires-Dist: langmem==0.0.29
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
+Requires-Dist: coverage>=7.2; extra == "dev"
+Requires-Dist: build>=1.0.0; extra == "dev"
+Requires-Dist: twine>=5.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: isort>=5.12.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+Requires-Dist: ruff>=0.5.0; extra == "dev"
+Requires-Dist: httpx>=0.27.0; extra == "dev"
+Provides-Extra: google
+Requires-Dist: google-api-python-client>=2.100.0; extra == "google"
+Requires-Dist: google-auth>=2.23.0; extra == "google"
+Requires-Dist: google-auth-oauthlib>=1.1.0; extra == "google"
+Provides-Extra: slack
+Requires-Dist: slack-sdk>=3.20.0; extra == "slack"
+Provides-Extra: postgres
+Requires-Dist: asyncpg>=0.28.0; extra == "postgres"
+Provides-Extra: sqlite
+Requires-Dist: aiosqlite>=0.19.0; extra == "sqlite"
+
+# Broadie
+
+A powerful multi-agent framework developed by the Broad Institute for building intelligent, collaborative AI systems with persistence, API integration, and agent-to-agent communication.
+
+## Overview
+
+Broadie enables you to create sophisticated AI agent systems that can work together, remember conversations, integrate with external services, and communicate with other agents. Whether you're building a simple chatbot or a complex multi-agent workflow, Broadie provides the infrastructure you need.
+
+## Key Features
+
+- **Two Usage Modes**: JSON configuration for quick setup or programmatic Python API for advanced customization
+- **Agent Collaboration**: Main agents coordinate with specialized sub-agents
+- **Persistent Memory**: Agents remember conversations and learn from interactions
+- **Tool Integration**: Built-in tools for file operations, Google Drive, Slack, and more
+- **API Server**: REST and WebSocket endpoints for web integration
+- **Agent Communication**: Secure peer-to-peer agent discovery and function calls
+- **Multiple AI Models**: Support for Google Gemini, Vertex AI, and more
+
+## Installation
+
+```bash
+pip install broadie
+```
+
+## Before you begin (5‑minute setup)
+
+Follow these simple steps to prepare your computer. Even if you’re new to Python, this will guide you through.
+
+1) Check your Python version
+- Broadie supports Python 3.9–3.12. We recommend Python 3.11 for the best compatibility.
+- Check your version:
+  - macOS/Linux: `python3 --version` (or `python --version`)
+  - Windows (PowerShell/CMD): `python --version`
+- If you don’t have Python or it’s older than 3.9:
+  - Download: https://www.python.org/downloads/
+  - Or use pyenv (advanced users on macOS/Linux): https://github.com/pyenv/pyenv
+
+2) Create a project folder
+- macOS/Linux:
+  - `mkdir -p ~/broadie-quickstart && cd ~/broadie-quickstart`
+- Windows (PowerShell):
+  - `mkdir $HOME\broadie-quickstart; cd $HOME\broadie-quickstart`
+
+3) Create a virtual environment
+- macOS/Linux:
+  - `python3 -m venv .venv`
+  - Activate: `source .venv/bin/activate`
+- Windows (PowerShell):
+  - `python -m venv .venv`
+  - Activate: `.venv\Scripts\Activate.ps1`
+
+4) Upgrade pip and install Broadie
+- `python -m pip install -U pip`
+- `pip install broadie`
+
+5) Create a minimal agent config (my_agent.json)
+Copy this into a new file named `my_agent.json` in your project folder:
+
+```
+{
+  "name": "helpful_assistant",
+  "description": "A helpful AI assistant",
+  "instruction": "You are a helpful AI assistant that can answer questions and help with tasks."
+}
+```
+
+Note: You can omit the model block — Broadie defaults to Google Gemini `gemini-2.0-flash`. To use a different model, you can add a `model` section later.
+
+6) Set your model API key
+- Broadie uses Google Gemini by default. Set an environment variable before serving:
+  - macOS/Linux (bash/zsh): `export GOOGLE_API_KEY=your_google_api_key`
+  - Windows (PowerShell): `$env:GOOGLE_API_KEY = "your_google_api_key"`
+  - Get a key: https://ai.google.dev/
+
+7) Start Broadie and open the UI
+- `broadie serve my_agent.json`
+- Open your browser at: http://localhost:8000/
+
+That’s it — you’re ready to use the Quick Start below.
+
+## Quick Start
+
+### Option 1: JSON Configuration (Simple Setup)
+
+Perfect for getting started quickly or creating agents without custom logic.
+
+1. **Create an agent configuration** (`my_agent.json`):
+
+```json
+{
+  "name": "helpful_assistant",
+  "description": "A helpful AI assistant",
+  "instruction": "You are a helpful AI assistant that can answer questions and help with tasks."
+}
+```
+
+Note: You can omit the `model` block — by default Broadie will use Google Gemini `gemini-2.0-flash`. To override, include an explicit model in your JSON, for example:
+
+```json
+{
+  "name": "helpful_assistant",
+  "description": "A helpful AI assistant",
+  "instruction": "You are a helpful AI assistant that can answer questions and help with tasks.",
+  "model": { "provider": "google", "name": "gemini-2.0-flash" }
+}
+```
+
+2. **Run your agent**:
+
+```bash
+broadie run my_agent.json
+```
+
+### Option 2: Programmatic Python API (Advanced)
+
+Use this approach when you need custom tools, complex logic, or want to extend agent capabilities.
+
+```python
+from broadie import Agent, SubAgent, tool
+
+# Define custom tools that your agents can use
+@tool(name="analyze_data", description="Analyze data and return insights")
+def analyze_data(data: str) -> str:
+    # Your custom analysis logic here
+    return f"Analysis complete: {data} shows positive trends"
+
+@tool(name="generate_report", description="Generate a formatted report")
+def generate_report(findings: str) -> str:
+    return f"# Report\n\n{findings}\n\n*Generated by Broadie*"
+
+# Create a specialized sub-agent
+class AnalystAgent(SubAgent):
+    def build_config(self):
+        return {
+            "name": "data_analyst",
+            "description": "Specializes in data analysis",
+            "instruction": "You are a data analysis expert. Use your tools to analyze data and provide insights."
+        }
+
+# Create the main coordination agent
+class ResearchCoordinator(Agent):
+    def build_config(self):
+        return {
+            "name": "research_coordinator", 
+            "description": "Coordinates research tasks",
+            "instruction": "You coordinate research tasks, delegating analysis to specialists and compiling results.",
+            "sub_agents": [AnalystAgent()]
+        }
+
+# Use your agent
+async def main():
+    agent = ResearchCoordinator()
+    response = await agent.process_message("Analyze our Q4 sales data and generate a report")
+    print(response)
+```
+
+## When to Use Each Approach
+
+### JSON Configuration
+- **Best for**: Quick prototypes, simple agents, configuration-driven workflows
+- **Limitations**: Cannot add custom tools or complex logic
+- **Use cases**: Customer support bots, FAQ assistants, content generators
+
+### Python API  
+- **Best for**: Production systems, custom integrations, complex workflows
+- **Advantages**: Full customization, custom tools, advanced logic, integration with existing systems
+- **Use cases**: Data analysis pipelines, API integrations, complex business workflows
+
+## Configuration
+
+### Environment Setup
+
+Create a `.env` file with your API keys and settings:
+
+```bash
+# Required: AI Model Access
+GOOGLE_API_KEY=your_google_api_key_here
+
+# Optional: Agent-to-Agent Communication
+A2A_ENABLED=true
+A2A_AGENT_ID=my_agent_001
+A2A_AGENT_NAME=my_helpful_agent
+
+# Optional: Database (defaults to SQLite)
+DB_DRIVER=sqlite
+DB_NAME=broadie.db
+
+# Optional: Slack Integration
+SLACK_BOT_TOKEN=xoxb-your-slack-token
+SLACK_CHANNEL=#general
+
+# Optional: Google Drive Integration  
+GOOGLE_DRIVE_CREDENTIALS_PATH=/path/to/credentials.json
+```
+
+## Built-in Tools
+
+Broadie agents automatically have access to powerful built-in tools:
+
+### File Operations
+- Read, write, and edit files
+- List directories and search content
+
+### Google Drive Integration (when configured)
+- Search documents and spreadsheets
+- Read and write Google Docs
+- Create and update Google Sheets
+
+### Slack Integration (when configured)
+- Send messages to channels
+- Search message history
+- Upload files and create threads
+
+### Task Management
+- Create and manage todo lists
+- Track progress across conversations
+
+## CLI Commands
+
+```bash
+# Initialize a new project with templates
+broadie init my_project
+
+# Run an agent from JSON config
+broadie run agent.json
+
+# Run an agent from Python code
+broadie run module.path:MyAgent
+
+# Start API server for web integration
+broadie serve agent.json
+
+# Create agent configurations
+broadie create agent customer_support
+broadie create sub-agent data_analyzer
+
+# List available project templates
+broadie templates
+```
+
+## API Integration
+
+Start a web server to integrate agents with your applications:
+
+```bash
+broadie serve my_agent.json
+```
+
+This provides:
+- **Web UI**: Visit `http://localhost:8000/` to chat with your agent in the browser
+- **REST API**: `POST /agents/{id}/invoke` for function calls
+- **WebSocket**: `/ws` for real-time chat
+- **Health Check**: `GET /health` for monitoring
+
+## Agent-to-Agent Communication
+
+Agents can discover and communicate with each other for complex workflows:
+
+```python
+# Agent A can invoke functions on Agent B
+result = await coordinator_agent.invoke_peer_agent(
+    "analyst_agent_id", 
+    "analyze_sales_data",
+    {"data": sales_data, "period": "Q4"}
+)
+```
+
+## Project Templates
+
+Get started faster with built-in templates:
+
+- **simple**: Single agent for basic tasks
+- **integration**: Agent with API integration capabilities  
+- **generic**: Multi-agent system template
+- **support**: Customer support system with specialized agents
+
+```bash
+broadie init --template support my_support_system
+```
+
+## Example Use Cases
+
+### Customer Support System
+```bash
+broadie init --template support customer_help
+cd customer_help
+# Configure your API keys in .env
+broadie serve main.json
+```
+
+### Data Analysis Pipeline
+```python
+# Create agents for data ingestion, analysis, and reporting
+# Each agent specializes in one aspect of the pipeline
+# Main agent coordinates the workflow
+```
+
+### Content Generation Workflow
+```python
+# Research agent gathers information
+# Writer agent creates content  
+# Editor agent reviews and refines
+# Coordinator manages the entire process
+```
+
+## Support and Documentation
+
+- **Issues**: [GitHub Issues](https://github.com/broadinstitute/broadie/issues)
+- **Documentation**: [docs.broadie.ai](https://docs.broadie.ai)
+- **Community**: [GitHub Discussions](https://github.com/broadinstitute/broadie/discussions)
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and contribution guidelines.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Developed by the Broad Institute** - Empowering researchers and developers with intelligent agent systems.
