@@ -1,0 +1,149 @@
+Metadata-Version: 2.1
+Name: generaptor
+Version: 10.0.2
+Summary: A generator for Velociraptor-based offline collectors
+Author-email: CERT-EDF <cert@edf.fr>
+License: MIT License
+        
+        Copyright (c) 2024 CERT-EDF
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/cert-edf/generaptor
+Project-URL: Repository, https://github.com/cert-edf/generaptor
+Project-URL: Bug Tracker, https://github.com/cert-edf/generaptor/issues
+Keywords: cli,generator,velociraptor,offline,triage
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Topic :: Utilities
+Classifier: Topic :: Security
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pick~=2.2
+Requires-Dist: rich~=13.4
+Requires-Dist: jinja2~=3.1
+Requires-Dist: pyzipper~=0.3
+Requires-Dist: cryptography~=42.0
+
+# Generaptor
+
+
+## Introduction
+
+Generaptor is a platform-agnostic command line tool to generate a [Velociraptor](https://github.com/velocidex/velociraptor) offline collector based on pre-configured or customizable collection profiles.
+
+All platforms can generate collectors for all targets, there is no limitation thanks to Python on the generation side and velociraptor on the configuration repacking side.
+
+Generation of Darwin collector is not implemented for the moment due to the lack of use case on our side. Feel free to open a pull request regarding this feature.
+
+
+## Dependencies
+
+Dependencies are listed in [pyproject.toml](pyproject.toml) under `dependencies` option.
+
+
+## Setup
+
+The setup is the same for Linux, Windows and Darwin as long as Python 3.9+ is
+installed and registered in the PATH environment variable. Using a Python virtual
+environment is recommended.
+
+```bash
+python3 -m pip install git+https://github.com/cert-edf/generaptor
+```
+
+
+## Basic Collector Generation
+
+```bash
+# First, we fetch latest stable release of velociraptor
+generaptor update
+# Then create a collector for windows for instance
+generaptor generate -o /data/case/case-001/collectors/ windows
+# keep the private key secret in a password vault to be able to decrypt the archive
+# /data/case/case-001/collectors now contains a collector and its configuration file
+```
+
+
+## Advanced Collector Generation
+
+Some options allow to customize collectors:
+
+```bash
+# Explore generate options using
+generaptor generate -h
+# Explore linux-specific options using
+generaptor generate linux -h
+# Explore windows-specific options using
+generaptor generate windows -h
+# Generate a single-device collector for windows
+# (windows default collector collects all devices)
+generaptor generate windows --device D:
+# Collector targets customization (interactive)
+generaptor generate --custom windows
+# Collector targets customization using a profile (non interactive)
+echo '{"targets":["WebServer/IIS"]}' > iis_server.json
+generaptor generate --custom-profile iis_server.json windows
+```
+
+
+## Expert Collector Generation
+
+Generaptor can use optional configuration files put in `$HOME/.config/generaptor` directory to generate collectors.
+
+Target and rules can be extended using this configuration directory.
+
+VQL templates can also be modified to add custom artifacts or modify the collector behavior. Please refer to [Velociraptor documentation](https://docs.velociraptor.app/) to learn how to master VQL and write your own configuration files.
+
+After starting generaptor for the first time, you can use the following commands to initialize the configuration directory
+
+```bash
+# Add variables for directories in current environment
+export CACHE="${HOME}/.cache/generaptor"
+export CONFIG="${HOME}/.config/generaptor"
+# Copy header for each file
+head -n 1 "${CACHE}/linux.rules.csv" > "${CONFIG}/linux.rules.csv"
+head -n 1 "${CACHE}/linux.targets.csv" > "${CONFIG}/linux.targets.csv"
+head -n 1 "${CACHE}/windows.rules.csv" > "${CONFIG}/windows.rules.csv"
+head -n 1 "${CACHE}/windows.targets.csv" > "${CONFIG}/windows.targets.csv"
+# Copy VQL templates
+cp "${CACHE}/linux.collector.yml.jinja" "${CONFIG}/"
+cp "${CACHE}/windows.collector.yml.jinja" "${CONFIG}/"
+```
+
+
+## Collection Processing
+
+```bash
+# Extract a collection
+generaptor extract \
+           --directory /data/case/case-001/collection/ \
+           private.key.pem \
+           Collection_COMPUTERNAME_DEVICENAME_YYYY-mm-ddTHH-MM-SS.zip
+```
+
+## Contributors
+
+- [koromodako](https://github.com/koromodako)
+- [SPToast](https://github.com/SPToast)
+- [td2m](https://github.com/td2m)
