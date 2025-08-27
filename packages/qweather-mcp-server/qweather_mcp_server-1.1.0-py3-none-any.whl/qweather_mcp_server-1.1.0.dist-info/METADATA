@@ -1,0 +1,360 @@
+Metadata-Version: 2.4
+Name: qweather-mcp-server
+Version: 1.1.0
+Summary: 中国天气查询 MCP 服务器
+Home-page: https://github.com/modelcontextprotocol/weather-mcp-server
+Author: MCP Weather Server
+Author-email: 
+License: MIT
+Project-URL: Homepage, https://github.com/YOUR_USERNAME/qweather-mcp-server
+Project-URL: Repository, https://github.com/YOUR_USERNAME/qweather-mcp-server
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: mcp>=1.0.0
+Requires-Dist: httpx>=0.24.0
+Requires-Dist: pyjwt[crypto]>=2.8.0
+Requires-Dist: cryptography>=41.0.0
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# 中国天气查询 MCP 服务器
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![PyPI version](https://badge.fury.io/py/qweather-mcp-server.svg)](https://badge.fury.io/py/qweather-mcp-server)
+
+一个基于 MCP（Model Context Protocol）的中国天气查询服务器，通过和风天气API为Claude Desktop等AI助手提供实时天气信息查询功能。
+
+## 主要特性
+
+- 🌤️ **实时天气数据** - 支持中国境内所有城市的实时天气查询
+- 🔐 **安全认证** - 使用JWT令牌进行API认证
+- ⚡ **高性能** - 异步HTTP客户端，支持并发请求
+- 📊 **详细信息** - 温度、湿度、风速、气压等完整天气数据
+- 🛡️ **错误处理** - 完善的异常处理和错误提示
+- 📦 **简易安装** - 支持pip一键安装
+
+## 快速开始
+
+### 1. 安装
+
+```bash
+pip install qweather-mcp-server
+```
+
+### 2. 获取和风天气API密钥
+
+1. 访问 [和风天气开发者控制台](https://console.qweather.com/)
+2. 注册账号并登录
+3. 创建项目并获取以下信息：
+   - Project ID (项目ID)
+   - Key ID (密钥ID)
+   - API Host (API主机地址)
+   - Private Key (私钥)
+
+### 3. 配置API密钥
+
+有两种配置方式：
+
+#### 方式一：环境变量配置（推荐）
+
+直接在Claude Desktop配置中设置环境变量：
+
+```json
+{
+  "mcpServers": {
+    "qweather": {
+      "command": "python",
+      "args": ["-m", "weather_server"],
+      "env": {
+        "QWEATHER_PROJECT_ID": "你的项目ID",
+        "QWEATHER_KEY_ID": "你的密钥ID",
+        "QWEATHER_API_HOST": "你的API主机地址",
+        "QWEATHER_PRIVATE_KEY": "你的私钥base64字符串"
+      }
+    }
+  }
+}
+```
+
+#### 方式二：配置文件方式
+
+```bash
+# 查找安装位置
+pip show qweather-mcp-server
+
+# 进入安装目录，复制配置模板
+cp config_template.py config.py
+
+# 编辑config.py文件，填入你的API信息
+```
+
+在 `config.py` 中填入实际信息：
+
+```python
+QWEATHER_CONFIG = {
+    "PROJECT_ID": "你的项目ID",
+    "KEY_ID": "你的密钥ID", 
+    "API_HOST": "你的API主机",
+    "PRIVATE_KEY": "你的私钥base64字符串"  # 只需要字符串部分
+}
+```
+
+### 4. 配置Claude Desktop
+
+#### 4.1 找到配置文件位置
+
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+#### 4.2 添加MCP服务器配置
+
+在配置文件中添加：
+
+```json
+{
+  "mcpServers": {
+    "weather": {
+      "command": "python",
+      "args": ["-m", "weather_server"],
+      "env": {}
+    }
+  }
+}
+```
+
+#### 4.3 重启Claude Desktop
+
+保存配置后，重启Claude Desktop使配置生效。
+
+## 使用方法
+
+配置完成后，在Claude Desktop中直接询问天气：
+
+```
+北京天气怎么样？
+请查询上海的天气情况
+广州现在的温度是多少？
+深圳今天天气如何？
+```
+
+### 返回信息示例
+
+```
+📍 北京市
+🌡️ 温度：26°C（体感温度：29°C）
+🌦️ 天气：阴
+💨 风向风速：西南风 4 km/h  
+💧 湿度：79%
+📊 气压：1008 hPa
+👁️ 能见度：23 km
+☁️ 云量：100%
+🕒 更新时间：2025-08-26T21:25+08:00
+```
+
+## 项目结构
+
+```
+weather-mcp-server/
+├── weather_server.py          # MCP服务器主程序
+├── config_template.py         # 配置文件模板
+├── requirements.txt           # Python依赖包
+├── setup.py                   # 安装脚本
+├── pyproject.toml            # 项目配置
+├── LICENSE                   # MIT许可证
+├── MANIFEST.in              # 打包清单
+└── README.md                # 项目说明（本文件）
+```
+
+### 核心文件说明
+
+- **weather_server.py** - MCP服务器主程序，实现天气查询功能
+- **config_template.py** - API配置模板，用户需复制为config.py并填入密钥
+- **requirements.txt** - 列出所有Python依赖包
+- **setup.py** - Python包安装配置，支持pip安装
+
+## API接口
+
+### get_weather 工具
+
+**描述**: 获取中国指定城市的实时天气信息
+
+**输入参数**:
+```json
+{
+  "city": "string, 必填, 中国的城市名，例如：北京、上海、广州"
+}
+```
+
+**输出格式**:
+```json
+{
+  "city": "北京",
+  "adm1": "北京",
+  "adm2": "北京", 
+  "temperature": "26°C",
+  "feels_like": "29°C",
+  "weather": "阴",
+  "wind_direction": "西南风",
+  "wind_speed": "4 km/h",
+  "humidity": "79%",
+  "pressure": "1008 hPa",
+  "visibility": "23 km",
+  "cloud_cover": "100%",
+  "update_time": "2025-08-26T21:25+08:00"
+}
+```
+
+**错误响应**:
+```json
+{
+  "error": "无效的城市名，请输入中国境内城市"
+}
+```
+
+## 技术架构
+
+### 核心组件
+
+1. **QWeatherClient** - 和风天气API客户端
+   - JWT令牌认证（按官方格式）
+   - 城市位置查询
+   - 实时天气数据获取
+   - 异步HTTP请求处理
+
+2. **MCP Server** - Model Context Protocol服务器
+   - 工具注册和管理
+   - JSON-RPC 2.0协议处理
+   - stdio接口通信
+
+### 数据流程
+
+1. 接收城市名称参数
+2. JWT认证和API调用
+3. 城市位置信息查询
+4. 实时天气数据获取
+5. 格式化并返回结构化数据
+
+## 故障排除
+
+### 常见问题
+
+#### 1. 安装失败
+```bash
+# 确保Python版本符合要求
+python --version  # 需要3.8+
+
+# 升级pip
+pip install --upgrade pip
+
+# 重新安装
+pip install --upgrade qweather-mcp-server
+```
+
+#### 2. Claude Desktop无响应
+- 检查配置文件语法是否正确
+- 确认MCP服务器路径正确
+- 重启Claude Desktop
+- 检查Python环境是否正常
+
+#### 3. API认证失败
+- 确认config.py文件配置正确
+- 检查和风天气API密钥是否有效
+- 确认网络连接正常
+
+#### 4. 城市查询失败
+- 使用标准中文城市名
+- 确认为中国境内城市
+- 检查城市名拼写
+
+### 调试命令
+
+```bash
+# 检查安装
+pip show qweather-mcp-server
+
+# 测试配置
+python -c "from config import QWEATHER_CONFIG; print('配置加载成功')"
+
+# 测试MCP服务器
+python -m weather_server
+
+# 检查依赖
+python -c "import mcp, httpx, jwt; print('依赖正常')"
+```
+
+## 开发和贡献
+
+### 本地开发
+
+```bash
+# 克隆仓库
+git clone https://github.com/YOUR_USERNAME/qweather-mcp-server.git
+cd qweather-mcp-server
+
+# 安装开发依赖
+pip install -r requirements.txt
+
+# 本地测试
+python weather_server.py
+```
+
+### 构建发布包
+
+```bash
+# 安装构建工具
+pip install build twine
+
+# 构建包
+python -m build
+
+# 发布到PyPI
+twine upload dist/*
+```
+
+## 版本历史
+
+### v1.1.0 (2025-08-26)
+- 🚀 重大改进：支持环境变量配置（推荐方式）
+- ✨ 简化PRIVATE_KEY配置格式（直接使用base64字符串）
+- 🔧 优先级：环境变量 → config.py文件
+- 📦 清理项目结构，移除不必要文件
+- 📚 更新文档说明两种配置方式
+
+### v1.0.0 (2025-08-26)
+- 🎉 首次发布
+- ✅ 支持中国所有城市天气查询
+- ✅ 完整的MCP协议实现
+- ✅ JWT安全认证
+- ✅ PyPI包发布支持
+
+## 许可证
+
+本项目采用 [MIT 许可证](LICENSE)。
+
+## 联系方式
+
+- 项目主页：https://github.com/YOUR_USERNAME/qweather-mcp-server
+- 问题报告：https://github.com/YOUR_USERNAME/qweather-mcp-server/issues
+
+## 致谢
+
+- [Model Context Protocol](https://modelcontextprotocol.io/) - MCP协议支持
+- [和风天气](https://www.qweather.com/) - 天气数据API
+- [Claude AI](https://claude.ai/) - AI助手平台
+
+---
+
+**享受智能天气查询体验！** 🌤️
