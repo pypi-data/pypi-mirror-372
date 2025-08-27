@@ -1,0 +1,2 @@
+# copilot-auth
+copilot authenticator
