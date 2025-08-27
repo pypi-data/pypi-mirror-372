@@ -1,0 +1,115 @@
+Metadata-Version: 2.4
+Name: websight
+Version: 0.1.0
+Summary: Vision first browser agents based on Websight-7B, a custom model
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: colorama>=0.4.6
+Requires-Dist: datasets>=3.6.0
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: huggingface-hub>=0.30.2
+Requires-Dist: matplotlib>=3.10.1
+Requires-Dist: openai>=1.82.0
+Requires-Dist: peft>=0.15.2
+Requires-Dist: pillow>=11.2.1
+Requires-Dist: playwright>=1.52.0
+Requires-Dist: pydantic>=2.10.5
+Requires-Dist: python-dotenv>=1.1.0
+Requires-Dist: pyyaml>=6.0.2
+Requires-Dist: rich>=14.0.0
+Requires-Dist: torchvision>=0.22.0
+Requires-Dist: tqdm>=4.67.1
+Requires-Dist: transformers>=4.52.4
+Requires-Dist: webdriver-manager>=4.0.2
+
+# Websight
+
+Minimal Python package for calling the Websight VLM and a thin browser Agent.
+
+## Layout
+
+```
+src/websight/
+  __init__.py
+  agent/
+    agent.py         # Agent(run/execute_action)
+    browser.py       # Playwright wrapper
+  model/
+    websight.py      # websight_call(prompt, history, image)
+    actions.py       # Action + parse_action
+    prompts.py       # system prompt for websight_call
+    llm.py           # simple OpenRouter LLM helpers
+scripts/
+  manual_image_demo.py
+eval/
+  showdown/...
+tests/
+```
+
+## Install (editable) and run tests
+
+```bash
+uv run --frozen -- python -V  # ensure Python is available
+PYTHONPATH=src uv run --group test pytest -q tests
+```
+
+## Quickstart
+
+Programmatic use:
+
+```python
+from websight import websight_call
+
+# image_base64 may include the 'data:image/png;base64,' prefix or raw base64
+action = websight_call(
+    prompt="Click the Login button",
+    history=[],  # list of (reasoning, action_str) pairs from prior steps
+    image_base64="data:image/png;base64,<...>",
+)
+print(action.action, action.args)
+```
+
+Agent (with a real browser via Playwright):
+
+```bash
+PYTHONPATH=src uv run python websight.py --task "Go to https://example.com and click More" --show-browser
+```
+
+Manual image demo (no browser):
+
+```bash
+PYTHONPATH=src uv run python scripts/manual_image_demo.py \
+  --image data/showdown_clicks/images/0b1c958b929acdbf.png \
+  --max-new-tokens 512
+```
+
+## Environment
+
+Web requests to LLMs use OpenRouter. Set:
+
+```
+export OPENROUTER_API_KEY=...
+```
+
+The Websight model will be loaded from Hugging Face via `transformers` pipeline: `tanvirb/websight-7B`.
+
+## Packaging (src layout)
+
+This repository is configured for a src layout with setuptools.
+
+```toml
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = {find = {where = ["src"]}}
+```
+
+Build locally (artifacts in `dist/`):
+
+```bash
+uv build
+```
+
+Do not publish yet. When ready, you can publish with `uv publish` after setting the appropriate token.
