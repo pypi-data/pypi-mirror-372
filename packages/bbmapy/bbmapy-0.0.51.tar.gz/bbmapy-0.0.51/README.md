@@ -1,0 +1,147 @@
+# bbmapy
+
+A Python wrapper for BBTools.
+Current version of bbmapy is v39.33.
+
+## Installation
+
+```bash
+conda install -c bioconda -c conda-forge bbmapy # not yet available on conda-forge
+```  
+Also available on pip (but does not ensure java is available):
+```bash
+pip install bbmapy
+```
+
+## Usage
+
+bbmapy let's you call bbtools stuff from python. To the shell only one CLI is available:  
+- `bbmapy-test`: Run tests to verify installation
+
+### Example
+
+```python
+from bbmapy import bbmap
+
+# Run bbmap.sh
+bbmap.bbmap(
+    in1="reads1.fastq",
+    in2="reads2.fastq",
+    out="mapped.sam",
+    ref="reference.fasta"
+)
+```
+
+## Dependencies
+
+- Python >= 3.9
+- rich
+- install-jdk (this will be used to install a JRE if needed)
+
+## Usage
+
+After installation, you can use bbmapy in your Python scripts like this:
+
+```python
+from bbmapy import bbduk
+
+# Basic usage
+bbduk(
+    in_file="input.fastq",
+    out="output.fastq",
+    ktrim="r",
+    k="23",
+    mink="11",
+    hdist="1",
+    tbo=True,
+    tpe=True,
+    minlen="45",
+    ref="adapters",
+    ftm="5",
+    maq="6",
+    maxns="1",
+    ordered=True,
+    threads="4",
+    overwrite="t",
+    stats="stats.txt"
+)
+```
+### Using Java flags alongside other arguments
+```python
+bbduk(
+    Xmx="2g",  # Set maximum heap size
+    da=True,   # Enable assertions
+    eoom=True, # Enable out-of-memory termination
+    in_file="input.fastq",
+    out="output.fastq",
+    ktrim="r",
+    k="23"
+)
+```
+
+### To capture output
+You need to set `capture_output=True` in the function call, AND out="stdout.fastq" (or any other file format you like). 
+```python
+stdout, stderr = bbduk(
+    capture_output=True,
+    Xmx="2g",
+    in_file="input.fastq",
+    out="stdout.fastq",
+    # ... other parameters ...
+)
+```
+
+#### Getting java executable
+Can be a pain, see [this PR discussion](https://github.com/conda-forge/staged-recipes/pull/29085).  
+bioconda's recipes that require java will usually bring a really bloated set of stuff. not good. way too much useless bandwidth (I see no reason that getting bbmap would require alsa).  
+But pip and bioconda recipies allow using other pip and conda recipes. Good. A workaround - adding a custom function that recognizes the os + arch and fetches during install or test.  
+Technically - this does not count as preloading a binary/executable. The actual JRE is tiny, and getting it can be done via [`install-jdk`](https://pypi.org/project/install-jdk/).  
+
+tl;dr: after installing from pypi (via pip/uv/pixi)
+```
+bbmapy-ensure-java
+```  
+
+
+#### Notes:
+ * `in` can be a protected word in python and other code, it is replaced by `in_file` in function calls. `in1`, `in2` are still valid.
+ * Java flags (such as `Xmx`, `Xms`, `da`, `ea`, `eoom`) are automatically recognized and handled appropriately. Include them in your function calls just like any other argument.
+ * the `capture_output` argument might be switched (stderr --> out and vice verse). 
+ * Flags (i.e. argument that do not take value in the OG bbmap version) are set with Boolean values. e.g.:
+ ``` 
+ flag : True
+ ```
+ Not to be mistaken for lower case, fouble qouted `"true"` and `"false"` for boolian arguments to be passed to bbtools, e.g.:
+ ```
+ argument : "true"
+ ```
+ 
+### Citation
+BBMerge manuscript: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0185056
+Please cite this paper if you use bbmap in your work.
+
+
+
+## License
+
+This project is only a wrapper, please see the actual bbtools repository for (license)[https://bitbucket.org/berkeleylab/jgi-bbtools/src/master/license.txt] etc.  
+Neither the developers of bbtools nor of bbmapy take any responsibility for how you use this code. All accountability is on you.
+
+## Acknowledgments
+
+This project only (crudely) wraps BBTools (a.k.a bbmap), which is developed by Brian Bushnell.  
+If you use bbmapy and things don't quite work like you'd like, don't expect the developer of bbmap to help you with this whacky python wrapper.  
+Please see the [BBTools website](https://jgi.doe.gov/data-and-tools/bbtools/) for more information about the underlying tools.  
+
+
+### to build and upload to pypi
+
+```bash
+rm -rf dist build egg-info
+python bbmapy/update.py # fetch latest version of bbtools and update version in pyproject.toml
+rm bbmapy/vendor/bbmap/pytools -rf # remove the pytools folder
+pip install --upgrade build twine
+python -m build
+twine upload dist/*
+
+```
