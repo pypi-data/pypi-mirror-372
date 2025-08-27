@@ -1,0 +1,215 @@
+# _{{stinger.name}}_ API Overview 
+{%-if stinger.summary %} 
+_{{stinger.summary}}_
+{%endif-%}
+{%if stinger.documentation%}
+{{stinger.documentation}}
+
+## Connections
+
+A connection object is a wrapper around an MQTT client and provides specific functionality to support both clients and servers.
+Generally, you only need one connection object per daemon/program, as it can support multiple clients and servers.  
+
+### Connection code Examples
+
+<details>
+  <summary>Python</summary>
+
+```python{%set broker = stinger.get_example_broker()%}
+from connection import {{broker.class_name}}
+
+connection_object = {{broker.class_name}}({%if broker.hostname is none%}'localhost', 1883{%endif%})
+```
+
+The `connection_object` will be passed to client and server constructors.
+
+</details>
+
+<details>
+  <summary>C++</summary>
+
+```c++{%set broker = stinger.get_example_broker()%}
+#include "broker.hpp"
+
+auto connection_object = std::make_shared<{{broker.class_name}}>({%if broker.hostname is none%}"localhost", 1883, {%endif%}"{{stinger.name | UpperCamelCase}}");
+```
+
+The `connection_object` will be passed to client and server constructors.
+
+</details>
+
+## Server
+
+A server is a _provider_ of functionality.  It sends signals, handles method calls, and owns property values.
+
+### Server Code Examples
+
+<details>
+  <summary>Python Server</summary>
+
+```python{%set broker = stinger.get_example_broker()%}
+from {{stinger.python.package_name}}.client import {{stinger.cpp.server_class_name}}
+
+server = {{stinger.python.server_class_name}}(connection_object)
+```
+
+The `server` object provides methods for emitting signals and updating properties.  It also allows for decorators to indicate method call handlers.
+
+</details>
+
+<details>
+  <summary>C++ Server</summary>
+
+```python{%set broker = stinger.get_example_broker()%}
+from connection import {{broker.class_name}}
+
+conn = {{broker.class_name}}({%if broker.hostname is none%}'localhost', 1883{%endif%})
+server = {{stinger.python.server_class_name}}(conn)
+```
+
+The `server` object provides methods for emitting signals and updating properties.  It also allows for decorators to indicate method call handlers.
+
+</details>
+
+## Client
+
+{%endif-%}
+{%macro argrow(arg) -%}
+|{{arg.name|center(15)}}|
+{%-if arg.arg_type.name.lower() == "enum" or arg.arg_type.name.lower() == "struct"%}{{arg.markdown_type|center(10)}}
+{%-else%}{{arg.json_type|center(10)}}
+{%-endif%}{%if arg.optional%} (optional){%endif%}|
+{{- arg.description or ''}}|
+{%- endmacro %}
+{%macro argtable(arglist) -%}
+| Name          | Type     |Description|
+|---------------|----------|-----------|
+{%-for arg in arglist%}
+{{argrow(arg)}}
+{%- endfor %}
+{%- endmacro %}
+{%if stinger.signals | length > 0 %}
+## Signals
+
+Signals are messages from the server to clients.
+
+```plantuml
+@startuml
+Client <<- Server : Signal(Parameters)
+@enduml
+```
+{%for sig_name, signal in stinger.signals.items()%}
+### Signal `{{sig_name}}`
+
+{{signal.documentation or "_No documentation for this signal_"}}
+
+#### Signal Parameters for `{{sig_name}}`
+
+{{argtable(signal.arg_list)}}
+
+#### Code Examples
+
+<details>
+  <summary>Python Client</summary>
+
+```python
+@client.receive_{{sig_name | snake_case }}
+def on_{{sig_name | snake_case }}({%for arg in signal.arg_list%}{{arg.name}}: {{arg.python_type}}{%if not loop.last%}, {%endif%}{%endfor%}):
+    print(f"Got a '{{sig_name}}' signal: {%for arg in signal.arg_list%}{{arg.name}}={ {{arg.name}} } {%endfor%}")
+```
+
+</details>
+
+<details>
+  <summary>Rust Server</summary>
+
+```rust
+server.emit_{{sig_name|snake_case}}({%for arg in signal.arg_list%}{{arg.get_random_example_value(lang="rust")}}{%if not loop.last%}, {%endif%}{%endfor%}).await;
+```
+
+</details>
+
+{%endfor%}{#- end for each signal -#}
+{%endif%}{#- end if there are signals -#}
+
+{#- ------------------------------------------------------- -#}
+{%if stinger.methods | length > 0 %}
+## Methods
+
+Methods are requests from a client to a server and the server provides a response back to the client:
+
+```plantuml
+@startuml
+Client ->> Server : Request(Parameters)
+Client <<-- Server: Response(Parameters)
+@enduml
+```
+
+{%for method_name, method in stinger.methods.items()%}
+### Method `{{method_name}}`
+
+{{method.documentation or "_No documentation for this method_"}}
+
+#### Request Parameters
+{%if method.arg_list | length == 0%}
+There are no arguments for this request.
+{%else-%}
+{{argtable(method.arg_list)}}
+{%endif%}{# number of args #}
+#### Return Parameters
+
+{%if method.return_value_type == "struct" %}
+{{argtable(method.return_value)}}
+{%elif method.return_value_type is false -%}
+There is no return value for this method call.
+{%else-%}
+The return value type is `{{method.return_value.json_type}}`.
+{%endif-%}
+{%endfor-%}
+{%endif%}
+{#- ------------------------------------------------------- #}
+{%if stinger.properties | length > 0 %}## Properties
+
+Properties are values (or a set of values) held by the server.   They are re-published when the value changes. 
+
+```plantuml
+@startuml
+Server -> Server : Set Property
+Client <<- Server: Property Updated
+@enduml
+```
+{%for prop_name, prop in stinger.properties.items()%}
+### Property `{{prop_name}}`
+
+{{prop.documentation or "_No documentation is available for this property_"}}{%if prop.read_only %}
+
+This property is **read-only**.  It can only be modified by the server.{%endif%}
+
+{{argtable(prop.arg_list)}}
+{%endfor%}{# for each property #}
+{%endif%}{#end condition that there are a number of properties#}
+{%if stinger.enums | length > 0%}## Enums
+{%endif%}
+{%for ie_name, ie in stinger.enums.items() %}
+{#- ------------------------------------------------------- -#}
+### Enum `{{ie.class_name }}`
+
+<a name="Enum-{{ie.class_name}}"></a>{{ie.description or "_No description exists for this enumeration._"}}
+
+{%for value in ie.values -%}
+* {{value}} ({{loop.index}}) 
+{%- if ie.value_descriptions and ie.value_descriptions|length >= loop.index %}
+  - {{ie.value_descriptions[loop.index0]}}{% endif %}
+{%endfor%}
+{%endfor%}
+{#- ------------------------------------------------------- #}
+## Structures
+
+Structures are a group of values and may be used as an argument in signals, methods, or properties.  Defining a structure allows for easy reuse.
+{%for istruct_name, istruct in stinger.structs.items() %}
+### Struct `{{istruct.class_name }}`
+
+<a name="Struct-{{istruct.class_name}}"></a>{{istruct.description or "_No general description exists for this structure_"}}
+
+{{argtable(istruct.members)}}
+{%endfor%}
