@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <!-- Form view -->
+        <record id="view_odoo_instance_form" model="ir.ui.view">
+            <field name="name">odoo.instance.form</field>
+            <field name="model">odoo.instance</field>
+            <field name="arch" type="xml">
+                <form string="Odoo Instance">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only" />
+                            <h1>
+                                <field name="name" />
+                            </h1>
+                        </div>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="toggle_state" type="object"
+                                class="btn oe_stat_button oe_read_only">
+                                <i title="Tasks icon" class="fa fa-fw o_button_icon fa-tasks"></i>
+                                <field string="State" name="state" widget="statinfo" />
+                            </button>
+                            <button name="open_instance_url" type="object"
+                                class="btn oe_stat_button oe_read_only">
+                                <i title="Link icon" class="fa fa-fw o_button_icon fa-link"></i>
+                                <div class="o_stat_info">
+                                    <span class="o_stat_value">URL</span>
+                                    <span class="o_stat_text">Instance</span>
+                                </div>
+                            </button>
+                        </div>
+                        <group>
+                            <field name="instance_url" class="oe_edit_only" edit_only="1" />
+                            <group>
+                                <field name="project_id" />
+                                <field name="helpdesk_team_id" />
+                            </group>
+                            <group>
+                                <field name="partner_id" widget="res_partner_many2one" />
+                                <field name="client_contact_id" />
+                            </group>
+                            <group>
+                                <field name="odoo_version_id" />
+                            </group>
+
+                            <group>
+                                <field name="state" />
+                                <field name="instance_type" />
+                                <!-- <field name="contact_role_id" /> -->
+                            </group>
+                            <group string="Instance Roles">
+                                <field name="technician_ids" widget="many2many_tags_avatar" />
+                                <field name="functional_ids" widget="many2many_tags_avatar" />
+                            </group>
+
+
+                        </group>
+                        <div>
+                            <!-- <h4>
+                                <field name="next_window" />
+                            </h4> -->
+                        </div>
+
+                        <notebook>
+                            <page string="Functional">
+                                <group name="Processes" string="Processes">
+                                    <group>
+                                        <div>Processes are the main functional areas of the system.
+                                            They are used to group the functional requirements and
+                                            modules.</div>
+                                    </group>
+                                    <field name="process_ids"
+                                        domain="[('odoo_version_id', '=', odoo_version_id)]"
+                                        nolabel="1">
+                                        <tree editable="bottom">
+                                            <field name="name" />
+                                            <field name="description" />
+                                            <field name="module_ids" widget="many2many_tags" />
+                                            <field name="handbook_url" widget="url" />
+                                        </tree>
+                                    </field>
+                                </group>
+                                <group name="Functional Configurations"
+                                    string="Functional Configurations">
+                                    <group>
+                                        <div> Configurations made through UI.
+
+                                        </div>
+                                    </group>
+                                    <field name="functional_configuration_ids"
+                                        domain="[('odoo_version_id', '=', odoo_version_id)]"
+                                        widget="one2many_list"
+                                        nolabel="1"
+                                        options="{'open': True}">
+                                        <tree editable="bottom">
+                                            <field name="name" />
+                                            <field name="description" widget="text" />
+                                            <field name="required_modules" widget="many2many_tags" />
+                                            <field name="handbook_url" widget="url" />
+                                        </tree>
+                                    </field>
+                                </group>
+                                <group string="Functional Requirements">
+                                    <field name="functional_requirement_ids" nolabel="1"
+                                        context="{'default_odoo_instance_id': active_id}">
+                                        <tree editable="bottom">
+                                            <field name="name" />
+                                            <field name="status" />
+                                        </tree>
+                                    </field>
+                                </group>
+                            </page>
+
+                            <page string="Technic">
+                                <group name="update_info" string="Update info" class="oe_edit_only">
+                                    <button name="update_instance_info" type="object"
+                                        string="Get from YAML" class="btn-secondary"
+                                        icon="fa-cloud-download" />
+                                </group>
+                                <group>
+
+                                    <field name="inventory_url" widget="url" />
+                                    <field name="branch" />
+                                    <field name="odoo_release_id" options="{'no_create': True}"
+                                        domain="[('odoo_version_id', '=', odoo_version_id)]"
+                                        widget="badge" />
+                                </group>
+                                <group>
+                                    <field name="server_information" />
+                                    <field name="server_type" />
+                                </group>
+                                <group string="Planned Deploys">
+                                    <field name="deploy_duration" widget="float_time" />
+                                    <field name="deploy_event_ids"
+                                        domain="[('start', '>', current_date)]">
+                                        <tree string="Planned Deploys">
+                                            <field name="name" />
+                                            <field name="start" />
+                                            <field name="description" />
+                                        </tree>
+                                    </field>
+                                </group>
+                                <group string="Available Windows">
+                                    <button name="compute_available_windows"
+                                        string="Calculate Available Windows" type="object"
+                                        class="btn btn-secondary" icon="fa-calendar" />
+                                    <button string="Clear computed windows"
+                                        name="action_clear_windows" type="object"
+                                        class="btn btn-seconday" icon="fa-trash-o" />
+                                </group>
+
+                                <field name="available_windows" nolabel="1">
+                                    <tree editable="top" create="false" delete="false">
+                                        <field name="start_time" widget="datetime" />
+                                        <field name="end_time" widget="datetime"
+                                            string="Last deploy" />
+                                        <button name="open_calendar_event_wizard"
+                                            string="Plan Deploy" type="object" />
+                                    </tree>
+                                </field>
+                                <group name="databases" string="Databases">
+                                    <field name="database_ids" nolabel="1">
+                                        <tree>
+                                            <field name="name" />
+                                            <field name="is_test" />
+                                        </tree>
+                                    </field>
+
+                                </group>
+
+                                <group string="Requirements">
+                                    <field name="requirements_url" widget="url" nolabel="1" />
+                                    <group>
+
+                                        <button name="download_and_process_requirements_txt"
+                                            string="Update Modules from URL" type="object"
+                                            class="btn btn-secondary" icon="fa-refresh" />
+
+                                    </group>
+                                    <field name="module_ids" nolabel="1"
+                                        context="{'module_instance_ids': active_id}">
+                                        <tree editable="false" create="false" delete="false">
+                                            <field name="name" />
+                                            <field name="technical_name" />
+                                            <field name="is_odoo_module" />
+                                            <field name="module_type" />
+                                            <field name="version_ids" widget="many2many_tags" />
+                                        </tree>
+                                    </field>
+                                </group>
+
+
+                            </page>
+                            <page string="Troubleshooting">
+                                <group string="Troubleshooting">
+                                    <field name="troubleshooting_ids" nolabel="1">
+                                        <tree editable="bottom">
+                                            <field name="date" />
+                                            <field name="title" />
+                                            <field name="type" />
+                                            <field name="url" widget="url" />
+                                        </tree>
+                                    </field>
+                                </group>
+
+                            </page>
+                            <page string="Commercial">
+                                <group>
+                                    <field name="maintenance_contract_ids" />
+                                    <field name="support_contract_ids" />
+                                    <field name="implementation_contract_id" />
+                                </group>
+                            </page>
+                            <page string="Misc">
+                                <group>
+                                    <field name="description" />
+                                    <field name="start_date" />
+
+                                </group>
+                                <group name="Deploy Windows" string="Non-deploy windows">
+                                    <group>
+                                        <div> Schedule of working hours in those we can't make
+                                            deployments</div>
+                                    </group>
+                                    <field name="unavailable_windows" widget="one2many_list"
+                                        nolabel="1">
+                                        <tree editable="bottom">
+                                            <field name="day_of_week" />
+                                            <field name="start_time" widget="float_time" />
+                                            <field name="end_time" widget="float_time" />
+                                        </tree>
+                                    </field>
+                                </group>
+                            </page>
+
+                        </notebook>
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids" widget="mail_followers"
+                            groups="base.group_user" />
+                        <field name="message_ids" widget="mail_thread" groups="base.group_user" />
+                    </div>
+                </form>
+            </field>
+        </record>
+        <!-- Tree View -->
+        <record id="odoo_instance_tree_view" model="ir.ui.view">
+            <field name="name">odoo.instance.tree</field>
+            <field name="model">odoo.instance</field>
+            <field name="arch" type="xml">
+                <tree string="Odoo Instances">
+                    <field name="name" />
+                    <field name="odoo_version_id" />
+                    <field name="instance_type" />
+                    <field name="partner_id" />
+                    <field name="state" />
+                </tree>
+            </field>
+        </record>
+        <!-- Kanban view -->
+        <record id="odoo_instance_kanban" model="ir.ui.view">
+            <field name="name">odoo.instance.kanban</field>
+            <field name="model">odoo.instance</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_mobile" create="0">
+                    <field name="name" />
+                    <field name="odoo_version_id" />
+                    <field name="deploy_event_ids" />
+                    <field name="partner_id" />
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div t-attf-class="oe_kanban_global_click oe_kanban_card_custom">
+                                <div class="o_kanban_card_header">
+                                    <div class="o_kanban_card_header_title">
+                                        <strong>
+                                            <field name="name" />
+                                        </strong>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_card_content">
+                                    <div class="o_kanban_primary_left">
+                                        <div class="o_kanban_primary">
+                                            <div class="o_kanban_image">
+                                                <img
+                                                    t-att-src="kanban_image('res.partner', 'image_medium', record.partner_id.raw_value)"
+                                                    class="oe_avatar o_kanban_avatar_small"
+                                                    t-att-alt="record.partner_id.raw_value.name" />
+                                            </div>
+                                            <div class="o_kanban_details">
+                                                <p>
+                                                    <strong>Odoo Version:</strong>
+                                                    <t t-esc="record.odoo_version_id.value" />
+                                                </p>
+                                                <p>
+                                                    <strong>Deploy Events:</strong>
+                                                    <t
+                                                        t-esc="record.deploy_event_ids.raw_value.length" />
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                    <xpath expr="//div[@class='o_kanban_image']" position="attributes">
+                        <attribute name="style">margin-right: 10px;</attribute>
+                    </xpath>
+                    <xpath expr="//div[@class='o_kanban_details']" position="attributes">
+                        <attribute name="style">margin-left: 10px; font-size: 14px;</attribute>
+                    </xpath>
+                    <xpath expr="//div[@class='o_kanban_card_content']" position="attributes">
+                        <attribute name="style">padding-top: 10px; padding-bottom: 10px;</attribute>
+                    </xpath>
+                    <xpath expr="//div[@class='o_kanban_card_header']" position="attributes">
+                        <attribute name="style">padding: 10px 20px; background-color: #f7f7f7;
+                            border-radius: 5px 5px 0 0; border-bottom: 1px solid #d9d9d9;</attribute>
+                    </xpath>
+                    <xpath expr="//div[@class='oe_kanban_global_click oe_kanban_card_custom']"
+                        position="attributes">
+                        <attribute name="style">border-radius: 5px; box-shadow: 0 2px 2px
+                            rgba(0,0,0,.05), 0 1px 0 rgba(0,0,0,.06), 0 0 0 1px
+                            rgba(rgba(0,0,0,.09); background-color: #ffffff; border: 1px solid
+                            #d9d9d9; margin-bottom: 10px; overflow: hidden; transition:
+                            box-shadow
+                            0.1s ease-in-out;</attribute>
+                    </xpath>
+                    <xpath expr="//div[@class='oe_kanban_global_click oe_kanban_card_custom']"
+                        position="after">
+                        <xpath expr="//div[@class='o_kanban_card_header']">
+                            <div class="o_kanban_card_image">
+                                <img
+                                    t-att-src="kanban_image('res.partner', 'image_small', record.partner_id.raw_value)"
+                                    class="oe_avatar o_kanban_avatar_small"
+                                    t-att-alt="record.partner_id.raw_value.name" />
+                            </div>
+                        </xpath>
+                    </xpath>
+                    <xpath expr="//div[@class='o_kanban_card_header_title']" position="attributes">
+                        <attribute name="style">display: flex; align-items: center;
+                            justify-content:
+                            space-between;</attribute>
+                    </xpath>
+                    <xpath expr="//div[@class='o_kanban_card_header_title']" position="inside">
+                        <div class="o_kanban_card_partner_name">
+                            <t t-esc="record.partner_id.raw_value.name" />
+                        </div>
+                    </xpath>
+                </kanban>
+            </field>
+        </record>
+
+        <record id="view_functional_requirement_tree" model="ir.ui.view">
+            <field name="name">odoo.instance.functional_requirement.tree</field>
+            <field name="model">odoo.instance.functional_requirement</field>
+            <field name="arch" type="xml">
+                <tree string="Functional Requirements">
+                    <field name="name" />
+                    <field name="status" />
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_functional_requirement_form" model="ir.ui.view">
+            <field name="name">odoo.instance.functional_requirement.form</field>
+            <field name="model">odoo.instance.functional_requirement</field>
+            <field name="arch" type="xml">
+                <form string="Functional Requirement">
+                    <sheet>
+                        <group>
+                            <field name="name" />
+                            <field name="status" />
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+    </data>
+</odoo>
