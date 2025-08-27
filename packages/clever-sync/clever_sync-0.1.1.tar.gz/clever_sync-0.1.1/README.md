@@ -1,0 +1,1 @@
+This is a library meant to build cleversheets from a oneroster data pull. I plan to provide function to send via SFTP to Clever. I need to setup data validation as well
