@@ -1,0 +1,355 @@
+.TH piknik 1
+
+
+.SH NAME
+piknik \- Issue tracking using CLI
+
+
+.SH SYNOPSIS
+
+.SY piknik
+add [ -d store_dir ] [ --alias issue_alias ] caption
+.YS
+
+.SY piknik
+show [ -i issue_id ] [ -d store_dir ] [ -r renderer ] [ --state state ]
+.YS
+
+.SY piknik
+show [ -d store_dir ] -r html [ -o output_dir ]
+.YS
+
+.SY piknik
+mod < -i issue_id > [ -d store_dir ] [ --state state ] [ -t tag ] [ -u tag ] [ --dep issue_id ] [ --undep issue_id ] [ --assign id ] [ --unassign id ]
+.YS
+
+.SY piknik
+mod < -i issue_id > [ -d store_dir ] [ --block ]
+.YS
+
+.SY piknik
+mod < -i issue_id > [ -d store_dir ] [ --unblock ]
+.YS
+
+.SY piknik
+comment < -i issue_id > [ -d store_dir ] [ [ -x "text content" ... ] [ -y file ... ] ... ]
+.YS
+
+
+.SH DESCRIPTION
+.P
+This tool enables issue tracking by command line interface.
+.P
+After an issue has been created it can move through different pre-defined, kanban-like states. They can also be tagged, assigned and commented on.
+
+
+.SH COMMANDS
+
+The following commands are available:
+
+.IP
+\fBshow\fP \- Output all issues for all or selected issue states.
+.IP
+\fBadd\fP \- Propose a new issue.
+.IP
+\fBmod\fP \- Tag, assign, set dependencies and modify state of an existing issue.
+.IP
+\fBcomment\fP \- Add comment to an existing issue.
+
+
+.SS Common options
+
+.TP
+\fB-d\fP
+Issue state store directory.
+
+.TP
+.TQ
+.B -h
+.TQ
+.B --help
+Command help summary.
+
+.TP
+.TQ
+.BI -i issue_id
+.TQ
+.BI --issue-id issue_id
+Issue to operate on. Argument can be issue alias or full issue uuid. Only available with \fBmod\fP and \fBcomment\fP. 
+
+.TP
+.TQ
+.BI -s state
+.TQ
+.BI --state state
+Limit output to issue having the given \fIstate\fP. (Only valid with \fBshow\fP or \fBmod\fP).
+
+.TP
+-v
+Write debugging log to standard error.
+
+.SS Options for add
+
+.TP
+\fB--alias\fP
+Specify alias used to refer to issue when using \fB-i\fP. If not specified, an alias will be auto-generated. See \fBALIAS\fP. Only available with \fBadd\fP.
+
+
+.SS Options for show
+
+.TP
+.TQ
+.B -f
+.TQ
+.B --files
+Save attachments to filesystem. Can be used in the context of viewing details of a single issue, or in conjunction with \fB-r html -o\fP. Only available with \fBshow\fP.
+
+.TP
+.TQ
+.BI -o dir
+.TQ
+.BI --files-dir dir
+Output issue details to individual files in \fIdir\fP. Only available with \fBshow -r html ...\fP.
+
+.TP
+.TQ
+.BI -r format
+.TQ
+.BI --renderer format
+Output format. Valid values are \fIplain\fP and \fIhtml\fP.
+
+.TP
+.B -reverse
+Sort comments with oldest first. Only available with \fBshow\fP.
+
+.TP
+.B --show-finished
+Include issues with state \fBFINISHED\fP in output. Only available with \fBshow\fP.
+
+
+.SS Options for mod
+
+.TP
+.BI --assign key_id
+Assign the issue to entity defined by \fIkey_id\fP. If it is the first assignment for an issue, the assigned will become the issue \fIowner\fP (see \fB--owner\fP and \fBACTIONS/Assignment\fP below. Only available with \fBmod\fP.
+
+.TP
+.BI --block
+Set the \fBBLOCKED\fP state on the issue. Preserves the previous state; a following \fB--unblock\fP instruction will return the issue to the pre-blocked state. Only available with \fBmod\fP.
+
+.TP
+.BI --dep issue_id
+Make the current issue (identified by \fB-i\fP dependent on \fIissue_id\fP. Only available with \fBmod\fP.
+
+.TP
+.BI --owner key_id
+Set the entity represented by \fIkey_id\fP as issue owner.
+
+
+.TP
+.TQ
+.BI -t tag
+.TQ
+.BI --tag tag
+Add the given tag to the issue. Only available with \fBmod\fP.
+
+.TP
+.BI --unassign key_id
+Remove the assignment of the issue to entity defined by \fIkey_id\fP. Only available with \fBmod\fP.
+
+.TP
+.BI --unblock
+Remove block on issue. Will return the issue to its previous state (before the block). Only available with \fBmod\fP.
+
+
+.TP
+.BI --undep issue_id
+Remove dependency on \fIissue_id\fP. Only available with \fBmod\fP.
+
+.TP
+.TQ
+.BI -u tag
+.TQ
+.BI --untag tag
+Remove the given tag from the issue. Only available with \fBmod\fP.
+
+
+.SS Options for comment
+
+.TP
+.TQ
+.BI -s pgp_key_fingerprint
+.TQ
+.BI --sign-as pgp_key_fingerprint
+Use the private key matching the fingerprint to sign (instead of the default key). Only available with \fBcomment\fP.
+
+.TP
+.TQ
+.BI -x "text"
+.TQ
+.BI --text "text"
+Add a text content part to the comment. Must be enclosed by double quotes.  Only available with \fBcomment\fP.
+
+.TP
+.TQ
+.BI -y file
+.TQ
+.BI --file file
+Add file as content part to the comment. Can be any type of file. Only available with \fBcomment\fP. See the \fBCOMMENT\fP section for more information.
+
+
+
+.SH STATES
+
+The tracking of the issue lifetime is organized using a pre-defined set of kanban-like states.
+
+.TP
+.B PROPOSED
+The initial state of an issue after being created by \fBpiknik add\fP. Is intended for review by issue board moderator.
+
+.TP
+.B BACKLOG
+The initial state of an issue after being "accepted" by a moderator.
+
+.TP
+.B PENDING
+An issue has been queued for imminent processing.
+
+.TP
+.B DOING
+An issue is currently being worked on.
+
+.TP
+.B REVIEW
+Work that was done on an issue is currently in review.
+
+.TP
+.B BLOCKED
+Progress on a \fBPENDING\fP issue is currently not possible.
+
+.TP
+.B FINISHED
+Processing of an issue has been completed. 
+
+
+.SH ACTIONS
+.P
+
+.SS Assignment
+.P
+Indicates an individual or entity that is responsible for processing the issue.
+.P
+Currently assigments are defined as hexadecimal values. By convention, the value should correspond to e.g. a public key or a key fingerprint (e.g. PGP). \fBpiknik\fP will check that the value is hexadecimal, but will not do additional verification.
+.P
+The first assigned entity to an issue automatically becomes the issue owner. The issue ownership may be changed using \fB--owner\fP, but ownership cannot be removed entirely after the initial assignment.
+
+.SS Tagging
+.P
+Any issue may be assigned any number of tags. Tags may be added and removed individually.
+
+
+.SS Dependencies
+.P
+Any issue may be set as dependent on another issue. Dependencies may be set or unset. Dependencies must be manually managed, and will not be magically removed as a side-effect of state transitions.
+
+
+.SH COMMENTING
+.P
+Comments are stored as email-like Multipart MIME message logs. They may include any number of plaintext and file attachment parts intermingled.
+
+All comments must be \fBsigned\fP using a PGP key. Unless the \fB-s\fP flag is used, the default signing key will be used. It is currently not possible to comment without a PGP key.
+
+
+.SH RENDERING
+.P
+There are currently two rendering options for displaying issue indices and individual issue details, \fIplain\fP (plain text) and \fIhtml\fP.
+Ideosyncracies for each are described below.
+
+.SS PLAIN
+.P
+When listing the issue index, output will be in the form:
+
+.EX
+[STATE]
+<caption>	<tags>	<uuid>	[(alias)]
+.EE
+
+Per-issue render should be self-explanatory.
+
+.SS HTML
+.P
+If rendered with \fB-o\fP \fIoutdir\fP it creates a browseable version of individual issues from the issue index in the specified directory.
+.P
+Some image types will by default be displayed inline. There is currently no way to toggle this behavior.
+
+
+.SH EXAMPLE
+.P
+This example illustrates a possible lifetime of an issue.
+
+.EX
+# propose new issue
+piknik add Title describing the issue --alias myissue
+
+# accept proposed issue (move to backlog state)
+piknik mod -i myissue --accept
+
+# move the issue to state "DOING"
+piknik mod -i myissue --state doing
+
+# tag the issue as a "BUG"
+piknik mod -i myissue --tag bug
+
+# Add a signed text comment to the issue
+piknik comment -i myissue -x "This is a text comment"
+
+# Add a comment with intermixed text and attachment contents to the issue
+piknik comment -i myissue -x "This is a text comment with two attachments " -y attachment.png -y another.pdf -x "This text follows the attachments"
+
+# Write index of all issues as plain text to standard output
+piknik show
+
+# Write issue details as plain text to standard output
+piknik show -i myissue
+
+# Write index of all issues as html to standard output
+piknik show --render html
+
+# Write index and individual issue as browseable html to directory "outdir"
+piknik show --render html -o outdir
+
+# Mark issue as finished
+piknik mod -i myissue --finish
+.EE
+
+
+.SH KNOWN ISSUES
+Currently issues are tracked using - in fact - \fBpiknik\fP. An HTML (read-only) render can be found at
+.UR https://holbrook.no/issues/piknik
+.UE https://holbrook.no/issues/piknik
+.IP
+
+
+.SH LICENSE
+
+This documentation and its source is licensed under the Creative Commons Attribution-Sharealike 4.0 International license.
+
+The source code of the tool this documentation describes is licensed under the GNU General Public License 3.0.
+
+
+.SH COPYRIGHT AND CONTACT
+
+.MT dev@holbrook.no
+Louis Holbrook
+.ME
+
+.UR https://holbrook.no
+.UE https://holbrook.no
+
+.P
+PGP: 59A844A484AC11253D3A3E9DCDCBD24DD1D0E001
+
+
+.SH SOURCE CODE
+
+https://git.defalsify.org/piknik
