@@ -1,0 +1,53 @@
+{% if sync_systems %}
+<div class="card">
+    <h5 class="card-header">
+        Sync Status
+    </h5>
+
+    <div class="card-body text-right noprint">
+        <table class="table table-hover">
+            <tr>
+                <th width="100">Status</th>
+                <th>System</th>
+                <th>Message</th>
+                <th>Last Sync</th>
+            </tr>
+            {% for item in sync_systems %}
+                <tr>
+                    <td>
+                        {% if item.last_event %}
+                            {% badge item.last_event.status bg_color=item.last_event.get_status_color %}
+                        {% else %}
+                            {% badge "not-started" bg_color=item.last_event.get_status_color %}
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <a href="{% url 'plugins:netbox_sync_status:syncstatus_list' %}?object_id={{ object.id }}&system={{ item.system.id }}&object_type_id={{ object_type_id }}">{{ item.system.name }}</a>
+                    </td>
+
+                    <td>
+                        {% if item.last_event %}
+                            {{ item.last_event.message }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if item.last_event %}
+                            {{ item.last_event.created }}
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="card-footer text-end noprint">
+        <a href="{% url 'plugins:netbox_sync_status:syncstatus_list' %}?object_id={{ object.id }}&object_type_id={{ object_type_id }}" class="btn btn-primary btn-sm">Show all events</a>
+    </div>
+</div>
+{% endif %}
