@@ -1,0 +1,327 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # 当推送 v* 标签时触发
+  workflow_dispatch:  # 允许手动触发
+
+permissions:
+  contents: write  # 需要写权限来创建 release
+  packages: read   # 可能需要读取包的权限
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }} installer package
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            package_format: "deb"
+            installer_ext: ".deb"
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            package_format: "msi"
+            installer_ext: ".msi"
+          - os: macos-15
+            platform: macos
+            arch: arm64
+            package_format: "dmg"
+            installer_ext: ".dmg"
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Install timeout command (macOS)
+      if: matrix.platform == 'macos'
+      run: |
+        brew install coreutils
+    
+    - name: Install WiX Toolset (Windows)
+      if: matrix.platform == 'windows'
+      run: |
+        choco install wixtoolset -y
+        # 确保 WiX 工具在 PATH 中
+        echo "C:\\Program Files (x86)\\WiX Toolset v3.11\\bin" >> $GITHUB_PATH
+    
+    - name: Install deb build tools (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y dpkg-dev
+    
+    - name: Install dependencies
+      run: |
+        uv sync --extra build
+    
+    - name: Create PyInstaller spec file
+      shell: bash
+      run: |
+        if [ "${{ matrix.arch }}" = "arm64" ]; then
+          # ARM64 spec file
+          cat > nage.spec << 'EOF'
+        # -*- mode: python ; coding: utf-8 -*-
+        
+        block_cipher = None
+        
+        a = Analysis(
+            ['nage/__main__.py'],
+            pathex=[],
+            binaries=[],
+            datas=[],
+            hiddenimports=['click', 'openai', 'pyperclip', 'nage.ai_client', 'nage.setting', 'nage.parse'],
+            hookspath=[],
+            hooksconfig={},
+            runtime_hooks=[],
+            excludes=[],
+            win_no_prefer_redirects=False,
+            win_private_assemblies=False,
+            cipher=block_cipher,
+            noarchive=False,
+        )
+        
+        pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+        
+        exe = EXE(
+            pyz,
+            a.scripts,
+            a.binaries,
+            a.zipfiles,
+            a.datas,
+            [],
+            name='nage',
+            debug=False,
+            bootloader_ignore_signals=False,
+            strip=False,
+            upx=False,
+            upx_exclude=[],
+            runtime_tmpdir=None,
+            console=True,
+            disable_windowed_traceback=False,
+            argv_emulation=False,
+            target_arch='arm64',
+            codesign_identity=None,
+            entitlements_file=None,
+        )
+        EOF
+        else
+          # x64 spec file
+          cat > nage.spec << 'EOF'
+        # -*- mode: python ; coding: utf-8 -*-
+        
+        block_cipher = None
+        
+        a = Analysis(
+            ['nage/__main__.py'],
+            pathex=[],
+            binaries=[],
+            datas=[],
+            hiddenimports=['click', 'openai', 'pyperclip', 'nage.ai_client', 'nage.setting', 'nage.parse'],
+            hookspath=[],
+            hooksconfig={},
+            runtime_hooks=[],
+            excludes=[],
+            win_no_prefer_redirects=False,
+            win_private_assemblies=False,
+            cipher=block_cipher,
+            noarchive=False,
+        )
+        
+        pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+        
+        exe = EXE(
+            pyz,
+            a.scripts,
+            a.binaries,
+            a.zipfiles,
+            a.datas,
+            [],
+            name='nage',
+            debug=False,
+            bootloader_ignore_signals=False,
+            strip=False,
+            upx=False,
+            upx_exclude=[],
+            runtime_tmpdir=None,
+            console=True,
+            disable_windowed_traceback=False,
+            argv_emulation=False,
+            target_arch='x86_64',
+            codesign_identity=None,
+            entitlements_file=None,
+        )
+        EOF
+        fi
+    
+    - name: Build executable with PyInstaller
+      run: |
+        uv run --extra build pyinstaller --clean nage.spec
+
+    - name: Create Linux .deb package
+      if: matrix.platform == 'linux'
+      run: |
+        # 创建 Debian 包结构
+        mkdir -p nage_1.0_amd64/DEBIAN
+        mkdir -p nage_1.0_amd64/usr/bin
+        mkdir -p nage_1.0_amd64/usr/share/applications
+        mkdir -p nage_1.0_amd64/usr/share/doc/nage
+        
+        # 复制可执行文件
+        cp dist/nage nage_1.0_amd64/usr/bin/
+        chmod +x nage_1.0_amd64/usr/bin/nage
+        
+        # 创建控制文件
+        cat > nage_1.0_amd64/DEBIAN/control << EOF
+        Package: nage
+        Version: 1.0
+        Section: utils
+        Priority: optional
+        Architecture: amd64
+        Maintainer: 0x3st
+        Description: AI assistant CLI tool
+         A command-line AI assistant tool.
+        EOF
+        
+        # 创建 .desktop 文件
+        cat > nage_1.0_amd64/usr/share/applications/nage.desktop << EOF
+        [Desktop Entry]
+        Name=Nage
+        Comment=AI assistant CLI tool
+        Exec=/usr/bin/nage
+        Terminal=true
+        Type=Application
+        Categories=Utility;
+        EOF
+        
+        # 构建 .deb 包
+        dpkg-deb --build nage_1.0_amd64
+        mv nage_1.0_amd64.deb nage-${{ matrix.platform }}-${{ matrix.arch }}.deb
+
+    - name: Create Windows MSI installer
+      if: matrix.platform == 'windows'
+      shell: bash
+      run: |
+        # 创建 WiX 源文件 - 简化版本，去掉程序菜单
+        cat > nage.wxs << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+          <Product Id="*" Name="Nage" Language="1033" Version="1.0.0" Manufacturer="0x3st" UpgradeCode="12345678-1234-1234-1234-123456789012">
+            <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+            <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+            <MediaTemplate EmbedCab="yes" />
+            
+            <Feature Id="ProductFeature" Title="Nage" Level="1">
+              <ComponentGroupRef Id="ProductComponents" />
+            </Feature>
+            
+            <Directory Id="TARGETDIR" Name="SourceDir">
+              <Directory Id="ProgramFilesFolder">
+                <Directory Id="INSTALLFOLDER" Name="Nage" />
+              </Directory>
+            </Directory>
+            
+            <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+              <Component Id="nage.exe" Guid="*">
+                <File Id="nage.exe" Source="dist/nage.exe" KeyPath="yes"/>
+                <Environment Id="AddToPath" Name="PATH" Value="[INSTALLFOLDER]" Action="set" Part="last" System="yes" />
+              </Component>
+            </ComponentGroup>
+          </Product>
+        </Wix>
+        EOF
+        
+        # 编译 MSI
+        candle.exe nage.wxs
+        light.exe -sw1076 -o nage-${{ matrix.platform }}-${{ matrix.arch }}.msi nage.wixobj
+
+    - name: Create macOS DMG package
+      if: matrix.platform == 'macos'
+      run: |
+        # 创建应用程序包结构
+        mkdir -p Nage.app/Contents/MacOS
+        mkdir -p Nage.app/Contents/Resources
+        
+        # 复制可执行文件
+        cp dist/nage Nage.app/Contents/MacOS/
+        chmod +x Nage.app/Contents/MacOS/nage
+        
+        # 创建 Info.plist
+        cat > Nage.app/Contents/Info.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleExecutable</key>
+            <string>nage</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.0x3st.nage</string>
+            <key>CFBundleName</key>
+            <string>Nage</string>
+            <key>CFBundleVersion</key>
+            <string>1.0</string>
+            <key>LSUIElement</key>
+            <true/>
+        </dict>
+        </plist>
+        EOF
+        
+        # 创建 DMG
+        hdiutil create -volname "Nage" -srcfolder Nage.app -ov -format UDZO nage-${{ matrix.platform }}-${{ matrix.arch }}.dmg
+    
+    - name: Upload installer package
+      uses: actions/upload-artifact@v4
+      with:
+        name: nage-${{ matrix.platform }}-${{ matrix.arch }}-installer
+        path: nage-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.installer_ext }}
+        retention-days: 30
+
+  create-release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v5
+      with:
+        path: artifacts/
+    
+    - name: List artifacts (debug)
+      run: |
+        echo "Artifacts structure:"
+        find artifacts/ -type f -name "*" | head -20
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        files: |
+          artifacts/*/*.deb
+          artifacts/*/*.msi
+          artifacts/*/*.dmg
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
