@@ -1,0 +1,96 @@
+# classFunctions
+A few simple functions that I use for teaching and demonstrations. Some of them are quite useful beyond those settings.
+
+There are also instructions for publishing your own functions to PyPI.org so that you can easily use them on multiple computers and share them with others.
+
+## Publish to PyPI 
+
+First, run the terminal command if you don't already have these packages installed.
+```bash
+pip install setuptools wheel twine
+```
+
+
+In addition to the .py file that contains the functions, you will want to create other files with the file structure shown below, but using the folder and function names that are unique to your package.
+
+### File structure
+* class_functions/ 
+    * class_functions/ 
+        * \__init__.py 
+        * main.py 
+    * setup.py 
+    * README.md 
+    * requirements.txt 
+
+#### \__init__.py
+```py 
+from .main import tidyUpCols, assignmentPlots, relocate
+```
+
+#### main.py
+This file contains the code for the class_functions package.
+
+#### setup.py
+Use the code below, but make sure to include the packages needed for your module. Do not include modules like math, io, datetime, and json that come with the standard Python distribution.
+
+```py
+from setuptools import setup, find_packages
+
+# For using the README.md file as the project description
+with open("README.md", "r") as f:
+    description = f.read()
+
+setup(
+    name="class_functions",
+    version="0.2.4", # Make sure to update this and the location of the whl file for each modification
+    packages=find_packages(),
+    install_requires=["pandas", "matplotlib", "seaborn", "plotly-express"],
+    # These next two lines are also needed to turn the README.md file into the project description
+    long_description=description,
+    long_description_content_type="text/markdown",
+)
+```
+
+#### README.md 
+This is the README.md file.
+
+#### requirements.txt 
+setuptools
+wheel
+twine
+
+### Create the distribution and whl files  
+Run the following shell command in the folder where setup.py is located:
+```bash
+python setup.py sdist bdist_wheel
+```
+
+
+### Test locally 
+You can install this on your computer where your other Python libraries are located using the following terminal command from the folder where the setup.py file is located, but rather than the dist/class_functions... file, use the one for your module:
+```bash 
+pip install dist/class_functions-0.1-py3-none-any.whl
+``` 
+If you need to reinstall it, run it with `--force-reinstall` to force installation of the whl file.
+
+You can now run the terminal command `pip list` to see the package listed with the others on your computer. You can also try using functions in a new IPYNB or PY file just like any other package.
+
+### Upload to PyPI
+First create an account on PyPI.org and create an API token. It's free to do so.
+
+Then upload it using the following terminal command from the same folder as your setup.py file:
+```bash
+twine upload dist/*
+```
+
+Be prepared to enter your API token. Alternatively, you can set environment variables so that they can be accessed as part of a workflow that does not need manual intervention by running the following terminal commands:
+`export TWINE_USERNAME=__token__` 
+`export TWINE_PASSWORD=[api_token]`
+
+Once It is uploaded, anyone can download and install the package using the terminal command:
+```bash
+pip install classFunctions
+```
+
+#### Hattip
+Thanks to [pixegami](https://www.youtube.com/watch?v=Kz6IlDCyOUY&ab_channel=pixegami) for the wonderful video detailing how to do this.
