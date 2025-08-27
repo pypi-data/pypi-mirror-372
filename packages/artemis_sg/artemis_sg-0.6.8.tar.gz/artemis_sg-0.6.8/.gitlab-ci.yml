@@ -1,0 +1,65 @@
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+image: cimg/python:3.13.1-browsers
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# Pip's cache doesn't store the python packages
+# https://pip.pypa.io/en/stable/topics/caching/
+#
+# If you want to also cache the installed packages, you have to install
+# them in a virtualenv and cache it as well.
+cache:
+  paths:
+    - .cache/pip
+
+before_script:
+  - python --version ; pip --version  # For debugging
+  - pip install hatch
+
+stages:
+  - Static Analysis
+  - Test
+  - Deploy
+
+lint:
+  stage: Static Analysis
+  only:
+    - main
+    - 0.6.x
+    - merge_requests
+  script:
+    - hatch run lint
+
+pytest:
+  stage: Test
+  only:
+    - main
+    - 0.6.x
+    - merge_requests
+  script:
+    - hatch run test
+
+coverage:
+  stage: Test
+  only:
+    - main
+    - 0.6.x
+    - merge_requests
+  script:
+    - hatch run cov
+  coverage: '/^TOTAL.*\s+(\d+\%)$/'
+
+pages:
+  cache: []
+  stage: Deploy
+  script:
+    - hatch run doc
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
