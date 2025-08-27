@@ -1,0 +1,54 @@
+"""
+Guest needs assistance operating the in-room safe.
+ROLES: user (guest unable to set up safe), assistant (front desk agent providing safe instructions)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "get_safe_instructions",
+    "description": "Provide step-by-step instructions for using the in-room safe.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" }
+      },
+      "required": ["room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a front desk agent at City Center Suites (hotel_id: city_center_suites_boston). Address: 120 Tremont St, Boston, MA 02116.
+Timezone: America/New_York. The 120-suite hotel features an art gallery lobby, digital key access, and in-room safes with keypad locks.
+Check-in 4:00 PM, check-out 11:00 AM. Use tools to provide safe instructions and offer further assistance.
+
+user:
+Hi, hope you're having a good day. I can't figure out the safe in room 405—how do I set a code?
+
+assistant channel=analysis:
+Retrieve safe instructions for room 405.
+
+assistant channel=commentary to=tool.get_safe_instructions:
+{"room_number":"405"}
+
+tool.get_safe_instructions channel=commentary to=assistant:
+{"steps":["Close the door","Enter a 4-digit code","Press LOCK"]}
+
+assistant channel=analysis:
+Explain steps clearly and offer help if issues persist.
+
+assistant channel=final:
+Close the safe door, enter a 4-digit code of your choice, then press LOCK. If it doesn't engage, let me know and I'll send someone up.
+
+user:
+Got it working—thanks! The artwork in the hallway is amazing.
+
+assistant channel=analysis:
+Respond to compliment and end warmly.
+
+assistant channel=final:
+We're glad you like it; the pieces are from local artists. Enjoy your stay!

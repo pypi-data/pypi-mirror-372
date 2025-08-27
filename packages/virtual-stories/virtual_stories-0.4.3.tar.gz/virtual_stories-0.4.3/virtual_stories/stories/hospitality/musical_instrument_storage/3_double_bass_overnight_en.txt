@@ -1,0 +1,61 @@
+"""
+Guest requests overnight storage for a double bass and quick morning access.
+
+ROLES: user (touring musician with a large double bass), assistant (front desk agent arranging secure access and storage logistics)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_secure_storage",
+    "description": "Reserve a climate-controlled locker and generate a claim ticket.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "item_description": { "type": "string" },
+        "priority_access_time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" }
+      },
+      "required": ["reservation_id", "item_description", "priority_access_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Lakeshore Pavilion Hotel (hotel_id: lakeshore_pavilion_chi).
+Address: 88 E Harbor Dr, Chicago, IL 60601. Timezone: America/Chicago.
+Facilities: climate-controlled storage (45% relative humidity, 68°F), musician loading bay on Lower Level, 24/7 security, practice salon 07:00-22:00, claim tickets required for retrieval.
+Check-in 3 PM; check-out 11 AM. Currency: USD.
+
+user:
+Hi there—hope your evening's smooth. I have a double bass with me. Could you store it overnight and let me grab it quickly at 6:30 AM? My reservation is RSV44521.
+
+assistant channel=analysis:
+Reserve storage for a double bass under RSV44521 with priority access at 06:30.
+
+assistant channel=commentary to=tool.reserve_secure_storage:
+{"reservation_id":"RSV44521","item_description":"double bass","priority_access_time":"06:30"}
+
+tool.reserve_secure_storage channel=commentary to=assistant:
+{"status":"reserved","locker_id":"BASS-03","claim_ticket":"CT-8891"}
+
+assistant channel=analysis:
+Confirm locker, claim ticket, and morning access logistics.
+
+assistant channel=final:
+All set—your double bass is reserved in locker BASS-03. Your claim ticket is CT-8891, and security will have it ready for priority access at 06:30 at the Lower Level loading bay. Enjoy your evening! Anything else before you turn in?
+
+user:
+Thanks! Also, your lobby art is gorgeous.
+
+assistant channel=analysis:
+Respond to small talk—no tool needed.
+
+assistant channel=final:
+That's lovely to hear—our local artists will be thrilled you noticed. Sleep well!
+
+

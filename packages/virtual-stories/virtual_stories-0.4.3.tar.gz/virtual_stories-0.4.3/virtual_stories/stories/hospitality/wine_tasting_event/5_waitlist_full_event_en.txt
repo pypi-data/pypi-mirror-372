@@ -1,0 +1,39 @@
+"""
+Join waitlist for a full wine tasting event.
+ROLES: user (guest asking to be waitlisted), assistant (concierge managing capacity and waitlist)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"check_capacity","description":"Check remaining capacity for tasting date.","parameters":{"type":"object","additionalProperties":false,"properties":{"date":{"type":"string","format":"date"}},"required":["date"]},"strict":true},
+  {"name":"join_waitlist","description":"Add reservation to waitlist.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"date":{"type":"string","format":"date"},"party_size":{"type":"integer","minimum":1,"maximum":6}},"required":["reservation_id","date","party_size"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Bayfront Grand
+Address: 1 Harbor Esplanade, Tampa, FL 33602
+Event capacity: 30; auto‑notify waitlist in order if spots open by 3 PM
+
+user:
+Can you add us to the tasting this Friday for 3 people? Res RBF330.
+
+assistant channel=analysis:
+Check capacity; if full, join waitlist; give clear expectations.
+
+assistant channel=commentary to=tool.check_capacity:
+{"date":"2025-09-12"}
+
+tool.check_capacity channel=commentary to=assistant:
+{"remaining":0}
+
+assistant channel=commentary to=tool.join_waitlist:
+{"reservation_id":"RBF330","date":"2025-09-12","party_size":3}
+
+tool.join_waitlist channel=commentary to=assistant:
+{"status":"waitlisted","position":4}
+
+assistant channel=final:
+The event is currently full. I’ve added you to the waitlist at position 4. We’ll notify you automatically if spots open by 3 PM Friday.

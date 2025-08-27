@@ -1,0 +1,73 @@
+"""
+Guest cannot find a suitcase left in hotel storage.
+ROLES: user (guest searching for stored luggage), assistant (lost-and-found agent checking records and arranging return)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "search_lost_and_found",
+    "description": "Search the lost-and-found log for an item description and stay details.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "item_description": { "type": "string" },
+        "check_out_date": { "type": "string", "format": "date" }
+      },
+      "required": ["item_description","check_out_date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "arrange_item_return",
+    "description": "Arrange shipping of a recovered item back to the guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "item_id": { "type": "string" },
+        "shipping_address": { "type": "string" },
+        "guest_name": { "type": "string" }
+      },
+      "required": ["item_id","shipping_address","guest_name"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a lost-and-found agent at Forest Trail Inn Vancouver (hotel_id: forest_trail_yvr). Address: 90 Pine St, Vancouver, BC V6A 1A1, Canada. Timezone: America/Vancouver. Check-in 3:00 PM, check-out 11:00 AM. Amenities: forest-view rooms, sauna, free Wi‑Fi. Currency: CAD; taxes 5% GST + 8% PST. Be clear and only use tools to search logs and arrange returns.
+
+user:
+Hi, the lobby's woodwork is beautiful. I left a blue rolling suitcase in storage when I checked out on May 5. Is it still there?
+
+assistant channel=analysis:
+Search lost-and-found for blue rolling suitcase with given date and arrange return.
+
+assistant channel=commentary to=tool.search_lost_and_found:
+{"item_description":"blue rolling suitcase","check_out_date":"2025-05-05"}
+
+tool.search_lost_and_found channel=commentary to=assistant:
+{"found":true,"item_id":"LF-455","storage_location":"Luggage Room"}
+
+assistant channel=final:
+Yes, we have a blue rolling suitcase stored (item LF-455). Please provide your name and address so we can send it to you.
+
+user:
+Great! I'm Emma Watson, send it to 12 Maple Rd, Calgary, AB T2P 1A5.
+
+assistant channel=analysis:
+Arrange shipping of item LF-455.
+
+assistant channel=commentary to=tool.arrange_item_return:
+{"item_id":"LF-455","shipping_address":"12 Maple Rd, Calgary, AB T2P 1A5","guest_name":"Emma Watson"}
+
+tool.arrange_item_return channel=commentary to=assistant:
+{"status":"shipped","tracking_number":"CA123456789"}
+
+assistant channel=final:
+Your suitcase is on its way to Calgary with tracking CA123456789. Enjoy your travels!

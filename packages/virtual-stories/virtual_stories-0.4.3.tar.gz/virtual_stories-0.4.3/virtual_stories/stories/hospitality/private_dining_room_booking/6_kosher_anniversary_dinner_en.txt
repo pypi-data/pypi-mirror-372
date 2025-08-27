@@ -1,0 +1,74 @@
+"""
+Couple requests a kosher-style anniversary dinner in a private dining room.
+
+ROLES: user (partner arranging an anniversary), assistant (hotel reservations specialist)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_private_room_availability",
+    "description": "Check availability for a private dining room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "start_time": { "type": "string" },
+        "duration_minutes": { "type": "integer" }
+      },
+      "required": ["room_id", "date", "start_time", "duration_minutes"]
+    },
+    "strict": true
+  },
+  {
+    "name": "log_dietary_request",
+    "description": "Record special dietary requests like kosher-style.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_type": { "type": "string" },
+        "details": { "type": "string" }
+      },
+      "required": ["request_type"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the reservations specialist at The Marigold Court Hotel, 510 Citrine Ave, Chicago IL. Private Room: "Amber Parlour" (room_id: marigold_amber_parlour) seats 8, velvet banquette, privacy curtain. Dinner 17:30–22:00. Kosher-style meals prepared with sealed ingredients; we are not a certified kosher kitchen. Non-dairy desserts available. Sparkling water included. No outside wine; no corkage.
+
+user:
+Hello—could you arrange a kosher-style private dinner for two this Sunday around 7 PM?
+
+assistant channel=analysis:
+Check Amber Parlour at 19:00 for 120 minutes; then log dietary request; include warm small talk about anniversary.
+
+assistant channel=commentary to=tool.check_private_room_availability:
+{"room_id":"marigold_amber_parlour","date":"2025-08-24","start_time":"19:00","duration_minutes":120}
+
+tool.check_private_room_availability channel=commentary to=assistant:
+{"status":"available","hold_id":"HOLD-AMBER-0824-1900"}
+
+assistant channel=commentary to=tool.log_dietary_request:
+{"request_type":"kosher-style","details":"Sealed ingredients; non-dairy dessert; no outside wine."}
+
+tool.log_dietary_request channel=commentary to=assistant:
+{"logged":true}
+
+assistant channel=final:
+I’ve placed a hold on the Amber Parlour for Sunday 7–9 PM (HOLD-AMBER-0824-1900). We can prepare kosher-style meals with sealed ingredients and a non-dairy dessert. Congratulations on your anniversary—would you like a simple bouquet on the table?
+
+user:
+That would be lovely, thank you.
+
+assistant channel=analysis:
+Acknowledge bouquet and summarize logistics.
+
+assistant channel=final:
+Bouquet noted. We’ll have sparkling water on the table and the privacy curtain drawn. Please arrive via the Citrine Ave entrance; I’ll have your names with the host.

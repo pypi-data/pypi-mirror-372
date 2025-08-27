@@ -1,0 +1,57 @@
+"""
+Solo traveler checks airline weight limit.
+
+ROLES: user (guest flying on strict weight allowance), assistant (front desk agent advising and lending scale)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "loan_scale_with_tip_sheet",
+    "description": "Loan a luggage scale and attach packing tip sheet.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "return_time": { "type": "string", "format": "date-time" },
+        "tip_sheet_id": { "type": "string" }
+      },
+      "required": ["reservation_id", "return_time", "tip_sheet_id"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are at Highline Micro Hotel (hotel_id: highline_bos). Address: 44 Channel Center St, Boston, MA 02210. Timezone: America/New_York.
+Amenities: self-serve espresso taps, quiet pods, complimentary packing tip sheets (id: PACK-TIPS-A). Scales available from the front desk for 60 minutes.
+
+user:
+Hi! This place has the coolest espresso taps. Could I borrow a scale? I’m on a budget airline—tight limits.
+
+assistant channel=analysis:
+Acknowledge compliment; provide scale with tip sheet. Reservation RSV22119, return by 2025-09-10T11:00:00.
+
+assistant channel=commentary to=tool.loan_scale_with_tip_sheet:
+{"reservation_id":"RSV22119","return_time":"2025-09-10T11:00:00","tip_sheet_id":"PACK-TIPS-A"}
+
+tool.loan_scale_with_tip_sheet channel=commentary to=assistant:
+{"status":"ready","scale_id":"HL-S-3"}
+
+assistant channel=analysis:
+Confirm and add friendly note.
+
+assistant channel=final:
+Great taste—single‑origin Guatemalan today! I’ve prepped scale HL-S-3 for you until 11:00 AM and tucked in our PACK-TIPS-A sheet. Quick tip: weigh once, then reweigh after shifting heavier items to your personal bag.
+
+user:
+Perfect—thanks for the tip!
+
+assistant channel=analysis:
+Close politely.
+
+assistant channel=final:
+Anytime. If the espresso runs low, pull the right tap—it refreshes automatically.

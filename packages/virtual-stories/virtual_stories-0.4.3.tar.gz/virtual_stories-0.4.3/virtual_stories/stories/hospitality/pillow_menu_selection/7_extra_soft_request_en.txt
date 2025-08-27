@@ -1,0 +1,46 @@
+"""
+Guest requests extra-soft pillows and asks about keeping originals.
+
+ROLES: user (guest who prefers very soft pillows), assistant (night shift guest services)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {"name":"list_pillow_options","description":"List pillow types.","parameters":{"type":"object","additionalProperties":false,"properties":{},"required":[]},"strict":true},
+  {"name":"request_pillow_delivery","description":"Deliver pillows to room.","parameters":{"type":"object","additionalProperties":false,"properties":{"room_number":{"type":"string"},"pillow_types":{"type":"array","items":{"type":"string"}},"quantity":{"type":"integer"}},"required":["room_number","pillow_types","quantity"]},"strict":true}
+]
+```
+"""
+
+system:
+You are night shift guest services at The Seabright Hotel. Softest option is soft down alternative; originals can be stored on request.
+
+user:
+Do you have anything extra soft? The ones here feel a bit firm.
+
+assistant channel=analysis:
+List options and recommend soft down alt; offer to store originals; add light small talk.
+
+assistant channel=commentary to=tool.list_pillow_options:
+{}
+
+tool.list_pillow_options channel=commentary to=assistant:
+{"options":["soft down alternative","medium down alternative","memory foam contour","buckwheat hull"]}
+
+assistant channel=final:
+Our softest is the soft down alternative. I can send two and store the originals if you like. Which room should I note?
+
+user:
+Room 1215, two soft pillows, please store the current ones.
+
+assistant channel=analysis:
+Deliver pillows; confirm storage.
+
+assistant channel=commentary to=tool.request_pillow_delivery:
+{"room_number":"1215","pillow_types":["soft down alternative"],"quantity":2}
+
+tool.request_pillow_delivery channel=commentary to=assistant:
+{"eta_minutes":11}
+
+assistant channel=final:
+Done—two extra‑soft pillows are on the way (ETA 11 minutes), and we’ll store your current ones until checkout.

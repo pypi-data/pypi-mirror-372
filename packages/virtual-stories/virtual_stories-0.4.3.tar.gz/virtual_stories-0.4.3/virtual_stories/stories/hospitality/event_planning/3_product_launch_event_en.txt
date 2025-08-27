@@ -1,0 +1,90 @@
+"""
+Company asks about space for 80-person product launch with presentation setup.
+ROLES: user (event organizer), assistant (events coordinator assisting bookings)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "search_event_space_availability",
+    "description": "Check availability of event spaces for a given date and attendance size.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event_date": { "type": "string", "format": "date", "description": "Requested event date." },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500, "description": "Expected number of attendees." }
+      },
+      "required": ["event_date","attendees"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_event_quote",
+    "description": "Get a pricing quote for a specific event space and duration.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string", "description": "Event space identifier." },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500 },
+        "hours": { "type": "integer", "minimum": 1, "maximum": 12 }
+      },
+      "required": ["room_name","event_date","attendees","hours"]
+    },
+    "strict": true
+  },
+  {
+    "name": "hold_event_space",
+    "description": "Place a temporary hold on an event space.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer" },
+        "organizer_name": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["room_name","event_date","attendees","organizer_name","email"]
+    },
+    "strict": true
+  },
+  {
+    "name": "confirm_event_booking",
+    "description": "Confirm a held event space reservation with payment.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hold_id": { "type": "string" },
+        "payment_token": { "type": "string", "minLength": 8 }
+      },
+      "required": ["hold_id","payment_token"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are an events coordinator at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi‑Fi, gym, pool, on-site restaurant. Currency: USD; taxes 14.75% + occupancy tax $3.50/night. Be clear and only use tools to check space availability, quote pricing, and manage bookings.
+
+user:
+Need a space for 80 people with projector on March 5. Any rooms open and pricing for four hours?
+assistant channel=analysis:
+Check availability, quote Empire Boardroom, offer hold.
+assistant channel=commentary to=tool.search_event_space_availability:
+{"event_date":"2026-03-05","attendees":80}
+tool.search_event_space_availability channel=commentary to=assistant:
+{"available_spaces":[{"room_name":"Empire Boardroom","capacity":50},{"room_name":"Hudson Ballroom","capacity":100}]}
+assistant channel=commentary to=tool.get_event_quote:
+{"room_name":"Hudson Ballroom","event_date":"2026-03-05","attendees":80,"hours":4}
+tool.get_event_quote channel=commentary to=assistant:
+{"room_name":"Hudson Ballroom","base_rate":1600.00,"service_charge":320.00,"total":1920.00}
+assistant channel=final:
+Hudson Ballroom is open March 5. Four hours for 80 attendees costs $1,920. Want me to place a hold?

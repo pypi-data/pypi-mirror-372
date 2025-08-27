@@ -1,0 +1,59 @@
+"""
+Guest requests early drop-off for grooming with hold until noon pickup.
+
+ROLES: user (guest with busy morning schedule), assistant (concierge arranging early drop-off and post-groom hold)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_grooming",
+    "description": "Book a pet grooming appointment at the onsite salon.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "pet_name": { "type": "string" },
+        "service_type": { "type": "string", "enum": ["bath", "full_groom"] },
+        "appointment_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "pet_name", "service_type", "appointment_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are concierge at Paws & Relax Lodge (hotel_id: paws_relax_seattle). Early drop-off available from 8:30 AM.
+
+user:
+Could I drop off Coco at 8:30 for a bath and pick up around noon? Reservation RSV42424.
+
+assistant channel=analysis:
+Book bath at 08:30.
+
+assistant channel=commentary to=tool.schedule_pet_grooming:
+{"reservation_id":"RSV42424","pet_name":"Coco","service_type":"bath","appointment_time":"2025-08-22T08:30:00"}
+
+tool.schedule_pet_grooming channel=commentary to=assistant:
+{"status":"scheduled","appointment_id":"GROOM-38"}
+
+assistant channel=analysis:
+Confirm hold until noon verbally.
+
+assistant channel=final:
+Coco’s bath is set for 8:30 AM (ID GROOM-38). We’re happy to hold her comfortably until noon—swing by whenever you’re free.
+
+user:
+Thank you! Your front garden smells amazing.
+
+assistant channel=analysis:
+Small talk.
+
+assistant channel=final:
+Our lavender is in bloom—glad you caught the scent!
+
+

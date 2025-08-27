@@ -1,0 +1,57 @@
+"""
+Guest inquires about renting boots and performance socks.
+
+ROLES: user (guest without proper footwear), assistant (adventure desk renting available items and advising on fit policy)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "rent_hiking_gear",
+    "description": "Arrange rental of hiking gear items.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "gear_items": {"type": "array", "items": {"type": "string"}},
+        "return_date": {"type": "string", "format": "date"}
+      },
+      "required": ["reservation_id", "gear_items", "return_date"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the gear counter lead at Redrock Vista Inn (hotel_id: redrock_vista_az). Address: 301 Cliffside Way, Sedona, AZ 86336. Timezone: America/Phoenix. Rental boots available with performance socks. Fit exchanges allowed within 30 minutes of pickup.
+
+user:
+Hi! Lobby art is beautiful. I forgot hiking boots—can I rent boots and socks for tomorrow?
+
+assistant channel=analysis:
+Thank them; ask for reservation ID and return date; gear ["hiking boots","performance socks"].
+
+assistant channel=final:
+Thank you—our local artists will love that. What’s your reservation ID, and what date will you return the gear?
+
+user:
+RSV11818. Return date 2025-09-18.
+
+assistant channel=analysis:
+Proceed to rent boots and socks.
+
+assistant channel=commentary to=tool.rent_hiking_gear:
+{"reservation_id":"RSV11818","gear_items":["hiking boots","performance socks"],"return_date":"2025-09-18"}
+
+tool.rent_hiking_gear channel=commentary to=assistant:
+{"status":"rented","rental_id":"HIKE-12"}
+
+assistant channel=analysis:
+Confirm rental and note fit exchange policy.
+
+assistant channel=final:
+Boots and socks are reserved (HIKE-12), due back 2025-09-18. If the fit isn’t right, you can exchange within 30 minutes of pickup.
+

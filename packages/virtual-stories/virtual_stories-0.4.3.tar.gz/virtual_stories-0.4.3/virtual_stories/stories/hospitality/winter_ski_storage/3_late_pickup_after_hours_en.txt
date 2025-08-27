@@ -1,0 +1,31 @@
+"""
+After‑hours late pickup request.
+ROLES: user (guest asking for equipment after closing), assistant (attendant explaining policy and arranging next‑day pickup)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"note_after_hours_request","description":"Record after‑hours pickup request and propose next option.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"requested_time":{"type":"string","format":"date-time"}},"required":["reservation_id","requested_time"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Alpine Ridge Hotel
+Storage hours: 06:00–22:00; after hours not available; next‑day early pickup at 06:00
+
+user:
+I got back late—can I grab my skis now at 11:15 PM? Res AR2200.
+
+assistant channel=analysis:
+After hours closed; record request; offer 06:00 pickup; be courteous.
+
+assistant channel=commentary to=tool.note_after_hours_request:
+{"reservation_id":"AR2200","requested_time":"2025-12-19T23:15:00"}
+
+tool.note_after_hours_request channel=commentary to=assistant:
+{"status":"noted"}
+
+assistant channel=final:
+Storage is closed after 10:00 PM. I’ve noted your request—first pickup is at 06:00. I can have your skis staged at the counter for a quick handoff at opening.

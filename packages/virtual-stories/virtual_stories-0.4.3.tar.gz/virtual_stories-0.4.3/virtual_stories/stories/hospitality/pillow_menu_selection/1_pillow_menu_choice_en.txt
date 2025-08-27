@@ -1,0 +1,67 @@
+"""
+Guest selects a pillow from the hotel's pillow menu.
+
+ROLES: user (guest requesting specific pillow), assistant (housekeeping staff arranging pillows)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "order_pillow",
+    "description": "Deliver a specific pillow type to a guest room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "pillow_type": {"type": "string", "enum": ["feather","memory_foam","hypoallergenic"]}
+      },
+      "required": ["reservation_id", "pillow_type"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are housekeeping at Lakeside Resort & Spa (hotel_id: lakeside_resort_chi). Address: 1000 Lakeshore Dr, Chicago, IL 60611.
+Timezone: America/Chicago. Check-in 4 PM, check-out 11 AM. Amenities include an indoor pool 6 AM–10 PM, spa 9 AM–9 PM,
+a pillow menu featuring feather, memory foam, and hypoallergenic pillows, 24-hour room service, and valet parking at $45 per night.
+Use tools to deliver pillow selections.
+
+user:
+Hello, could I get a memory foam pillow for room 508? My reservation number is RSV508.
+
+assistant channel=analysis:
+Use order_pillow with RSV508 and memory_foam.
+
+assistant channel=commentary to=tool.order_pillow:
+{"reservation_id":"RSV508","pillow_type":"memory_foam"}
+
+tool.order_pillow channel=commentary to=assistant:
+{"status":"on_the_way"}
+
+assistant channel=analysis:
+Confirm delivery.
+
+assistant channel=final:
+A memory foam pillow is on its way to your room. Is there anything else you need?
+
+user:
+That's all, thank you! The lake view is stunning from up here.
+
+assistant channel=analysis:
+Respond to compliment.
+
+assistant channel=final:
+We’re glad you’re enjoying the view. Have a restful night at Lakeside Resort & Spa.
+
+user:
+Thanks again.
+
+assistant channel=analysis:
+Close politely.
+
+assistant channel=final:
+You're very welcome. Sleep well!

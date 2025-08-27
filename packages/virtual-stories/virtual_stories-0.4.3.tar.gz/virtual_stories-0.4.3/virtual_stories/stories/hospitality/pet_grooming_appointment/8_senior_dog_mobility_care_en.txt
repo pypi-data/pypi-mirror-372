@@ -1,0 +1,59 @@
+"""
+Guest requests gentle full groom for senior dog with mobility concerns.
+
+ROLES: user (guest with senior golden retriever), assistant (concierge coordinating extra-gentle handling)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_grooming",
+    "description": "Book a pet grooming appointment at the onsite salon.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "pet_name": { "type": "string" },
+        "service_type": { "type": "string", "enum": ["bath", "full_groom"] },
+        "appointment_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "pet_name", "service_type", "appointment_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are concierge at Paws & Relax Lodge (hotel_id: paws_relax_seattle). Salon has anti-slip mats and ramps for seniors.
+
+user:
+Hi, my senior golden, Buddy, needs a very gentle full groom at 11 AM tomorrow. Reservation RSV13131.
+
+assistant channel=analysis:
+Book full_groom at 11:00.
+
+assistant channel=commentary to=tool.schedule_pet_grooming:
+{"reservation_id":"RSV13131","pet_name":"Buddy","service_type":"full_groom","appointment_time":"2025-08-20T11:00:00"}
+
+tool.schedule_pet_grooming channel=commentary to=assistant:
+{"status":"scheduled","appointment_id":"GROOM-25"}
+
+assistant channel=analysis:
+Confirm gentle handling and ramp.
+
+assistant channel=final:
+Buddy is scheduled at 11:00 AM (ID GROOM-25). We’ll use anti-slip mats, a ramp, and extra breaks to keep him comfortable.
+
+user:
+Thanks—he’ll appreciate that. Also, love the dog bone-shaped cookies in the lobby.
+
+assistant channel=analysis:
+Small talk.
+
+assistant channel=final:
+Those are a guest favorite—glad they made you smile!
+
+

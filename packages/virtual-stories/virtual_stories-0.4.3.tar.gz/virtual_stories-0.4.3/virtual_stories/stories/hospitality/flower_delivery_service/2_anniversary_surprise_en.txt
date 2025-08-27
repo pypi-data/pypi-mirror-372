@@ -1,0 +1,88 @@
+"""
+A guest wants to arrange for flowers to be delivered to their room for a special occasion.
+
+ROLES: user (a guest planning a surprise), assistant (a hotel concierge arranging a flower delivery)
+CHANNELS: analysis, commentary, final
+TOOLS:
+```json
+[
+  {
+    "name": "get_flower_options",
+    "description": "Get the available flower options for delivery.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "arrange_flower_delivery",
+    "description": "Arrange for a flower delivery to a guest's room.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "room_number": {
+          "type": "string",
+          "description": "The room number for the delivery."
+        },
+        "flower_choice": {
+          "type": "string",
+          "description": "The chosen flowers."
+        },
+        "delivery_time": {
+          "type": "string",
+          "format": "time",
+          "description": "The desired delivery time."
+        }
+      },
+      "required": ["room_number", "flower_choice", "delivery_time"]
+    }
+  }
+]
+```
+"""
+
+system:
+You are a concierge at the 'Blooming Meadows Hotel', which offers a flower delivery service for guests.
+
+user:
+I'd like to surprise my wife with some flowers in our room tomorrow. Can you help me with that?
+
+assistant channel=analysis:
+The user wants to arrange a flower delivery. I should first provide them with the available flower options.
+
+assistant channel=commentary to=tool.get_flower_options:
+{}
+
+tool.get_flower_options channel=commentary to=assistant:
+{"options": [{"name": "Rose Bouquet", "price": 75}, {"name": "Lily Arrangement", "price": 60}, {"name": "Mixed Seasonal Flowers", "price": 50}]}
+
+assistant channel=analysis:
+I have the flower options. I will present them to the user.
+
+assistant channel=final:
+That's a lovely idea! We can certainly arrange that for you. We have a few beautiful options to choose from:
+
+*   A classic Rose Bouquet for $75
+*   An elegant Lily Arrangement for $60
+*   A vibrant bouquet of Mixed Seasonal Flowers for $50
+
+Do any of those options sound right for the occasion?
+
+user:
+The Rose Bouquet sounds perfect. Can you have it delivered to room 405 at 6 PM tomorrow? The scent of roses always reminds me of our first date.
+
+assistant channel=analysis:
+The user has chosen the Rose Bouquet for delivery to room 405 at 6 PM. I will use the `arrange_flower_delivery` tool to place the order and also respond to their sentimental comment.
+
+assistant channel=commentary to=tool.arrange_flower_delivery:
+{"room_number": "405", "flower_choice": "Rose Bouquet", "delivery_time": "18:00"}
+
+tool.arrange_flower_delivery channel=commentary to=assistant:
+{"confirmation_message": "A Rose Bouquet will be delivered to room 405 at 6:00 PM."}
+
+assistant channel=analysis:
+The flower delivery has been arranged. I will now confirm with the user.
+
+assistant channel=final:
+How romantic! I've arranged for the Rose Bouquet to be delivered to your room, 405, at 6:00 PM tomorrow. I'm sure your wife will be delighted. We'll make sure it's a beautiful surprise for her.

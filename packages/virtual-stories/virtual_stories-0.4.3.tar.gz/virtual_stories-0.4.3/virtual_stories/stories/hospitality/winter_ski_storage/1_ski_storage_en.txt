@@ -1,0 +1,56 @@
+"""
+Guest requests overnight storage for ski equipment.
+
+ROLES: user (skiing guest), assistant (storage attendant managing ski lockers)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "store_ski_equipment",
+    "description": "Log ski equipment into storage with pickup time.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "pieces": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "pickup_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "pieces", "pickup_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the equipment attendant at Alpine Ridge Hotel (hotel_id: alpine_ridge_aspen). Address: 1400 Snowcap Rd, Aspen, CO 81611. The hotel offers secure ski storage in the basement locker room, open from 06:00 to 22:00.
+
+user:
+Hey! The slopes were amazing today. Could you store my skis for the night? I'll grab them early tomorrow at 7 a.m.
+
+assistant channel=analysis:
+Respond enthusiastically and ask for the guest's reservation ID and number of ski sets.
+
+assistant channel=final:
+Glad you enjoyed the slopes! I can store them for you—could you give me your reservation ID and let me know how many sets of skis you have?
+
+user:
+Sure, it's reservation RSV66778, and I've got two sets of skis.
+
+assistant channel=analysis:
+Store two pieces with pickup time 2025-12-20T07:00:00.
+
+assistant channel=commentary to=tool.store_ski_equipment:
+{"reservation_id":"RSV66778","pieces":2,"pickup_time":"2025-12-20T07:00:00"}
+
+tool.store_ski_equipment channel=commentary to=assistant:
+{"status":"stored","locker":"L-12"}
+
+assistant channel=analysis:
+Inform guest of locker assignment and pickup time.
+
+assistant channel=final:
+Your skis are tucked away in locker L-12. We'll have them ready for you to pick up at 7:00 AM tomorrow. Rest up for another great day on the mountain!

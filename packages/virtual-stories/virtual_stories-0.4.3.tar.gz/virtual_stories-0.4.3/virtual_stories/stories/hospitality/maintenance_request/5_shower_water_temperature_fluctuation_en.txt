@@ -1,0 +1,54 @@
+"""
+Shower water temperature fluctuates.
+
+ROLES: user (guest experiencing hot-cold cycling), assistant (maintenance coordinator triaging plumbing)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_plumber_visit",
+    "description": "Schedule a plumber to check mixing valve and supply pressure.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_number": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "required": ["reservation_id", "room_number", "priority"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are maintenance coordination at Cascadia Park Lodge (hotel_id: cascadia_pdx). Address: 505 SW Pine St, Portland, OR 97204. Timezone: America/Los_Angeles.
+Amenities: tea library, bike valet, filtered water taps. For temperature swings, plumbers inspect the mixing valve and riser pressure.
+
+user:
+Hi—shower in 811 keeps going from hot to cold and back. Love the tea selection here!
+
+assistant channel=analysis:
+Acknowledge tea; schedule plumber priority medium. Reservation RSV811.
+
+assistant channel=commentary to=tool.schedule_plumber_visit:
+{"reservation_id":"RSV811","room_number":"811","priority":"medium"}
+
+tool.schedule_plumber_visit channel=commentary to=assistant:
+{"status":"scheduled","ticket_id":"PL-202","eta_minutes":60}
+
+assistant channel=analysis:
+Provide ETA and possible workaround.
+
+assistant channel=final:
+Thank you—we just added a new oolong. I’ve scheduled ticket PL-202 with a 60‑minute ETA to check the mixing valve and pressure. Meanwhile, starting with a steady warm setting can reduce swings.
+
+user:
+Appreciate the tip.
+
+assistant channel=final:
+We’ll update you when the plumber is en route.

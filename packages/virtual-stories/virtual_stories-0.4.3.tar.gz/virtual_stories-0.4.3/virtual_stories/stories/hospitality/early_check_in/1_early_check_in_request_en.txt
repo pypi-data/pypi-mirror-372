@@ -1,0 +1,48 @@
+"""
+Guest requests early check-in for existing reservation.
+
+ROLES: user (guest with existing reservation wanting early check-in), assistant (front desk agent verifying availability and fees)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_early_checkin_availability",
+    "description": "Check if early check-in can be granted for a reservation.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string", "description": "Confirmed reservation identifier." },
+        "desired_time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$", "description": "Requested check-in time in HH:MM format." }
+      },
+      "required": ["reservation_id", "desired_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001.
+Timezone: America/New_York. Standard check-in 3:00 PM, check-out 11:00 AM. Early check-in before 1:00 PM is $50 if available.
+Amenities: free Wi-Fi, gym, pool, restaurant. Be courteous and confirm details before calling tools.
+
+user:
+Hi there! I’m arriving early this Friday and wondered if I could check in around 11 a.m. My reservation ID is RSV12345.
+
+assistant channel=analysis:
+Verify reservation and ask tool to check early check-in availability at 11:00.
+
+assistant channel=commentary to=tool.check_early_checkin_availability:
+{"reservation_id":"RSV12345","desired_time":"11:00"}
+
+tool.check_early_checkin_availability channel=commentary to=assistant:
+{"available":true,"fee":50.0}
+
+assistant channel=analysis:
+Inform guest that early check-in is available with $50 fee and confirm they agree.
+
+assistant channel=final:
+Great news—your room can be ready by 11:00 AM for a $50 early check‑in fee. Shall I add that to your reservation?

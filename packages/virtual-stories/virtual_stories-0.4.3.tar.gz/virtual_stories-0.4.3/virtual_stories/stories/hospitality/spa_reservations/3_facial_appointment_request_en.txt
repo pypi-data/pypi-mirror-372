@@ -1,0 +1,60 @@
+"""
+Guest asks about facial appointment availability.
+ROLES: user (guest booking spa services), assistant (spa desk agent)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_spa_availability",
+    "description": "Check available times for a specific spa service on a given date.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "service_type": { "type": "string", "enum": ["swedish_massage","deep_tissue","facial"], "description": "Type of spa service." },
+        "date": { "type": "string", "format": "date", "description": "Desired appointment date." }
+      },
+      "required": ["service_type","date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_spa_service",
+    "description": "Book a spa appointment for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "service_type": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\d{2}:\d{2}$", "description": "Start time in HH:MM" },
+        "guest_name": { "type": "string" },
+        "room_number": { "type": "string" }
+      },
+      "required": ["service_type","date","time","guest_name","room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a spa desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi‑Fi, gym, pool, on-site restaurant. Currency: USD; taxes 14.75% + occupancy tax $3.50/night. Be clear and only use tools to check spa availability and book services.
+
+user:
+Can I get a facial on September 2 in the morning? I'm in room 712, name is Priya.
+assistant channel=analysis:
+Check availability, book 10 AM facial.
+assistant channel=commentary to=tool.check_spa_availability:
+{"service_type":"facial","date":"2025-09-02"}
+tool.check_spa_availability channel=commentary to=assistant:
+{"available_times":["10:00","13:00"]}
+assistant channel=commentary to=tool.book_spa_service:
+{"service_type":"facial","date":"2025-09-02","time":"10:00","guest_name":"Priya Patel","room_number":"712"}
+tool.book_spa_service channel=commentary to=assistant:
+{"status":"booked","confirmation_number":"SPA-6102"}
+assistant channel=final:
+Your facial is confirmed for September 2 at 10:00 AM (SPA-6102).

@@ -1,0 +1,38 @@
+"""
+Reset locker PIN for ski storage.
+ROLES: user (guest who forgot locker PIN), assistant (attendant verifying identity and resetting PIN)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"verify_reservation","description":"Verify guest reservation ID before PIN reset.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"}},"required":["reservation_id"]},"strict":true},
+  {"name":"reset_locker_pin","description":"Reset the locker PIN and return a temporary code.","parameters":{"type":"object","additionalProperties":false,"properties":{"locker":{"type":"string"}},"required":["locker"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Silver Summit Hotel
+Security: Verify reservation before resetting locker PIN; provide temporary code and prompt change
+
+user:
+I forgot my locker code—reservation SS221, locker D‑05.
+
+assistant channel=analysis:
+Verify reservation; reset PIN; instruct to change code.
+
+assistant channel=commentary to=tool.verify_reservation:
+{"reservation_id":"SS221"}
+
+tool.verify_reservation channel=commentary to=assistant:
+{"status":"verified"}
+
+assistant channel=commentary to=tool.reset_locker_pin:
+{"locker":"D-05"}
+
+tool.reset_locker_pin channel=commentary to=assistant:
+{"status":"ok","temp_code":"4397"}
+
+assistant channel=final:
+Your reservation is verified. The temporary PIN for locker D‑05 is 4397—please change it on the keypad after opening.

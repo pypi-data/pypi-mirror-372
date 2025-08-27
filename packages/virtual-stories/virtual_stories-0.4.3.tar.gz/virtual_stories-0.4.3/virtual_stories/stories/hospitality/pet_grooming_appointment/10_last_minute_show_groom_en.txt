@@ -1,0 +1,59 @@
+"""
+Guest requests last-minute show groom polish before event.
+
+ROLES: user (guest entering a local pet show), assistant (concierge coordinating a quick spruce-up appointment)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_grooming",
+    "description": "Book a pet grooming appointment at the onsite salon.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "pet_name": { "type": "string" },
+        "service_type": { "type": "string", "enum": ["bath", "full_groom"] },
+        "appointment_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "pet_name", "service_type", "appointment_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are concierge at Paws & Relax Lodge (hotel_id: paws_relax_seattle). The salon can fit short notice spruce-ups within bath slots when available.
+
+user:
+Hi! The show starts at 3. Can I get a quick spruce-up bath for Rocco at 1 PM? Reservation RSV90909.
+
+assistant channel=analysis:
+Book bath at 13:00.
+
+assistant channel=commentary to=tool.schedule_pet_grooming:
+{"reservation_id":"RSV90909","pet_name":"Rocco","service_type":"bath","appointment_time":"2025-08-21T13:00:00"}
+
+tool.schedule_pet_grooming channel=commentary to=assistant:
+{"status":"scheduled","appointment_id":"GROOM-37"}
+
+assistant channel=analysis:
+Confirm timing and good-luck note.
+
+assistant channel=final:
+Rocco is booked for a 1:00 PM bath (ID GROOM-37). We’ll blow-dry with a light finish so he’s ring-ready by 3. Good luck at the show!
+
+user:
+Thanks! Your staff’s enthusiasm is contagious.
+
+assistant channel=analysis:
+Small talk.
+
+assistant channel=final:
+We’re cheering for Rocco—have a fantastic time at the show!
+
+

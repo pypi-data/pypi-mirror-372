@@ -1,0 +1,48 @@
+"""
+Guest requests additional towels from housekeeping.
+
+ROLES: user (guest wanting more towels), assistant (front desk agent dispatching housekeeping)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "request_housekeeping_service",
+    "description": "Send a request to housekeeping for items or cleaning.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string", "description": "Guest room number." },
+        "request": { "type": "string", "description": "Items or service requested." }
+      },
+      "required": ["room_number", "request"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001.
+Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities include free Wi-Fi, gym, pool, and on-site restaurant.
+Be friendly and confirm room number before dispatching housekeeping.
+
+user:
+Hi! Could I get a couple more towels sent to room 512?
+
+assistant channel=analysis:
+Confirm request and send to housekeeping.
+
+assistant channel=commentary to=tool.request_housekeeping_service:
+{"room_number":"512","request":"2 extra towels"}
+
+tool.request_housekeeping_service channel=commentary to=assistant:
+{"status":"scheduled","eta_minutes":10}
+
+assistant channel=analysis:
+Inform guest towels are on the way.
+
+assistant channel=final:
+Absolutely—two fresh towels will arrive at your room within about 10 minutes. Anything else I can do for you?

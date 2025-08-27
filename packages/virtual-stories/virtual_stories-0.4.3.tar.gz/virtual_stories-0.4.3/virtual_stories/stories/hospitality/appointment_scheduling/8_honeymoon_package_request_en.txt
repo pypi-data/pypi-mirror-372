@@ -1,0 +1,122 @@
+"""
+Couple asks for suite with honeymoon amenities.
+ROLES: user (guest seeking a stay), assistant (reservations agent)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "search_room_availability",
+    "description": "Check room availability for given dates, guest count, and optional room type.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier (e.g., skyline_city_hotel_nyc)." },
+        "check_in": { "type": "string", "format": "date", "description": "YYYY-MM-DD check-in date." },
+        "check_out": { "type": "string", "format": "date", "description": "YYYY-MM-DD check-out date." },
+        "guests": { "type": "integer", "minimum": 1, "maximum": 6, "description": "Total number of guests." },
+        "num_rooms": { "type": "integer", "minimum": 1, "maximum": 3, "description": "Number of rooms requested." },
+        "room_type": { "type": "string", "enum": ["standard_king", "standard_two_double", "deluxe_king_city_view", "suite_one_bedroom"], "description": "Preferred room type, if any." }
+      },
+      "required": ["hotel_id", "check_in", "check_out", "guests"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_rate_quote",
+    "description": "Get a rate quote for a specific room type and dates, including tax and fees.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier." },
+        "room_type": { "type": "string", "enum": ["standard_king", "standard_two_double", "deluxe_king_city_view", "suite_one_bedroom"], "description": "Room type to quote." },
+        "check_in": { "type": "string", "format": "date", "description": "YYYY-MM-DD check-in date." },
+        "check_out": { "type": "string", "format": "date", "description": "YYYY-MM-DD check-out date." },
+        "guests": { "type": "integer", "minimum": 1, "maximum": 6, "description": "Total number of guests." },
+        "member_tier": { "type": "string", "enum": ["none", "silver", "gold", "platinum"], "description": "Loyalty tier for discounts, if any." },
+        "promo_code": { "type": "string", "pattern": "^[A-Z0-9_-]{3,16}$", "description": "Optional promotional code." },
+        "refundable": { "type": "boolean", "description": "Whether the quote should be refundable/flexible." },
+        "include_breakfast": { "type": "boolean", "description": "Include daily breakfast in rate plan." }
+      },
+      "required": ["hotel_id", "room_type", "check_in", "check_out", "guests"]
+    },
+    "strict": true
+  },
+  {
+    "name": "hold_reservation",
+    "description": "Place a temporary hold on an available room and return a hold identifier.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier." },
+        "room_type": { "type": "string", "enum": ["standard_king", "standard_two_double", "deluxe_king_city_view", "suite_one_bedroom"], "description": "Room type to hold." },
+        "check_in": { "type": "string", "format": "date", "description": "YYYY-MM-DD check-in date." },
+        "check_out": { "type": "string", "format": "date", "description": "YYYY-MM-DD check-out date." },
+        "guests": { "type": "integer", "minimum": 1, "maximum": 6, "description": "Total number of guests." },
+        "num_rooms": { "type": "integer", "minimum": 1, "maximum": 3, "description": "Number of rooms to hold." },
+        "customer_name": { "type": "string", "minLength": 2, "description": "Guest full name for the reservation." },
+        "email": { "type": "string", "format": "email", "description": "Guest email for confirmation." },
+        "phone_e164": { "type": "string", "pattern": "^\+?[1-9]\d{1,14}$", "description": "Guest phone number in E.164 format." },
+        "guarantee_method": { "type": "string", "enum": ["credit_card", "deposit", "pay_at_hotel"], "description": "Guarantee method for hold." },
+        "special_requests": { "type": "string", "description": "Optional special requests (crib, high floor, late arrival)." }
+      },
+      "required": ["hotel_id", "room_type", "check_in", "check_out", "guests", "customer_name", "guarantee_method"]
+    },
+    "strict": true
+  },
+  {
+    "name": "confirm_reservation",
+    "description": "Confirm a held reservation and issue a reservation ID.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hold_id": { "type": "string", "description": "Identifier from hold operation." },
+        "payment_token": { "type": "string", "minLength": 8, "description": "Tokenized payment reference for guarantee/charge." },
+        "billing_address": { "type": "string", "description": "Billing address line(s)." }
+      },
+      "required": ["hold_id"]
+    },
+    "strict": true
+  },
+  {
+    "name": "send_confirmation_email",
+    "description": "Send a confirmation email to the guest with itinerary and hotel details.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "to_email": { "type": "string", "format": "email", "description": "Recipient email address." },
+        "subject": { "type": "string", "minLength": 3, "maxLength": 120, "description": "Email subject line." },
+        "body": { "type": "string", "minLength": 1, "maxLength": 5000, "description": "Plaintext email body." },
+        "reservation_id": { "type": "string", "description": "Confirmed reservation identifier to include." }
+      },
+      "required": ["to_email", "subject", "body"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a reservations agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi‑Fi, gym, pool, on-site restaurant. Currency: USD; taxes 14.75% + occupancy tax $3.50/night. Flexible rate: free cancel until 48 hours before check-in; Advance Purchase: non-refundable, 15% off. Incidental hold: $100/night. Parking: $35/night. Pets: up to 2 under 40 lb, $75/stay. Be clear, verify missing details, and only use tools to check availability, quote rates, hold, confirm, and email.
+
+user:
+We're planning a honeymoon Oct 10–14. Do you have a suite with any special packages?
+assistant channel=analysis:
+Search suite availability, quote, offer hold.
+assistant channel=commentary to=tool.search_room_availability:
+{"hotel_id":"skyline_city_hotel_nyc","check_in":"2025-10-10","check_out":"2025-10-14","guests":2,"room_type":"suite_one_bedroom"}
+tool.search_room_availability channel=commentary to=assistant:
+{"available":true,"rooms":[{"room_type":"suite_one_bedroom","inventory":1}]}
+assistant channel=commentary to=tool.get_rate_quote:
+{"hotel_id":"skyline_city_hotel_nyc","room_type":"suite_one_bedroom","check_in":"2025-10-10","check_out":"2025-10-14","guests":2,"include_breakfast":true,"refundable":true}
+tool.get_rate_quote channel=commentary to=assistant:
+{"room_type":"suite_one_bedroom","nights":4,"base_avg_nightly":350.00,"taxes_and_fees_total":206.00,"total_stay":1606.00}
+assistant channel=final:
+Our one-bedroom suite is available; total with breakfast $1,606. Shall I place a hold?

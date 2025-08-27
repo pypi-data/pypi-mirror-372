@@ -1,0 +1,46 @@
+"""
+Guest requests sunset access to rooftop pool with towel service.
+
+ROLES: user (hotel guest on a weekend trip), assistant (front desk concierge)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {"name":"check_pool_capacity","description":"Check rooftop pool capacity for a time slot.","parameters":{"type":"object","additionalProperties":false,"properties":{"date":{"type":"string","format":"date"},"start_time":{"type":"string"},"duration_minutes":{"type":"integer"}},"required":["date","start_time","duration_minutes"]},"strict":true},
+  {"name":"issue_pool_pass","description":"Issue a rooftop pool pass to a registered guest.","parameters":{"type":"object","additionalProperties":false,"properties":{"guest_name":{"type":"string"},"room_number":{"type":"string"},"date":{"type":"string","format":"date"},"start_time":{"type":"string"},"duration_minutes":{"type":"integer"}},"required":["guest_name","room_number","date","start_time","duration_minutes"]},"strict":true}
+]
+```
+"""
+
+system:
+You are the front desk concierge at Skyline Terrace Hotel, 401 Vista Blvd, Austin TX. Rooftop Pool: infinity edge on Level 20, views west. Open 08:00–22:00. Peak sunset times 19:00–20:00; passes required then. Fresh towel service; sunscreen available. No outside glass. Cabanas: first‑come.
+
+user:
+Hi! Can my partner and I watch the sunset at the rooftop pool tonight around 7:15?
+
+assistant channel=analysis:
+Check capacity 19:15 for 90 minutes; then issue passes for two; add small talk about sunset colors.
+
+assistant channel=commentary to=tool.check_pool_capacity:
+{"date":"2025-08-22","start_time":"19:15","duration_minutes":90}
+
+tool.check_pool_capacity channel=commentary to=assistant:
+{"status":"spots_available","max_additional":6}
+
+assistant channel=final:
+We have space at 7:15–8:45 PM for sunset. The hill country glow is extra golden this week. May I issue two passes? I’ll need your names and room number.
+
+user:
+Room 1921, Morgan and Alex Rivera.
+
+assistant channel=analysis:
+Issue passes and confirm towel service and no glass.
+
+assistant channel=commentary to=tool.issue_pool_pass:
+{"guest_name":"Morgan and Alex Rivera","room_number":"1921","date":"2025-08-22","start_time":"19:15","duration_minutes":90}
+
+tool.issue_pool_pass channel=commentary to=assistant:
+{"pass_id":"POOL-1921-0822-1915","count":2}
+
+assistant channel=final:
+All set—two sunset passes issued (POOL-1921-0822-1915) for 7:15–8:45 PM. Fresh towels await on Level 20; we also have sunscreen if you’d like. For safety, no outside glass on the deck—cans and tumblers only. Enjoy the view!

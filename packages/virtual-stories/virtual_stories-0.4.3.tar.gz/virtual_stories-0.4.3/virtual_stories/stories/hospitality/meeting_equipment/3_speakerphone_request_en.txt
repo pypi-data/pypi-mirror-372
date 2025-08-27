@@ -1,0 +1,54 @@
+"""
+Team requests a speakerphone for a hybrid meeting.
+
+ROLES: user (meeting organizer confirming equipment), assistant (meetings concierge arranging setup)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_speakerphone",
+    "description": "Reserve a conference speakerphone and schedule delivery/setup.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room": { "type": "string" },
+        "setup_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "room", "setup_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the meetings concierge at Beacon Row Hotel (hotel_id: beacon_bos). Address: 25 Beacon St, Boston, MA 02108. Timezone: America/New_York.
+Amenities: huddle rooms, rooftop terrace, fast uplink Wi‑Fi. Speakerphones are available; A/V can pre‑test audio.
+
+user:
+Hi—can we get a speakerphone in Liberty Room at 2:15 PM? And that terrace view is stunning.
+
+assistant channel=analysis:
+Acknowledge view; reserve for 2:15 PM setup for reservation RSV-LIB-215.
+
+assistant channel=commentary to=tool.reserve_speakerphone:
+{"reservation_id":"RSV-LIB-215","room":"Liberty Room","setup_time":"2025-09-10T14:15:00"}
+
+tool.reserve_speakerphone channel=commentary to=assistant:
+{"status":"reserved","asset_id":"SPK-3"}
+
+assistant channel=analysis:
+Confirm and suggest quick test.
+
+assistant channel=final:
+It really shines at sunset. I’ve reserved speakerphone SPK-3 for Liberty Room at 2:15 PM. We’ll run a quick audio check before your team joins the call.
+
+user:
+Perfect—thanks.
+
+assistant channel=final:
+Happy to help. Ping us if you also need an HDMI adapter.

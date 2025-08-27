@@ -1,0 +1,58 @@
+"""
+Business guest books a conference room for a half-day meeting and shares small talk.
+
+ROLES: user (corporate guest), assistant (front desk agent managing event spaces)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_conference_room",
+    "description": "Reserve a conference room with specified time block and attendee count.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "start_time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "duration_hours": { "type": "number", "minimum": 0.5 },
+        "attendees": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["hotel_id", "date", "start_time", "duration_hours", "attendees"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Phone: (212) 555-0100. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi-Fi, gym, indoor pool, spa, business center, rooftop restaurant, 24-hour room service, and several conference rooms equipped with projectors and whiteboards.
+
+user:
+Good afternoon! I need a meeting room next Wednesday from 9 AM for about four hours for eight people.
+
+assistant channel=analysis:
+Confirm details and reserve conference room for requested time using tool.
+
+assistant channel=commentary to=tool.reserve_conference_room:
+{"hotel_id":"skyline_city_hotel_nyc","date":"2025-08-20","start_time":"09:00","duration_hours":4,"attendees":8}
+
+tool.reserve_conference_room channel=commentary to=assistant:
+{"reservation_id":"CONF-301","room":"Hudson Boardroom"}
+
+assistant channel=analysis:
+Provide confirmation and room name; ask if any equipment needed.
+
+assistant channel=final:
+You're confirmed in the Hudson Boardroom on Wednesday starting at 9:00 AM for four hours—reservation CONF-301. Do you need any special equipment or catering?
+
+user:
+Just the projector will do. By the way, hope your day’s going alright!
+
+assistant channel=analysis:
+Acknowledge small talk and note equipment need.
+
+assistant channel=final:
+Projector will be ready, and thanks—day’s going smoothly! Let me know if anything else comes up.

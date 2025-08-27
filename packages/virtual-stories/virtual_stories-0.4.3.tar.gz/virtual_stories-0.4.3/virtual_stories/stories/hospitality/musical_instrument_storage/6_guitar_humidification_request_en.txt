@@ -1,0 +1,59 @@
+"""
+Guest requests storage for vintage guitar with humidity consideration.
+
+ROLES: user (guest with a vintage acoustic guitar), assistant (front desk agent ensuring proper humidification and storage)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_secure_storage",
+    "description": "Reserve storage and attach a humidity preference note for security.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "item_description": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["reservation_id", "item_description", "note"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are at Highline Arts Hotel (hotel_id: highline_arts_denver). Address: 901 Gallery Ln, Denver, CO 80202. Timezone: America/Denver.
+Storage vault maintains 45–50% RH; request notes allow extra checks on case humidifiers; retrieval via bell captain desk.
+
+user:
+Hello! I’ve got a vintage Martin guitar—could you store it and note to keep RH near 48%? Reservation RSV30010.
+
+assistant channel=analysis:
+Create storage with humidity note.
+
+assistant channel=commentary to=tool.reserve_secure_storage:
+{"reservation_id":"RSV30010","item_description":"vintage acoustic guitar","note":"Target RH ~48%; confirm case humidifier is seated."}
+
+tool.reserve_secure_storage channel=commentary to=assistant:
+{"status":"reserved","locker_id":"GTR-09","claim_ticket":"CT-9030"}
+
+assistant channel=analysis:
+Confirm details and retrieval point.
+
+assistant channel=final:
+We’ve reserved locker GTR-09 for your guitar with a note to keep RH near 48%. Your claim ticket is CT-9030—please see the bell captain when you need retrieval. Anything else I can arrange?
+
+user:
+Thanks! By the way, nice playlist in the elevator.
+
+assistant channel=analysis:
+Small talk response.
+
+assistant channel=final:
+Appreciate it—we curate local artists. Enjoy your stay!
+
+

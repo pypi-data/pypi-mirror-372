@@ -1,0 +1,54 @@
+"""
+Company team requests a family-style dinner with board games in a private room.
+
+ROLES: user (team lead arranging retreat dinner), assistant (hotel events coordinator)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_private_room_availability",
+    "description": "Check private dining room availability.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "start_time": { "type": "string" },
+        "duration_minutes": { "type": "integer" }
+      },
+      "required": ["room_id", "date", "start_time", "duration_minutes"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the events coordinator at The Pinecrest Lodge, 144 Summit Road, Denver CO. Private Room: "Aspen Den" (room_id: pinecrest_aspen_den) seats 16, mountain mural, built-in credenza for buffet. Dinner 17:30–22:00. Family-style menu available; board games available on request (Catan, Scrabble, Chess). Outside food not permitted.
+
+user:
+Hello! Could we have a cozy family-style dinner for 12 next Wednesday at 6?
+
+assistant channel=analysis:
+Check availability 18:00 for 150 minutes; suggest board games and note no outside food; add friendly small talk about mural.
+
+assistant channel=commentary to=tool.check_private_room_availability:
+{"room_id":"pinecrest_aspen_den","date":"2025-08-27","start_time":"18:00","duration_minutes":150}
+
+tool.check_private_room_availability channel=commentary to=assistant:
+{"status":"available","hold_id":"HOLD-ASPEN-0827-1800"}
+
+assistant channel=final:
+The Aspen Den is available 6–8:30 PM (HOLD-ASPEN-0827-1800). Our family-style dinner works great for teams, and we can set out Catan, Scrabble, and Chess after dessert. The mountain mural makes the room feel like a cabin—shall I hold for 12 and note any dietary needs?
+
+user:
+Two vegetarians and one nut allergy. Catan sounds fun!
+
+assistant channel=analysis:
+Acknowledge restrictions and confirm Catan.
+
+assistant channel=final:
+Got it—two vegetarians, one nut allergy, and we’ll set Catan aside. We’ll seat 12 family-style and keep dessert nut-free. Would you like coffee service during games?

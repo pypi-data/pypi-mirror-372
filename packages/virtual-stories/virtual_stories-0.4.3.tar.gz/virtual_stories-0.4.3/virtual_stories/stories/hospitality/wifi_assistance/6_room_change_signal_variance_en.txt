@@ -1,0 +1,65 @@
+"""
+Room change due to Wi‑Fi signal variance; verify signal and advise options.
+ROLES: user (guest noticing big Wi‑Fi speed differences), assistant (IT verifying AP signal and offering room move)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "measure_signal",
+    "description": "Measure RSSI and noise floor for a room location.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "as_of_utc": {"type": "string", "format": "date-time"}
+      },
+      "required": ["room_number", "as_of_utc"]
+    },
+    "strict": true
+  },
+  {
+    "name": "suggest_adjacent_rooms",
+    "description": "Suggest nearby rooms with stronger AP coverage.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"}
+      },
+      "required": ["room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+Property: Seaside Promenade Hotel, South Wing
+SSIDs: "Promenade_Guest_5G", "Promenade_Guest_2G"
+Policy: If coverage issues persist, offer comparable room on same rate plan when available
+Front desk extension: 0
+
+user:
+Wi‑Fi is fast by the window but crawls by the desk in room 331.
+
+assistant channel=analysis:
+Measure signal; if weak near desk, propose adjacent rooms; include friendly note.
+
+assistant channel=commentary to=tool.measure_signal:
+{"room_number":"331","as_of_utc":"2025-08-25T16:40:00Z"}
+
+tool.measure_signal channel=commentary to=assistant:
+{"rssi_window_dbm":-58,"rssi_desk_dbm":-75,"noise_floor_dbm":-95}
+
+assistant channel=commentary to=tool.suggest_adjacent_rooms:
+{"room_number":"331"}
+
+tool.suggest_adjacent_rooms channel=commentary to=assistant:
+{"alternatives":[{"room":"329","rssi_dbm":-60},{"room":"333","rssi_dbm":-61}]}
+
+assistant channel=final:
+Thanks for flagging this—signal near the desk is weaker than by the window. I can arrange a move to 329 or 333 with stronger coverage, same rate. If you prefer to stay, placing the desk closer to the window should help. Front desk is at extension 0 if you'd like me to loop them in.

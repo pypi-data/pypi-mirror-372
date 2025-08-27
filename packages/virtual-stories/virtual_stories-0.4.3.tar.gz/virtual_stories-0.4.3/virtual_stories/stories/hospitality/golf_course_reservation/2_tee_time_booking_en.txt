@@ -1,0 +1,97 @@
+"""
+A guest wants to book a tee time at the hotel's golf course.
+
+ROLES: user (a golf enthusiast), assistant (a hotel concierge arranging a golf reservation)
+CHANNELS: analysis, commentary, final
+TOOLS:
+```json
+[
+  {
+    "name": "get_golf_course_availability",
+    "description": "Get the available tee times at the golf course.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "The desired date for the tee time."
+        }
+      },
+      "required": ["date"]
+    }
+  },
+  {
+    "name": "book_tee_time",
+    "description": "Book a tee time for a guest.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "guest_name": {
+          "type": "string",
+          "description": "The name of the guest."
+        },
+        "time": {
+          "type": "string",
+          "format": "time",
+          "description": "The desired tee time."
+        },
+        "number_of_players": {
+          "type": "integer",
+          "description": "The number of players in the group."
+        }
+      },
+      "required": ["guest_name", "time", "number_of_players"]
+    }
+  }
+]
+```
+"""
+
+system:
+You are a concierge at the 'Greenside Resort & Spa', which features a championship golf course. Today is August 24, 2025.
+
+user:
+I'm an avid golfer, and I was hoping to play a round tomorrow. Can you help me book a tee time?
+
+assistant channel=analysis:
+The user wants to book a tee time for tomorrow. I should first check the availability.
+
+assistant channel=commentary to=tool.get_golf_course_availability:
+{"date": "2025-08-25"}
+
+tool.get_golf_course_availability channel=commentary to=assistant:
+{"available_times": ["08:00", "08:30", "09:00", "10:00", "10:30", "11:00"]}
+
+assistant channel=analysis:
+I have the available tee times. I will present them to the user.
+
+assistant channel=final:
+We would be delighted to arrange that for you. Our course is in beautiful condition right now. Here are the available tee times for tomorrow:
+
+*   8:00 AM
+*   8:30 AM
+*   9:00 AM
+*   10:00 AM
+*   10:30 AM
+*   11:00 AM
+
+Do any of those times work for you?
+
+user:
+The 9:00 AM time would be perfect. There will be two of us playing. My name is Michael Thompson. I've heard great things about your course!
+
+assistant channel=analysis:
+The user wants to book a 9:00 AM tee time for two players. I will use the `book_tee_time` tool to make the reservation and also respond to their comment.
+
+assistant channel=commentary to=tool.book_tee_time:
+{"guest_name": "Michael Thompson", "time": "09:00", "number_of_players": 2}
+
+tool.book_tee_time channel=commentary to=assistant:
+{"booking_id": "GOLF-6543", "confirmation_message": "A tee time has been booked for Michael Thompson for 2 players at 9:00 AM."}
+
+assistant channel=analysis:
+The tee time has been booked. I will now confirm with the user.
+
+assistant channel=final:
+We're very proud of our course, and we're so glad you've heard good things! I've booked your tee time for two players tomorrow at 9:00 AM, Mr. Thompson. You can check in at the pro shop 15 minutes before your tee time. Enjoy your round!

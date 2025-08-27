@@ -1,0 +1,78 @@
+"""
+Guest wants small, travel-friendly games to take poolside and rotate quickly.
+
+ROLES: user (guest seeking compact games for casual play), assistant (activities attendant suggesting pocket games and coordinating checkout)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "list_travel_games",
+    "description": "List compact, waterproof or pool-friendly games with playtime.",
+    "parameters": {"type": "object", "additionalProperties": false, "properties": {}}
+  },
+  {
+    "name": "reserve_game_items",
+    "description": "Reserve multiple small games to a reservation.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "items": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "return_time": {"type": "string", "format": "date-time"}
+      },
+      "required": ["reservation_id", "items", "return_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the activities attendant at Palm Cove Resort (hotel_id: palm_cove_resort_fl).
+Address: 980 Ocean Walk, Fort Lauderdale, FL 33316. Timezone: America/New_York.
+Amenities: lagoon pool with shaded cabanas, smoothie bar, daily splash hour 3–4 PM. Game carts offer mini and waterproof games; returns due by 10 PM.
+
+user:
+We’re hanging at the pool and want quick, small games we can rotate between dips. Nothing too thinky—just fun. Reservation RSV33321.
+
+assistant channel=analysis:
+Fetch travel-friendly list, then recommend 3–4 quick options and offer to reserve. Include a bit of sunny small talk.
+
+assistant channel=commentary to=tool.list_travel_games:
+{}
+
+tool.list_travel_games channel=commentary to=assistant:
+{"games":[{"title":"Uno Splash (waterproof)","playtime":"10-20"},{"title":"Sushi Go!","playtime":"15"},{"title":"Dobble/Spot It!","playtime":"10"},{"title":"No Thanks!","playtime":"10-15"},{"title":"Love Letter","playtime":"15"}]}
+
+assistant channel=analysis:
+Recommend Uno Splash, Dobble, No Thanks!, and Love Letter as a compact set. Then reserve to 10 PM return.
+
+assistant channel=final:
+Pool days call for breezy games! Top picks that stay fun between swims:
+- Uno Splash (waterproof, 10–20 min)
+- Dobble/Spot It! (fast matching, ~10 min)
+- No Thanks! (simple numbers, 10–15 min)
+- Love Letter (bluffing, ~15 min)
+
+Want me to bundle those to your cabana and set a 10:00 PM return?
+
+user:
+Yes please—send them over now.
+
+assistant channel=analysis:
+Reserve the four items for RSV33321 with 10 PM return.
+
+assistant channel=commentary to=tool.reserve_game_items:
+{"reservation_id":"RSV33321","items":["Uno Splash (waterproof)","Dobble/Spot It!","No Thanks!","Love Letter"],"return_time":"2025-08-24T22:00:00"}
+
+tool.reserve_game_items channel=commentary to=assistant:
+{"status":"reserved","item_ids":["WV-02","MIN-07","MIN-12","MIN-15"],"delivery_eta_minutes":5}
+
+assistant channel=analysis:
+Confirm reservation and add light chitchat without tools.
+
+assistant channel=final:
+Done! I’ve reserved your set (WV-02, MIN-07, MIN-12, MIN-15) and will drop them at your cabana in about 5 minutes. Enjoy the sunshine—smoothie bar’s mango special pairs perfectly with game night!

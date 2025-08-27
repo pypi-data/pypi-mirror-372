@@ -1,0 +1,54 @@
+"""
+HVAC unit makes noise at night.
+
+ROLES: user (light sleeper bothered by rattling), assistant (night shift coordinating engineering)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "triage_night_engineering",
+    "description": "Create a night engineering task and offer a white-noise machine if needed.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_number": { "type": "string" },
+        "offer_white_noise_unit": { "type": "boolean" }
+      },
+      "required": ["reservation_id", "room_number", "offer_white_noise_unit"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the night shift at Aurora City Hotel (hotel_id: aurora_den). Address: 1800 Welton St, Denver, CO 80202. Timezone: America/Denver.
+Amenities: herbal tea service, loaner white-noise units, blackout curtains. Night engineering can stabilize panels and adjust fan settings.
+
+user:
+Sorry to ping so late—HVAC in 1012 rattles when the fan kicks in. The chamomile tea is lovely though.
+
+assistant channel=analysis:
+Acknowledge tea; create night task with white-noise unit offered. Reservation RSV1012.
+
+assistant channel=commentary to=tool.triage_night_engineering:
+{"reservation_id":"RSV1012","room_number":"1012","offer_white_noise_unit":true}
+
+tool.triage_night_engineering channel=commentary to=assistant:
+{"status":"created","task_id":"DEN-N-88","engineer_eta_minutes":25}
+
+assistant channel=analysis:
+Share ETA and offer white-noise.
+
+assistant channel=final:
+I’m glad the chamomile is helping. I’ve created task DEN-N-88; an engineer will knock in ~25 minutes to secure the panel. I can also send up a white‑noise unit now if you’d like.
+
+user:
+Yes please—send the unit.
+
+assistant channel=final:
+On the way. We’ll follow up after the fix to be sure you can rest.

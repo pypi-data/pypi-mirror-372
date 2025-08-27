@@ -1,0 +1,80 @@
+"""
+Guest asks about accessibility seating and audio description headsets; reserves accessible row.
+
+ROLES: user (guest with accessibility needs), assistant (access coordinator ensuring accommodations)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_accessibility_options",
+    "description": "Fetch accessibility seating, ramp access, and headset availability.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["hotel_id", "date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "reserve_accessible_row",
+    "description": "Reserve seats in the accessible row and an audio headset if requested.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "guest_name": { "type": "string" },
+        "movie_date": { "type": "string", "format": "date" },
+        "seats": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "audio_description": { "type": "boolean" }
+      },
+      "required": ["hotel_id", "guest_name", "movie_date", "seats", "audio_description"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the accessibility coordinator at Harborview Bay Hotel (hotel_id: harborview_bay_seattle). Address: 77 Pier St, Seattle, WA 98101. Timezone: America/Los_Angeles. Check-in 3:00 PM, check-out 12:00 PM. Currency: USD.
+Amenities: heated rooftop pool with ramp entry, ADA lift, accessible row with companion seating, loaner audio-description headsets (limited supply), blankets available.
+
+user:
+Hi—do you have accessible seating and audio description for the pool movie tonight? If so, can you reserve one seat for Riley with a headset?
+
+assistant channel=analysis:
+Check options, then reserve 1 seat with audio description for 2025-08-24 for Riley.
+
+assistant channel=commentary to=tool.get_accessibility_options:
+{"hotel_id":"harborview_bay_seattle","date":"2025-08-24"}
+
+tool.get_accessibility_options channel=commentary to=assistant:
+{"accessible_row":true,"ramp_entry":true,"headsets_available":true}
+
+assistant channel=commentary to=tool.reserve_accessible_row:
+{"hotel_id":"harborview_bay_seattle","guest_name":"Riley","movie_date":"2025-08-24","seats":1,"audio_description":true}
+
+tool.reserve_accessible_row channel=commentary to=assistant:
+{"status":"reserved","seat_label":"A-3","confirmation":"HB-AD-118"}
+
+assistant channel=analysis:
+Confirm details, mention limited supply.
+
+assistant channel=final:
+Yes—there’s an accessible row with companion seating, ramp entry, and we offer a limited number of audio-description headsets. I reserved one accessible seat for Riley with a headset—seat A-3, confirmation HB-AD-118.
+
+user:
+Thanks! Seattle nights can get chilly—are blankets a thing?
+
+assistant channel=analysis:
+Answer from amenities.
+
+assistant channel=final:
+They are—we provide complimentary blankets at the towel stand. Just ask our team when you arrive.
+

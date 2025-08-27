@@ -1,0 +1,72 @@
+"""
+VPN blocked symptoms; advise split‑tunnel and apply exception.
+ROLES: user (guest on corporate VPN experiencing blocked services), assistant (IT applying exception policy)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_firewall_policy",
+    "description": "Check firewall rule hits for a room/device.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "device_mac": {"type": "string", "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"}
+      },
+      "required": ["room_number", "device_mac"]
+    },
+    "strict": true
+  },
+  {
+    "name": "grant_vpn_exception",
+    "description": "Temporarily relax firewall for known corporate VPN endpoints.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "device_mac": {"type": "string", "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"},
+        "duration_minutes": {"type": "integer", "minimum": 30, "maximum": 1440}
+      },
+      "required": ["room_number", "device_mac", "duration_minutes"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+Property: Riverside Conference Hotel
+Wi‑Fi SSID: "Riverside_Guest"; default firewall blocks some UDP ports used by legacy VPNs
+Policy: IT can grant time‑bound exception upon request
+
+user:
+My VPN connects but then Slack and email stop working in room 1012.
+
+assistant channel=analysis:
+Check firewall hits; if VPN block observed, grant limited exception and advise split‑tunnel.
+
+assistant channel=final:
+I can help. Could you share your device MAC from network settings so I can check the firewall logs?
+
+user:
+MAC is 58:EF:68:22:99:AB.
+
+assistant channel=commentary to=tool.check_firewall_policy:
+{"room_number":"1012","device_mac":"58:EF:68:22:99:AB"}
+
+tool.check_firewall_policy channel=commentary to=assistant:
+{"vpn_block_hits":12,"last_block":"2025-08-25T13:02:00Z"}
+
+assistant channel=commentary to=tool.grant_vpn_exception:
+{"room_number":"1012","device_mac":"58:EF:68:22:99:AB","duration_minutes":240}
+
+tool.grant_vpn_exception channel=commentary to=assistant:
+{"status":"ok","until":"2025-08-25T17:02:00Z"}
+
+assistant channel=final:
+I’ve granted a 4‑hour exception for your VPN. For stability, consider enabling split‑tunneling so only work apps use the VPN while general traffic stays on Wi‑Fi. If you need more time, let me know.

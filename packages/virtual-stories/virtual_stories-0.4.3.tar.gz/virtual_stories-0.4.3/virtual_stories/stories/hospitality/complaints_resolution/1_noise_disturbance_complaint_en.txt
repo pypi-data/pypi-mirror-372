@@ -1,0 +1,108 @@
+"""
+Guest reports nighttime noise disturbance and asks for resolution.
+ROLES: user (guest unable to sleep due to hallway noise), assistant (duty manager addressing the incident and providing recovery)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "log_incident",
+    "description": "Log a service incident with time, location, and description.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "description": { "type": "string" },
+        "occurred_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["room_number", "description"]
+    },
+    "strict": true
+  },
+  {
+    "name": "notify_security",
+    "description": "Notify security to patrol a floor for noise issues.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "floor": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["floor"]
+    },
+    "strict": true
+  },
+  {
+    "name": "offer_room_change",
+    "description": "Offer a room change and hold a quiet alternative.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "preferred_features": { "type": "array", "items": { "type": "string", "enum": ["high_floor", "away_from_elevator", "courtyard_view"] } }
+      },
+      "required": ["reservation_id"]
+    },
+    "strict": true
+  },
+  {
+    "name": "issue_service_recovery",
+    "description": "Issue service recovery (points, discount, or amenity).",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "recovery_type": { "type": "string", "enum": ["points", "discount", "amenity"] },
+        "amount": { "type": "integer", "minimum": 1 },
+        "note": { "type": "string" }
+      },
+      "required": ["reservation_id", "recovery_type", "amount"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the duty manager at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Apologize sincerely, act promptly, and only use tools to log incidents, notify security, arrange room changes, and issue service recovery.
+
+user:
+It was really noisy in the hallway near 1022 around 1 AM. I couldn’t sleep.
+
+assistant channel=analysis:
+Record the incident, send security patrol to 10th floor, offer quiet room alternative and recovery points.
+
+assistant channel=commentary to=tool.log_incident:
+{"room_number":"1022","description":"Hallway noise at ~1 AM; guest unable to sleep.","occurred_at":"2025-08-22T01:10:00-04:00"}
+
+tool.log_incident channel=commentary to=assistant:
+{"incident_id":"INC-1022-5531","status":"logged"}
+
+assistant channel=commentary to=tool.notify_security:
+{"floor":"10","note":"Patrol near rooms 1018–1026; address noise complaints."}
+
+tool.notify_security channel=commentary to=assistant:
+{"status":"dispatched","eta_min":5}
+
+assistant channel=commentary to=tool.offer_room_change:
+{"reservation_id":"RSV-2025-0820-1109","preferred_features":["high_floor","away_from_elevator","courtyard_view"]}
+
+tool.offer_room_change channel=commentary to=assistant:
+{"status":"held","new_room":"1807","expires_at":"2025-08-24T23:59:00-04:00"}
+
+assistant channel=commentary to=tool.issue_service_recovery:
+{"reservation_id":"RSV-2025-0820-1109","recovery_type":"points","amount":5000,"note":"Noise disturbance goodwill"}
+
+tool.issue_service_recovery channel=commentary to=assistant:
+{"status":"granted"}
+
+assistant channel=final:
+I’m truly sorry for the disturbance. I’ve logged the incident and dispatched security to the 10th floor. I can move you to room 1807 (quieter, away from elevators) and added 5,000 points to your account for the inconvenience. Would you like me to proceed with the room change now?
+
+

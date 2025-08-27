@@ -1,0 +1,81 @@
+"""
+Guest books a sunset cabana slot and asks for a fruit platter.
+
+ROLES: user (guest seeking cabana and light refreshment), assistant (front desk agent booking cabana)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "book_cabana",
+    "description": "Reserve a specific cabana time slot for a reservation.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time_slot": { "type": "string" }
+      },
+      "required": ["reservation_id","date","time_slot"]
+    },
+    "strict": true
+  },
+  {
+    "name": "add_cabana_amenities",
+    "description": "Add extras such as a fruit platter or sparkling water to a cabana booking.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "amenities": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["reservation_id","amenities"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Coral Key Resort & Spa (hotel_id: coral_key_keywest). Address: 220 Sunset Way, Key West, FL 33040. Timezone: America/New_York. Cabanas operate 11:00 AM–7:00 PM in two-hour slots for $75 per slot and include chilled water, towels, and a Bluetooth speaker. Add‑ons: tropical fruit platter and sparkling water available upon request.
+
+user:
+Hello! The pool looks amazing today. Could I reserve a cabana for tomorrow near sunset? My reservation ID is RSV99012.
+
+assistant channel=analysis:
+Book a late slot close to sunset for tomorrow; then offer fruit platter add‑on.
+
+assistant channel=commentary to=tool.book_cabana:
+{"reservation_id":"RSV99012","date":"2025-07-16","time_slot":"17:00-19:00"}
+
+tool.book_cabana channel=commentary to=assistant:
+{"cabana_number":3,"status":"confirmed"}
+
+assistant channel=analysis:
+Offer fruit platter add‑on per system; include small talk about the view.
+
+assistant channel=final:
+Cabana 3 is reserved for 5–7 PM tomorrow. The sunset from that side of the pool is gorgeous. Would you like a tropical fruit platter or sparkling water set up as well?
+
+user:
+Yes, please add the fruit platter.
+
+assistant channel=analysis:
+Add amenity to the cabana booking.
+
+assistant channel=commentary to=tool.add_cabana_amenities:
+{"reservation_id":"RSV99012","amenities":["tropical_fruit_platter"]}
+
+tool.add_cabana_amenities channel=commentary to=assistant:
+{"status":"added","amenities":["tropical_fruit_platter"]}
+
+assistant channel=analysis:
+Confirm amenity and close.
+
+assistant channel=final:
+Done—your fruit platter will be waiting in Cabana 3. Enjoy the sunset swim!
+

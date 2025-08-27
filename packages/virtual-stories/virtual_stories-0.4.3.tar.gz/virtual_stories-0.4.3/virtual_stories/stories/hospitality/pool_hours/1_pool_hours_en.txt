@@ -1,0 +1,86 @@
+"""
+Guest asks about pool hours and reserves a cabana.
+ROLES: user (guest wanting to swim), assistant (front desk agent handling pool reservations)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_pool_hours",
+    "description": "Retrieve pool opening and closing hours for a date.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "reserve_pool_cabana",
+    "description": "Reserve a poolside cabana for a reservation.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "start_time": { "type": "string", "format": "date-time" },
+        "duration_hours": { "type": "integer", "minimum": 1, "maximum": 8 }
+      },
+      "required": ["reservation_id","start_time","duration_hours"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. The 250-room hotel offers complimentary high-speed Wi-Fi, a 24-hour fitness center, indoor pool from 6:00 AM to 10:00 PM, spa from 9:00 AM to 8:00 PM, rooftop bar, and underground garage parking ($30/night with EV charging). Breakfast buffet runs 6:30 AM–10:30 AM daily. Pets up to 50 lbs are welcome with a one-time $75 cleaning fee. Use tools for pool information or reservations.
+
+user:
+Hi, what are the pool hours today? I'm hoping to catch some sun later.
+
+assistant channel=analysis:
+Check today's pool hours.
+
+assistant channel=commentary to=tool.get_pool_hours:
+{"date":"2025-09-10"}
+
+tool.get_pool_hours channel=commentary to=assistant:
+{"opens":"06:00","closes":"22:00"}
+
+assistant channel=analysis:
+Inform guest and offer cabana reservation.
+
+assistant channel=final:
+Our pool is open today from 6:00 AM to 10:00 PM. Would you like to reserve a cabana?
+
+user:
+Great! Can I reserve a cabana around 3 PM for two hours? Reservation RSV11111. By the way, the pool area looks amazing in photos.
+
+assistant channel=analysis:
+Reserve cabana and respond to compliment.
+
+assistant channel=commentary to=tool.reserve_pool_cabana:
+{"reservation_id":"RSV11111","start_time":"2025-09-10T15:00:00","duration_hours":2}
+
+tool.reserve_pool_cabana channel=commentary to=assistant:
+{"status":"reserved","cabana_number":4}
+
+assistant channel=analysis:
+Confirm reservation and acknowledge compliment.
+
+assistant channel=final:
+Cabana 4 is reserved for you from 3:00 PM to 5:00 PM. The pool area does look even better in person—enjoy the sunshine!
+
+user:
+Sweet, see you there!
+
+assistant channel=analysis:
+Close politely.
+
+assistant channel=final:
+We look forward to it. Have a fantastic afternoon by the pool.

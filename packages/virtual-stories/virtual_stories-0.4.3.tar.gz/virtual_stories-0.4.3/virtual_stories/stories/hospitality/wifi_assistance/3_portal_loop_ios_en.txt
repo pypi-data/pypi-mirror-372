@@ -1,0 +1,79 @@
+"""
+Wi‑Fi captive‑portal loop on iOS. Use tools to diagnose and resolve.
+ROLES: user (guest on iPhone stuck in portal), assistant (IT support guiding steps and using tools)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_wifi_status",
+    "description": "Check portal session and device association.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "device_mac": {"type": "string", "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"},
+        "as_of_utc": {"type": "string", "format": "date-time"}
+      },
+      "required": ["room_number", "device_mac", "as_of_utc"]
+    },
+    "strict": true
+  },
+  {
+    "name": "reset_wifi_access",
+    "description": "Clear captive portal session and DHCP.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "device_mac": {"type": "string", "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"},
+        "reason": {"type": "string"}
+      },
+      "required": ["room_number", "device_mac", "reason"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+Property: Grand Pine Lodge, Main Wing
+Address: 300 Mountain View Rd, Timber Falls, CO 80400
+Guest Wi‑Fi SSIDs: "PineLodge_Guest_5G", "PineLodge_Guest_2G"
+Portal: https://wifi.grandpine.example/portal (accept T&Cs; room+last name)
+Policy: 4 devices/room, leases auto‑renew daily; breakfast 7:00–10:00 at Pine Café
+Tip: iOS Private Address can cause loops—toggle off for this SSID
+
+user:
+My iPhone keeps opening the login page again and again in room 415.
+
+assistant channel=analysis:
+Ask for SSID and MAC; then check portal session; clear session if stuck.
+
+assistant channel=final:
+Got it. Are you on PineLodge_Guest_5G or 2G, and could you share your iPhone Wi‑Fi Address (MAC) from Settings → Wi‑Fi → Info?
+
+user:
+On 5G. MAC is 6A:91:CE:04:22:70.
+
+assistant channel=commentary to=tool.get_wifi_status:
+{"room_number":"415","device_mac":"6A:91:CE:04:22:70","as_of_utc":"2025-08-25T15:10:00Z"}
+
+tool.get_wifi_status channel=commentary to=assistant:
+{"associated":true,"portal_authenticated":false,"reason":"policy_private_address_block","ap":"MW-4B"}
+
+assistant channel=analysis:
+Private MAC likely blocked. Clear session and advise to disable Private Address for this SSID.
+
+assistant channel=commentary to=tool.reset_wifi_access:
+{"room_number":"415","device_mac":"6A:91:CE:04:22:70","reason":"Clear portal session; instruct disable Private Address"}
+
+tool.reset_wifi_access channel=commentary to=assistant:
+{"status":"ok"}
+
+assistant channel=final:
+I cleared the stuck session. Please tap the “i” next to PineLodge_Guest_5G, turn off Private Address, forget the network, then rejoin and accept the terms. If you need a quick bite later, breakfast is 7:00–10:00 at Pine Café.

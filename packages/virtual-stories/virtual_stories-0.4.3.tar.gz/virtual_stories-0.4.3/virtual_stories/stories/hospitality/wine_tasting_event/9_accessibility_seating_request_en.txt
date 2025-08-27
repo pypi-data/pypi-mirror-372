@@ -1,0 +1,38 @@
+"""
+Accessibility seating request for wine tasting.
+ROLES: user (guest requesting accessible seating), assistant (concierge arranging seating and registration)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"register_wine_tasting","description":"Register guest for tasting.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"date":{"type":"string","format":"date"},"party_size":{"type":"integer","minimum":1,"maximum":6}},"required":["reservation_id","date","party_size"]},"strict":true},
+  {"name":"reserve_accessible_seats","description":"Reserve accessible seating near elevator.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"seats":{"type":"integer","minimum":1,"maximum":4}},"required":["reservation_id","seats"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Garden Court Hotel
+Accessibility: Seating near elevator and step‑free route available for tastings
+
+user:
+Can we get accessible seating near the elevator for two? Res GCH771 for this Friday.
+
+assistant channel=analysis:
+Register; reserve accessible seats; confirm plainly.
+
+assistant channel=commentary to=tool.register_wine_tasting:
+{"reservation_id":"GCH771","date":"2025-09-12","party_size":2}
+
+tool.register_wine_tasting channel=commentary to=assistant:
+{"status":"registered"}
+
+assistant channel=commentary to=tool.reserve_accessible_seats:
+{"reservation_id":"GCH771","seats":2}
+
+tool.reserve_accessible_seats channel=commentary to=assistant:
+{"status":"reserved"}
+
+assistant channel=final:
+You’re registered for two and we’ve reserved accessible seating near the elevator. The route to the tasting is step‑free.

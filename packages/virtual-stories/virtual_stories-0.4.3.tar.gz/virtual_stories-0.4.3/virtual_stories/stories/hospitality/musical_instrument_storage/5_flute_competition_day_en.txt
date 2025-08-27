@@ -1,0 +1,60 @@
+"""
+Guest asks for short-term storage for flute during competition day and late retrieve.
+
+ROLES: user (flutist competing nearby), assistant (concierge arranging short-term secure storage and late pickup)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_secure_storage",
+    "description": "Create a short-term storage reservation with after-hours pickup note.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "item_description": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["reservation_id", "item_description", "note"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Aria Court Hotel (hotel_id: aria_court_sf).
+Address: 300 Overture Ave, San Francisco, CA 94103. Timezone: America/Los_Angeles.
+Features: instrument lockers adjacent to bell desk, after-hours retrieval via security office (22:00–06:00), claim tickets mandatory.
+
+user:
+Hi! Could I leave my flute for a few hours and pick it up around 10:30 PM? Reservation RSV77889.
+
+assistant channel=analysis:
+Reserve storage with after-hours retrieval note for 22:30.
+
+assistant channel=commentary to=tool.reserve_secure_storage:
+{"reservation_id":"RSV77889","item_description":"flute","note":"After-hours retrieval at 22:30 via security office."}
+
+tool.reserve_secure_storage channel=commentary to=assistant:
+{"status":"reserved","locker_id":"FLT-05","claim_ticket":"CT-5577"}
+
+assistant channel=analysis:
+Confirm retrieval instructions.
+
+assistant channel=final:
+All set! Your flute is reserved in locker FLT-05 with claim ticket CT-5577. For pickup at 10:30 PM, please go directly to the Security Office beside the bell desk window—they’ll verify your claim ticket and ID.
+
+user:
+Great—wish me luck!
+
+assistant channel=analysis:
+Encourage; no tools.
+
+assistant channel=final:
+Best of luck—you’ll do wonderfully!
+
+

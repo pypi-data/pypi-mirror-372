@@ -1,0 +1,48 @@
+"""
+Guest requests a small local-art display with a handwritten welcome note.
+
+ROLES: user (guest who appreciates local art), assistant (concierge coordinating decor with local artisan prints)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"check_decor_inventory","description":"Check availability of decor items by style.","parameters":{"type":"object","additionalProperties":false,"properties":{"style":{"type":"string"}},"required":["style"]},"strict":true},
+  {"name":"place_room_decor_order","description":"Place a room decor order with notes.","parameters":{"type":"object","additionalProperties":false,"properties":{"room_number":{"type":"string"},"style":{"type":"string"},"notes":{"type":"string"}},"required":["style"]},"strict":true}
+]
+```
+"""
+
+system:
+You are the concierge at Gallery Row Hotel, 52 Canvas Street, Santa Fe, NM. Decor: (1) Local Art set includes two small matted prints on easel stands and a handwritten note card; (2) Prints are displayed on desk only; (3) Setup window 14:00–18:00.
+
+user:
+Could you arrange a small display of local art in my room with a handwritten note?
+
+assistant channel=analysis:
+Verify local art set and schedule.
+
+assistant channel=commentary to=tool.check_decor_inventory:
+{"style":"local_art"}
+
+tool.check_decor_inventory channel=commentary to=assistant:
+{"style":"local_art","available":true,"items":["matted_prints","easel_stands","note_card"]}
+
+assistant channel=final:
+Yes—two matted prints on easel stands with a handwritten note on the desk. Our setup window is 14:00–18:00. What time would you like?
+
+user:
+Let’s do 17:10. Also, do you have a favorite gallery nearby?
+
+assistant channel=analysis:
+Place order and small talk about nearby galleries.
+
+assistant channel=commentary to=tool.place_room_decor_order:
+{"room_number":"(not_provided)","style":"local_art","notes":"2 matted prints on easels + handwritten note, setup 17:10"}
+
+tool.place_room_decor_order channel=commentary to=assistant:
+{"status":"placed","reference":"decor_8459"}
+
+assistant channel=final:
+Booked for 17:10 (ref decor_8459). Canyon Road always has charming spots—perfect for an evening stroll.
+

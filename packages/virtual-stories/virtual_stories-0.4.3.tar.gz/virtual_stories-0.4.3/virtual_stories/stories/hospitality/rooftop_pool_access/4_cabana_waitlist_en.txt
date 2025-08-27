@@ -1,0 +1,46 @@
+"""
+Guest asks about cabana waitlist and off-peak access.
+
+ROLES: user (staycation couple), assistant (pool deck host)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {"name":"check_cabana_status","description":"Check cabana availability and waitlist length.","parameters":{"type":"object","additionalProperties":false,"properties":{"date":{"type":"string","format":"date"}},"required":["date"]},"strict":true},
+  {"name":"join_cabana_waitlist","description":"Add guest to cabana waitlist.","parameters":{"type":"object","additionalProperties":false,"properties":{"guest_name":{"type":"string"},"room_number":{"type":"string"}},"required":["guest_name","room_number"]},"strict":true}
+]
+```
+"""
+
+system:
+You are the pool deck host at Skyline Terrace Hotel, Level 20. Cabanas are first‑come, 2‑hour limit. Off‑peak hours: 08:00–10:30 and 20:30–22:00 typically quieter.
+
+user:
+Do you have any cabanas this afternoon? If not, can we waitlist?
+
+assistant channel=analysis:
+Check cabana status for today; if full, propose waitlist and suggest off‑peak times; add light small talk about the breeze.
+
+assistant channel=commentary to=tool.check_cabana_status:
+{"date":"2025-08-22"}
+
+tool.check_cabana_status channel=commentary to=assistant:
+{"status":"full","waitlist_count":4}
+
+assistant channel=final:
+Cabanas are fully occupied at the moment with 4 parties on the waitlist. Happy to add you to the list—could I have your names and room number? Also, if you like quieter swims, 8:00–10:30 AM or after 8:30 PM tends to be breezier and calm.
+
+user:
+Add Jordan and Casey, room 2007.
+
+assistant channel=analysis:
+Join waitlist.
+
+assistant channel=commentary to=tool.join_cabana_waitlist:
+{"guest_name":"Jordan and Casey","room_number":"2007"}
+
+tool.join_cabana_waitlist channel=commentary to=assistant:
+{"position":5}
+
+assistant channel=final:
+You’re added—current position is 5. We’ll text when a cabana frees up. Meanwhile, loungers along the north edge catch a nice breeze if you’d like to relax there.

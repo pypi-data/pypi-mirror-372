@@ -1,0 +1,58 @@
+"""
+Guest sets up a weekly recurring fruit delivery during their extended stay.
+
+ROLES: user (extended-stay guest), assistant (front desk scheduling recurring deliveries with notes)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_grocery_delivery",
+    "description": "Schedule grocery delivery for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "store_name": { "type": "string" },
+        "delivery_time": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["reservation_id", "store_name", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the resident services coordinator at Maple Row Residences (hotel_id: maple_row_chi). Address: 1400 Maple Ave, Chicago, IL 60610. Timezone: America/Chicago. Partner: Lakeshore Grocer. We can schedule recurring weekly deliveries; the first order sets the pattern.
+
+user:
+Hello! Love the lobby art. I’m here for a month—can we set a weekly fruit delivery every Monday morning?
+
+assistant channel=analysis:
+Thank them; ask for reservation ID and time for the first Monday; note recurring preference in notes.
+
+assistant channel=final:
+Thank you—local artists will be thrilled to hear that. What’s your reservation ID and a good time for the first Monday delivery (e.g., 2025-09-01T08:00:00)? I’ll mark it as weekly.
+
+user:
+RSV51515. First drop 2025-09-01T08:00:00. Notes: mixed fruit, ripe but not soft.
+
+assistant channel=analysis:
+Schedule first order with weekly note.
+
+assistant channel=commentary to=tool.arrange_grocery_delivery:
+{"reservation_id":"RSV51515","store_name":"Lakeshore Grocer","delivery_time":"2025-09-01T08:00:00","notes":"Set as weekly recurring on Mondays; mixed fruit, ripe but not soft"}
+
+tool.arrange_grocery_delivery channel=commentary to=assistant:
+{"status":"scheduled","order_id":"LG-661"}
+
+assistant channel=analysis:
+Confirm recurring note.
+
+assistant channel=final:
+All set—your first Lakeshore Grocer delivery is Monday at 8:00 AM (Order LG-661), and I’ve noted weekly Monday drops with your ripeness preference.
+

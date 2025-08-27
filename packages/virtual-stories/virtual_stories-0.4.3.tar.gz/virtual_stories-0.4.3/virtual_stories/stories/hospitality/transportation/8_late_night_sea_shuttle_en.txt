@@ -1,0 +1,64 @@
+"""
+Guest needs a late-night shuttle to Seattle-Tacoma Airport (SEA).
+ROLES: user (guest catching a midnight flight), assistant (front desk agent checking schedule and booking)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_shuttle_schedule",
+    "description": "Retrieve upcoming shuttle departure times for a given airport.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "airport_code": { "type": "string" }
+      },
+      "required": ["airport_code"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_airport_shuttle",
+    "description": "Reserve a seat on the airport shuttle.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "airport_code": { "type": "string" },
+        "departure_time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "guest_name": { "type": "string" },
+        "room_number": { "type": "string" }
+      },
+      "required": ["airport_code","departure_time","guest_name","room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Harbor Breeze Hotel Seattle (hotel_id: harbor_breeze_sea). Address: 300 Pier Way, Seattle, WA 98121. Timezone: America/Los_Angeles. Check-in 3:00 PM, check-out 11:00 AM. Amenities: waterfront patio, free Wi‑Fi, indoor pool. Currency: USD; taxes 15.7% + city fee $4/night. Be clear and only use tools to check shuttle schedules and book seats.
+
+user:
+Hey, the waterfront is so calming tonight. I have a red-eye at SEA and need a shuttle around 11 PM. I'm Dana in room 808.
+
+assistant channel=analysis:
+Check shuttle schedule for SEA, book 23:00 if available.
+
+assistant channel=commentary to=tool.check_shuttle_schedule:
+{"airport_code":"SEA"}
+
+tool.check_shuttle_schedule channel=commentary to=assistant:
+{"departures":["21:00","23:00"]}
+
+assistant channel=commentary to=tool.book_airport_shuttle:
+{"airport_code":"SEA","departure_time":"23:00","guest_name":"Dana","room_number":"808"}
+
+tool.book_airport_shuttle channel=commentary to=assistant:
+{"status":"confirmed","reservation_number":"SHUT-SEA23"}
+
+assistant channel=final:
+You're booked on the 11:00 PM shuttle to SEA (reservation SHUT-SEA23). Please meet in the lobby by 10:50 PM. Safe travels!

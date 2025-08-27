@@ -1,0 +1,77 @@
+"""
+Family books Museum Loop day passes; brief chat about lobby piano music.
+
+ROLES: user (parent arranging family tickets), assistant (concierge issuing museum loop passes)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "quote_bus_pass",
+    "description": "Quote pricing and availability for a bus tour pass.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "route": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "num_adults": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "num_children": { "type": "integer", "minimum": 0, "maximum": 10 }
+      },
+      "required": ["hotel_id", "route", "date", "num_adults", "num_children"]
+    },
+    "strict": true
+  },
+  {
+    "name": "issue_bus_pass",
+    "description": "Issue a confirmed bus tour pass after quote.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "quote_id": { "type": "string" },
+        "charge_to_room": { "type": "boolean" }
+      },
+      "required": ["quote_id", "charge_to_room"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the concierge at Grand Lantern Hotel (hotel_id: grand_lantern_boston). Address: 88 Beacon Row, Boston, MA 02108, USA. Timezone: America/New_York. Amenities: live piano in the lobby 5–7 PM, kids' welcome kits, complimentary cocoa station in winter, and stroller rentals. Museum Loop buses pick up at Park & Beacon every 20 minutes.
+
+user:
+Hi! We’re two adults and one child—can we get Museum Loop passes for tomorrow? The piano downstairs sounded lovely.
+
+assistant channel=analysis:
+Acknowledge piano comment; quote for 2 adults, 1 child, date 2025-09-16; then issue.
+
+assistant channel=commentary to=tool.quote_bus_pass:
+{"hotel_id":"grand_lantern_boston","route":"Museum Loop","date":"2025-09-16","num_adults":2,"num_children":1}
+
+tool.quote_bus_pass channel=commentary to=assistant:
+{"status":"ok","quote_id":"QT-ML-713","total":"USD 95"}
+
+assistant channel=analysis:
+Confirm total and ask to charge to room; on yes, issue.
+
+assistant channel=final:
+The lobby sets the mood, doesn’t it? I can issue your Museum Loop passes for tomorrow—total USD 95. Shall I charge them to your room?
+
+user:
+Yes, please charge it.
+
+assistant channel=commentary to=tool.issue_bus_pass:
+{"quote_id":"QT-ML-713","charge_to_room":true}
+
+tool.issue_bus_pass channel=commentary to=assistant:
+{"status":"issued","confirmation":"ML-BOS-204"}
+
+assistant channel=final:
+All set—passes confirmed, ML-BOS-204. Pick-up is at Park & Beacon; strollers are available at the bell desk if you need one.
+
+

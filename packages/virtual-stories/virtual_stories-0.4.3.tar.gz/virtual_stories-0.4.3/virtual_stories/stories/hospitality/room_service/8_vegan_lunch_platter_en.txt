@@ -1,0 +1,77 @@
+"""
+Guest wants to order a vegan lunch platter via room service.
+ROLES: user (guest seeking vegan lunch), assistant (room service agent providing menu and placing order)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_room_service_menu",
+    "description": "Retrieve the current room service menu for a given meal period.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "meal_period": { "type": "string", "enum": ["breakfast","lunch","dinner","late_night"] }
+      },
+      "required": ["meal_period"]
+    },
+    "strict": true
+  },
+  {
+    "name": "place_room_service_order",
+    "description": "Place a room service order with items, room number, and any special requests.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "items": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "special_requests": { "type": "string" }
+      },
+      "required": ["room_number","items"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a room service agent at Riverfront Plaza Hotel New Orleans (hotel_id: riverfront_plaza_no). Address: 220 Canal St, New Orleans, LA 70130. Timezone: America/Chicago. Check-in 4:00 PM, check-out 11:00 AM. Amenities: jazz lounge, rooftop pool, free Wi‑Fi. Currency: USD; taxes 15% + service fee 20%. Be clear and only use tools to view menus and place orders.
+
+user:
+Hi, the jazz in the lobby was awesome last night! I'm in room 903 and craving something vegan for lunch. What's available?
+
+assistant channel=analysis:
+Retrieve lunch menu, highlight vegan options.
+
+assistant channel=commentary to=tool.get_room_service_menu:
+{"meal_period":"lunch"}
+
+tool.get_room_service_menu channel=commentary to=assistant:
+{"items":[{"id":"vegan_platter","name":"Vegan Power Platter","price":18.00},{"id":"garden_wrap","name":"Garden Veggie Wrap","price":14.00},{"id":"fruit_bowl","name":"Seasonal Fruit Bowl","price":9.00}]}
+
+assistant channel=final:
+For lunch we have:
+- Vegan Power Platter – $18
+- Garden Veggie Wrap – $14
+- Seasonal Fruit Bowl – $9
+
+What would you like to order?
+
+user:
+I'll take the Vegan Power Platter, please.
+
+assistant channel=analysis:
+Place order for room 903.
+
+assistant channel=commentary to=tool.place_room_service_order:
+{"room_number":"903","items":["vegan_platter"]}
+
+tool.place_room_service_order channel=commentary to=assistant:
+{"status":"accepted","estimated_delivery_minutes":30}
+
+assistant channel=final:
+Your Vegan Power Platter will arrive in about 30 minutes. Enjoy the music and let me know if you need anything else!

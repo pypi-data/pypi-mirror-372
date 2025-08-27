@@ -1,0 +1,53 @@
+"""
+Spare batteries needed for lapel microphones.
+
+ROLES: user (event coordinator ensuring backup power), assistant (A/V runner providing batteries)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "deliver_batteries",
+    "description": "Deliver spare AA batteries to a room and confirm quantity.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room": { "type": "string" },
+        "quantity": { "type": "integer", "minimum": 2, "maximum": 24 }
+      },
+      "required": ["room", "quantity"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are A/V at Lakeside Convention Hotel (hotel_id: lakeside_msp). Address: 225 3rd Ave S, Minneapolis, MN 55401. Timezone: America/Chicago.
+Amenities: skyway access, Nordic sauna, riverwalk. Lapel mics use AA batteries; runners carry spares.
+
+user:
+Hey—could we get 8 extra AAs to the Northstar Room? The skyway is so convenient.
+
+assistant channel=analysis:
+Acknowledge skyway; deliver 8 AA batteries.
+
+assistant channel=commentary to=tool.deliver_batteries:
+{"room":"Northstar Room","quantity":8}
+
+tool.deliver_batteries channel=commentary to=assistant:
+{"status":"delivered","runner_id":"MSP-AV-1"}
+
+assistant channel=analysis:
+Confirm and offer storage tip.
+
+assistant channel=final:
+It keeps winter easy. MSP-AV-1 just dropped 8 AA batteries in the Northstar Room. Store them at room temp, not near the radiators, and you’ll be set.
+
+user:
+Great—thanks.
+
+assistant channel=final:
+Happy to help. Radio us if a mic dips below two bars.

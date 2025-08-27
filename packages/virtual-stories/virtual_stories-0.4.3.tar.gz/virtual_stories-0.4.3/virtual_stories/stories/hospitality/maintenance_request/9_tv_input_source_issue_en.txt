@@ -1,0 +1,54 @@
+"""
+TV input source stuck on HDMI.
+
+ROLES: user (guest can't switch inputs to live TV), assistant (tech support coordinating in-room visit)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_av_reset",
+    "description": "Schedule an A/V reset for the in-room TV and remote pairing.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_number": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "required": ["reservation_id", "room_number", "priority"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are tech support at Pioneer Skyline Hotel (hotel_id: pioneer_den). Address: 909 17th St, Denver, CO 80202. Timezone: America/Denver.
+Amenities: rooftop hot tub, sunrise coffee, gear locker. TVs can be reset to hotel mode; remotes sometimes need pairing.
+
+user:
+Hi—my TV in 221 is stuck on HDMI and won’t go back to channels. The sunrise coffee was great!
+
+assistant channel=analysis:
+Acknowledge compliment; schedule A/V reset priority medium. Reservation RSV0221.
+
+assistant channel=commentary to=tool.schedule_av_reset:
+{"reservation_id":"RSV0221","room_number":"221","priority":"medium"}
+
+tool.schedule_av_reset channel=commentary to=assistant:
+{"status":"scheduled","ticket_id":"AV-77","eta_minutes":40}
+
+assistant channel=analysis:
+Provide ETA and quick DIY step.
+
+assistant channel=final:
+Glad you caught the sunrise pour. I’ve scheduled ticket AV-77 with a 40‑minute ETA to reset the TV and pair the remote. If you’d like, try holding the “Input” button for 5 seconds—sometimes it frees up the menu.
+
+user:
+I’ll try that—thanks.
+
+assistant channel=final:
+We’ll see you shortly and make sure live TV is restored.

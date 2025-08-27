@@ -1,0 +1,38 @@
+"""
+Add boot warmers with ski storage.
+ROLES: user (guest requesting storage plus boot warmers), assistant (attendant logging storage and add‑ons)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"store_ski_equipment","description":"Log equipment into storage.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"pieces":{"type":"integer","minimum":1,"maximum":6},"pickup_time":{"type":"string","format":"date-time"}},"required":["reservation_id","pieces","pickup_time"]},"strict":true},
+  {"name":"reserve_boot_warmers","description":"Reserve boot warmers for a reservation.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"pairs":{"type":"integer","minimum":1,"maximum":4}},"required":["reservation_id","pairs"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Frost Peak Lodge
+Ski storage hours: 06:00–22:00; boot warmers available on request
+
+user:
+Can you store one snowboard and set up two boot warmers for tomorrow 8 a.m.? Res FP1001.
+
+assistant channel=analysis:
+Store one piece with pickup at 08:00; reserve two boot warmers; confirm politely.
+
+assistant channel=commentary to=tool.store_ski_equipment:
+{"reservation_id":"FP1001","pieces":1,"pickup_time":"2025-12-20T08:00:00"}
+
+tool.store_ski_equipment channel=commentary to=assistant:
+{"status":"stored","locker":"B-07"}
+
+assistant channel=commentary to=tool.reserve_boot_warmers:
+{"reservation_id":"FP1001","pairs":2}
+
+tool.reserve_boot_warmers channel=commentary to=assistant:
+{"status":"reserved"}
+
+assistant channel=final:
+All set—your snowboard is in locker B‑07, and two boot warmers will be ready by 8:00 AM.

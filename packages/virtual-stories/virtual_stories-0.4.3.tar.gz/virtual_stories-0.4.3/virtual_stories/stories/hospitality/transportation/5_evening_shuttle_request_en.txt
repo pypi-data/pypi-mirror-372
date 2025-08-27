@@ -1,0 +1,58 @@
+"""
+Guest checks for late evening shuttle availability.
+ROLES: user (guest arranging transportation), assistant (front desk agent)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_shuttle_schedule",
+    "description": "Retrieve upcoming shuttle departure times for a given airport.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "airport_code": { "type": "string", "description": "IATA airport code." }
+      },
+      "required": ["airport_code"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_airport_shuttle",
+    "description": "Reserve a seat on the airport shuttle.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "airport_code": { "type": "string" },
+        "departure_time": { "type": "string", "pattern": "^\d{2}:\d{2}$" },
+        "guest_name": { "type": "string" },
+        "room_number": { "type": "string" }
+      },
+      "required": ["airport_code","departure_time","guest_name","room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi‑Fi, gym, pool, on-site restaurant. Currency: USD; taxes 14.75% + occupancy tax $3.50/night. Be clear and only use tools to check shuttle schedules and book seats.
+
+user:
+Is there a shuttle to JFK after 8 PM tonight?
+assistant channel=analysis:
+Check schedule, no late shuttles, inform guest.
+assistant channel=commentary to=tool.check_shuttle_schedule:
+{"airport_code":"JFK"}
+tool.check_shuttle_schedule channel=commentary to=assistant:
+{"departures":["18:00","20:00"]}
+assistant channel=commentary to=tool.check_shuttle_schedule:
+{"airport_code":"JFK"}
+tool.check_shuttle_schedule channel=commentary to=assistant:
+{"departures":["18:00","20:00"]}
+assistant channel=final:
+The last shuttle to JFK departs at 8:00 PM; unfortunately there are no later shuttles tonight.

@@ -1,0 +1,97 @@
+"""
+Guest arranges a conference room for a meeting.
+ROLES: user (guest organizing meeting), assistant (event coordinator handling bookings)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_conference_room_availability",
+    "description": "Check availability of conference rooms for a time range.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "start_time": { "type": "string", "format": "date-time" },
+        "end_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["start_time","end_time"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_conference_room",
+    "description": "Book a conference room for a reservation.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_id": { "type": "string" },
+        "start_time": { "type": "string", "format": "date-time" },
+        "end_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id","room_id","start_time","end_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are an event coordinator at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. The hotel offers complimentary high-speed Wi-Fi, a 24-hour fitness center, indoor pool from 6:00 AM to 10:00 PM, spa from 9:00 AM to 8:00 PM, rooftop bar, and underground garage parking ($30/night with EV charging). Breakfast buffet runs 6:30 AM–10:30 AM daily. Pets up to 50 lbs are welcome with a one-time $75 cleaning fee. Use tools to check availability and book rooms.
+
+user:
+Hi, I'm planning a meeting next Monday for 10 people. Is your conference room free?
+
+assistant channel=analysis:
+Need specific time to check availability.
+
+assistant channel=final:
+We'd be happy to host. What time will the meeting run?
+
+user:
+It's from 2 PM to 4 PM. Reservation ID RSV55555. Also, your lobby art is cool!
+
+assistant channel=analysis:
+Check availability for provided time and respond to compliment.
+
+assistant channel=commentary to=tool.check_conference_room_availability:
+{"start_time":"2025-09-15T14:00:00","end_time":"2025-09-15T16:00:00"}
+
+tool.check_conference_room_availability channel=commentary to=assistant:
+{"available":true,"room_id":"conf_a","hourly_rate":80.0}
+
+assistant channel=analysis:
+Inform guest room is available, mention rate, confirm booking request.
+
+assistant channel=final:
+Thank you! The artwork is one of our favorites. Conference room A is available from 2 to 4 PM at $80 per hour. Shall I book it for you?
+
+user:
+Yes, please book it.
+
+assistant channel=analysis:
+Book conference room using reservation ID and room details.
+
+assistant channel=commentary to=tool.book_conference_room:
+{"reservation_id":"RSV55555","room_id":"conf_a","start_time":"2025-09-15T14:00:00","end_time":"2025-09-15T16:00:00"}
+
+tool.book_conference_room channel=commentary to=assistant:
+{"status":"booked","confirmation":"CONF-902"}
+
+assistant channel=analysis:
+Confirm booking to guest.
+
+assistant channel=final:
+Your meeting is booked in conference room A with confirmation CONF-902. Let us know if you need catering or equipment.
+
+user:
+Thanks!
+
+assistant channel=analysis:
+Wrap up politely.
+
+assistant channel=final:
+You're welcome. We look forward to hosting your meeting.

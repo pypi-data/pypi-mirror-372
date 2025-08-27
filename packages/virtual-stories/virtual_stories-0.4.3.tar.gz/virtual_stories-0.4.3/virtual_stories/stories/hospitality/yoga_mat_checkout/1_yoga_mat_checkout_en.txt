@@ -1,0 +1,68 @@
+"""
+Guest borrows yoga mats from the hotel.
+
+ROLES: user (guest wanting yoga mats), assistant (front desk agent managing loan items)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "checkout_yoga_mat",
+    "description": "Loan yoga mats to guests with a return date.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "quantity": {"type": "integer", "minimum": 1, "maximum": 4},
+        "return_date": {"type": "string", "format": "date"}
+      },
+      "required": ["reservation_id", "quantity", "return_date"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a concierge at Garden Plaza Hotel (hotel_id: garden_plaza_ldn). Address: 50 Green St, London W1K 6DN, UK.
+Timezone: Europe/London. Check-in 2 PM, check-out 11 AM. The hotel offers a courtyard garden, tea lounge,
+a gym 6 AM–11 PM, and complimentary breakfast 7–10 AM. Yoga mats may be borrowed for 24 hours.
+Use tools to log yoga mat loans.
+
+user:
+Hi, could I borrow two yoga mats for tomorrow morning? I'm RSV4545.
+
+assistant channel=analysis:
+Ask for return date and then loan mats.
+
+assistant channel=final:
+Absolutely. When will you be able to return them?
+
+user:
+We'll bring them back tomorrow evening. The garden smells wonderful, by the way.
+
+assistant channel=analysis:
+Use tool with reservation RSV4545, quantity 2, return_date 2025-09-21. Respond to compliment.
+
+assistant channel=commentary to=tool.checkout_yoga_mat:
+{"reservation_id":"RSV4545","quantity":2,"return_date":"2025-09-21"}
+
+tool.checkout_yoga_mat channel=commentary to=assistant:
+{"status":"checked_out"}
+
+assistant channel=analysis:
+Confirm loan and address comment.
+
+assistant channel=final:
+Two yoga mats are reserved for you and due back tomorrow evening. The garden's lavender is in bloom—glad you noticed!
+
+user:
+Thanks, that's great.
+
+assistant channel=analysis:
+Close conversation.
+
+assistant channel=final:
+You're welcome. Enjoy your practice.

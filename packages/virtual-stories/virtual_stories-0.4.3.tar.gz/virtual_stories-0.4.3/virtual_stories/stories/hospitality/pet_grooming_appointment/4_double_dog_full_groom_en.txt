@@ -1,0 +1,65 @@
+"""
+Guest requests two back-to-back full grooms for sibling dogs.
+
+ROLES: user (guest with two dogs), assistant (concierge coordinating consecutive grooming slots)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_grooming",
+    "description": "Book a pet grooming appointment at the onsite salon.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "pet_name": { "type": "string" },
+        "service_type": { "type": "string", "enum": ["bath", "full_groom"] },
+        "appointment_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "pet_name", "service_type", "appointment_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the concierge at Paws & Relax Lodge (hotel_id: paws_relax_seattle). Salon hours 09:00–17:00. Each full groom is 90 minutes.
+
+user:
+Hello! Could I book full grooms for my two dogs, Maple and Cedar, one after the other starting at 9 AM? Reservation RSV52020.
+
+assistant channel=analysis:
+Book Maple at 09:00, Cedar at 10:30.
+
+assistant channel=commentary to=tool.schedule_pet_grooming:
+{"reservation_id":"RSV52020","pet_name":"Maple","service_type":"full_groom","appointment_time":"2025-08-21T09:00:00"}
+
+tool.schedule_pet_grooming channel=commentary to=assistant:
+{"status":"scheduled","appointment_id":"GROOM-30"}
+
+assistant channel=commentary to=tool.schedule_pet_grooming:
+{"reservation_id":"RSV52020","pet_name":"Cedar","service_type":"full_groom","appointment_time":"2025-08-21T10:30:00"}
+
+tool.schedule_pet_grooming channel=commentary to=assistant:
+{"status":"scheduled","appointment_id":"GROOM-31"}
+
+assistant channel=analysis:
+Confirm both bookings.
+
+assistant channel=final:
+All set! Maple is at 9:00 AM (ID GROOM-30) and Cedar at 10:30 AM (ID GROOM-31). We’ll text when each pup is ready for pickup. Anything they’re sensitive to?
+
+user:
+Maple likes quiet clippers. Also, the dog park looks fun!
+
+assistant channel=analysis:
+Small talk.
+
+assistant channel=final:
+We’ll note quiet clippers for Maple—and the park’s on Level 2 if you want a romp later!
+
+

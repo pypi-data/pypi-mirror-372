@@ -1,0 +1,99 @@
+"""
+Guest reports a malfunctioning safe and needs urgent assistance with access.
+
+ROLES: user (guest experiencing safe malfunction), assistant (technical support specialist at tech-forward hotel)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "diagnose_safe_issue",
+    "description": "Diagnose common safe malfunction issues and provide troubleshooting steps.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "symptom": { "type": "string", "description": "Description of the safe issue" },
+        "room_number": { "type": "string", "description": "Room number for reference" }
+      },
+      "required": ["symptom", "room_number"]
+    },
+    "strict": true
+  },
+  {
+    "name": "schedule_technician_visit",
+    "description": "Schedule a technician visit for safe repair or replacement.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "issue_type": { "type": "string" }
+      },
+      "required": ["room_number", "priority", "issue_type"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a technical support specialist at The Ritz-Carlton San Francisco (hotel_id: ritz_san_francisco). Address: 600 Stockton St, San Francisco, CA 94108.
+Timezone: America/Los_Angeles. This luxury hotel features smart room technology, electronic safes with mobile app control, and 24-hour technical support.
+Check-in 4:00 PM, check-out 11:00 AM. Provide efficient technical assistance for all guest technology needs.
+
+user:
+I'm having a serious problem with the safe in my room. The digital display isn't working at all - it's completely blank. I have important medications inside and I need access urgently!
+
+assistant channel=analysis:
+Guest has a critical safe malfunction - display not working with medications inside. This is urgent. I need to diagnose the issue first, then schedule immediate technician assistance.
+
+assistant channel=commentary to=tool.diagnose_safe_issue:
+{"symptom":"blank digital display","room_number":"1208"}
+
+tool.diagnose_safe_issue channel=commentary to=assistant:
+{"diagnosis":"power failure or circuit issue","troubleshooting_steps":"check power outlet, reset circuit breaker, wait 30 minutes","estimated_resolution_time":"15-30 minutes","requires_technician":true}
+
+assistant channel=analysis:
+Diagnosis shows power/circuit issue. Since it's urgent with medications inside, I should schedule immediate technician visit while trying basic troubleshooting first.
+
+assistant channel=final:
+I understand this is urgent, especially with your medications inside. Our diagnostic shows this could be a power or circuit issue. Please try checking if the safe is properly plugged in and if there's a power outlet reset button nearby. While you do that, I'll arrange for our technician to come immediately.
+
+user:
+I checked the outlet and tried resetting it, but the display is still blank. My room is 1208. How soon can someone come?
+
+assistant channel=analysis:
+Basic troubleshooting didn't work. I need to schedule urgent technician visit since the guest has medications that need immediate access.
+
+assistant channel=commentary to=tool.schedule_technician_visit:
+{"room_number":"1208","priority":"urgent","issue_type":"power failure - medications locked inside"}
+
+tool.schedule_technician_visit channel=commentary to=assistant:
+{"technician_eta":"8 minutes","technician_name":"Alex Thompson","confirmation_number":"TECH-2024-001208","alternative_solution":"emergency safe override available if needed"}
+
+assistant channel=analysis:
+Technician will arrive in 8 minutes. I should inform the guest and provide reassurance about their medications being accessible soon.
+
+assistant channel=final:
+Our technician Alex will be at your room in just 8 minutes - confirmation TECH-2024-001208. He has the tools to safely access your safe and get your medications. In the meantime, please stay near your room so he can reach you quickly.
+
+user:
+Thank you, that's a relief. I've been traveling with these medications and was worried about the timing. The view from this room is incredible - you can see the entire bay from up here!
+
+assistant channel=analysis:
+Guest is making small talk about the view while waiting. This doesn't require tool usage - I can respond conversationally using hotel knowledge about the room views.
+
+assistant channel=final:
+I'm glad you're reassured - Alex is one of our best technicians. Yes, the rooms on the 12th floor have spectacular views of San Francisco Bay and the Golden Gate Bridge. Many guests tell us it's the highlight of their stay. The city lights at night are particularly beautiful from that vantage point.
+
+user:
+That's what I thought! I'll definitely take some photos later. Thanks again for the quick response - I really appreciate the service here at The Ritz.
+
+assistant channel=analysis:
+Guest is appreciative and concluding the conversation. I should respond warmly and confirm the technician will arrive soon.
+
+assistant channel=final:
+You're very welcome! We pride ourselves on providing exceptional service, especially for urgent situations. Alex should arrive at your room momentarily - he'll have your safe working in no time. Enjoy the rest of your evening and those stunning views!

@@ -1,0 +1,96 @@
+"""
+Organizer asks about booking multiple breakout rooms for a corporate training session.
+ROLES: user (corporate trainer seeking rooms and pricing), assistant (events coordinator checking availability, quoting, and holding rooms)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "search_event_space_availability",
+    "description": "Check availability of event spaces for a given date and attendance size.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500 }
+      },
+      "required": ["event_date","attendees"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_event_quote",
+    "description": "Get a pricing quote for a specific event space and duration.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500 },
+        "hours": { "type": "integer", "minimum": 1, "maximum": 12 }
+      },
+      "required": ["room_name","event_date","attendees","hours"]
+    },
+    "strict": true
+  },
+  {
+    "name": "hold_event_space",
+    "description": "Place a temporary hold on an event space.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer" },
+        "organizer_name": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["room_name","event_date","attendees","organizer_name","email"]
+    },
+    "strict": true
+  },
+  {
+    "name": "confirm_event_booking",
+    "description": "Confirm a held event space reservation with payment.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hold_id": { "type": "string" },
+        "payment_token": { "type": "string", "minLength": 8 }
+      },
+      "required": ["hold_id","payment_token"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are an events coordinator at Lakeside Conference Resort Chicago (hotel_id: lakeside_conf_chi). Address: 880 Lake Shore Dr, Chicago, IL 60611. Timezone: America/Chicago. Check-in 3:00 PM, check-out 11:00 AM. Amenities: lakeside pavilion, indoor pool, free Wi‑Fi. Currency: USD; taxes 17.4% + service fee 5%. Be clear and only use tools to check space availability, quote pricing, hold rooms, and confirm bookings.
+
+user:
+Hi there, the breeze off the lake is great! I'm planning a training for 60 people on November 5 and need two breakout rooms. Are they available for the afternoon?
+
+assistant channel=analysis:
+Check availability for 60 attendees November 5; provide quote for "Michigan" room (main) and note breakout rooms, hold if requested.
+
+assistant channel=commentary to=tool.search_event_space_availability:
+{"event_date":"2025-11-05","attendees":60}
+
+tool.search_event_space_availability channel=commentary to=assistant:
+{"available_spaces":[{"room_name":"Michigan Ballroom","capacity":120},{"room_name":"Superior Breakout","capacity":40},{"room_name":"Huron Breakout","capacity":40}]}
+
+assistant channel=commentary to=tool.get_event_quote:
+{"room_name":"Michigan Ballroom","event_date":"2025-11-05","attendees":60,"hours":6}
+
+tool.get_event_quote channel=commentary to=assistant:
+{"room_name":"Michigan Ballroom","base_rate":1500.00,"service_charge":300.00,"total":1800.00}
+
+assistant channel=final:
+We have the Michigan Ballroom plus two breakout rooms (Superior and Huron) available on November 5. The main room runs $1,800 for a six-hour block; breakout rooms are $300 each. Would you like me to place them on hold under your name?

@@ -1,0 +1,43 @@
+"""
+City Marathon cheer zone timing and route crossings near hotel.
+Coordinate early coffee and crossing windows.
+
+ROLES: user (guest cheering a runner), assistant (concierge advising best spots and times)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"get_event_schedule","description":"Get marathon route and ETA.","parameters":{"type":"object","additionalProperties":false,"properties":{"event_name":{"type":"string"},"date":{"type":"string","format":"date"}},"required":["event_name","date"]},"strict":true},
+  {"name":"check_crossing_window","description":"Find safe pedestrian crossing windows on route.","parameters":{"type":"object","additionalProperties":false,"properties":{"intersection":{"type":"string"}},"required":["intersection"]},"strict":true}
+]
+```
+"""
+
+system:
+Hotel: Riverbend Suites, 88 Quay Street. Lobby cafe opens 05:30 on marathon day. Closest route segment: Quay St between 4th and 9th; cheer zone at Pier Park.
+
+user:
+What time should I be at Pier Park to see runners, and can I cross Quay St after 8?
+
+assistant channel=analysis:
+Get ETA for Pier Park; check crossing window after 08:00 at Quay & 6th.
+
+assistant channel=commentary to=tool.get_event_schedule:
+{"event_name":"City Marathon","date":"2025-03-16"}
+
+tool.get_event_schedule channel=commentary to=assistant:
+{"pier_park_eta":"08:10-08:40","route_segment":"Quay St 4th-9th"}
+
+assistant channel=commentary to=tool.check_crossing_window:
+{"intersection":"Quay & 6th"}
+
+tool.check_crossing_window channel=commentary to=assistant:
+{"windows":[{"start":"08:45","end":"08:55"},{"start":"09:20","end":"09:30"}]}
+
+assistant channel=final:
+Aim for Pier Park around 08:10–08:40 to catch the main pack. You can cross at Quay & 6th during managed windows at 08:45–08:55 or 09:20–09:30—follow marshal directions.
+
+Coffee’s on from 05:30 in the lobby if you’re heading out early.
+
+

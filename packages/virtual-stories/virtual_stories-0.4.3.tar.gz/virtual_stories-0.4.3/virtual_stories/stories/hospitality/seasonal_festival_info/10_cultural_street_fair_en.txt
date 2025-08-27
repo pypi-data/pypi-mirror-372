@@ -1,0 +1,49 @@
+"""
+Cultural Street Fair with performance stages and tastings.
+Assist with stage times and tasting tokens.
+
+ROLES: user (guest exploring street fair), assistant (concierge coordinating stage schedule and tokens)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"get_event_schedule","description":"Get stage lineup and tasting sessions.","parameters":{"type":"object","additionalProperties":false,"properties":{"event_name":{"type":"string"},"date":{"type":"string","format":"date"}},"required":["event_name","date"]},"strict":true},
+  {"name":"purchase_tokens","description":"Purchase tasting tokens for guest pickup.","parameters":{"type":"object","additionalProperties":false,"properties":{"bundle":{"type":"string"},"guest_name":{"type":"string"}},"required":["bundle","guest_name"]},"strict":true}
+]
+```
+"""
+
+system:
+Hotel: Mosaic Courtyard Hotel, 40 Artisan Lane. Courtyard gate shortcut to Fair Street; token booth nearest gate B. Quiet lounge 14:00–17:00 for midday breaks.
+
+user:
+What time is the folk dance performance, and how do tastings work?
+
+assistant channel=analysis:
+Fetch stage time; explain token bundles; offer purchase. Add small talk.
+
+assistant channel=commentary to=tool.get_event_schedule:
+{"event_name":"Cultural Street Fair","date":"2025-06-08"}
+
+tool.get_event_schedule channel=commentary to=assistant:
+{"folk_dance":"15:15","tasting_bundles":["T5","T10"],"notes":"Token booths at gates A, B"}
+
+assistant channel=final:
+The folk dance starts at 15:15 on the main stage. Tastings use prepaid token bundles—T5 or T10. The closest booth to the hotel is Gate B via our courtyard shortcut.
+
+Out of curiosity, do you lean savory snacks or sweet treats first?
+
+user:
+Sweet! Please purchase a T10 bundle for Morgan.
+
+assistant channel=commentary to=tool.purchase_tokens:
+{"bundle":"T10","guest_name":"Morgan"}
+
+tool.purchase_tokens channel=commentary to=assistant:
+{"status":"confirmed","token_code":"TK-MOS-10"}
+
+assistant channel=final:
+Your T10 bundle is confirmed (code TK-MOS-10). Pick up at Gate B by showing this code.
+
+

@@ -1,0 +1,48 @@
+"""
+Guest asks about upgrading to a pet-friendly suite and fees.
+
+ROLES: user (guest with small dog), assistant (front desk agent)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"check_room_upgrade_options","description":"Check pet-friendly upgrade options.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"}},"required":["reservation_id"]},"strict":true},
+  {"name":"process_room_upgrade","description":"Confirm upgrade selection.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"room_type":{"type":"string"}},"required":["reservation_id","room_type"]},"strict":true}
+]
+```
+"""
+
+system:
+You are at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Pets up to 50 lbs welcome with a one‑time $75 cleaning fee. Suites on floors 12–15 are pet‑friendly.
+
+user:
+Hi! Could I upgrade to a pet‑friendly suite? I’ve got a 12‑lb terrier. Reservation RSV84511.
+
+assistant channel=analysis:
+Check options; mention pet fee.
+
+assistant channel=commentary to=tool.check_room_upgrade_options:
+{"reservation_id":"RSV84511"}
+
+tool.check_room_upgrade_options channel=commentary to=assistant:
+{"available":["pet_friendly_junior_suite","pet_friendly_executive_suite"],"rates":{"pet_friendly_junior_suite":55.0,"pet_friendly_executive_suite":110.0}}
+
+assistant channel=final:
+We have a pet‑friendly junior suite for $55/night or an executive suite for $110/night. There’s a one‑time $75 cleaning fee for pets up to 50 lbs. Which would you like?
+
+user:
+Junior suite is fine—thank you!
+
+assistant channel=analysis:
+Process junior suite.
+
+assistant channel=commentary to=tool.process_room_upgrade:
+{"reservation_id":"RSV84511","room_type":"pet_friendly_junior_suite"}
+
+tool.process_room_upgrade channel=commentary to=assistant:
+{"status":"confirmed","new_room_type":"pet_friendly_junior_suite"}
+
+assistant channel=final:
+Confirmed—junior suite on a pet‑friendly floor. We’ll set out a water bowl for your terrier.
+

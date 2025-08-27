@@ -1,0 +1,114 @@
+"""
+Corporate group seeks theater tickets for team building event.
+
+ROLES: user (corporate event planner organizing team outing), assistant (concierge handling group theater reservations)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_group_availability",
+    "description": "Check theater availability for large groups and special events.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "group_size": {"type": "integer", "minimum": 8, "maximum": 50},
+        "event_type": {"type": "string", "enum": ["corporate", "birthday", "reunion", "team_building"]},
+        "date": {"type": "string", "format": "date"},
+        "preferred_time": {"type": "string", "pattern": "^\\d{2}:\\d{2}$"}
+      },
+      "required": ["group_size", "event_type", "date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "reserve_group_tickets",
+    "description": "Reserve multiple theater tickets for groups with special accommodations.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "show_name": {"type": "string"},
+        "show_time": {"type": "string", "format": "date-time"},
+        "total_tickets": {"type": "integer", "minimum": 8, "maximum": 50},
+        "special_requests": {"type": "string"},
+        "contact_person": {"type": "string"}
+      },
+      "required": ["reservation_id", "show_name", "show_time", "total_tickets", "contact_person"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Midtown Business Hotel (hotel_id: midtown_business_nyc).
+Address: 1335 Avenue of the Americas, New York, NY 10019. Phone: (212) 555-0335.
+The hotel features 280 business suites with work areas, conference rooms, corporate event planning services, partnerships with Broadway theaters for group discounts, and team building entertainment packages.
+Check-in 2 PM, check-out 1 PM. Timezone: America/New_York.
+
+user:
+Good afternoon! I'm organizing a team-building event for my company and we'd like to book theater tickets for 15 people. We're looking for something fun and engaging that would work well for team bonding.
+
+assistant channel=analysis:
+Corporate group of 15 wants theater tickets for team building. Need to check group availability and suggest appropriate shows for corporate events.
+
+assistant channel=final:
+Hello! We'd be happy to help with your team-building theater event. For groups of 15, we have excellent partnerships with Broadway theaters that offer special corporate pricing. Could you share your reservation ID and the preferred date?
+
+user:
+Our reservation ID is CORP2025009. We'd like to do this on Friday evening. The team is diverse in age and interests, so something broadly appealing would be great.
+
+assistant channel=analysis:
+Check group availability for Friday evening for a corporate team-building event with 15 people.
+
+assistant channel=commentary to=tool.check_group_availability:
+{"group_size":15,"event_type":"team_building","date":"2025-08-23","preferred_time":"19:30"}
+
+tool.check_group_availability channel=commentary to=assistant:
+{"available_shows":[{"name":"Wicked","time":"19:30","group_discount":"15%","min_group_size":10,"special_features":"interactive preshow activities","duration":"165 min"},{"name":"The Book of Mormon","time":"20:00","group_discount":"20%","min_group_size":12,"special_features":"group photo opportunity","duration":"135 min"},{"name":"Chicago","time":"18:30","group_discount":"12%","min_group_size":8,"special_features":"post-show reception area","duration":"150 min"}]}
+
+assistant channel=analysis:
+All shows offer good discounts for groups of 15. The Book of Mormon has the highest discount and is closest to their preferred time. It would be good for team bonding with humor and memorable moments.
+
+assistant channel=final:
+Excellent! For your team of 15, "The Book of Mormon" at 8:00 PM offers our best group discount at 20% off, plus they have a special group photo opportunity. "Wicked" also has good interactive elements for team building. Which would appeal more to your group?
+
+user:
+The Book of Mormon sounds perfect! It's hilarious and has great music - exactly what we need for team bonding. Could you arrange that for us?
+
+assistant channel=analysis:
+Reserve 15 tickets for The Book of Mormon at 8:00 PM for corporate group CORP2025009. Include team building special requests.
+
+assistant channel=commentary to=tool.reserve_group_tickets:
+{"reservation_id":"CORP2025009","show_name":"The Book of Mormon","show_time":"2025-08-23T20:00:00","total_tickets":15,"special_requests":"team building event with group photo opportunity","contact_person":"event planner"}
+
+tool.reserve_group_tickets channel=commentary to=assistant:
+{"status":"confirmed","ticket_ids":"MORMON-GRP-2025-089","total_cost":"$1,275","group_discount_applied":"20%","special_arrangements":"pre-show group activities and photo session"}
+
+assistant channel=analysis:
+Confirm the reservation with all group details and mention the additional team-building features.
+
+assistant channel=final:
+Perfect! Your group tickets for "The Book of Mormon" are confirmed - ticket group MORMON-GRP-2025-089 for all 15 people. With the 20% group discount, the total comes to $1,275. Plus, I've arranged for pre-show group activities and a photo session to enhance the team-building experience.
+
+user:
+That's outstanding! The team will love the special touches. Could you also recommend any nearby places for a post-show team dinner?
+
+assistant channel=analysis:
+The guest wants restaurant recommendations for post-show team dinner. Since this is about dining recommendations and not theater booking, I can provide this information from my hotel knowledge without using tools.
+
+assistant channel=final:
+Absolutely! For a post-show team dinner, I recommend "The Modern" at MoMA (just a 10-minute walk) - they have excellent group seating and a diverse menu that appeals to all tastes. If your team prefers something more casual, "The Spotted Pig" has great sharing plates and can accommodate groups of 15. Both are highly rated for business groups!
+
+user:
+The Modern sounds sophisticated yet approachable. We'll go with that. Thank you for making this team event so special!
+
+assistant channel=analysis:
+The guest is pleased with the restaurant recommendation. This closes the conversation nicely with the complete event planning.
+
+assistant channel=final:
+Wonderful choice! The Modern will be perfect for your team. I'm delighted we could help make your team-building event memorable from start to finish. Your group will have an incredible evening! 🎭🍽️

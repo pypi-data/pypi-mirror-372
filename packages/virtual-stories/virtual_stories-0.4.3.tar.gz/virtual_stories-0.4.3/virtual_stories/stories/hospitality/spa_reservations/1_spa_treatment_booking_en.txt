@@ -1,0 +1,64 @@
+"""
+Hotel guest wants to book a spa treatment and asks about availability and timing.
+ROLES: user (guest seeking a massage appointment), assistant (spa desk agent checking availability and booking)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_spa_availability",
+    "description": "Check available times for a specific spa service on a given date.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "service_type": { "type": "string", "enum": ["swedish_massage","deep_tissue","facial"], "description": "Type of spa service." },
+        "date": { "type": "string", "format": "date", "description": "Desired appointment date." }
+      },
+      "required": ["service_type","date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_spa_service",
+    "description": "Book a spa appointment for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "service_type": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$", "description": "Start time in HH:MM" },
+        "guest_name": { "type": "string" },
+        "room_number": { "type": "string" }
+      },
+      "required": ["service_type","date","time","guest_name","room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a spa desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi‑Fi, gym, pool, on-site restaurant. Currency: USD; taxes 14.75% + occupancy tax $3.50/night. Be clear and only use tools to check spa availability and book services.
+user:
+Hi, I'd love to book a Swedish massage for tomorrow afternoon. Do you have any openings?
+assistant channel=analysis:
+Check availability for Swedish massage tomorrow, then offer available slots.
+assistant channel=commentary to=tool.check_spa_availability:
+{"service_type":"swedish_massage","date":"2025-07-22"}
+tool.check_spa_availability channel=commentary to=assistant:
+{"available_times":["14:00","16:00"]}
+assistant channel=final:
+We have Swedish massage openings tomorrow at 2:00 PM and 4:00 PM. Which time works for you?
+user:
+4 PM would be great. I'm in room 908, name is Daniel Lee.
+assistant channel=analysis:
+Book the 4 PM appointment for Daniel Lee in room 908.
+assistant channel=commentary to=tool.book_spa_service:
+{"service_type":"swedish_massage","date":"2025-07-22","time":"16:00","guest_name":"Daniel Lee","room_number":"908"}
+tool.book_spa_service channel=commentary to=assistant:
+{"status":"booked","confirmation_number":"SPA-5521"}
+assistant channel=final:
+Your Swedish massage is booked for tomorrow at 4:00 PM (confirmation SPA-5521). Please arrive 15 minutes early to check in. Enjoy your relaxation!

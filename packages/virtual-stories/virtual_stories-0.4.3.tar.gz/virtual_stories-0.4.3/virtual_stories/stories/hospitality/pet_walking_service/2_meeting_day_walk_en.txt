@@ -1,0 +1,87 @@
+"""
+A guest needs to arrange for their dog to be walked while they are out for the day.
+
+ROLES: user (a dog owner with a busy schedule), assistant (a hotel staff member arranging a dog walking service)
+CHANNELS: analysis, commentary, final
+TOOLS:
+```json
+[
+  {
+    "name": "get_pet_walking_service_options",
+    "description": "Get the available options for the pet walking service.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "book_pet_walking_service",
+    "description": "Book the pet walking service for a guest.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "guest_name": {
+          "type": "string",
+          "description": "The name of the guest."
+        },
+        "pet_name": {
+          "type": "string",
+          "description": "The name of the pet."
+        },
+        "walk_time": {
+          "type": "string",
+          "format": "time",
+          "description": "The desired time for the walk."
+        }
+      },
+      "required": ["guest_name", "pet_name", "walk_time"]
+    }
+  }
+]
+```
+"""
+
+system:
+You are a staff member at the 'Happy Paws Hotel', which offers a professional pet walking service for guests.
+
+user:
+I have a long day of meetings tomorrow, and I don't want to leave my dog, Max, in the room all day. Do you have a dog walking service?
+
+assistant channel=analysis:
+The user needs a dog walking service for their dog, Max. I should first provide them with the available options for the service.
+
+assistant channel=commentary to=tool.get_pet_walking_service_options:
+{}
+
+tool.get_pet_walking_service_options channel=commentary to=assistant:
+{"options": [{"duration_minutes": 30, "price": 25}, {"duration_minutes": 60, "price": 40}]}
+
+assistant channel=analysis:
+I have the options for the pet walking service. I will present them to the user.
+
+assistant channel=final:
+Yes, we do! We can arrange for one of our trusted pet walkers to take Max out for you. We offer two options:
+
+*   A 30-minute walk for $25
+*   A 60-minute walk for $40
+
+Would you like to book a walk for Max?
+
+user:
+The 60-minute walk sounds great. Can you have someone walk him around 1:00 PM? My name is Emily Carter. It's such a relief to know he'll be taken care of.
+
+assistant channel=analysis:
+The user wants to book a 60-minute walk for her dog, Max, at 1:00 PM. I will use the `book_pet_walking_service` tool to make the booking and also reassure her.
+
+assistant channel=commentary to=tool.book_pet_walking_service:
+{"guest_name": "Emily Carter", "pet_name": "Max", "walk_time": "13:00"}
+
+tool.book_pet_walking_service channel=commentary to=assistant:
+{"booking_id": "PW-5566", "confirmation_message": "A 60-minute walk has been booked for Max at 1:00 PM."}
+
+assistant channel=analysis:
+The walk has been booked. I will now confirm with the user.
+
+assistant channel=final:
+You can rest assured that Max will be in good hands. I've booked a 60-minute walk for him tomorrow at 1:00 PM, Ms. Carter. Our pet walker will come to your room to pick him up. We'll make sure he has a great time!

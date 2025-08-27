@@ -1,0 +1,57 @@
+"""
+Private rooftop wine tasting request and registration.
+ROLES: user (guest requesting private tasting), assistant (concierge handling event and add‑ons)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"register_wine_tasting","description":"Register guest for scheduled tasting.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"date":{"type":"string","format":"date"},"party_size":{"type":"integer","minimum":1,"maximum":12}},"required":["reservation_id","date","party_size"]},"strict":true},
+  {"name":"request_private_segment","description":"Request a 20‑minute private segment before public tasting.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"date":{"type":"string","format":"date"}},"required":["reservation_id","date"]},"strict":true},
+  {"name":"add_cheese_board","description":"Add chef’s cheese board for the party.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"boards":{"type":"integer","minimum":1,"maximum":6}},"required":["reservation_id","boards"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Skyline Terrace Hotel (hotel_id: skyline_terrace_nyc)
+Address: 500 W 44th St, New York, NY 10036 | Timezone: America/New_York
+Event: Rooftop wine tasting Fridays 6:00 PM (weather backup: 24th‑floor Lounge A)
+Capacity: 28 guests; dress code smart casual; add‑on cheese board serves 2 each
+Policies: Private pre‑segment (20 min) offered at 5:30 PM if available
+
+user:
+We’d like a private few minutes before the tasting this Friday—party of 4, RSVP KNG9021.
+
+assistant channel=analysis:
+Secure private segment if available; register for tasting; offer cheese board.
+
+assistant channel=commentary to=tool.request_private_segment:
+{"reservation_id":"KNG9021","date":"2025-09-12"}
+
+tool.request_private_segment channel=commentary to=assistant:
+{"status":"confirmed","start_time":"17:30"}
+
+assistant channel=commentary to=tool.register_wine_tasting:
+{"reservation_id":"KNG9021","date":"2025-09-12","party_size":4}
+
+tool.register_wine_tasting channel=commentary to=assistant:
+{"status":"registered"}
+
+assistant channel=final:
+Your private segment is confirmed at 5:30 PM, and you’re registered for the 6:00 PM tasting for four guests. Would you like to add chef’s cheese boards (each serves two)? The lounge on 24 is our weather backup.
+
+user:
+Yes, add two boards—and can we wear jeans?
+
+assistant channel=analysis:
+Add boards; confirm dress code from system.
+
+assistant channel=commentary to=tool.add_cheese_board:
+{"reservation_id":"KNG9021","boards":2}
+
+tool.add_cheese_board channel=commentary to=assistant:
+{"status":"added"}
+
+assistant channel=final:
+Two cheese boards added. Dress code is smart casual—jeans are fine when paired with a dress shirt or blouse. Enjoy the skyline views!

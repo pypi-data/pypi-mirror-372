@@ -1,0 +1,54 @@
+"""
+Livestream encoder setup request.
+
+ROLES: user (marketing team streaming a keynote), assistant (A/V engineer configuring encoder and network)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "configure_livestream_encoder",
+    "description": "Configure an RTMP encoder and prioritize network traffic for the stream.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room": { "type": "string" },
+        "rtmp_url": { "type": "string" },
+        "bitrate_kbps": { "type": "integer", "minimum": 800, "maximum": 12000 }
+      },
+      "required": ["room", "rtmp_url", "bitrate_kbps"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are A/V at Skyline East Hotel (hotel_id: skyline_east_jfk). Address: 144-02 135th Ave, Queens, NY 11436. Timezone: America/New_York.
+Amenities: airport shuttle, fiber uplink, control room. We can QoS-prioritize the encoder traffic for reliability.
+
+user:
+Hi—need RTMP set up in Hudson Ballroom. Fiber uplink sounds perfect.
+
+assistant channel=analysis:
+Affirm fiber; configure encoder at 4500 kbps.
+
+assistant channel=commentary to=tool.configure_livestream_encoder:
+{"room":"Hudson Ballroom","rtmp_url":"rtmp://live.example.com/app/stream","bitrate_kbps":4500}
+
+tool.configure_livestream_encoder channel=commentary to=assistant:
+{"status":"configured","encoder_id":"ENC-5","qos":"enabled"}
+
+assistant channel=analysis:
+Confirm and provide test guidance.
+
+assistant channel=final:
+We’ll put that fiber to work. Encoder ENC-5 is configured at 4.5 Mbps with QoS enabled. Let’s push a 60‑second test stream now to verify audio/video sync before doors.
+
+user:
+Copy—that works.
+
+assistant channel=final:
+Great. We’ll monitor from the control room during the keynote.

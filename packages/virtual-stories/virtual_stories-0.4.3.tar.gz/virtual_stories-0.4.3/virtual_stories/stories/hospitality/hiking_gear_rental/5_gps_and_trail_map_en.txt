@@ -1,0 +1,57 @@
+"""
+Guest rents a handheld GPS and trail map set.
+
+ROLES: user (guest seeking navigation gear), assistant (adventure desk managing rentals and orientation)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "rent_hiking_gear",
+    "description": "Arrange rental of hiking gear items.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "gear_items": {"type": "array", "items": {"type": "string"}},
+        "return_date": {"type": "string", "format": "date"}
+      },
+      "required": ["reservation_id", "gear_items", "return_date"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the trek desk at High Meadow Chalet (hotel_id: high_meadow_co). Address: 19 Aspen Spur, Breckenridge, CO 80424. Timezone: America/Denver. Complimentary laminated trail maps available with GPS rentals.
+
+user:
+Hey! The fireplace is so cozy. Could I rent a handheld GPS and get a laminated trail map for tomorrow?
+
+assistant channel=analysis:
+Thank them; ask for reservation ID and return date; gear ["handheld GPS","trail map"].
+
+assistant channel=final:
+Glad the hearth is welcoming! What’s your reservation ID, and when will you bring the gear back?
+
+user:
+RSV56560. Returning 2025-09-20.
+
+assistant channel=analysis:
+Proceed with rental and confirm free map.
+
+assistant channel=commentary to=tool.rent_hiking_gear:
+{"reservation_id":"RSV56560","gear_items":["handheld GPS","trail map"],"return_date":"2025-09-20"}
+
+tool.rent_hiking_gear channel=commentary to=assistant:
+{"status":"rented","rental_id":"HIKE-33"}
+
+assistant channel=analysis:
+Confirm rental and map.
+
+assistant channel=final:
+Reserved—handheld GPS and map are set (HIKE-33), due back 2025-09-20. The laminated trail map is complimentary with the GPS.
+
