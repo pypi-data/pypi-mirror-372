@@ -1,0 +1,214 @@
+# Rules MCP Server
+
+A Model Context Protocol (MCP) server that provides development rules and best practices from markdown files. Similar to Context7's approach, this server dynamically loads rules from markdown files in the `rules/` directory.
+
+## Features
+
+- **Simple API**: Only two tools - `get_rules` and `list_rules`
+- **Dynamic Loading**: Automatically loads any `.md` files from the `rules/` directory
+- **File Watching**: Automatically reloads rules when files change (optional)
+- **Metadata Support**: Extracts metadata from markdown files for better organization
+
+## Installation
+
+### From PyPI (Recommended)
+```bash
+pip install rules-mcp-server
+```
+
+### From Source
+```bash
+git clone https://github.com/yourusername/rules-mcp-server.git
+cd rules-mcp-server
+pip install -e .
+```
+
+### Prerequisites
+- Python 3.8+
+- pip
+
+## Usage
+
+### With Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "rules": {
+      "command": "rules-mcp-server"
+    }
+  }
+}
+```
+
+### With Cursor
+
+Add to your `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "rules": {
+      "command": "rules-mcp-server"
+    }
+  }
+}
+```
+
+### Alternative: Using Python Module
+
+```json
+{
+  "mcpServers": {
+    "rules": {
+      "command": "python",
+      "args": ["-m", "rules_mcp_server"]
+    }
+  }
+}
+```
+
+### Local Development
+
+```bash
+# After installation
+rules-mcp-server
+
+# Or run directly
+python server.py
+```
+
+## Available Tools
+
+### `get_rules(domain: str)`
+Get rules and best practices for a specific domain.
+
+**Example:**
+```
+get_rules("react") - Get React development rules
+get_rules("security") - Get security best practices
+```
+
+### `list_rules()`
+List all available rule domains with descriptions.
+
+**Example:**
+```
+list_rules() - Shows all available rule domains
+```
+
+## Adding Rules
+
+Simply add markdown files to the `rules/` directory. The filename (without `.md`) becomes the domain name.
+
+### Rule File Format
+
+```markdown
+# Domain Name Rules
+
+## Metadata
+- Version: 1.0
+- Last Updated: 2025-01-26
+- Description: Brief description of the rules
+
+## Your Rules Content
+
+Add your rules, best practices, examples, etc. here.
+The server will automatically load this file and make it available
+via get_rules("filename").
+```
+
+### Example Rule File (`rules/typescript.md`)
+
+```markdown
+# TypeScript Rules
+
+## Metadata
+- Version: 1.0
+- Last Updated: 2025-01-26
+- Description: TypeScript development best practices
+
+## Type Safety
+
+### Strict Mode
+- Always enable strict mode in tsconfig.json
+- Use explicit types for function parameters
+- Avoid using `any` type
+
+### Interfaces vs Types
+- Use interfaces for object shapes
+- Use type aliases for unions and primitives
+```
+
+## Configuration
+
+Environment variables:
+- `RULES_DIRECTORY`: Path to rules directory (default: `./rules`)
+- `WATCH_FILES`: Enable file watching (default: `true`)
+- `LOG_LEVEL`: Logging level (default: `INFO`)
+
+## File Structure
+
+```
+rules-mcp-server/
+├── rules/                  # Your rule markdown files
+│   ├── react.md
+│   ├── security.md
+│   ├── typescript.md
+│   └── ...
+├── src/                    # Server source code
+├── server.py              # Main server entry point
+├── requirements.txt       # Python dependencies
+└── README.md             # This file
+```
+
+## Contributing
+
+1. Add your rule files to the `rules/` directory
+2. Follow the markdown format with metadata section
+3. Test with your MCP client
+4. Commit and push to your repository
+
+The server will automatically detect and load new rule files!
+## 
+Publishing to PyPI
+
+### Build the Package
+```bash
+python build.py
+```
+
+### Test Installation
+```bash
+python test_install.py
+```
+
+### Upload to PyPI
+```bash
+# Test PyPI first
+twine upload --repository testpypi dist/*
+
+# Then real PyPI
+twine upload dist/*
+```
+
+## Development
+
+### Setup Development Environment
+```bash
+git clone https://github.com/yourusername/rules-mcp-server.git
+cd rules-mcp-server
+pip install -e .
+```
+
+### Run Tests
+```bash
+python test_install.py
+```
+
+### Build Package
+```bash
+python build.py
+```
