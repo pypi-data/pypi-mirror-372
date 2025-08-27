@@ -1,0 +1,60 @@
+{% extends 'sb_admin/sb_admin_base_no_sidebar.html' %}
+{% load sb_admin_tags %}
+
+{% block main_wrapper %}
+    {% get_item request.META 'HTTP_SEC_FETCH_SITE' as sec_fetch_site %}
+    <div class="w-full h-full min-h-full{% if not sec_fetch_site or request.META.HTTP_SEC_FETCH_DEST == 'document' %} xl:pl-260{% endif %}">
+        {% include 'sb_admin/navigation.html' %}
+
+        {% if sbadmin_is_modal %}
+            <div id="modal-content" class="modal-dialog">
+                <div class="modal-content">
+        {% endif %}
+
+        <div id="content" class="relative flex flex-col{% if sbadmin_is_modal %} min-h-0 h-full{% else %} min-h-screen sm:p-24 {% block view_class %}{% endblock %}{% endif %}">
+            {% if sbadmin_is_modal %}
+                {# load media which are missing #}
+                <script>
+                    (function(){
+                        const mediaString = '{{ media|escapejs }}';
+                        const mediaList = mediaString.split('\n');
+                        const tmpEl = document.createElement('div');
+                        function duplicateScript(script) {
+                            const newScript = document.createElement('script');
+                            for (let i = 0; i < script.attributes.length; i++) {
+                                const attr = script.attributes[i];
+                                newScript.setAttribute(attr.name, attr.value);
+                            }
+                            newScript.textContent = script.textContent;
+                            newScript.async = false;
+                            return newScript;
+                        }
+                        mediaList.forEach(media => {
+                            tmpEl.innerHTML = media.trim();
+                            const mediaEl = tmpEl.firstElementChild;
+                            if(mediaEl.tagName === 'LINK' && !document.head.querySelector(`link[href="${mediaEl.getAttribute('href')}"]`)) {
+                                document.head.appendChild(mediaEl);
+                                return
+                            }
+                            if(mediaEl.tagName === 'SCRIPT' && !document.head.querySelector(`script[src="${mediaEl.getAttribute('src')}"]`)) {
+                                document.head.appendChild(duplicateScript(mediaEl));
+                            }
+                        });
+                    }());
+                </script>
+            {% else %}
+                {% include "sb_admin/includes/loading.html" %}
+                {% include "sb_admin/includes/notifications.html" %}
+            {% endif %}
+
+            {% block content %}
+            {% endblock %}
+            {{ inner_content }}
+        </div>
+
+        {% if sbadmin_is_modal %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
