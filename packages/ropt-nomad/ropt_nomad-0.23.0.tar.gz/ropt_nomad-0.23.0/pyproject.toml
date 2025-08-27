@@ -1,0 +1,92 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ropt-nomad"
+description = "A NOMAD plugin for the ropt robust optimization package"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+]
+requires-python = ">=3.11"
+dynamic = ["version"]
+dependencies = ["PyNomadBBO"]
+
+[project.urls]
+"Homepage" = "https://github.com/TNO-ropt/ropt-nomad"
+"Repository" = "https://github.com/TNO-ropt/ropt-nomad"
+"Bug Tracker" = "https://github.com/TNO-ropt/ropt-nomad/issues"
+
+[project.entry-points."ropt.plugins.optimizer"]
+nomad = "ropt_nomad.nomad:NomadOptimizerPlugin"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ropt_nomad = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = { attr = "ropt_nomad.version.__version__" }
+
+[tool.setuptools_scm]
+write_to = "src/ropt_nomad/version.py"
+
+[tool.pytest.ini_options]
+markers = ["external: external optimizer marker"]
+filterwarnings = [
+    "error",
+    'ignore:numpy.ndarray size changed, may indicate binary incompatibility.*:RuntimeWarning',
+]
+
+[tool.ruff.format]
+exclude = ["src/ropt_nomad/version.py", "build"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812", # missing-trailing-comma
+    "E501",   # line-too-lone
+    "S101",   # assert
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "E402",    # module-import-not-at-top-of-file
+    "D",       # pydocstyle
+    "ANN401",  # anytype
+    "FBT",     # flake8-boolean-trap
+    "PLR2004", # magic-value-comparison
+    "PLR0913", # too-many-arguments
+]
+"examples/*" = [
+    "INP001", # implicit-namespace-package
+    "T201",   # print
+]
+
+[tool.mypy]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["PyNomad.*"]
+ignore_missing_imports = true
+
+[tool.uv]
+dev-dependencies = [
+    "mike>=2.1.3",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.5.35",
+    "mkdocstrings[python]>=0.26.1",
+    "mypy>=1.11.2",
+    "pytest>=8.3.3",
+    "ruff>=0.6.5",
+]
