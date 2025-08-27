@@ -1,0 +1,72 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Permette esecuzione manuale
+
+jobs:
+  test-before-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Install dependencies
+      run: uv sync
+    
+    - name: Run full test suite
+      run: |
+        uv run pytest tests/ -v
+        echo "✅ All tests passed before publish"
+    
+    - name: Test import safety
+      run: |
+        uv run python -c "from fastal.langgraph.toolkit import ModelFactory; print('✅ Core imports working')"
+        uv run python -c "from fastal.langgraph.toolkit import TranscriptionResult; print('✅ STT type imports working')"
+        echo "✅ Import verification passed"
+
+  publish:
+    needs: test-before-publish
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Install dependencies
+      run: uv sync
+    
+    - name: Build package
+      run: uv build
+    
+    - name: Check package
+      run: |
+        uv add twine
+        uv run twine check dist/*
+        echo "✅ Package validation passed"
+    
+    - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: uv run twine upload dist/* --skip-existing

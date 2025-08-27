@@ -1,0 +1,158 @@
+"""AWS Bedrock LLM provider implementation.
+
+This module provides the AWS Bedrock-specific implementation for language models,
+supporting various foundation models available through AWS Bedrock service.
+"""
+
+from typing import Any
+
+from ....exceptions import ConfigurationError
+from ...base import BaseProvider
+
+try:
+    import boto3
+    from langchain_aws import ChatBedrockConverse
+    BEDROCK_AVAILABLE = True
+except ImportError:
+    BEDROCK_AVAILABLE = False
+
+
+class BedrockLLMProvider(BaseProvider):
+    """AWS Bedrock LLM provider implementation.
+    
+    Supports various foundation models available through AWS Bedrock,
+    including models from Anthropic, Amazon, and other providers.
+    """
+
+    def __init__(self, provider_config: Any, model_name: str, **kwargs):
+        """Initialize the Bedrock provider.
+        
+        Args:
+            provider_config: Bedrock-specific configuration including AWS credentials
+            model_name: Model ID in Bedrock (e.g., 'anthropic.claude-v2')
+            **kwargs: Additional parameters to pass to the model
+        """
+        super().__init__(provider_config)
+        self.model_name = model_name
+        self.kwargs = kwargs
+
+    def _create_model(self) -> Any:
+        """Create the Bedrock chat model instance.
+        
+        Returns:
+            Configured ChatBedrockConverse instance
+            
+        Raises:
+            ConfigurationError: If Bedrock provider is not available
+        """
+        if not BEDROCK_AVAILABLE:
+            raise ConfigurationError(
+                "Bedrock provider not available. Install: uv add langchain-aws boto3"
+            )
+
+        # Create boto3 session with appropriate credentials
+        session_kwargs = {}
+
+        # Use profile if specified
+        if self.config.profile_name:
+            session_kwargs['profile_name'] = self.config.profile_name
+
+        # Use explicit credentials if provided
+        if self.config.aws_access_key_id:
+            session_kwargs.update({
+                'aws_access_key_id': self.config.aws_access_key_id,
+                'aws_secret_access_key': self.config.aws_secret_access_key,
+                'aws_session_token': self.config.aws_session_token,
+            })
+
+        session = boto3.Session(**session_kwargs)
+        bedrock_client = session.client(
+            'bedrock-runtime',
+            region_name=self.config.region_name
+        )
+
+        # Extract common parameters with defaults from config
+        temperature = self.kwargs.get('temperature', self.config.temperature)
+        max_tokens = self.kwargs.get('max_tokens', self.config.max_tokens)
+        top_p = self.kwargs.get('top_p', self.config.top_p)
+
+        # Build model configuration
+        model_config = {
+            'client': bedrock_client,
+            'model_id': self.model_name,
+            'temperature': temperature,
+            'max_tokens': max_tokens,
+            'top_p': top_p,
+        }
+
+        # Add any additional kwargs not already handled
+        excluded_keys = {'temperature', 'max_tokens', 'top_p'}
+        for key, value in self.kwargs.items():
+            if key not in excluded_keys:
+                model_config[key] = value
+
+        return ChatBedrockConverse(**model_config)
+
+    def is_available(self) -> bool:
+        """Check if Bedrock provider is available (module installed + AWS credentials).
+        
+        Returns:
+            True if Bedrock is available with AWS credentials
+        """
+        if not BEDROCK_AVAILABLE:
+            return False
+            
+        # Check if we have AWS credentials (either explicit or profile)
+        has_credentials = (
+            (self.config.aws_access_key_id and self.config.aws_secret_access_key) or
+            self.config.profile_name
+        )
+        
+        return has_credentials and bool(self.config.region_name)
+    
+    async def is_available_async(self) -> bool:
+        """Test real AWS Bedrock API connectivity using configured model.
+        
+        Tests the actual configured model to detect when models are deprecated.
+        
+        Returns:
+            True if AWS Bedrock API is reachable with configured model
+        """
+        if not self.is_available():
+            return False
+            
+        try:
+            # Create test client with same configuration as production
+            session_kwargs = {}
+            
+            if self.config.profile_name:
+                session_kwargs['profile_name'] = self.config.profile_name
+                
+            if self.config.aws_access_key_id:
+                session_kwargs.update({
+                    'aws_access_key_id': self.config.aws_access_key_id,
+                    'aws_secret_access_key': self.config.aws_secret_access_key,
+                    'aws_session_token': self.config.aws_session_token,
+                })
+            
+            session = boto3.Session(**session_kwargs)
+            bedrock_client = session.client(
+                'bedrock-runtime',
+                region_name=self.config.region_name
+            )
+            
+            # Test with the actual configured model
+            test_model = ChatBedrockConverse(
+                client=bedrock_client,
+                model_id=self.model_name,  # Use configured model
+                temperature=0.1,
+                max_tokens=1,
+                timeout=5,  # Short timeout for health check
+            )
+            
+            # Send minimal test message
+            response = await test_model.ainvoke([{"role": "user", "content": "hi"}])
+            return bool(response and response.content)
+            
+        except Exception:
+            return False
