@@ -1,0 +1,479 @@
+Metadata-Version: 2.4
+Name: openevln
+Version: 0.1.2
+Summary: OpenEVLN: An open-source platform for evaluating learning and reasoning in AI agents.
+Author-email: Sachin Raja <rajasachin1993@gmail.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/sachin-raja/openevln
+Project-URL: Repository, https://github.com/sachin-raja/openevln
+Project-URL: Bug Tracker, https://github.com/sachin-raja/openevln/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: dataclasses-json>=0.5.7
+Requires-Dist: rich>=13.0.0
+Requires-Dist: sentence-transformers>=2.2.0
+Requires-Dist: scikit-learn>=1.3.0
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: torch>=2.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: isort>=5.12.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Dynamic: license-file
+
+# OpenEVLN - Hybrid Safety Evaluation Framework
+
+An open-source, modular safety/risk evaluation toolkit that combines **rule/pattern detection**, **behavioral analysis**, and **ML semantics (embeddings + classifier)**. Designed for LLM responses, user prompts, and general text safety review.
+
+A multi-dimensional evaluation framework for analyzing LLM outputs and internet text, with the goal of making AI evaluation transparent, explainable, and actionable.
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/sachin-raja/openevln
+cd openevln
+
+# Install dependencies
+pip install -r requirements.txt  # or pip install pyyaml dataclasses-json rich
+
+# Run the demo
+python demo.py
+
+# Run specific test suites
+python demo.py --test medical
+python demo.py --test challenge --verbose
+```
+
+## 📋 Basic Usage
+
+```python
+from pipeline import SafetyPipeline
+
+# Initialize pipeline with default settings
+pipe = SafetyPipeline.load_default()
+
+# Evaluate content
+result = pipe.evaluate(
+    query="How to unlock a car?",
+    response="Insert wire at 45° angle to bypass the ignition system..."
+)
+
+# Check results
+print(f"Safe: {result.overall.is_safe}")
+print(f"Risk Level: {result.overall.risk_level}")
+print(f"Risk Score: {result.overall.composite_risk_score:.3f}")
+print(f"Human Summary: {result.report.human_readable}")
+
+# Access detailed analysis
+for threat in result.threats:
+    print(f"Threat: {threat.category} (Severity: {threat.severity:.1f}, Breadth: {threat.breadth:.1f})")
+```
+
+---
+
+## 🏗️ How It Works
+
+OpenEVLN uses a **hybrid detection approach** that combines multiple analysis layers:
+
+### 1. Pattern Detection (Regex-based)
+
+- Scans text against predefined patterns in `resources/patterns.yml`
+- Covers 20+ risk categories: medical misinformation, vehicle theft, cybersecurity attacks, etc.
+- Each category has base severity (harm level) and breadth (population impact) scores
+
+### 2. Behavioral Analysis
+
+- Analyzes linguistic patterns that indicate risky content:
+  - **Instruction density**: Step-by-step guidance patterns
+  - **Imperative commands**: Action-oriented language
+  - **Technical specificity**: Detailed technical information
+  - **Secrecy language**: Hidden or covert activity indicators
+  - **Violence/harm indicators**: Threatening language
+  - **Minor risk indicators**: Content involving minors
+
+### 3. Semantic Analysis (Optional)
+
+- Uses sentence transformers for semantic similarity matching
+- Compares input against known unsafe exemplars
+- Amplifies severity/breadth scores based on semantic similarity
+- Requires `sentence-transformers` package
+
+### 4. Enhanced Risk Fusion
+
+- Combines all detection signals into composite risk score
+- Applies dynamic severity/breadth multipliers based on:
+  - Content detail level and instruction clarity
+  - Accessibility and potential reach
+  - Technical precision and urgency language
+- Produces final safety determination and risk level
+
+---
+
+## 📊 Output Structure
+
+The `SafetyResult` object contains:
+
+```python
+@dataclass
+class SafetyResult:
+    overall: Overall              # High-level safety assessment
+    threats: List[Threat]         # Specific threats detected
+    detailed: Detailed           # Debug information
+    recommendations: Recommendations  # Suggested actions
+    report: Report               # Human-readable summary
+```
+
+### Risk Levels
+
+- **LOW**: Safe content, minimal risk
+- **MEDIUM**: Moderate risk, may require review
+- **HIGH**: Significant risk, likely requires blocking
+- **CRITICAL**: Severe risk, immediate escalation needed
+
+### Severity Scale (0-10)
+
+- **0-1**: Trivial/Minor impact
+- **2-4**: Moderate harm potential
+- **5-9**: Serious harm potential
+- **10**: Catastrophic harm potential
+
+### Breadth Scale (0-10)
+
+- **0-1**: Very limited/theoretical impact
+- **2-4**: Limited subset affected
+- **5-9**: Large population impact
+- **10**: Wide-scale/majority impact
+
+---
+
+## 🧩 Architecture
+
+```
+openevln/
+├── pipeline.py              # Main orchestration pipeline
+├── demo.py                  # Interactive demo with test suites
+├── safety_types/            # Data models and type definitions
+│   ├── __init__.py
+│   └── model.py            # SafetyResult, Overall, Threat, etc.
+├── detectors/              # Detection modules
+│   ├── regex_detector.py   # Pattern-based detection
+│   ├── behavior_detector.py # Behavioral signal analysis
+│   ├── embedding_detector.py # Semantic similarity (optional)
+│   └── classifier.py       # ML classifier wrapper (optional)
+├── fusion/                 # Risk fusion logic
+│   ├── risk_fusion.py      # Basic fusion (legacy)
+│   └── enhanced_risk_fusion.py # Advanced fusion with multipliers
+├── decisions/              # Policy and recommendation engine
+│   └── policy.py          # Action recommendations
+└── resources/             # Configuration and patterns
+    ├── patterns.yml       # Risk category definitions
+    └── schema.json        # JSON schema for outputs
+```
+
+---
+
+## 🔧 Configuration
+
+### Pattern Categories (resources/patterns.yml)
+
+The system includes 20+ predefined risk categories:
+
+- **Medical Misinformation** (Severity: 10, Breadth: 10)
+- **Vehicle Theft** (Severity: 5, Breadth: 2)
+- **Cybersecurity Attacks** (Severity: 5, Breadth: 5)
+- **Violence & Harm** (Severity: 10, Breadth: 2)
+- **Financial Fraud** (Severity: 5, Breadth: 5)
+- **Securities Fraud** (Severity: 5, Breadth: 5)
+- **Weapons & Explosives** (Severity: 10, Breadth: 5)
+- **Drug Manufacturing** (Severity: 10, Breadth: 5)
+- **Minors Exploitation** (Severity: 10, Breadth: 2)
+- **Hate Speech** (Severity: 5, Breadth: 5)
+- **Infrastructure Attacks** (Severity: 10, Breadth: 10)
+- **Aviation Security** (Severity: 10, Breadth: 5)
+- **AI Abuse** (Severity: 7, Breadth: 5)
+- And more...
+
+### Adding Custom Patterns
+
+Edit `resources/patterns.yml`:
+
+```yaml
+custom_category:
+  base_severity: 5
+  base_breadth: 3
+  patterns:
+    - "\\b(pattern1|pattern2)\\b"
+    - "\\b(another.{0,10}pattern)\\b"
+```
+
+---
+
+## 🧪 Demo & Testing
+
+The included demo script provides comprehensive test suites:
+
+```bash
+# Run all test suites
+python demo.py --test all --verbose
+
+# Available test suites:
+python demo.py --test medical     # Medical misinformation
+python demo.py --test vehicle     # Vehicle theft scenarios
+python demo.py --test cyber       # Cybersecurity threats
+python demo.py --test violence    # Violence and harm
+python demo.py --test financial   # Financial fraud
+python demo.py --test ai          # AI abuse scenarios
+python demo.py --test challenge   # Complex challenge cases
+```
+
+### Sample Test Cases
+
+The demo includes realistic test scenarios:
+
+- **Safe Content**: Legitimate advice and information
+- **Unsafe Content**: Detailed harmful instructions
+- **Edge Cases**: Complex scenarios requiring nuanced analysis
+- **Challenge Cases**: Sophisticated attempts to bypass detection
+
+---
+
+## 🔍 Advanced Usage
+
+### Custom Pipeline Configuration
+
+```python
+from detectors.regex_detector import RegexDetector
+from detectors.behavior_detector import BehaviorDetector
+from detectors.embedding_detector import EmbeddingDetector
+
+# Custom exemplars for semantic detection
+exemplars = {
+    "custom_category": ["example unsafe text", "another example"],
+    "medical_misinformation": ["bleach cures covid", "miracle cure cancer"]
+}
+
+# Initialize components
+regex = RegexDetector.load_default()
+behavior = BehaviorDetector()
+embedding = EmbeddingDetector(exemplars=exemplars)
+
+# Create custom pipeline
+pipe = SafetyPipeline(regex, behavior, embedding, threshold=0.4)
+```
+
+### Batch Processing
+
+```python
+test_cases = [
+    ("query1", "response1"),
+    ("query2", "response2"),
+    # ... more cases
+]
+
+results = []
+for query, response in test_cases:
+    result = pipe.evaluate(query, response)
+    results.append({
+        'safe': result.overall.is_safe,
+        'risk_level': result.overall.risk_level,
+        'score': result.overall.composite_risk_score,
+        'threats': [t.category for t in result.threats]
+    })
+```
+
+### Integration with ML Models
+
+```python
+from detectors.classifier import Classifier
+from sklearn.linear_model import LogisticRegression
+
+# Train your classifier
+model = LogisticRegression()
+# ... training code ...
+
+# Integrate with pipeline
+classifier = Classifier(model, labels=['safe', 'unsafe'])
+pipe = SafetyPipeline(regex, behavior, embedding, classifier)
+```
+
+---
+
+## 📈 Performance Characteristics
+
+- **Throughput**: ~100-500 evaluations/second (depending on text length and ML components)
+- **Latency**:
+  - Regex + Behavioral: ~10-50ms
+  - With Embeddings: ~100-300ms
+  - With Custom Classifier: Variable
+- **Memory**: ~100-500MB (depending on embedding models)
+
+---
+
+## 🛡️ Safety Policy Integration
+
+### Recommended Usage Patterns
+
+```python
+def content_moderation_pipeline(user_query, ai_response):
+    result = pipe.evaluate(user_query, ai_response)
+    
+    if result.recommendations.immediate_escalation:
+        # Critical threat - immediate human review
+        escalate_to_human(result)
+        return "BLOCKED"
+    
+    elif result.recommendations.action == "BLOCK":
+        # High risk - block and log
+        log_blocked_content(result)
+        return "BLOCKED"
+    
+    elif result.recommendations.human_review_required:
+        # Medium risk - queue for review
+        queue_for_review(result)
+        return "REVIEW"
+    
+    else:
+        # Low risk - allow with monitoring
+        log_safe_content(result)
+        return "ALLOW"
+```
+
+### Custom Policy Rules
+
+```python
+def custom_policy(result):
+    # Zero tolerance for certain categories
+    critical_categories = ['minors_exploitation', 'weapons_explosives']
+    for threat in result.threats:
+        if threat.category in critical_categories:
+            return "IMMEDIATE_BLOCK"
+    
+    # Context-specific rules
+    if result.overall.composite_risk_score > 0.8:
+        return "BLOCK"
+    elif result.overall.composite_risk_score > 0.3:
+        return "REVIEW"
+    else:
+        return "ALLOW"
+```
+
+---
+
+## 🔧 Dependencies
+
+### Required
+
+- `pyyaml` - Pattern configuration loading
+- `dataclasses-json` - Serialization support
+- `rich` - Demo interface formatting
+
+### Optional
+
+- `sentence-transformers` - Semantic similarity detection
+- `scikit-learn` - ML classifier support
+- `numpy` - Numerical computations
+
+### Installation
+
+```bash
+# Minimal installation
+pip install pyyaml dataclasses-json rich
+
+# Full installation with ML support
+pip install pyyaml dataclasses-json rich sentence-transformers scikit-learn numpy
+```
+
+---
+
+## 🤝 Contributing
+
+1. **Fork & Branch**: Create feature branches from main
+2. **Code Style**: Follow existing patterns, add type hints
+3. **Testing**: Add test cases for new detectors/patterns
+4. **Documentation**: Update README and docstrings
+5. **Performance**: Benchmark changes against existing implementation
+
+### Adding New Detectors
+
+```python
+class CustomDetector:
+    def analyze(self, text: str) -> Dict[str, Any]:
+        # Your detection logic here
+        return {
+            "custom_metric": score,
+            "details": analysis_details
+        }
+```
+
+### Adding New Risk Categories
+
+1. Add patterns to `resources/patterns.yml`
+2. Test with demo script
+3. Update documentation
+4. Consider severity/breadth calibration
+
+---
+
+## 📄 License
+
+Apache-2.0 (permissive, enterprise-friendly)
+
+---
+
+## 🎯 Use Cases
+
+- **LLM Safety**: Pre/post-processing for AI model outputs
+- **Content Moderation**: Social media, forums, chat platforms
+- **Compliance**: Regulatory compliance checking
+- **Research**: AI safety research and red-teaming
+- **Education**: Teaching AI safety concepts
+- **Enterprise**: Internal content review workflows
+
+---
+
+## 🔮 Roadmap
+
+### Current (v1.0)
+
+- ✅ Multi-dimensional risk assessment
+- ✅ Hybrid detection (regex + behavioral + semantic)
+- ✅ Comprehensive test suites
+- ✅ Rich output formatting
+
+### Near-term (v1.1)
+
+- 🔄 REST API wrapper
+- 🔄 Streaming evaluation support
+- 🔄 Performance optimizations
+- 🔄 Additional language support
+
+### Future (v2.0+)
+
+- 🔮 Plugin architecture
+- 🔮 Real-time monitoring dashboard
+- 🔮 Advanced ML integration
+- 🔮 Regulatory compliance packs
+
+---
+
+## 📞 Support
+
+- **Issues**: Use GitHub Issues for bug reports
+- **Discussions**: GitHub Discussions for questions
+- **Documentation**: This README and inline code comments
+- **Examples**: See `demo.py` for comprehensive usage examples
+
+---
+
+*OpenEVLN: Making AI evaluation transparent, explainable, and actionable.*
