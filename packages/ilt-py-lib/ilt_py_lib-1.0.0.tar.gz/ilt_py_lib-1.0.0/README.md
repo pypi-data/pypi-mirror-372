@@ -1,0 +1,169 @@
+# ILTpy 1.0.0
+<div align="center">
+<img src="https://jugit.fz-juelich.de/iet-1/iltpy/-/raw/main/logo/iltpy_readme.gif?ref_type=heads" width="90%" alt="iltpy_logo">
+
+ [![ILTpy_test](https://jugit.fz-juelich.de/iet-1/iltpy/badges/main/pipeline.svg?key_text=ILTpy%20Tests&key_width=80)](https://jugit.fz-juelich.de/iet-1/iltpy/-/pipelines) [![Website](https://img.shields.io/website?url=https%3A%2F%2Fapps.fz-juelich.de%2Filtpy%2F&up_message=online&label=ILTpy%20Docs)](https://apps.fz-juelich.de/iltpy/)
+[![coverage_report](https://jugit.fz-juelich.de/iet-1/iltpy/badges/main/coverage.svg?key_text=Test%20coverage&key_width=90)]( https://jugit.fz-juelich.de/iet-1/iltpy/-/pipelines) [![PyPI - Version](https://img.shields.io/pypi/v/ilt-py-lib?label=Version)](https://pypi.org/project/ilt-py-lib/) [![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fjugit.fz-juelich.de%2Fiet-1%2Filtpy%2F-%2Fraw%2Fmain%2Fpyproject.toml%3Fref_type%3Dheads)](https://www.python.org/)
+ [![PyPI - Downloads](https://img.shields.io/pypi/dm/ilt-py-lib?label=Downloads)](https://pypi.org/project/ilt-py-lib/) [![PyPI - License](https://img.shields.io/pypi/l/ilt-py-lib?label=License)
+](https://jugit.fz-juelich.de/iet-1/iltpy/-/blob/main/LICENSE?ref_type=heads)
+
+</div>
+
+## Introduction
+
+**ILTpy** (/ɪltˈpaɪ/) is a python library for performing regularized inversion of one-dimensional or multi-dimensional data without non-negativity constraint. Contributions to respective distributions with both positive and negative sign are determined. Primary applications include magnetic resonance (NMR, EPR), and electrochemical impedance spectroscopy (distribution of relaxation times; DRT). Algorithmic details and parametrization are described in : [J. Granwehr, P.J. Roberts, J. Chem. Theory Comput. 8, 3473­3482 (2012)](https://doi.org/10.1021/ct3001393)
+
+## Documentation
+
+Visit [ILTpy's documentation](https://apps.fz-juelich.de/iltpy/index.html).  
+
+## Demo
+[Try ILTpy in your web browser](https://apps.fz-juelich.de/iltpy/demo) or jump to [quick start](https://jugit.fz-juelich.de/iet-1/iltpy/-/tree/main?ref_type=heads#-quick-start).
+
+## Installation
+
+### Prerequisites
+* To install and use **ILTpy**, Python must be installed on your device and be available on system PATH. 
+* **ILTpy** is compatible with Python 3.9, 3.10, 3.11, 3.12 and 3.13.
+* **ILTpy** can be installed using python's package manager, pip.
+* A python virtual environment is recommended.
+
+### Installing from PyPi
+
+* Run the following command in a terminal:
+
+```python
+python -m pip install ilt-py-lib
+```
+
+### Installing from FZJ's app server
+
+* Run the following command in a terminal:
+
+```python
+python -m pip install --index-url https://apps.fz-juelich.de/iltpy/packages --extra-index-url https://pypi.org/simple ilt-py-lib
+```
+
+### Installing from source
+
+* Clone this repository.
+* Navigate to the local directory where ILTpy was downloaded/extracted. The **ILTpy** directory should contain a `setup.py` file along with other folders.
+* While inside the **ILTpy** directory, run the following command in a terminal (or command prompt) :
+
+```python
+python -m pip install .
+```
+
+### Dependencies
+
+* python >=3.9,<3.14
+* scipy>=1.13.1,<=1.16.0 
+* numpy>1.25.1,<=2.3.1 
+* joblib>=1.4.2,<=1.5.1
+* tqdm
+
+More information on using **ILTpy** can be found [here](https://apps.fz-juelich.de/iltpy/index.html). 
+
+## ⚡ Quick-start
+A workflow using ILTpy and synthetic exponential decay data wth noise is shown below. 
+First, we generate some synthetic data for analysis :
+
+<details>
+<summary> Click to show</summary>
+
+```python
+# --- Simulate synthetic data ---
+
+import numpy as np
+
+def kww(t, taus, betas, amps):
+
+    """Kohlrausch–Williams–Watts function"""
+    
+    return sum(a * np.exp(-(t / tau) ** b) for tau, b, a in zip(taus, betas, amps))
+
+# Time vector (input sampling points)
+t_syn = np.linspace(0, 1024,1024) 
+
+# Simulate data with two components at 10 and 100 with different amplitudes
+data_syn = kww(t_syn, taus=[10,100], betas=[1, 1], amps=[1, 0.5])
+
+# Add noise to the simulated data
+noise_level = 0.01
+data_syn = data_syn + np.random.randn(t_syn.size)*noise_level
+
+# scale data so that noise variance is 1 before analysis using ILTpy
+data_syn = data_syn/noise_level
+```
+
+</details>
+<br>
+The synthetic data consists of two components with time constants 10 and 100, which is reproduced in the distribution after inversion.
+The residuals obtained after inversion are random and devoid of systematic features, indicating a good fit to the data and a compatible kernel.
+
+#### ILTpy Workflow
+```python
+# --- ILTpy workflow ---
+# assuming data_syn and t_syn are numpy arrays with the data and the sampling vector.
+
+# Import ILTpy
+import iltpy as ilt
+
+# Load the data into iltpy using iltload
+synILT = ilt.iltload(data=data_syn, t=t_syn)
+
+# Specify parameters and  initialize inversion
+tau = np.logspace(-1, 4, 100) # output sampling points
+synILT.init(tau=tau, kernel=ilt.Exponential())
+
+# Perform inversion
+synILT.invert()
+```
+```bash
+Starting iterations ...
+100%|██████████| 100/100 [00:00<00:00, 423.44it/s]
+Done.
+```
+```python
+## Reporting
+
+# Save the results
+synILT.report(filepath='syn_data_ILT.txt')
+
+# Plot the results
+from iltpy.output.plotting import iltplot
+iltplot(synILT)
+```
+
+<div align="center">
+<img src="https://jugit.fz-juelich.de/iet-1/iltpy/-/raw/main/docs/source/images/getting_started_example_syn_data.png?ref_type=heads" width="60%" alt="iltpy_quick_start_result">
+</div>
+
+## Team
+* [Dr. Davis Thomas Daniel](https://davistdaniel.github.io/introduction/) (Lead developer)
+* Christian Bartsch
+* Franz Philipp Bereck
+* Dr. Simone Köcher
+* Dr. Christoph Scheurer
+* Prof. Dr. Josef Granwehr (Project lead)
+
+## License
+
+Copyright (c) 2025 Davis Thomas Daniel, Josef Granwehr and [other contributors](https://jugit.fz-juelich.de/iet-1/iltpy#team).
+
+ILTpy is licensed under the GNU Lesser General Public License v3.0.
+See the [LICENSE](https://jugit.fz-juelich.de/iet-1/iltpy/-/blob/main/LICENSE?ref_type=heads) file for details.
+
+## Citation
+
+If you use **ILTpy** in your work, please cite it (using the appropriate version):
+
+```bibtex
+@software{iltpy,
+  author       = {Davis Thomas Daniel and Christian Bartsch and Franz Philipp Bereck and Simone Köcher and Christoph Scheurer and Josef Granwehr},
+  title        = {ILTpy},
+  year         = {2025},
+  version      = {1.0.0},
+  url          = {https://apps.fz-juelich.de/iltpy/},
+  doi          = {10.1021/ct3001393}
+}
