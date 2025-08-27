@@ -1,0 +1,101 @@
+from collections.abc import Mapping
+from typing import Any, Literal, TypeVar, Union, cast
+
+from attrs import define as _attrs_define
+from attrs import field as _attrs_field
+
+from ..types import UNSET, Unset
+
+T = TypeVar("T", bound="MultiPolygon")
+
+
+@_attrs_define
+class MultiPolygon:
+    """
+    Attributes:
+        type_ (Union[Literal['MultiPolygon'], Unset]):
+        coordinates (Union[Unset, list[list[list[list[float]]]]]):
+    """
+
+    type_: Union[Literal["MultiPolygon"], Unset] = UNSET
+    coordinates: Union[Unset, list[list[list[list[float]]]]] = UNSET
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        type_ = self.type_
+
+        coordinates: Union[Unset, list[list[list[list[float]]]]] = UNSET
+        if not isinstance(self.coordinates, Unset):
+            coordinates = []
+            for coordinates_item_data in self.coordinates:
+                coordinates_item = []
+                for componentsschemas_coordinates_lists_item_data in coordinates_item_data:
+                    componentsschemas_coordinates_lists_item = []
+                    for componentsschemas_coordinates_list_item_data in componentsschemas_coordinates_lists_item_data:
+                        componentsschemas_coordinates_list_item = componentsschemas_coordinates_list_item_data
+
+                        componentsschemas_coordinates_lists_item.append(componentsschemas_coordinates_list_item)
+
+                    coordinates_item.append(componentsschemas_coordinates_lists_item)
+
+                coordinates.append(coordinates_item)
+
+        field_dict: dict[str, Any] = {}
+        field_dict.update(self.additional_properties)
+        field_dict.update({})
+        if type_ is not UNSET:
+            field_dict["type"] = type_
+        if coordinates is not UNSET:
+            field_dict["coordinates"] = coordinates
+
+        return field_dict
+
+    @classmethod
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        d = dict(src_dict)
+        type_ = cast(Union[Literal["MultiPolygon"], Unset], d.pop("type", UNSET))
+        if type_ != "MultiPolygon" and not isinstance(type_, Unset):
+            raise ValueError(f"type must match const 'MultiPolygon', got '{type_}'")
+
+        coordinates = []
+        _coordinates = d.pop("coordinates", UNSET)
+        for coordinates_item_data in _coordinates or []:
+            coordinates_item = []
+            _coordinates_item = coordinates_item_data
+            for componentsschemas_coordinates_lists_item_data in _coordinates_item:
+                componentsschemas_coordinates_lists_item = []
+                _componentsschemas_coordinates_lists_item = componentsschemas_coordinates_lists_item_data
+                for componentsschemas_coordinates_list_item_data in _componentsschemas_coordinates_lists_item:
+                    componentsschemas_coordinates_list_item = cast(
+                        list[float], componentsschemas_coordinates_list_item_data
+                    )
+
+                    componentsschemas_coordinates_lists_item.append(componentsschemas_coordinates_list_item)
+
+                coordinates_item.append(componentsschemas_coordinates_lists_item)
+
+            coordinates.append(coordinates_item)
+
+        multi_polygon = cls(
+            type_=type_,
+            coordinates=coordinates,
+        )
+
+        multi_polygon.additional_properties = d
+        return multi_polygon
+
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

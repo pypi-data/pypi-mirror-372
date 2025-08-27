@@ -1,0 +1,16 @@
+from enum import Enum
+
+
+class GeotekniskFeltUndersMetodeKode(str, Enum):
+    BELASTNINGTEST = "BELASTNINGTEST"
+    ELEKTRISKSONDERING = "ELEKTRISKSONDERING"
+    HELNINGMÅLING = "HELNINGMÅLING"
+    PERMEABILITETMÅLING = "PERMEABILITETMÅLING"
+    RAMSONDERING = "RAMSONDERING"
+    SETNINGMÅLING = "SETNINGMÅLING"
+    SKOVLBORING = "SKOVLBORING"
+    SKRUEPLATE = "SKRUEPLATE"
+    SPT = "SPT"
+
+    def __str__(self) -> str:
+        return str(self.value)
