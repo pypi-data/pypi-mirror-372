@@ -1,0 +1,162 @@
+# Sample prefecture configuration for MVP testing
+# Defines regional hierarchy for pattern expansion
+
+# Regional hierarchy - prefectures grouped by regions
+prefectures:
+  # Kanto region (Tokyo area)
+  tokyo: kanto
+  kanagawa: kanto
+  saitama: kanto
+  chiba: kanto
+  ibaraki: kanto
+  tochigi: kanto
+  gunma: kanto
+  
+  # Kansai region (Osaka area)  
+  osaka: kansai
+  kyoto: kansai
+  hyogo: kansai
+  nara: kansai
+  wakayama: kansai
+  shiga: kansai
+  
+  # Chubu region (Central Japan)
+  aichi: chubu
+  shizuoka: chubu
+  gifu: chubu
+  nagano: chubu
+  yamanashi: chubu
+  niigata: chubu
+  toyama: chubu
+  ishikawa: chubu
+  fukui: chubu
+  mie: chubu
+  
+  # Kyushu region (Southern Japan)
+  fukuoka: kyushu
+  saga: kyushu
+  nagasaki: kyushu
+  kumamoto: kyushu
+  oita: kyushu
+  miyazaki: kyushu
+  kagoshima: kyushu
+  okinawa: kyushu
+  
+  # Hokkaido region (Northern Japan)
+  hokkaido: hokkaido
+  
+  # Tohoku region (Northeast Japan)
+  aomori: tohoku
+  iwate: tohoku
+  miyagi: tohoku
+  akita: tohoku
+  yamagata: tohoku
+  fukushima: tohoku
+  
+  # Chugoku region (Western Japan)
+  tottori: chugoku
+  shimane: chugoku
+  okayama: chugoku
+  hiroshima: chugoku
+  yamaguchi: chugoku
+  
+  # Shikoku region
+  tokushima: shikoku
+  kagawa: shikoku
+  ehime: shikoku
+  kochi: shikoku
+
+# Available regions
+regions:
+  - kanto
+  - kansai
+  - chubu
+  - kyushu
+  - hokkaido
+  - tohoku
+  - chugoku
+  - shikoku
+
+# Service types and roles for expansion
+services:
+  - edge
+  - service-hub
+  - corebrain
+  - gateway
+  - api
+  - web
+  - monitor
+  - backup
+  - cache
+
+roles:
+  - gateway
+  - api
+  - web
+  - processor
+  - analytics
+  - storage
+  - cache
+  - backup
+  - monitor
+  - critical
+  - daily
+  - hot
+
+# Pattern rules for expansion (compatible with existing compiler)
+pattern_rules:
+  # Edge services use prefectures
+  "edge.*.*":
+    data_source: "prefectures"
+    template: "edge.{prefecture}.{role}"
+    description: "Edge services by prefecture and role"
+    priority: 100
+  
+  # Service hubs use regions
+  "service-hub.*":
+    data_source: "regions" 
+    template: "service-hub.{region}"
+    description: "Service hubs by region"
+    priority: 50
+    
+  "service-hub.*.*":
+    data_source: "regions"
+    template: "service-hub.{region}.{service}"
+    description: "Service hub services by region"
+    priority: 75
+  
+  # Core brain uses regions
+  "corebrain.*.*":
+    data_source: "regions"
+    template: "corebrain.{region}.{service}"
+    description: "Core brain services by region"
+    priority: 60
+  
+  # Monitor services - multi-wildcard with prefectures
+  "monitor.*.*.*":
+    data_source: "prefectures"
+    template: "monitor.{prefecture}.{service}.{level}"
+    description: "Monitor services by prefecture, service, and level"
+    priority: 30
+  
+  # Backup services
+  "backup.*.*.*":
+    data_source: "regions"
+    template: "backup.{region}.{service}.{frequency}"  
+    description: "Backup services by region, service, and frequency"
+    priority: 20
+  
+  # Cache services
+  "cache.*.*.*":
+    data_source: "prefectures"
+    template: "cache.{prefecture}.{service}.{tier}"
+    description: "Cache services by prefecture, service, and tier"
+    priority: 25
+
+# Configuration metadata
+metadata:
+  version: "1.0.0"
+  description: "Prefecture and region configuration for strataregula"
+  total_prefectures: 47
+  total_regions: 8
+  created_by: "strataregula-mvp"

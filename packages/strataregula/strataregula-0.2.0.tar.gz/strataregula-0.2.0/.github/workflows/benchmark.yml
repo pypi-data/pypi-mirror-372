@@ -1,0 +1,67 @@
+name: Update Benchmark Visualizations
+
+on:
+  push:
+    paths:
+      - 'strataregula/**'
+      - 'tests/**'
+      - 'scripts/run_benchmarks.py'
+      - 'scripts/generate_benchmark_images.py'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install -e .
+        pip install matplotlib seaborn pandas jupyter nbconvert
+        pip install pytest pytest-cov psutil
+    
+    - name: Run benchmarks
+      run: |
+        python scripts/run_benchmarks.py
+    
+    - name: Generate visualizations
+      run: |
+        python scripts/generate_benchmark_images.py
+    
+    - name: Convert notebook to HTML
+      run: |
+        jupyter nbconvert --execute --to html notebooks/benchmark_results.ipynb --output benchmark_results.html
+      continue-on-error: true
+    
+    - name: Upload benchmark artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: |
+          benchmark_results.json
+          docs/images/*.png
+          notebooks/benchmark_results.html
+        retention-days: 30
+    
+    - name: Commit updated visualizations
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs/images/*.png
+        git add benchmark_results.json
+        if [ -f "notebooks/benchmark_results.html" ]; then
+          git add notebooks/benchmark_results.html
+        fi
+        git diff --staged --quiet || git commit -m "Update benchmark visualizations [skip ci]"
+        git push
+      continue-on-error: true

@@ -1,0 +1,271 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strataregula"
+dynamic = ["version"]
+description = "Layered Configuration Management with Strata Rules Architecture"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Strataregula Team", email = "team@strataregula.com"}
+]
+maintainers = [
+    {name = "Strataregula Team", email = "team@strataregula.com"}
+]
+keywords = [
+    "yaml", "configuration", "pattern", "compiler", "expansion", 
+    "infrastructure", "automation", "cli", "streaming", "pipe",
+    "strata", "layered", "hierarchical", "rules", "engine"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup",
+    "Typing :: Typed"
+]
+requires-python = ">=3.8"
+dependencies = [
+    "click>=7.0.0",          # より広い互換性
+    "rich>=10.0.0",          # 2021年初期版から対応
+    "pyyaml>=5.4.0",         # Python 3.8 確実対応
+    "typing-extensions>=3.10.0"  # Python 3.8 対応
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+    "bandit>=1.7.0",
+    "pre-commit>=3.0.0",
+    "build>=0.10.0",
+    "twine>=4.0.0"
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-benchmark>=4.0.0"
+]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.24.0"
+]
+performance = [
+    "psutil>=5.7.0",         # メモリ・CPU監視用
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "pandas>=2.0.0",
+    "jupyter>=1.0.0",
+    "nbconvert>=7.0.0"
+]
+plugins = [
+    "defusedxml>=0.7.1"  # For secure XML processing
+]
+api = [
+    "requests>=2.28.0",  # For HTTP API data sources
+    "httpx>=0.24.0"      # Alternative async HTTP client
+]
+
+[project.urls]
+Homepage = "https://github.com/strataregula/strataregula"
+Documentation = "https://strataregula.readthedocs.io/"
+Repository = "https://github.com/strataregula/strataregula"
+"Bug Tracker" = "https://github.com/strataregula/strataregula/issues"
+"Discussions" = "https://github.com/strataregula/strataregula/discussions"
+Changelog = "https://github.com/strataregula/strataregula/blob/main/CHANGELOG.md"
+"Performance Benchmarks" = "https://strataregula.github.io/strataregula/benchmark.html"
+
+[project.scripts]
+sr = "strataregula.cli.main:main"
+strataregula = "strataregula.cli.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["strataregula*"]
+exclude = ["tests*", "examples*", "docs*", "benchmarks*", "scripts*", "TO_DELETE*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "strataregula.__version__"}
+
+[tool.setuptools.package-data]
+strataregula = [
+    "py.typed",
+    "*.yaml",
+    "*.yml", 
+    "*.json",
+    "templates/*.j2",
+    "schemas/*.json"
+]
+
+# Testing configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "--cov=strataregula",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+    "--strict-markers",
+    "--strict-config"
+]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests", 
+    "performance: marks tests as performance tests",
+    "unit: marks tests as unit tests",
+    "asyncio: marks tests as async tests"
+]
+asyncio_mode = "auto"
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["strataregula"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/env/*",
+    "setup.py",
+    "conftest.py"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod"
+]
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.8"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+show_column_numbers = true
+show_error_context = true
+
+[[tool.mypy.overrides]]
+module = [
+    "yaml.*",
+    "click.*",
+    "psutil.*"  # Optional dependency
+]
+ignore_missing_imports = true
+
+# Ruff configuration
+[tool.ruff]
+target-version = "py38"
+line-length = 88
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings  
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "PTH", # flake8-use-pathlib
+    "ERA", # eradicate
+    "PL",  # pylint
+    "RUF"  # ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "PLR0913", # too many arguments
+    "PLR0911", # too many return statements
+    "PLR0912", # too many branches
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # assert allowed in tests
+    "ARG",     # unused arguments OK in tests
+    "PLR2004", # magic values OK in tests
+]
+"__init__.py" = [
+    "F401",    # imported but unused (re-exports)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["strataregula"]
+force-single-line = false
+combine-as-imports = true
+
+# Black compatibility (if needed)
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
