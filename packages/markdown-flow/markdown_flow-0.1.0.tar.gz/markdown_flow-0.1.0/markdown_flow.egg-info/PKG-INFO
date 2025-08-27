@@ -1,0 +1,246 @@
+Metadata-Version: 2.4
+Name: markdown-flow
+Version: 0.1.0
+Summary: An agent library designed to parse and process MarkdownFlow documents
+Project-URL: Homepage, https://github.com/ai-shifu/markdown-flow-agent-py
+Project-URL: Bug Tracker, https://github.com/ai-shifu/markdown-flow-agent-py/issues
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+
+# MarkdownFlow
+
+A powerful Python library for parsing and processing specially formatted Markdown documents with LLM integration capabilities.
+
+MarkdownFlow enables you to create interactive Markdown documents with custom syntax for user interactions, variable management, and seamless LLM integration.
+
+## ✨ Key Features
+
+- **Interactive Syntax**: Support for 5 types of user interactions using `?[]` syntax
+- **Variable System**: Dual variable formats (`{{var}}` and `%{{var}}`) for flexible content management
+- **LLM Integration**: Built-in support for Large Language Model providers
+- **Three-layer Parsing**: Robust parsing architecture for complex interaction formats
+- **Multiple Processing Modes**: PROMPT_ONLY, COMPLETE, and STREAM modes
+- **Block-based Structure**: Document segmentation using `---` separators
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+pip install markdownflow
+```
+
+### Basic Usage
+
+```python
+from markdown_flow import MarkdownFlow, ProcessMode
+
+# Your markdown document with interactive syntax
+document = """
+Hello {{name}}! Welcome to MarkdownFlow.
+
+---
+
+?[%{{user_choice}} Continue | Learn More | ...custom input]
+
+---
+
+Based on your choice: %{{user_choice}}
+Your next step is ready!
+"""
+
+# Initialize with LLM provider
+mf = MarkdownFlow(document, llm_provider=your_llm_provider)
+
+# Extract variables
+variables = mf.extract_variables()
+print(variables)  # ['name', 'user_choice']
+
+# Process blocks
+result = await mf.process(
+    block_index=0,
+    variables={'name': 'John'},
+    mode=ProcessMode.COMPLETE
+)
+```
+
+## 📝 Interactive Syntax Reference
+
+MarkdownFlow supports 5 types of interactions using `?[]` syntax:
+
+### 1. Text Input Only
+```markdown
+?[%{{variable}}...question text]
+?[%{{name}}]  # Simple input without prompt
+```
+User provides text input for variable assignment.
+
+### 2. Button Selection Only
+```markdown
+?[%{{choice}} Option1 | Option2 | Option3]
+?[%{{action}} Confirm//yes | Cancel//no]  # With custom values
+```
+User selects from predefined options.
+
+### 3. Buttons + Text Input Combined
+```markdown
+?[%{{variable}} Button1 | Button2 | ...custom input hint]
+```
+User can either click buttons or provide text input.
+
+### 4. Button with Display/Value Separation
+```markdown
+?[%{{variable}} Display Text//actual_value | Another Option//option2]
+```
+Buttons show display text but assign different values.
+
+### 5. Non-Assignment Buttons (Display Only)
+```markdown
+?[Continue]
+?[Continue | Cancel]
+```
+Buttons for user interaction without variable assignment.
+
+**Note**: `?[text](url)` format is treated as standard Markdown links, not interaction components.
+
+## 🔧 Variable System
+
+MarkdownFlow supports two types of variables:
+
+- **`{{variable}}`** - Regular variables: Replaced with actual values during processing
+- **`%{{variable}}`** - Preserved variables: Kept in original format for LLM understanding
+
+```python
+# Variable extraction and replacement
+from markdown_flow import extract_variables_from_text, replace_variables_in_text
+
+text = "Hello {{name}}, your status is %{{status}}"
+variables = extract_variables_from_text(text)
+# Returns: ['name', 'status']
+
+replaced = replace_variables_in_text(text, {'name': 'John', 'status': 'active'})
+# Returns: "Hello John, your status is %{{status}}"
+```
+
+## 🎮 Processing Modes
+
+MarkdownFlow offers three processing modes:
+
+```python
+from markdown_flow import ProcessMode
+
+# Get built prompt without LLM call
+prompt_result = await mf.process(0, mode=ProcessMode.PROMPT_ONLY)
+
+# Full processing with LLM (non-streaming)
+complete_result = await mf.process(0, mode=ProcessMode.COMPLETE)
+
+# Streaming LLM processing
+async for chunk in await mf.process(0, mode=ProcessMode.STREAM):
+    print(chunk.content)
+```
+
+## 🏗️ Core Components
+
+### MarkdownFlow Class
+The main processing class with unified `process()` interface:
+
+```python
+class MarkdownFlow:
+    async def process(
+        self,
+        block_index: int,
+        mode: ProcessMode = ProcessMode.COMPLETE,
+        variables: Optional[Dict[str, str]] = None,
+        user_input: Optional[str] = None,
+    ) -> Union[LLMResult, AsyncGenerator[LLMResult, None]]
+```
+
+### LLM Provider Integration
+Implement the `LLMProvider` interface for custom LLM integration:
+
+```python
+from markdown_flow import LLMProvider, LLMResult
+
+class YourLLMProvider(LLMProvider):
+    async def generate_response(self, messages: List[Dict], **kwargs) -> LLMResult:
+        # Your LLM implementation
+        pass
+
+    async def generate_stream(self, messages: List[Dict], **kwargs):
+        # Your streaming implementation
+        pass
+```
+
+## 📖 Advanced Usage
+
+### Document Structure
+```markdown
+# Document Title
+This is regular content that will be processed.
+
+---
+
+?[%{{user_name}}...What's your name?]
+
+---
+
+Hello %{{user_name}}! This block uses your input.
+
+---
+
+===Preserved Content===
+This content is preserved as-is without processing.
+===
+```
+
+### Block Processing
+```python
+# Get all blocks
+blocks = mf.get_all_blocks()
+
+for i, block in enumerate(blocks):
+    print(f"Block {i}: {block.block_type}")
+    if block.block_type == BlockType.INTERACTION:
+        # Process interaction
+        result = await mf.process(i, mode=ProcessMode.COMPLETE)
+```
+
+### Interaction Processing
+```python
+# Process user interaction
+interaction_result = await mf.process(
+    block_index=1,  # interaction block index
+    user_input="user response",
+    mode=ProcessMode.COMPLETE
+)
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [GitHub repository](https://github.com/ai-shifu/markdown-flow) for more information.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🔗 Links
+
+- **Homepage**: https://github.com/ai-shifu/markdown-flow
+- **Bug Tracker**: https://github.com/ai-shifu/markdown-flow/issues
+- **Documentation**: Coming soon
+
+## 🏷️ Version
+
+Current version: 0.1.0
+
+---
+
+**MarkdownFlow** - Making interactive Markdown documents simple and powerful! 🚀
