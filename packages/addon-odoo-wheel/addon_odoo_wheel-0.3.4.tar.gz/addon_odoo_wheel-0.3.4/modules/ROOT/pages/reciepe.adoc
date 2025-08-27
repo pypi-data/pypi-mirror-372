@@ -1,0 +1,62 @@
+= Receipe
+
+== Build an addon path with `uv`
+
+[,shell]
+----
+$ find . \
+-maxdepth 1 -type d -exec \
+test -e "{}/__manifest__.py" -a -e "{}/pyproject.toml" -a -e "{}/__init__.py" ';' -print \
+| xargs -n1 uv build -o ./dist
+----
+
+This command build all addons found in the current directory.
+An `addon` is a directory containing a `{manifest}` file, a `pyproject.toml` file.
+The output dir is `./dist`.
+=== Use your module with a classic odoo addon build with `whool` (or `whool-mangono`)
+
+Inside your second module you need to tell what's the pip package name of your module.
+
+`depends_override` is the way to do that.
+
+.pyproject.toml
+[source,toml]
+----
+[build-system]
+requires = ["addon-odoo-wheel"]
+build-backend = "addon_odoo_wheel.builder"
+
+[tool.whool.depends_override]
+"my_httpx_module" = "company-odoo-addon-my-httpx-module"
+----
+
+== Build multi odoo compatible addons
+
+.pyproject.toml
+[source,toml]
+----
+[build-system]
+requires = ["addon-odoo-wheel"]
+build-backend = "addon_odoo_wheel.builder"
+
+[project]
+name = "company-odoo-addon-my-httpx-module"
+classifiers = [
+    "Framework :: Odoo :: 15.0",
+    "Framework :: Odoo :: 16.0",
+    "Framework :: Odoo :: 17.0",
+]
+dynamic = ["version"]
+dependencies = [
+    "odoo>=15.0,17.1", # <1>
+]
+
+[tool.whool]
+allow_no_odoo_version = true # <2>
+----
+<1> Force odoo version in dependencies
+<2> Tell to {page-component-name} it's ok
+
+If you do that you need to be very carefully with the compatibility of your addon.
+But with the right dependencies you can package a multi-odoo compatible addon.
+The classifier is here to help your user to be sure your module is compatible with their Odoo version.
