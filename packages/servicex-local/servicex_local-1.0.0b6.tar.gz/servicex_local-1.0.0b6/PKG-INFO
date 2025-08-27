@@ -1,0 +1,128 @@
+Metadata-Version: 2.4
+Name: servicex-local
+Version: 1.0.0b6
+Summary: Enables a local backend for ServiceX
+Project-URL: Homepage, https://github.com/gordonwatts/ServiceX-Local
+Project-URL: Issue Tracker, https://github.com/gordonwatts/ServiceX-Local/issues
+Project-URL: Release Notes, https://github.com/gordonwatts/ServiceX-Local/releases
+Project-URL: Releases, https://github.com/gordonwatts/ServiceX-Local/releases
+Project-URL: Source Code, https://github.com/gordonwatts/ServiceX-Local
+Author-email: Gordon Watts <gwatts@uw.edu>
+License: BSD-3-Clause
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires-Python: >=3.9
+Requires-Dist: click
+Requires-Dist: make-it-sync
+Requires-Dist: requests-toolbelt
+Requires-Dist: servicex>=3.0.0
+Requires-Dist: tenacity
+Provides-Extra: develop
+Requires-Dist: servicex[docs,test,xaod]; extra == 'develop'
+Provides-Extra: docs
+Requires-Dist: autodoc-pydantic==2.2.0; extra == 'docs'
+Requires-Dist: furo>=2023.5.20; extra == 'docs'
+Requires-Dist: myst-parser>=3.0.1; extra == 'docs'
+Requires-Dist: sphinx-code-include>=1.4.0; extra == 'docs'
+Requires-Dist: sphinx-copybutton>=0.5.2; extra == 'docs'
+Requires-Dist: sphinx-tabs>=3.4.5; extra == 'docs'
+Requires-Dist: sphinx>=7.0.1; extra == 'docs'
+Provides-Extra: test
+Requires-Dist: black; extra == 'test'
+Requires-Dist: flake8>=5.0.4; extra == 'test'
+Requires-Dist: func-adl-xaod; extra == 'test'
+Requires-Dist: pytest-asyncio>=0.21.0; extra == 'test'
+Requires-Dist: pytest-console-scripts>=1.4.1; extra == 'test'
+Requires-Dist: pytest-cov>=4.0.0; extra == 'test'
+Requires-Dist: pytest-mock>=3.10.0; extra == 'test'
+Requires-Dist: pytest>=7.2.0; extra == 'test'
+Provides-Extra: xaod
+Requires-Dist: func-adl-xaod; extra == 'xaod'
+Description-Content-Type: text/markdown
+
+# ServiceX-Local
+
+A drop in to enable local running of the ServiceX codegen and science images. This is
+mostly geared toward running for debugging and testing.
+
+## Installation
+
+Install this as a library in your virtual environment with:
+
+* `pip install servicex-local` for all the Docker based codegen and science container access.
+* `pip install servicex-local[xAOD]` to get a local xAOD code generator (and the required dependencies) along with the docker based code.
+
+Some science images requires a x509 certificate to run. You'll need to get the `x509up` into your `/tmp` area. If you don't have the tools installed locally, do the following:
+
+1. Make sure in your `~/.globus` directory (on whatever OS you are no) contains the `usercert.pem` and `userkey.pem` files
+1. Use the `voms_proxy_init` to initialize against the `atlas` voms.
+
+The science image code will pick up the location of the 509 cert.
+
+## Usage
+
+### Certificates
+
+This will do its best to track `x509` certs. If a file called `x509up` is located in your temp directory (including on windows), that will be copied into the `docker` image or other places to be used.
+
+### Example Code
+
+This text is a **DRAFT**
+
+To use this, example code is as follows:
+
+```python
+    codegen = LocalXAOD()
+    science_runner = ScienceWSL2("atlas_al9", "22.2.107")
+    adaptor = SXLocalAdaptor(codegen, science_runner)
+
+    # The simple query, take straight from the example in the documentation.
+    query = q.FuncADL_ATLASr22()  # type: ignore
+    jets_per_event = query.Select(lambda e: e.Jets("AnalysisJets"))
+    jet_info_per_event = jets_per_event.Select(
+        lambda jets: {
+            "pt": jets.Select(lambda j: j.pt()),
+            "eta": jets.Select(lambda j: j.eta()),
+        }
+    )
+
+    spec = {
+        "Sample": [
+            {
+                "Name": "func_adl_xAOD_simple",
+                "Dataset": dataset.FileList(
+                    [
+                        "tests/test.root",  # noqa: E501
+                    ]
+                ),
+                "Query": jet_info_per_event,
+            }
+        ]
+    }
+    files = deliver(spec, servicex_name="servicex-uc-af", sx_adaptor=adaptor)
+    assert files is not None, "No files returned from deliver! Internal error"
+```
+
+### Running tests
+
+If you are on a machine with `wsl2` and or `docker` you can run the complete set of tests with flags:
+
+```bash
+pytest --wsl2 --docker
+```
+
+## Acknowledgments
+
+This `docker` versions of this code are thanks to @ketan96-m's work on [this Service MR](https://github.com/ssl-hep/ServiceX/pull/828).
