@@ -1,0 +1,170 @@
+Metadata-Version: 2.4
+Name: nekuda
+Version: 0.2.9
+Summary: Python SDK for Nekuda payment processing
+Project-URL: Homepage, https://nekuda.ai
+Project-URL: Documentation, https://docs.nekuda.ai
+Author-email: Nekuda AI <support@nekuda.ai>
+License-Expression: Apache-2.0
+License-File: LICENSE
+Keywords: ai-agents,credit-card,fintech,nekuda,payments,sdk
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Topic :: Office/Business :: Financial
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Typing :: Typed
+Requires-Python: >=3.9
+Requires-Dist: httpx>=0.24.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: python-dotenv>=1.0.0
+Description-Content-Type: text/markdown
+
+# Quickstart
+
+Welcome to the rapid-fire tour of the Nekuda **Python SDK**. In less than five minutes you will:
+
+1. install the package,
+2. authenticate with your **API key**, and
+3. run your first _card-reveal_ workflow with **type-safe responses**.
+
+> **TL;DR** – copy the snippets below into a file called `hello.py`, export your API key, run it, done.
+
+> **💡 Don't forget!** This Python SDK handles the backend payment processing. You'll also need to integrate our [wallet collection SDK](https://docs.nekuda.ai/essentials/react-nekuda-js) on your frontend to securely collect credit card details from users.
+
+---
+
+## 1. Installation
+
+We recommend using **[UV](https://github.com/astral-sh/uv)** (fast Rust-based `pip` replacement), but plain `pip` works just as well:
+
+```bash
+uv pip install nekuda
+#-or-
+pip install nekuda
+```
+
+> The SDK ships as a single, pure-python wheel with minimal dependencies – install is ~1 s.
+
+---
+
+## 2. Authenticate
+
+Grab your secret key from the Nekuda dashboard and export it as an environment variable:
+
+```bash
+export NEKUDA_API_KEY="sk_live_…"  # required
+# Optional – point the SDK to staging / localmock
+export NEKUDA_BASE_URL="https://api.nekuda.ai"
+```
+
+That's _all_ the configuration you need for the quickstart.
+
+---
+
+## 3. Hello World
+
+```python title="hello.py"
+from nekuda import NekudaClient
+
+client = NekudaClient.from_env()
+print("🚀 Authenticated! Your account ID is:", client.api_key[:8] + "…")
+```
+
+```bash
+python hello.py
+```
+
+If everything is set-up correctly you should see:
+
+```text
+🚀 Authenticated! Your account ID is: sk_live_12…
+```
+
+---
+
+## 4. End-to-end flow with Type Safety 🎯
+
+The snippet below walks through the **full payment flow** with type-safe responses:
+
+```python title="quick_demo.py"
+from nekuda import MandateData, NekudaClient, NekudaError
+
+client = NekudaClient.from_env()
+user = client.user("test_user_123")
+
+try:
+    # 1) Describe what the user is about to purchase
+    mandate = MandateData(
+        product="Premium Subscription",
+        price=49.99,
+        currency="USD",
+        merchant="Nekuda Corp"
+    )
+
+    # Create mandate - returns MandateCreateResponse
+    mandate_response = user.create_mandate(mandate)
+    print(f"✅ Created mandate: {mandate_response.mandate_id}")
+
+    # 2) Request a reveal token - returns CardRevealTokenResponse
+    reveal_response = user.request_card_reveal_token(mandate_response.mandate_id)
+    print(f"🔑 Token: {reveal_response.reveal_token}")
+
+    # IDE knows these fields exist! No more KeyErrors!
+    if reveal_response.expires_at:
+        print(f"⏰ Expires at: {reveal_response.expires_at}")
+
+    # 3) Exchange token for card details - returns CardDetailsResponse
+    card = user.reveal_card_details(reveal_response.reveal_token)
+    print(f"💳 **** **** **** {card.card_number[-4:]}")
+    print(f"📅 Expiry: {card.card_expiry_date}")  # Always MM/YY format
+    print(f"👤 Name: {card.cardholder_name}")
+
+except NekudaError as e:
+    print(f"❌ Error: {e}")
+```
+
+Run it and you'll see the card details with full type safety and IDE autocomplete support!
+
+> **🔗 Complete Integration:** Remember that in a real application, steps 1-2 happen on your backend (using this Python SDK), while the actual card collection happens on your frontend using our [React wallet SDK](https://docs.nekuda.ai/essentials/react-nekuda-js).
+
+---
+
+## 5. Why Type Safety Matters 🛡️
+
+With our new typed response models:
+
+- **No more `KeyError`** - IDE knows exactly what fields are available
+- **Autocomplete everywhere** - Your editor suggests available fields
+- **Validation built-in** - Card numbers and expiry dates are validated
+- **Better error messages** - Know exactly what went wrong
+
+```python
+# Before (raw dicts) 😟
+result = client.request_card_reveal_token(...)
+token = result["reveal_token"]  # Hope the key exists!
+
+# After (typed models) 😊
+result = client.request_card_reveal_token(...)
+token = result.reveal_token  # IDE autocomplete! Type checked!
+```
+
+---
+
+## What's next?
+
+- **[📚 Full Documentation](https://docs.nekuda.ai)** – comprehensive guides, API reference, and integration examples
+- **[Core Concepts](Core_Concepts.md)** – understand `NekudaClient`, `UserContext`, and response models
+- **[Usage Guide](Usage_Guide.md)** – deep dive into the payment flow
+- **[Configuration](Configuration.md)** – production-ready settings
+- **[Error Handling](Errors.md)** – build resilient applications
+
+Happy hacking! 🎉
