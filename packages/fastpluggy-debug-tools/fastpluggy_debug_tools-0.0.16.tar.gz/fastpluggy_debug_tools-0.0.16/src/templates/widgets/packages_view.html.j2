@@ -1,0 +1,207 @@
+{% from "widgets/partials/card_header.html.j2" import render_card_header %}
+
+<div class="card">
+    {{ render_card_header(widget) }}
+    <div id="collapse-{{ widget.widget_id }}" class="collapse {% if not widget.collapsed %}show{% endif %}">
+        <div class="card-body">
+            <!-- Search and Filter Controls -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control package-search-input" 
+                               id="package-search-{{ widget.widget_id }}" 
+                               placeholder="Search packages by name..."
+                               onkeyup="filterPackages('{{ widget.widget_id }}')">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" 
+                            id="package-sort-{{ widget.widget_id }}" 
+                            onchange="sortPackages('{{ widget.widget_id }}')">
+                        <option value="name">Sort by Name</option>
+                        <option value="version">Sort by Version</option>
+                        <option value="author">Sort by Author</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-end">
+                        <span class="badge bg-primary" id="package-count-{{ widget.widget_id }}">
+                            {{ widget.total_count }} packages
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Packages Table -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="packages-table-{{ widget.widget_id }}">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 25%;">Package Name</th>
+                            <th style="width: 15%;">Version</th>
+                            <th style="width: 40%;">Description</th>
+                            <th style="width: 20%;">Author</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for package in widget.packages_list %}
+                        <tr class="package-row" data-package-name="{{ package.name.lower() }}" data-author="{{ package.author.lower() }}" data-version="{{ package.version }}">
+                            <td>
+                                <strong>{{ package.name }}</strong>
+                                {% if package.home_page %}
+                                <br>
+                                <small>
+                                    <a href="{{ package.home_page }}" target="_blank" class="text-muted">
+                                        <i class="fas fa-external-link-alt"></i> Homepage
+                                    </a>
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code>{{ package.version }}</code>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ package.summary or 'No description available' }}</small>
+                            </td>
+                            <td>
+                                <small>{{ package.author or 'Unknown' }}</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- No Results Message -->
+            <div id="no-results-{{ widget.widget_id }}" class="alert alert-info text-center" style="display: none;">
+                <i class="fas fa-search"></i>
+                No packages found matching your search criteria.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterPackages(widgetId) {
+    const searchInput = document.getElementById('package-search-' + widgetId);
+    const table = document.getElementById('packages-table-' + widgetId);
+    const rows = table.getElementsByClassName('package-row');
+    const noResults = document.getElementById('no-results-' + widgetId);
+    const countBadge = document.getElementById('package-count-' + widgetId);
+    
+    const searchTerm = searchInput.value.toLowerCase();
+    let visibleCount = 0;
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const packageName = row.getAttribute('data-package-name');
+        const author = row.getAttribute('data-author');
+        
+        if (packageName.includes(searchTerm) || author.includes(searchTerm)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    }
+    
+    // Update count badge
+    countBadge.textContent = visibleCount + ' packages';
+    
+    // Show/hide no results message
+    if (visibleCount === 0) {
+        noResults.style.display = 'block';
+        table.style.display = 'none';
+    } else {
+        noResults.style.display = 'none';
+        table.style.display = 'table';
+    }
+}
+
+function sortPackages(widgetId) {
+    const sortSelect = document.getElementById('package-sort-' + widgetId);
+    const table = document.getElementById('packages-table-' + widgetId);
+    const tbody = table.getElementsByTagName('tbody')[0];
+    const rows = Array.from(tbody.getElementsByClassName('package-row'));
+    
+    const sortBy = sortSelect.value;
+    
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (sortBy) {
+            case 'name':
+                aValue = a.getAttribute('data-package-name');
+                bValue = b.getAttribute('data-package-name');
+                break;
+            case 'version':
+                aValue = a.getAttribute('data-version');
+                bValue = b.getAttribute('data-version');
+                break;
+            case 'author':
+                aValue = a.getAttribute('data-author');
+                bValue = b.getAttribute('data-author');
+                break;
+            default:
+                aValue = a.getAttribute('data-package-name');
+                bValue = b.getAttribute('data-package-name');
+        }
+        
+        return aValue.localeCompare(bValue);
+    });
+    
+    // Clear tbody and append sorted rows
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Initialize sorting on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus search input when card is expanded
+    const collapseElement = document.getElementById('collapse-{{ widget.widget_id }}');
+    if (collapseElement) {
+        collapseElement.addEventListener('shown.bs.collapse', function() {
+            const searchInput = document.getElementById('package-search-{{ widget.widget_id }}');
+            if (searchInput) {
+                searchInput.focus();
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.package-row:hover {
+    background-color: rgba(0, 123, 255, 0.1) !important;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+    border-color: #ced4da;
+}
+
+.package-search-input:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.badge {
+    font-size: 0.875em;
+}
+
+code {
+    background-color: #f8f9fa;
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+}
+</style>

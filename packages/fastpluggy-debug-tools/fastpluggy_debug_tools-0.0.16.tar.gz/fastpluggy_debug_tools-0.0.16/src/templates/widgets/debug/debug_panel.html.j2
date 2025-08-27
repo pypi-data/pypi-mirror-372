@@ -1,0 +1,325 @@
+{% from "widgets/partials/card_header.html.j2" import render_card_header %}
+
+{# Macro for rendering expandable details section #}
+{% macro render_details_section(title, icon, items, item_type="attributes") %}
+    {% if items %}
+        <details class="mb-2">
+            <summary class="text-muted small" style="cursor: pointer;">
+                <i class="{{ icon }} me-1"></i>{{ title }} ({{ items|length }})
+            </summary>
+            <div class="mt-1 p-2 bg-light rounded">
+                {% if item_type == "warnings" %}
+                    {% for warning in items %}
+                        <div class="d-flex align-items-start mb-1">
+                            <i class="fas fa-exclamation-triangle text-warning me-2 mt-1"
+                               style="font-size: 0.75rem;"></i>
+                            <small>{{ warning }}</small>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    {% for key, value in items.items() %}
+                        <div class="row mb-1 align-items-center">
+                            <div class="col-4">
+                                <small class="fw-bold text-primary">{{ key }}:</small>
+                            </div>
+                            <div class="col-8">
+                                <small class="font-monospace text-break">{{ value }}</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </details>
+    {% endif %}
+{% endmacro %}
+
+{# Macro for rendering stat cards #}
+{% macro render_stat_card(value, label, variant="secondary") %}
+    <div class="col-md-2">
+        <div class="text-center">
+            <div class="h4 text-{{ variant }} mb-1">{{ value }}</div>
+            <small class="text-muted">{{ label }}</small>
+        </div>
+    </div>
+{% endmacro %}
+
+{# Macro for rendering node badges #}
+{% macro render_node_badges(node, show_warnings) %}
+    <span class="badge bg-secondary me-2">{{ node.type_name }}</span>
+    <small class="text-muted me-2">ID: {{ node.obj_id }}</small>
+
+    {% if node.warnings and show_warnings %}
+        <span class="badge bg-warning text-dark me-2" title="{{ node.warnings|length }} warning(s)">
+    <i class="fas fa-exclamation-triangle"></i> {{ node.warnings|length }}
+</span>
+    {% endif %}
+
+    {% if node.children %}
+        <span class="badge bg-info" title="{{ node.children|length }} child component(s)">
+    {{ node.children|length }} children
+</span>
+    {% endif %}
+{% endmacro %}
+
+{# Main recursive macro for rendering debug nodes #}
+{% macro render_debug_node(node, index, auto_expand, show_attributes, show_warnings, show_context) %}
+    <div class="debug-node mb-2 depth-{{ node.depth }}"
+         style="margin-left: {{ node.depth * 20 }}px;"
+         data-node-id="{{ node.obj_id }}"
+         data-depth="{{ node.depth }}">
+
+        {# Node header with basic info #}
+        <div class="d-flex align-items-center flex-wrap">
+            {# Node icon with status indicator #}
+            <span class="me-2" title="{{ node.category|title }} Component">
+            {% if node.is_cycle %}
+                <i class="fas fa-recycle text-danger" title="Circular Reference Detected"></i>
+            {% elif node.warnings %}
+                <i class="{{ node.icon }} text-warning" title="Component has warnings"></i>
+            {% else %}
+                <i class="{{ node.icon }}"></i>
+            {% endif %}
+        </span>
+
+            {# Node name and badges #}
+            <div class="d-flex align-items-center flex-wrap gap-1">
+                <span class="fw-bold me-2">{{ node.name }}</span>
+                {{ render_node_badges(node, show_warnings) }}
+            </div>
+        </div>
+
+        {# Node details (attributes, context, warnings) #}
+        {% set has_details = (node.attributes and show_attributes) or
+                          (node.context and show_context) or
+                          (node.warnings and show_warnings) %}
+        {% if has_details %}
+            <div class="mt-2 ms-4">
+                {{ render_details_section("Attributes", "fas fa-cog", node.attributes, "attributes") }}
+                {{ render_details_section("Context", "fas fa-database", node.context, "attributes") }}
+
+                {% if node.warnings and show_warnings %}
+                    <div class="alert alert-warning py-2 mb-2">
+                        <small class="fw-bold d-block mb-1">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Warnings:
+                        </small>
+                        {{ render_details_section("", "", node.warnings, "warnings") }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {# Children section, using <details> with class "children-section" #}
+        {% if node.children %}
+            <details class="children-section mb-2 ms-4">
+                <summary class="text-muted small" style="cursor: pointer;">
+                    <i class="fas fa-layer-group me-1"></i>Children ({{ node.children|length }})
+                </summary>
+                <div class="mt-1 p-2 bg-light rounded">
+                    {% for child in node.children %}
+                        {{ render_debug_node(child, loop.index0, auto_expand, show_attributes, show_warnings, show_context) }}
+                    {% endfor %}
+                </div>
+            </details>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{# Main template #}
+<div class="card {{ css_class }} border-info mb-4" id="{{ widget.widget_id }}">
+    {{ render_card_header(widget) }}
+
+    <div class="card-body collapse {% if not widget.collapsed %}show{% endif %}" id="collapse-{{ widget.widget_id }}">
+        {# Statistics dashboard #}
+        <div class="border-bottom pb-3 mb-3">
+            <h6 class="mb-3">
+                <i class="fas fa-chart-bar me-2"></i>Analysis Summary
+            </h6>
+            <div class="row g-3">
+                {{ render_stat_card(widget.stats.total_components, "Total Components", "primary") }}
+                {{ render_stat_card(widget.stats.max_depth, "Max Depth", "info") }}
+                {{ render_stat_card(widget.stats.cycle_count, "Cycles",
+                    "danger" if widget.stats.cycle_count > 0 else "success") }}
+                {{ render_stat_card(widget.stats.warning_count, "Warnings",
+                    "warning" if widget.stats.warning_count > 0 else "success") }}
+                {{ render_stat_card(widget.stats.analysis_time_ms ~ "ms", "Analysis Time", "secondary") }}
+                {{ render_stat_card(widget.stats.root_components, "Root Items", "secondary") }}
+            </div>
+        </div>
+
+        {# Global warnings section #}
+        {% if widget.warnings %}
+            <div class="border-bottom pb-3 mb-3">
+                <h6 class="text-danger mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Global Issues
+                </h6>
+                {% for warning in widget.warnings %}
+                    <div class="alert alert-{{ warning.type }} py-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <small class="flex-grow-1">{{ warning.message }}</small>
+                            {% if warning.traceback and show_warnings %}
+                                <button class="btn btn-sm btn-outline-secondary ms-2"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#traceback-{{ loop.index0 }}"
+                                        aria-expanded="false">
+                                    <i class="fas fa-code"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                        {% if warning.traceback and show_warnings %}
+                            <div class="collapse mt-2" id="traceback-{{ loop.index0 }}">
+                                <pre class="text-muted small bg-light p-2 rounded">{{ warning.traceback }}</pre>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Component tree section #}
+        <div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">
+                    <i class="fas fa-sitemap me-2"></i>Component Tree
+                </h6>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button id="expand-all-{{ widget.widget_id }}"
+                            class="btn btn-outline-secondary"
+                            onclick="toggleAllSections('{{ widget.widget_id }}', true)"
+                            title="Expand all nodes">
+                        <i class="fas fa-expand-alt"></i> Expand All
+                    </button>
+                    <button id="collapse-all-{{ widget.widget_id }}"
+                            class="btn btn-outline-secondary"
+                            onclick="toggleAllSections('{{ widget.widget_id }}', false)"
+                            title="Collapse all nodes">
+                        <i class="fas fa-compress-alt"></i> Collapse All
+                    </button>
+                    <button id="expand-children-{{ widget.widget_id }}"
+                            class="btn btn-outline-secondary"
+                            onclick="toggleChildren('{{ widget.widget_id }}', true)"
+                            title="Expand children only">
+                        <i class="fas fa-angle-double-down"></i> Expand Children
+                    </button>
+                </div>
+            </div>
+
+            <div class="component-tree" id="tree-{{ widget.widget_id }}">
+                {% if widget.component_tree|length == 0 %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-info-circle me-2"></i>No components to display.
+                    </div>
+                {% else %}
+                    {% for node in widget.component_tree %}
+                        {{ render_debug_node(node, loop.index0,  widget.auto_expand,  widget.show_attributes,  widget.show_warnings,  widget.show_context) }}
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Enhanced JavaScript for better interaction #}
+<script>
+    function toggleAllSections(widgetId, expand) {
+        const treeContainer = document.getElementById(`tree-${widgetId}`);
+        if (!treeContainer) return;
+
+        // 1) Toggle all <details> inside this widget
+        const allDetails = treeContainer.querySelectorAll('details');
+        allDetails.forEach(detailEl => {
+            detailEl.open = expand;
+        });
+
+        // 2) Toggle any Bootstrap .collapse elements if still in use
+        const collapseEls = treeContainer.querySelectorAll('.collapse');
+        collapseEls.forEach(collapseEl => {
+            const bsCollapse = new bootstrap.Collapse(collapseEl, {toggle: false});
+            if (expand) {
+                bsCollapse.show();
+            } else {
+                bsCollapse.hide();
+            }
+        });
+
+        // 3) Update chevron icons on any expand‐buttons
+        const headerButtons = treeContainer.querySelectorAll('.expand-btn i');
+        headerButtons.forEach(icon => {
+            icon.className = expand ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
+        });
+    }
+
+    function toggleChildren(widgetId, expand) {
+        const treeContainer = document.getElementById(`tree-${widgetId}`);
+        if (!treeContainer) return;
+
+        // Only toggle <details> elements with class="children-section"
+        const childrenDetails = treeContainer.querySelectorAll('details.children-section');
+        childrenDetails.forEach(detailEl => {
+            detailEl.open = expand;
+        });
+    }
+
+    // Keep chevron icons in sync when a <details> is toggled manually
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('details').forEach(detailEl => {
+            detailEl.addEventListener('toggle', function () {
+                // If you want to swap the icon in <summary>, do it here.
+                // For example:
+                // let icon = detailEl.querySelector('summary i');
+                // icon.className = detailEl.open ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
+            });
+        });
+    });
+</script>
+
+<style>
+    /* Enhanced styling for better visual hierarchy */
+    .debug-node {
+        transition: background-color 0.2s ease;
+        border-radius: 4px;
+        padding: 4px;
+    }
+
+    .debug-node:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+
+    .depth-0 {
+        border-left: 3px solid #007bff;
+    }
+
+    .depth-1 {
+        border-left: 3px solid #28a745;
+    }
+
+    .depth-2 {
+        border-left: 3px solid #ffc107;
+    }
+
+    .depth-3 {
+        border-left: 3px solid #dc3545;
+    }
+
+    .depth-4 {
+        border-left: 3px solid #6f42c1;
+    }
+
+    .depth-5 {
+        border-left: 3px solid #fd7e14;
+    }
+
+    .component-tree {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    /* If expand‐button chevrons remain, keep their hover effect */
+    .expand-btn {
+        transition: transform 0.2s ease;
+    }
+
+    .expand-btn:hover {
+        transform: scale(1.1);
+    }
+</style>
