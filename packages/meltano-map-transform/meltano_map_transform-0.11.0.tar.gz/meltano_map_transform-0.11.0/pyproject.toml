@@ -1,0 +1,89 @@
+[build-system]
+build-backend = "poetry_dynamic_versioning.backend"
+requires = [
+  "poetry-core==2.1.3",
+  "poetry-dynamic-versioning==1.9.1",
+]
+
+[tool.poetry]
+name = "meltano-map-transform"
+version = "0.11.0"
+description = "Singer-compatible inline map transformer, built with the Meltano SDK for Singer Taps."
+authors = [
+  "Meltano Team and Contributors",
+]
+keywords = [
+  "ELT",
+  "singer.io",
+  "Inline Transformation",
+]
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://github.com/MeltanoLabs/meltano-map-transform"
+repository = "https://github.com/MeltanoLabs/meltano-map-transform"
+documentation = "https://github.com/MeltanoLabs/meltano-map-transform#readme"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4"
+
+[tool.poetry.dependencies.singer-sdk]
+version = "~=0.48.0"
+extras = [
+  "faker",
+]
+
+[tool.poetry.group.dev.dependencies]
+mypy = ">=1.17.1"
+pytest = ">=8"
+ty = ">=0.0.1a19"
+
+[tool.poetry.scripts]
+# CLI declaration
+meltano-map-transform = "meltano_map_transform.mapper:StreamTransform.cli"
+
+[tool.poetry-dynamic-versioning]
+enable = false
+format-jinja = """
+    {%- if distance == 0 -%}
+        {{ serialize_pep440(base, stage, revision) }}
+    {%- elif revision is not none -%}
+        {{ serialize_pep440(base, stage, revision + 1, dev=distance, metadata=[commit]) }}
+    {%- else -%}
+        {{ serialize_pep440(bump_version(base), stage, revision, dev=distance, metadata=[commit]) }}
+    {%- endif -%}
+"""
+metadata = true
+style = "pep440"
+vcs = "git"
+
+[tool.ruff]
+target-version = "py310"
+
+src = [
+  "meltano_map_transform",
+]
+lint.select = [
+  "ALL",
+]
+lint.ignore = [
+  "DJ", # flake8-django
+  "PD", # pandas-vet
+]
+
+lint.per-file-ignores."tests/*" = [
+  "ANN201", # missing-return-type-undocumented-public-function
+  "S101",   # assert
+]
+lint.isort.known-first-party = [
+  "meltano_map_transform",
+]
+lint.isort.required-imports = [
+  "from __future__ import annotations",
+]
+lint.pydocstyle.convention = "google"
+
+[tool.pytest.ini_options]
+addopts = "-vvv"
+
+[tool.mypy]
+warn_unused_configs = true
