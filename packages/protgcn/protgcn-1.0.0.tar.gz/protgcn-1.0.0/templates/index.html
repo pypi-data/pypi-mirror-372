@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProtGCN - AI-Powered Protein Sequence Prediction</title>
+    
+    <!-- Fonts and Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.3rem;
+            font-weight: 300;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 30px;
+            color: white;
+        }
+
+        .card-header h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            margin-bottom: 40px;
+        }
+
+        .upload-zone {
+            border: 3px dashed #e0e7ff;
+            border-radius: 15px;
+            padding: 50px 30px;
+            text-align: center;
+            background: #f8faff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-zone:hover {
+            border-color: #4facfe;
+            background: #f0f8ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-zone.dragover {
+            border-color: #00f2fe;
+            background: #e6f7ff;
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #4facfe;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .controls-section {
+            background: #f8faff;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .temperature-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .temperature-slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e7ff;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .temperature-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4facfe;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .temperature-value {
+            font-weight: 600;
+            color: #4facfe;
+            min-width: 50px;
+        }
+
+        .examples-section {
+            margin-bottom: 30px;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .example-card {
+            background: white;
+            border: 2px solid #e0e7ff;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .example-card:hover {
+            border-color: #4facfe;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .example-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .example-description {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .predict-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto;
+        }
+
+        .predict-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.3);
+        }
+
+        .predict-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e0e7ff;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            display: none;
+            margin-top: 40px;
+        }
+
+        .results-header {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px 15px 0 0;
+            margin-bottom: 0;
+        }
+
+        .results-content {
+            background: white;
+            border-radius: 0 0 15px 15px;
+            overflow: hidden;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8faff;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4facfe;
+            display: block;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .sequence-comparison {
+            padding: 30px;
+            border-bottom: 1px solid #e0e7ff;
+        }
+
+        .sequence-row {
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .sequence-label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sequence-text {
+            background: #f8faff;
+            padding: 10px;
+            border-radius: 8px;
+            word-break: break-all;
+            line-height: 1.6;
+        }
+
+        .residue-correct {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .residue-incorrect {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .benchmark-section {
+            padding: 30px;
+            border-bottom: 1px solid #e0e7ff;
+        }
+
+        .performance-highlights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .highlight-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .highlight-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .highlight-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .benchmark-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .benchmark-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 15px;
+            font-weight: 600;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1.5fr;
+            gap: 15px;
+        }
+
+        .benchmark-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1.5fr;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 1px solid #e0e7ff;
+            align-items: center;
+        }
+
+        .benchmark-row:hover {
+            background: #f8faff;
+        }
+
+        .benchmark-current {
+            background: #d1fae5 !important;
+            border-left: 4px solid #10b981;
+        }
+
+        .method-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .method-notes {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .performance-value {
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .performance-excellent {
+            color: #10b981;
+        }
+
+        .performance-good {
+            color: #3b82f6;
+        }
+
+        .performance-moderate {
+            color: #f59e0b;
+        }
+
+        .key-insights {
+            background: #f8faff;
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .insights-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .insight-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .insight-icon {
+            color: #10b981;
+            margin-top: 2px;
+        }
+
+        .predictions-table {
+            margin: 30px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .table-header {
+            background: #4facfe;
+            color: white;
+            padding: 15px;
+            font-weight: 600;
+        }
+
+        .table-content {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .prediction-row {
+            display: grid;
+            grid-template-columns: 60px 80px 80px 80px 1fr 100px;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 1px solid #e0e7ff;
+            align-items: center;
+        }
+
+        .prediction-row:hover {
+            background: #f8faff;
+        }
+
+        .confidence-bar {
+            background: #e0e7ff;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .amino-acid {
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            padding: 5px 10px;
+            border-radius: 6px;
+            background: #f0f8ff;
+        }
+
+        .top-predictions {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .top-pred {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border: 1px solid #fecaca;
+        }
+
+        .info-section {
+            background: #eff6ff;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border-left: 5px solid #4facfe;
+        }
+
+        .info-title {
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-list {
+            list-style: none;
+            space-y: 10px;
+        }
+
+        .info-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .info-list li::before {
+            content: "•";
+            color: #4facfe;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .viz-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .viz-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .viz-header h4 {
+            margin: 0;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .download-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        .viz-content {
+            padding: 20px;
+        }
+
+        .viz-content img {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #e0e7ff;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .card-content {
+                padding: 20px;
+            }
+            
+            .prediction-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .summary-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .viz-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .viz-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-dna"></i> ProtGCN</h1>
+            <p class="subtitle">AI-Powered Protein Sequence Prediction using Graph Convolutional Networks</p>
+        </div>
+
+        <div class="main-card">
+            <div class="card-header">
+                <h2><i class="fas fa-microscope"></i> Protein Structure Analysis</h2>
+            </div>
+            
+            <div class="card-content">
+                <!-- Information Section -->
+                <div class="info-section">
+                    <div class="info-title">
+                        <i class="fas fa-info-circle"></i>
+                        How to Get Protein Structures for Prediction
+                    </div>
+                    <ul class="info-list">
+                        <li><strong>RCSB Protein Data Bank (PDB):</strong> Visit <a href="https://www.rcsb.org" target="_blank">rcsb.org</a> and search for proteins by name or PDB ID (e.g., "1UBQ" for ubiquitin)</li>
+                        <li><strong>Download Format:</strong> Download structures in PDB format (.pdb files)</li>
+                        <li><strong>AlphaFold Database:</strong> Access predicted structures at <a href="https://alphafold.ebi.ac.uk" target="_blank">alphafold.ebi.ac.uk</a></li>
+                        <li><strong>Example Downloads:</strong> Try the example proteins below or search for your protein of interest</li>
+                        <li><strong>File Requirements:</strong> Upload PDB files containing 3D protein coordinates</li>
+                    </ul>
+                </div>
+
+                <!-- Example Proteins Section -->
+                <div class="examples-section">
+                    <h3><i class="fas fa-flask"></i> Try Example Proteins</h3>
+                    <div class="examples-grid">
+                        <div class="example-card" onclick="downloadExample('ubiquitin')">
+                            <div class="example-title">Ubiquitin (1UBQ)</div>
+                            <div class="example-description">Small regulatory protein, 76 residues. Great for testing the model's accuracy.</div>
+                        </div>
+                        <div class="example-card" onclick="downloadExample('insulin')">
+                            <div class="example-title">Insulin (1ZNI)</div>
+                            <div class="example-description">Hormone protein, ~51 residues. Important metabolic regulator.</div>
+                        </div>
+                        <div class="example-card" onclick="downloadExample('lysozyme')">
+                            <div class="example-title">Lysozyme (1AKI)</div>
+                            <div class="example-description">Antimicrobial enzyme, ~129 residues. Larger protein for testing.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload Section -->
+                <div class="upload-section">
+                    <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <div class="upload-text">Click to upload or drag & drop your PDB file</div>
+                        <div class="upload-subtext">Supports .pdb and .ent files (max 16MB)</div>
+                        <input type="file" id="fileInput" class="file-input" accept=".pdb,.ent" onchange="handleFileSelect(event)">
+                    </div>
+                    <div id="selectedFile" style="display: none; margin-top: 15px; text-align: center; color: #4facfe; font-weight: 600;"></div>
+                </div>
+
+                <!-- Controls Section -->
+                <div class="controls-section">
+                    <div class="control-group">
+                        <label class="control-label">
+                            <i class="fas fa-thermometer-half"></i> Temperature (Controls Prediction Confidence)
+                        </label>
+                        <div class="temperature-control">
+                            <span>Sharp (0.1)</span>
+                            <input type="range" class="temperature-slider" id="temperatureSlider" 
+                                   min="0.1" max="2.0" step="0.1" value="1.0" 
+                                   oninput="updateTemperature(this.value)">
+                            <span>Soft (2.0)</span>
+                            <span class="temperature-value" id="temperatureValue">1.0</span>
+                        </div>
+                        <div style="font-size: 0.85rem; color: #666; margin-top: 8px;">
+                            Lower values give more confident predictions, higher values give more diverse predictions
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Predict Button -->
+                <button class="predict-btn" id="predictBtn" onclick="startPrediction()" disabled>
+                    <i class="fas fa-brain"></i>
+                    Predict Amino Acid Sequence
+                </button>
+
+                <!-- Loading Section -->
+                <div class="loading" id="loadingSection">
+                    <div class="loading-spinner"></div>
+                    <div>Processing protein structure with GCNdesign model...</div>
+                    <div style="font-size: 0.9rem; color: #666; margin-top: 10px;">This may take a few seconds</div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="results-section" id="resultsSection">
+                    <div class="results-header">
+                        <h3><i class="fas fa-chart-line"></i> Prediction Results</h3>
+                    </div>
+                    <div class="results-content">
+                        <!-- Summary Statistics -->
+                        <div class="summary-stats" id="summaryStats">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+
+                        <!-- Sequence Comparison -->
+                        <div class="sequence-comparison" id="sequenceComparison">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+
+                        <!-- Benchmark Comparison Section -->
+                        <div class="benchmark-section" id="benchmarkSection" style="display: none;">
+                            <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                                <h3><i class="fas fa-trophy"></i> ProtGCN Performance Benchmark</h3>
+                                <p>Compare with state-of-the-art protein design methods</p>
+                            </div>
+                            
+                            <div class="benchmark-content">
+                                <!-- Performance Highlights -->
+                                <div class="performance-highlights" id="performanceHighlights">
+                                    <!-- Will be populated by JavaScript -->
+                                </div>
+                                
+                                <!-- Benchmark Table -->
+                                <div class="benchmark-table" id="benchmarkTable">
+                                    <!-- Will be populated by JavaScript -->
+                                </div>
+                                
+                                <!-- Key Insights -->
+                                <div class="key-insights" id="keyInsights">
+                                    <!-- Will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Visualizations Section -->
+                        <div class="visualizations-section" id="visualizationsSection" style="display: none;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px; margin: 20px 30px;">
+                                <h3><i class="fas fa-chart-bar"></i> Visual Analysis</h3>
+                                <p>Comprehensive charts and graphs generated by ProtGCN</p>
+                            </div>
+                            
+                            <div class="viz-grid" style="display: grid; grid-template-columns: 1fr; gap: 30px; margin: 30px;">
+                                <!-- Sequence Comparison Chart -->
+                                <div class="viz-card" id="sequenceComparisonCard" style="display: none;">
+                                    <div class="viz-header">
+                                        <h4><i class="fas fa-dna"></i> Sequence Comparison Analysis</h4>
+                                        <button class="download-btn" onclick="downloadVisualization('sequence_comparison')">
+                                            <i class="fas fa-download"></i> Download
+                                        </button>
+                                    </div>
+                                    <div class="viz-content">
+                                        <img id="sequenceComparisonImg" style="width: 100%; border-radius: 8px;">
+                                    </div>
+                                </div>
+                                
+                                <!-- Accuracy Summary Chart -->
+                                <div class="viz-card" id="accuracySummaryCard">
+                                    <div class="viz-header">
+                                        <h4><i class="fas fa-chart-pie"></i> Accuracy & Performance Summary</h4>
+                                        <button class="download-btn" onclick="downloadVisualization('accuracy_summary')">
+                                            <i class="fas fa-download"></i> Download
+                                        </button>
+                                    </div>
+                                    <div class="viz-content">
+                                        <img id="accuracySummaryImg" style="width: 100%; border-radius: 8px;">
+                                    </div>
+                                </div>
+                                
+                                <!-- Confidence Heatmap -->
+                                <div class="viz-card" id="confidenceHeatmapCard">
+                                    <div class="viz-header">
+                                        <h4><i class="fas fa-fire"></i> Confidence Heatmap</h4>
+                                        <button class="download-btn" onclick="downloadVisualization('confidence_heatmap')">
+                                            <i class="fas fa-download"></i> Download
+                                        </button>
+                                    </div>
+                                    <div class="viz-content">
+                                        <img id="confidenceHeatmapImg" style="width: 100%; border-radius: 8px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Predictions Table -->
+                        <div class="predictions-table">
+                            <div class="table-header">
+                                <div style="display: grid; grid-template-columns: 60px 80px 80px 80px 1fr 100px; gap: 15px;">
+                                    <div>Pos</div>
+                                    <div>Chain</div>
+                                    <div>Original</div>
+                                    <div>Predicted</div>
+                                    <div>Top Predictions</div>
+                                    <div>Confidence</div>
+                                </div>
+                            </div>
+                            <div class="table-content" id="predictionsTable">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Section -->
+                <div id="errorSection" style="display: none;">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        // File upload handlers
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                document.getElementById('selectedFile').style.display = 'block';
+                document.getElementById('selectedFile').textContent = `Selected: ${file.name}`;
+                document.getElementById('predictBtn').disabled = false;
+            }
+        }
+
+        // Drag and drop handlers
+        const uploadZone = document.querySelector('.upload-zone');
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.name.toLowerCase().endsWith('.pdb') || file.name.toLowerCase().endsWith('.ent')) {
+                    selectedFile = file;
+                    document.getElementById('selectedFile').style.display = 'block';
+                    document.getElementById('selectedFile').textContent = `Selected: ${file.name}`;
+                    document.getElementById('predictBtn').disabled = false;
+                } else {
+                    alert('Please select a PDB file (.pdb or .ent)');
+                }
+            }
+        });
+
+        // Temperature control
+        function updateTemperature(value) {
+            document.getElementById('temperatureValue').textContent = value;
+        }
+
+        // Download example proteins
+        async function downloadExample(exampleName) {
+            try {
+                const response = await fetch(`/example/${exampleName}`);
+                const data = await response.json();
+                
+                if (data.url) {
+                    // Download the PDB file
+                    const pdbResponse = await fetch(data.url);
+                    const pdbText = await pdbResponse.text();
+                    
+                    // Create a blob and simulate file selection
+                    const blob = new Blob([pdbText], { type: 'text/plain' });
+                    const file = new File([blob], `${data.pdb_id}.pdb`, { type: 'text/plain' });
+                    
+                    selectedFile = file;
+                    document.getElementById('selectedFile').style.display = 'block';
+                    document.getElementById('selectedFile').textContent = `Selected: ${data.name}`;
+                    document.getElementById('predictBtn').disabled = false;
+                    
+                    alert(`Downloaded ${data.name}. Click "Predict Amino Acid Sequence" to analyze.`);
+                } else {
+                    alert('Error downloading example protein');
+                }
+            } catch (error) {
+                console.error('Error downloading example:', error);
+                alert('Error downloading example protein');
+            }
+        }
+
+        // Start prediction
+        async function startPrediction() {
+            if (!selectedFile) {
+                alert('Please select a PDB file first');
+                return;
+            }
+
+            // Show loading, hide results
+            document.getElementById('loadingSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'none';
+            document.getElementById('predictBtn').disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('temperature', document.getElementById('temperatureSlider').value);
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    displayError(data.error);
+                }
+            } catch (error) {
+                displayError(`Network error: ${error.message}`);
+            } finally {
+                document.getElementById('loadingSection').style.display = 'none';
+                document.getElementById('predictBtn').disabled = false;
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            const { results, summary, visualizations } = data;
+            
+            // Show results section
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            // Update summary statistics
+            const summaryStats = document.getElementById('summaryStats');
+            summaryStats.innerHTML = `
+                <div class="stat-card">
+                    <span class="stat-value">${summary.total_residues}</span>
+                    <div class="stat-label">Total Residues</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">${summary.accuracy ? (summary.accuracy * 100).toFixed(1) + '%' : 'N/A'}</span>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">${(summary.avg_confidence * 100).toFixed(1)}%</span>
+                    <div class="stat-label">Avg Confidence</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">${summary.temperature}</span>
+                    <div class="stat-label">Temperature</div>
+                </div>
+            `;
+
+            // Update sequence comparison
+            const sequenceComparison = document.getElementById('sequenceComparison');
+            let sequenceHtml = `
+                <div class="sequence-row">
+                    <div class="sequence-label">Predicted Sequence:</div>
+                    <div class="sequence-text">${summary.predicted_sequence}</div>
+                </div>
+            `;
+            
+            if (summary.ground_truth_available && summary.original_sequence) {
+                sequenceHtml += `
+                    <div class="sequence-row">
+                        <div class="sequence-label">Original Sequence:</div>
+                        <div class="sequence-text">${summary.original_sequence}</div>
+                    </div>
+                    <div class="sequence-row">
+                        <div class="sequence-label">Comparison (✓ = Correct, ✗ = Incorrect):</div>
+                        <div class="sequence-text">
+                            ${results.map(r => r.original === r.predicted ? 
+                                `<span class="residue-correct">${r.predicted}</span>` : 
+                                `<span class="residue-incorrect">${r.predicted}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            sequenceComparison.innerHTML = sequenceHtml;
+
+            // Update predictions table
+            const predictionsTable = document.getElementById('predictionsTable');
+            predictionsTable.innerHTML = results.map(result => `
+                <div class="prediction-row">
+                    <div>${result.position}</div>
+                    <div>${result.chain}</div>
+                    <div><span class="amino-acid">${result.original}</span></div>
+                    <div><span class="amino-acid">${result.predicted}</span></div>
+                    <div class="top-predictions">
+                        ${result.top_predictions.slice(0, 3).map(pred => 
+                            `<span class="top-pred">${pred.amino_acid}:${pred.percentage.toFixed(1)}%</span>`
+                        ).join('')}
+                    </div>
+                    <div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: ${result.confidence * 100}%"></div>
+                        </div>
+                        <div style="text-align: center; font-size: 0.8rem; margin-top: 3px;">
+                            ${(result.confidence * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Display benchmark comparison
+            if (summary.benchmark_data) {
+                displayBenchmark(summary.benchmark_data);
+            }
+
+            // Display visualizations if available
+            if (visualizations) {
+                displayVisualizations(visualizations, summary);
+            }
+        }
+
+        // Display visualizations
+        function displayVisualizations(visualizations, summary) {
+            const vizSection = document.getElementById('visualizationsSection');
+            vizSection.style.display = 'block';
+
+            // Show sequence comparison chart if ground truth is available
+            if (summary.ground_truth_available && visualizations.sequence_comparison) {
+                const sequenceCard = document.getElementById('sequenceComparisonCard');
+                const sequenceImg = document.getElementById('sequenceComparisonImg');
+                sequenceCard.style.display = 'block';
+                sequenceImg.src = `data:image/png;base64,${visualizations.sequence_comparison}`;
+            }
+
+            // Show accuracy summary chart
+            if (visualizations.accuracy_summary) {
+                const accuracyImg = document.getElementById('accuracySummaryImg');
+                accuracyImg.src = `data:image/png;base64,${visualizations.accuracy_summary}`;
+            }
+
+            // Show confidence heatmap
+            if (visualizations.confidence_heatmap) {
+                const heatmapImg = document.getElementById('confidenceHeatmapImg');
+                heatmapImg.src = `data:image/png;base64,${visualizations.confidence_heatmap}`;
+            }
+        }
+
+        // Download visualization function
+        function downloadVisualization(imageType) {
+            // Get the corresponding image element
+            let imgElement;
+            let filename;
+            
+            switch(imageType) {
+                case 'sequence_comparison':
+                    imgElement = document.getElementById('sequenceComparisonImg');
+                    filename = 'sequence_comparison.png';
+                    break;
+                case 'accuracy_summary':
+                    imgElement = document.getElementById('accuracySummaryImg');
+                    filename = 'accuracy_summary.png';
+                    break;
+                case 'confidence_heatmap':
+                    imgElement = document.getElementById('confidenceHeatmapImg');
+                    filename = 'confidence_heatmap.png';
+                    break;
+                default:
+                    alert('Unknown visualization type');
+                    return;
+            }
+
+            if (imgElement && imgElement.src) {
+                // Create a temporary link element and trigger download
+                const link = document.createElement('a');
+                link.href = imgElement.src;
+                link.download = `protgcn_${filename}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                alert('Visualization not available for download');
+            }
+        }
+
+        // Display error
+        function displayError(errorMessage) {
+            document.getElementById('errorSection').style.display = 'block';
+            document.getElementById('errorSection').innerHTML = `
+                <div class="error-message">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Prediction Error</h4>
+                    <p>${errorMessage}</p>
+                </div>
+            `;
+        }
+
+        // Display benchmark comparison
+        function displayBenchmark(benchmarkData) {
+            const benchmarkSection = document.getElementById('benchmarkSection');
+            benchmarkSection.style.display = 'block';
+
+            // Performance highlights
+            const performanceHighlights = document.getElementById('performanceHighlights');
+            const currentModel = benchmarkData.current_model;
+            performanceHighlights.innerHTML = `
+                <div class="highlight-card">
+                    <div class="highlight-value">${currentModel.t500_equivalent}%</div>
+                    <div class="highlight-label">T500 Equivalent</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-value">${currentModel.ts50_equivalent}%</div>
+                    <div class="highlight-label">TS50 Equivalent</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-value">${currentModel.top3_accuracy}%</div>
+                    <div class="highlight-label">Top-3 Accuracy</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-value">${benchmarkData.performance_assessment.design_suitability}</div>
+                    <div class="highlight-label">Design Suitability</div>
+                </div>
+            `;
+
+            // Benchmark table
+            const benchmarkTable = document.getElementById('benchmarkTable');
+            let tableHtml = `
+                <div class="benchmark-header">
+                    <div>Method</div>
+                    <div>T500</div>
+                    <div>TS50</div>
+                    <div>Notes</div>
+                </div>
+            `;
+
+            // Add current model first (highlighted)
+            tableHtml += `
+                <div class="benchmark-row benchmark-current">
+                    <div>
+                        <div class="method-name">${currentModel.name}</div>
+                    </div>
+                    <div class="performance-value performance-excellent">${currentModel.t500_equivalent}%</div>
+                    <div class="performance-value performance-excellent">${currentModel.ts50_equivalent}%</div>
+                    <div class="method-notes">${currentModel.notes}</div>
+                </div>
+            `;
+
+            // Add literature methods
+            benchmarkData.literature_methods.forEach(method => {
+                const t500Class = method.t500_equivalent > 50 ? 'performance-good' : 'performance-moderate';
+                const ts50Class = method.ts50_equivalent > 45 ? 'performance-good' : 'performance-moderate';
+                
+                tableHtml += `
+                    <div class="benchmark-row">
+                        <div>
+                            <div class="method-name">${method.name}</div>
+                        </div>
+                        <div class="performance-value ${t500Class}">${method.t500_equivalent}%</div>
+                        <div class="performance-value ${ts50Class}">${method.ts50_equivalent}%</div>
+                        <div class="method-notes">${method.notes}</div>
+                    </div>
+                `;
+            });
+
+            benchmarkTable.innerHTML = tableHtml;
+
+            // Key insights
+            const keyInsights = document.getElementById('keyInsights');
+            keyInsights.innerHTML = `
+                <div class="insights-title">🏆 Key Performance Insights</div>
+                ${benchmarkData.key_insights.map(insight => `
+                    <div class="insight-item">
+                        <i class="fas fa-check-circle insight-icon"></i>
+                        <div>${insight}</div>
+                    </div>
+                `).join('')}
+                
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e7ff;">
+                    <div class="insights-title">📊 Performance Assessment</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 2px solid #10b981;">
+                            <div style="font-weight: 600; color: #10b981;">T500 Level</div>
+                            <div style="font-size: 1.2rem; font-weight: 700; color: #333;">${benchmarkData.performance_assessment.t500_level}</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 2px solid #10b981;">
+                            <div style="font-weight: 600; color: #10b981;">TS50 Level</div>
+                            <div style="font-size: 1.2rem; font-weight: 700; color: #333;">${benchmarkData.performance_assessment.ts50_level}</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 2px solid #4facfe;">
+                            <div style="font-weight: 600; color: #4facfe;">Overall Level</div>
+                            <div style="font-size: 1.2rem; font-weight: 700; color: #333;">${benchmarkData.performance_assessment.overall_level}</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 2px solid #10b981;">
+                            <div style="font-weight: 600; color: #10b981;">Design Suitability</div>
+                            <div style="font-size: 1.2rem; font-weight: 700; color: #333;">${benchmarkData.performance_assessment.design_suitability}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
