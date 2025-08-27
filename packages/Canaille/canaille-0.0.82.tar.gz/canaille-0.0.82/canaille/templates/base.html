@@ -1,0 +1,166 @@
+{#
+The main template inherited by almost every other templates.
+
+:param user: The current user, if logged in.
+:type user: :class:`~canaille.core.models.User`
+:param features: The features enabled and available in Canaille.
+:type features: :class:`~canaille.app.features.Features`
+:param locale: The user locale.
+:type locale: :class:`str`
+:param website_name: The Canaille instance defined in :attr:`~canaille.core.configuration.CoreSettings.NAME`.
+:type website_name: :class:`str`
+:param logo_url: The URL of the instance logo defined in :attr:`~canaille.core.configuration.CoreSettings.LOGO`.
+:type logo_url: :class:`str`
+:param favicon_url: The URL of the instance favicon defined in :attr:`~canaille.core.configuration.CoreSettings.FAVICON`.
+:type favicon_url: :class:`str`
+:param request_is_boosted: Whether the page is boosted by :attr:`~canaille.core.configuration.CoreSettings.HTMX`.
+:type request_is_boosted: :class:`bool`
+:param menu: Whether to display the menu or not.
+:type menu: :class:`bool`
+:param debug: Whether the app has been launched in debug mode.
+:type debug: :class:`bool`
+:param no_secret_key: Whether a :attr:`~canaille.app.configuration.RootSettings.SECRET_KEY` has been defined.
+:type no_secret_key: bool
+#}
+{%- import 'macro/flask.html' as flask -%}
+
+<!doctype html>
+<html lang="{{ locale }}">
+    <head>
+        <title>{% block title -%}{% trans %}Authorization interface{% endtrans %}{%- endblock %} - {{ website_name|default("Canaille") }}</title>
+
+        {% if not request_is_boosted %}
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
+            <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+            <link href="{{ url_for("static", filename="fomanticui/semantic.min.css") }}" rel="stylesheet">
+            <link href="{{ url_for("static", filename="fonts/lato.css") }}" rel="stylesheet">
+            <link href="{{ url_for("static", filename="css/base.css") }}" rel="stylesheet">
+            {% if logo_url %}<link rel="icon" href="{{ favicon_url }}">{% endif %}
+        {% endif %}
+        {% block style %}{% endblock %}
+    </head>
+
+    <body{% if config["CANAILLE"]["JAVASCRIPT"] and config["CANAILLE"]["HTMX"] %} hx-boost="true"{% endif %}>
+        {% if config["CANAILLE"]["JAVASCRIPT"] and config["CANAILLE"]["HTMX"] %}
+            <div class="ui overlay red nag network-error">
+                <div class="title">
+                    {% trans %}Network error{% endtrans %}
+                </div>
+                <div>
+                    {% trans %}
+                        {{ website_name }} could not be reached.
+                        Are you sure to be connected to the internet?
+                    {% endtrans %}
+
+                </div>
+                <i class="close icon"></i>
+            </div>
+        {% endif %}
+        {% if no_secret_key %}
+            <div class="ui container attached menu-container">
+                <div class="ui error icon message">
+                    <i class="exclamation circle icon"></i>
+                    <div class="content">
+                        {% trans %}
+                            Your Canaille instance is not fully configured and not ready for production.<br>
+                            Have a look at your server logs and at the <a href="{{ documentation_url }}">documentation</a> for more details.
+                        {% endtrans %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        {% block menu %}
+            {% if menu %}
+                <div class="ui container menu-container">
+                    <a id="skip-link" href="#submenu">{% trans %}Skip main menu{% endtrans %}</a>
+                    <nav class="ui stackable labeled icon seven item {% if self.submenu() | trim %}{% if not no_secret_key %}top {% endif %}attached{% endif %} menu">
+                        {% if logo_url %}
+                            <a href="/" class="item logo">
+                                <img class="ui img" src="{{ logo_url }}" alt="{{ website_name }}" />
+                            </a>
+                        {% endif %}
+
+                        {% if user %}
+                            {% if user.can_edit_self %}
+                                <a class="item {% if menuitem is defined and menuitem == "profile" %}active{% endif %}"
+                                   href="{{ url_for('core.account.profile_edition', edited_user=user) }}">
+                                    <i class="id card icon"></i>
+                                    {% trans %}Profile{% endtrans %}
+                                </a>
+                            {% endif %}
+                            {% if features.has_oidc and user.can_use_oidc %}
+                                <a class="item {% if menuitem is defined and menuitem == "consents" %}active{% endif %}"
+                                   href="{{ url_for('oidc.consents.consents') }}">
+                                    <i class="handshake icon"></i>
+                                    {% trans %}Consents{% endtrans %}
+                                </a>
+                            {% endif %}
+                            {% if user.can_manage_users %}
+                                <a class="item {% if menuitem is defined and menuitem == "users" %}active{% endif %}"
+                                   href="{{ url_for('core.account.users') }}">
+                                    <i class="address book icon"></i>
+                                    {% trans %}Users{% endtrans %}
+                                </a>
+                            {% endif %}
+                            {% if user.can_manage_groups %}
+                                <a class="item {% if menuitem is defined and menuitem == "groups" %}active{% endif %}"
+                                   href="{{ url_for('core.groups.groups') }}">
+                                    <i class="users icon"></i>
+                                    {% trans %}Groups{% endtrans %}
+                                </a>
+                            {% endif %}
+                            {% if user.can_manage_oidc %}
+                                <a class="item {% if menuitem is defined and menuitem == "admin" %}active{% endif %}" href="{{ url_for('core.admin.mail_index') }}">
+                                    <i class="settings icon"></i>
+                                    {% trans %}Admin{% endtrans %}
+                                </a>
+                            {% endif %}
+                            <a class="item" href="{{ url_for('core.auth.logout') }}">
+                                <i class="sign out alternate icon"></i>
+                                {% trans %}Log out{% endtrans %}
+                            </a>
+                        {% else %}
+                            <a class="item" href="{{ url_for('core.auth.login') }}">
+                                <i class="sign in alternate icon"></i>
+                                {% trans %}Sign in{% endtrans %}
+                            </a>
+
+                        {% endif %}
+                    </nav>
+                    {% if self.submenu() | trim %}
+                        <nav id="submenu" class="ui bottom attached equal width borderless menu">
+                            {% block submenu %}{% endblock %}
+                        </nav>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endblock %}
+
+
+        {% block container %}
+            <div class="ui container">
+                <div class="ui content">
+                    {{ flask.messages() }}
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        {% endblock %}
+
+        <footer>
+            <a href="{{ url_for('core.account.about') }}">{{ _("About Canaille") }}</a>
+        </footer>
+        {% if config["CANAILLE"]["JAVASCRIPT"] %}
+            {% if not request_is_boosted %}
+                <script src="{{ url_for("static", filename="jquery/jquery.min.js") }}" defer></script>
+                <script src="{{ url_for("static", filename="fomanticui/semantic.min.js") }}" defer></script>
+                {% if config["CANAILLE"]["HTMX"] %}
+                    <script src="{{ url_for("static", filename="htmx/htmx.min.js") }}" defer></script>
+                {% endif %}
+                <script src="{{ url_for("static", filename="js/base.js") }}" defer></script>
+            {% endif %}
+            {% block script %}{% endblock %}
+        {% endif %}
+    </body>
+</html>

@@ -1,0 +1,101 @@
+{#
+.. screenshot:: |canaille|/oauth/authorize?response_type=code&client_id=client1&redirect_uri=http%3A%2F%2Flocalhost%3A5001%2Flogin_callback&scope=openid+profile+email+phone+address+groups&state=state&nonce=nonce
+   :context: admin
+   :align: right
+   :width: 275px
+
+   The consent request dialog.
+
+Consent request template.
+
+This templates is displayed to users accessing a new application that requests to access to personal information.
+It lists the personal information requested by the application, and offers the user to accept or decline.
+
+:param user: The user whose consent is asked.
+:type user: :class:`~canaille.core.models.User`
+:param grant: The OIDC grant.
+:type grant: An Authlib ``Grant``
+#}
+{% extends theme('base.html') %}
+{% import 'macro/form.html' as fui %}
+
+{% block content %}
+    <div class="ui segment" hx-boost="false">
+        {% if client.logo_uri %}
+            <img class="ui centered tiny image" src="{{ client.logo_uri }}" alt="{{ client.client_name }}">
+        {% endif %}
+
+        <h2 class="ui header">
+            {% trans name=client.client_name %}The application {{ name }} is requesting access to:{% endtrans %}
+        </h2>
+
+        {% if grant.request.payload.scope is none %}
+            <div class="ui error message">
+                {% trans application_name=client.client_name %}
+                    The application {{ application_name }} does not allow user authentication.
+                {% endtrans %}
+            </div>
+            <div class="ui center aligned container">
+                {{ gettext('You are logged in as %(name)s', name=user.formatted_name) }}
+            </div>
+        {% else %}
+            <div class="ui divided items">
+                {% for scope in grant.request.payload.scope.split(" ") %}
+                    {% if scope not in ignored_scopes %}
+                        <div class="item">
+                            {% if scope in scope_details %}
+                                <div>
+                                    <i class="{{ scope_details[scope][0] }} large icon"></i>
+                                    {{ scope_details[scope][1] }}
+                                </div>
+                            {% else %}
+                                <div class="ui tiny image">
+                                    <i class="huge user icon"></i>
+                                    {{ scope }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                {% if client.policy_uri %}
+                    <h2>{% trans application_name=client.client_name %}Read {{ application_name }}'s Privacy Policy :{% endtrans %}</h2>
+                    <div class="item">
+                        <span>
+                            <i class="large mask icon"></i>
+                            <a href="{{ client.policy_uri }}">{% trans %}Policy{% endtrans %}</a>
+                        </span>
+                    </div>
+                {% endif %}
+                {% if client.tos_uri %}
+                    <h2>{% trans application_name=client.client_name %}Read {{ application_name }}'s Terms of Service :{% endtrans %}</h2>
+                    <div class="item">
+                        <span>
+                            <i class="large file signature icon"></i>
+                            <a href="{{ client.tos_uri }}">{% trans %}Terms of service{% endtrans %}</a>
+                        </span>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="ui center aligned container">
+                {{ gettext('You are logged in as %(name)s', name=user.formatted_name) }}
+            </div>
+
+            <div class="ui center aligned container">
+                {% call fui.render_form(form) %}
+                    <div class="ui stackable buttons">
+                        <button name="answer" type="submit" class="ui negative button" value="deny" id="deny">
+                            {% trans %}Deny{% endtrans %}
+                        </button>
+                        <button name="answer" type="submit" class="ui button" value="logout" id="logout">
+                            {% trans %}Switch user{% endtrans %}
+                        </button>
+                        <button name="answer" type="submit" class="ui primary button" value="accept" id="accept">
+                            {% trans %}Accept{% endtrans %}
+                        </button>
+                    </div>
+                {% endcall %}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
