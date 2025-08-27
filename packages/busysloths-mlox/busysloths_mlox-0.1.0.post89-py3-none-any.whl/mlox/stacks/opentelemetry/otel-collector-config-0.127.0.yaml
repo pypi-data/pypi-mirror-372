@@ -1,0 +1,75 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        tls:
+          cert_file: /etc/cert.pem
+          key_file: /etc/key.pem
+      http:
+        endpoint: 0.0.0.0:4318
+        tls:
+          cert_file: /etc/cert.pem
+          key_file: /etc/key.pem
+
+  hostmetrics:
+    collection_interval: 60s
+    scrapers:
+      cpu:
+      memory:
+      load:
+      disk:
+      filesystem:
+      network:
+
+exporters:
+  otlphttp:
+    endpoint: ${env:MY_OTEL_RELIC_ENDPOINT}
+    headers:
+      api-key: ${env:MY_OTEL_RELIC_KEY}
+  file:
+    path: /etc/otelcol/telemetry.json # Path inside the container where data will be written
+    rotation:
+      max_megabytes: 10    # Rotate file when size exceeds 100MB
+      max_backups: 5        # Keep up to 5 rotated files
+  debug:
+    verbosity: detailed
+
+processors:
+  batch:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 65
+    spike_limit_percentage: 20  
+
+# connectors:
+#   spanmetrics:
+#     namespace: myspanmetrics
+
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133" 
+    path: "/health/status" 
+    tls:
+      cert_file: /etc/cert.pem
+      key_file: /etc/key.pem
+    check_collector_pipeline: 
+      enabled: true 
+      interval: "5m" 
+      exporter_failure_threshold: 5   
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]    
+      processors: [batch, memory_limiter]
+      exporters: [debug, file]
+    metrics:
+      receivers: [otlp, hostmetrics]
+      processors: [batch, memory_limiter]
+      exporters: [debug, file]
+    logs:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [debug, file]
