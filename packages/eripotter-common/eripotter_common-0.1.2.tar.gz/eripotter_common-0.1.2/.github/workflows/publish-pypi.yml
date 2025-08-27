@@ -1,0 +1,40 @@
+name: Publish eripotter-common to PyPI
+
+on:
+  push:
+    tags:
+      - "v*"  # v0.1.0 같은 태그 푸시 시 동작
+  workflow_dispatch:  # 필요시 수동 실행
+
+permissions:
+  id-token: write  # OIDC 필수
+  contents: read
+  attestations: write  # 패키지 배포에 필요
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: pypi  # PyPI에 설정한 Environment 이름과 동일하게
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"  # pyproject.toml의 최소 버전과 일치
+          
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          
+      - name: Build package
+        run: python -m build
+        
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          # 테스트 시에는 아래 줄의 주석을 해제하세요
+          # repository-url: https://test.pypi.org/legacy/
