@@ -1,0 +1,151 @@
+from enaml.core.api import Looper
+from enaml.layout.api import align, spacer
+from enaml.styling import StyleSheet, Style, Setter
+from enaml.widgets.api import Container, HGroup, Label, PushButton
+
+from .modifier_button import ModifierButton
+
+
+def get_style_class(is_selected, is_reference, is_exg):
+    style_classes = []
+    if is_selected:
+        style_classes.append('selected')
+    if is_reference:
+        style_classes.append('reference')
+    if is_exg:
+        style_classes.append('exg')
+    return ' '.join(style_classes)
+
+
+enamldef ElectrodeSelectorContainer(Container):
+
+    attr selector
+
+    Container: container:
+        StyleSheet:
+            Style:
+                element = 'ModifierButton'
+                Setter:
+                    field = 'border'
+                    value = '1px solid gray'
+                Setter:
+                    field = 'border-radius'
+                    value = '3px'
+                Setter:
+                    field = 'background-color'
+                    value = 'LightSkyBlue'
+                Setter:
+                    field = 'padding'
+                    value = '3px'
+                Setter:
+                    field = 'font-size'
+                    value = '11px'
+            Style:
+                element = 'ModifierButton'
+                pseudo_class = 'hover'
+                Setter:
+                    field = 'background-color'
+                    value = 'LightCoral'
+            Style:
+                element = 'ModifierButton'
+                style_class = 'reference'
+                Setter:
+                    field = 'border'
+                    value = '3px solid black'
+            Style:
+                element = 'ModifierButton'
+                style_class = 'exg'
+                Setter:
+                    field = 'background-color'
+                    value = 'Aquamarine'
+            Style:
+                element = 'ModifierButton'
+                style_class = 'selected'
+                Setter:
+                    field = 'background-color'
+                    value = 'LightSalmon'
+
+        constraints = [
+            width == 600, height == 600,
+            extra_buttons.bottom == ref_buttons.top,
+            ref_buttons.bottom == container.bottom,
+        ]
+
+        HGroup: extra_buttons:
+            constraints = [pb_all.width == 70]
+            align_widths = True
+            share_layout = True
+            padding = 0
+            spacing = 0
+            Label:
+                text = 'Extra'
+
+            Looper:
+                iterable << selector.extra[:]
+
+                ModifierButton:
+                    text = loop_item
+
+                    clicked ::
+                        if not change['value']:
+                            selector.toggle_selected(loop_item)
+                        elif 'shift' in change['value']:
+                            selector.toggle_reference(loop_item)
+
+                    style_class << get_style_class(
+                        loop_item in selector.selected,
+                        loop_item in selector.reference,
+                        True,
+                    )
+
+
+        HGroup: ref_buttons:
+            constraints = [pb_all.width == 70]
+            align_widths = True
+            share_layout = True
+            padding = 0
+            spacing = 0
+            Label:
+                text = 'Reference'
+            PushButton: pb_none:
+                text = 'None'
+                clicked ::
+                    selector.reference = []
+            PushButton: pb_all:
+                text = 'All'
+                clicked ::
+                    selector.reference = selector.coords.index.values.tolist()
+            PushButton: pb_cz:
+                text = 'Cz'
+                clicked ::
+                    selector.reference = ['Cz']
+
+        Looper:
+            iterable << selector.coords.iterrows()
+
+            ModifierButton:
+                text = str(loop_item[0])
+
+                hug_width = 'ignore'
+                hug_height = 'ignore'
+                resist_width = 'ignore'
+                resist_height = 'ignore'
+
+                constraints = [
+                    (width == container.width * 0.095) | 'weak',
+                    (height == container.height * 0.075) | 'weak',
+                    left == (container.left + loop_item[1]['x_norm'] * (container.width - width)),
+                    top == ((container.top + loop_item[1]['y_norm'] * (container.height - 25 - 25 - height)) + 38),
+                ]
+
+                clicked ::
+                    if not change['value']:
+                        selector.toggle_selected(loop_item[0])
+                    elif 'shift' in change['value']:
+                        selector.toggle_reference(loop_item[0])
+
+                style_class << get_style_class(
+                    loop_item[0] in selector.selected,
+                    loop_item[0] in selector.reference,
+                    loop_item[1]['type'] == 'EXG',
+                )
