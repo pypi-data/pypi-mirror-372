@@ -1,0 +1,126 @@
+# SPDX-FileCopyrightText: 2021-2024 Jeff Epler
+#
+# SPDX-License-Identifier: CC0-1.0
+
+name: Test wwvbgen
+
+on:
+  push:
+  pull_request:
+  release:
+    types: [published]
+  check_suite:
+    types: [rerequested]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Install deps
+      run: python -mpip install -r requirements-dev.txt
+
+    - name: Build HTML docs
+      run: make html
+
+  typing:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+        - '3.13'
+        os-version:
+        - 'ubuntu-latest'
+    runs-on: ${{ matrix.os-version }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install deps
+      run: |
+        python -mpip install wheel
+        python -mpip install -r requirements-dev.txt
+
+    - name: Check stubs
+      if: (! startsWith(matrix.python-version, 'pypy-'))
+      run: make mypy PYTHON=python
+
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+        - '3.9'
+        - '3.10'
+        - '3.11'
+        - '3.12'
+        - '3.13'
+        - '3.14.0-alpha.0 - 3.14'
+        os-version:
+        - 'ubuntu-latest'
+        include:
+          - os-version: 'macos-latest'
+            python-version: '3.x'
+          - os-version: 'windows-latest'
+            python-version: '3.x'
+          - os-version: 'ubuntu-latest'
+            python-version: 'pypy-3.10'
+
+    runs-on: ${{ matrix.os-version }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install deps
+      run: |
+        python -mpip install wheel
+        python -mpip install -r requirements-dev.txt
+
+    - name: Coverage
+      run: make coverage PYTHON=python
+
+    - name: Test installed version
+      run: make test_venv PYTHON=python
+
+    - name: Upload Coverage as artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage for ${{ matrix.python-version }} on ${{ matrix.os-version }}
+        path: coverage.xml
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: pre-commit
+      run: pip install pre-commit && pre-commit run --all
