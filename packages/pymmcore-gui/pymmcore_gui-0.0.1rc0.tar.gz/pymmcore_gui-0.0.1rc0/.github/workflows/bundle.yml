@@ -1,0 +1,57 @@
+name: Bundle app
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+    tags: [v*]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  bundle:
+    name: Bundle ${{ matrix.platform }}
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - uses: pymmcore-plus/setup-mm-test-adapters@main
+        with:
+          version: 74
+
+      - name: Install the project
+        run: uv sync --all-extras --dev
+        env:
+          UV_LOCKED: ${{ github.ref_name == 'main' && 1 || 0 }}
+
+      - name: Bundle
+        shell: bash
+        run: |
+          uv run pyinstaller app/mmgui.spec --clean --noconfirm
+          ls -la dist/pymmgui
+
+      - name: Test Bundle
+        run: uv run pytest -v --color=yes tests/test_bundle.py
+
+      - name: Upload bundle
+        # upload-artifact@v2 does not preserve symlinks, this fork does
+        # https://github.com/actions/upload-artifact/issues/93#issuecomment-2304775030
+        # https://github.com/actions/upload-artifact/compare/main...eXhumer:0b7d5f5684d3f642f978d2faad9ade64f5b4dd57
+        uses: eXhumer/upload-artifact@0b7d5f5684d3f642f978d2faad9ade64f5b4dd57
+        with:
+          name: pymmgui-${{ runner.os }}
+          path: ${{ runner.os == 'macos' && 'dist' || runner.os == 'windows' && 'dist/pymmgui' }}
+          follow-symlinks: false
