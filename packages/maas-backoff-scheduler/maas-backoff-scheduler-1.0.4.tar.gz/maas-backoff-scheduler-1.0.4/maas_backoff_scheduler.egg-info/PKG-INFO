@@ -1,0 +1,216 @@
+Metadata-Version: 2.1
+Name: maas-backoff-scheduler
+Version: 1.0.4
+Summary: 基于Redis的任务退避重试框架，支持多种退避策略和自定义配置
+Home-page: https://github.com/xiaofucoding/maas-backoff-scheduler.git/
+Author: x
+Author-email: 515361725@qq.com
+License: MIT
+Project-URL: Source, https://github.com/yourusername/task-backoff-scheduler
+Project-URL: Documentation, https://github.com/yourusername/task-backoff-scheduler#readme
+Project-URL: Bug Reports, https://github.com/yourusername/task-backoff-scheduler/issues
+Description: # 任务退避重试框架
+        
+        一个基于Redis的任务退避重试框架，支持多种退避策略和自定义配置。
+        
+        ## 功能特点
+        - 基于Redis的分布式任务队列
+        - 支持多种退避策略（固定间隔、指数退避、线性退避等）
+        - 支持任务优先级
+        - 支持任务超时和失败处理
+        - 支持并发执行任务（线程池/进程池）
+        - 支持任务状态管理和监控
+        
+        ## 打包上传
+        
+        ```bash
+        # 打包
+        python setup.py sdist bdist_wheel
+        
+        # 上传pypi
+        twine upload dist/*
+        
+        ```
+        ## 安装说明
+        
+        ### 使用pip安装
+        ```bash
+        pip install maas-backoff-scheduler
+        
+        pip3.10 install maas-backoff-scheduler==1.0.29
+        ```
+        
+        ### 从源码安装
+        ```bash
+        # 克隆项目
+        git clone https://github.com/xiaofucoding/maas-backoff-scheduler.git
+        
+        cd maas-backoff-scheduler
+        
+        # 安装依赖
+        pip install -r requirements.txt
+        ```
+        
+        ## 快速开始与常用方法
+        
+        ```python
+        from backoff.common.result_entity import ResultEntity
+        from backoff.scheduler.backoff_scheduler import (
+            TaskBackoffScheduler,
+            TaskBackoffConfig,
+            TaskEntity,
+        )
+        
+        # 1) 创建配置
+        backoffConfig = TaskBackoffConfig.from_dict({
+            "storage": {
+                "type": "redis",
+                "host": "127.0.0.1",
+                "port": 6379,
+                "db": 1,
+                "password": ""
+            },
+            "task": {
+                "biz_prefix": "demo_service",
+                "max_retry_count": 5,
+                "backoff_type": "exponential",
+                "backoff_interval": 30,
+                "backoff_multiplier": 2.0,
+                "batch_size": 10,
+                "min_gpu_memory_mb": 0,
+                "min_gpu_utilization": 0
+            },
+            "threadpool": {
+                "concurrency": 8,
+                "executor_type": "thread",
+                "exec_timeout": 10
+            },
+            "scheduler": {
+                "interval": 5
+            }
+        })
+        
+        # 2) 创建Scheduler
+        scheduler = TaskBackoffScheduler(backoffConfig)
+        
+        # 3) 注册任务处理/异常处理
+        
+        def my_task_handler(task: TaskEntity):
+            # 业务逻辑
+            return {"status": "success", "result": "ok"}
+        
+        def my_exception_handler(task: TaskEntity):
+            # 异常兜底
+            return {"status": "failed", "reason": "handled"}
+        
+        scheduler.set_custom_task_handler(my_task_handler)
+        scheduler.set_custom_task_exception_handler(my_exception_handler)
+        
+        # 4) 创建任务
+        new_task_id = scheduler.create_task({"order_id": 123, "user_id": "u001"})
+        
+        # 5) 查询/删除任务
+        task_entity = scheduler.get_task(new_task_id)
+        _ = scheduler.delete_task(new_task_id)
+        
+        
+        # 7) 关闭
+        scheduler.shutdown()
+        ```
+        
+        ### 常用方法一览
+        
+        - `set_custom_task_handler(handler)`：设置业务处理函数，签名 `(task_entity, params) -> dict`
+        - `set_custom_task_exception_handler(handler)`：设置异常处理函数，签名 `(task_entity, params) -> dict`
+        - `create_task(task_params: dict, task_id: Optional[str] = None) -> Optional[str]`：创建任务
+        - `get_task(task_id: str) -> Optional[TaskEntity]`：查询任务详情
+        - `delete_task(task_id: str) -> bool`：删除任务
+        - `shutdown()`：关闭并清理资源
+        
+        ## 配置说明（TaskBackoffConfig）
+        
+        ### storage（必填：Redis）
+        
+        | 参数     | 类型   | 说明         | 示例        |
+        | -------- | ------ | ------------ | ----------- |
+        | type     | string | 存储类型     | "redis"     |
+        | host     | string | Redis 主机   | "127.0.0.1" |
+        | port     | int    | Redis 端口   | 6379        |
+        | db       | int    | Redis DB索引 | 1           |
+        | password | string | Redis 密码   | ""          |
+        
+        ### task（任务行为）
+        
+        | 参数               | 类型   | 说明                                 | 示例           |
+        | ------------------ | ------ | ------------------------------------ | -------------- |
+        | biz_prefix         | string | 业务前缀（用于隔离与命名）           | "demo_service" |
+        | max_retry_count    | int    | 最大重试次数                         | 5              |
+        | backoff_type       | enum   | 退避类型（FIXED/EXPONENTIAL/LINEAR） | EXPONENTIAL    |
+        | backoff_interval   | int    | 初始退避间隔（秒）                   | 30             |
+        | backoff_multiplier | float  | 退避倍数（指数/线性）                | 2.0            |
+        | batch_size         | int    | 每批次拉取任务数量上限               | 10             |
+        
+        ### threadpool（并发执行）
+        
+        | 参数          | 类型   | 说明                             | 示例     |
+        | ------------- | ------ | -------------------------------- | -------- |
+        | concurrency   | int    | 最大工作线程/进程数              | 8        |
+        | executor_type | string | 执行器类型（"thread"/"process"） | "thread" |
+        | exec_timeout       | int    | 单任务执行超时（秒）                 | 10             |
+        
+        
+        ### scheduler（调度轮询）
+        
+        | 参数     | 类型 | 说明           | 示例 |
+        | -------- | ---- | -------------- | ---- |
+        | interval | int  | 轮询间隔（秒） | 5    |
+        
+        ### 示例配置（JSON）
+        
+        ```json
+        {
+            "storage": {
+                "type": "redis",
+                "host": "127.0.0.1",
+                "port": 6379,
+                "db": 1,
+                "password": ""
+            },
+            "task": {
+                "biz_prefix": "demo_service",
+                "max_retry_count": 5,
+                "backoff_type": "exponential",
+                "backoff_interval": 30,
+                "backoff_multiplier": 2.0,
+                "batch_size": 10,
+                "min_gpu_memory_mb": 0,
+                "min_gpu_utilization": 0
+            },
+            "threadpool": {
+                "concurrency": 8,
+                "executor_type": "thread",
+                "exec_timeout": 10
+            },
+            "scheduler": {
+                "interval": 5
+            }
+        }
+        ```
+        
+        > 提示：如果你保证每次应用启动时 `biz_prefix` 唯一，那么无需额外的实例ID；框架会基于 `biz_prefix` 与时间戳后缀进行隔离，并在添加新调度器时自动清理相同业务前缀下的旧调度器。
+        
+Keywords: task retry backoff redis queue
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Provides-Extra: dev
