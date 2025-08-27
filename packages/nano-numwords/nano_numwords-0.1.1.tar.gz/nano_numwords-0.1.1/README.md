@@ -1,0 +1,61 @@
+# nano-numwords
+[![PyPI](https://img.shields.io/pypi/v/nano-numwords.svg?color=blue)](https://pypi.org/project/nano-numwords/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+![Size](https://img.shields.io/badge/size-~1KB-lightgrey.svg)
+[![CI](https://github.com/ozgunlu/nano-numwords/actions/workflows/ci.yml/badge.svg)](https://github.com/ozgunlu/nano-numwords/actions)
+
+World’s *tiniest* (yet practical) English **word → number** parser.
+Zero dependencies. Single ~1KB file. Perfect for code-golf, minimal environments, or just for fun.
+
+---
+
+## ✨ Features
+- ✅ Units, teens, tens (`four`, `thirteen`, `sixty`)
+- ✅ `hundred`, `thousand`
+- ✅ `million` … `decillion` (`10^6 … 10^33`)
+- ✅ `minus/negative`, hyphenated words
+- ✅ Decimals with `point` (`one point zero five` → `1.05`)
+
+---
+
+## 🚀 Usage
+```bash
+# CLI
+python app_min.py "seven hundred eighty six"              # 786
+python app_min.py "two million"                           # 2000000
+python app_min.py "one trillion"                          # 1000000000000
+python app_min.py "seven hundred sixty five thousand twelve"  # 765012
+python app_min.py "negative forty two"                    # -42
+python app_min.py "one point zero zero five"              # 1.005
+```
+
+or, after installing:
+
+```bash
+pip install nano-numwords
+nano-numwords "forty two"   # -> 42
+```
+
+---
+
+## 🤓 Why so small?
+
+- Minimal word lists (units/teens/tens)
+- Irregular stems via string rewrites
+(thir→three, fif→five, eigh→eight, twen→two, for→four, twel→twelve)
+- Big scales via 1000**(i+1) (not hardcoded)
+
+---
+
+## 🎉 Fun Ideas
+
+- Put it in your coding golf repo and brag: “My parser fits in a tweet.”
+- Ship it to a NASA spacecraft (disk quota friendly).
+- Teach your AI overlords to count with 1KB of Python.
+
+---
+
+## 📜 License
+
+MIT © 2025
+
