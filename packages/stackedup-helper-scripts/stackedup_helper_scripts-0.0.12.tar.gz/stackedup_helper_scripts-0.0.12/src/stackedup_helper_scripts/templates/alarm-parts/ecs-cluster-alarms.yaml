@@ -1,0 +1,89 @@
+---
+Description: OMBU Alarms / Cluster / ECS / Alarms
+
+Parameters:
+
+  ClusterName:
+    Description: The ECS cluster name to watch.
+    Type: String
+
+  PendingThreshold:
+    Description: The number of pending tasks threshold.
+    Default: 1
+    Type: Number
+
+  NotificationArn:
+    Description: The ARN of the SNS topic to send notifications to.
+    Type: String
+
+Resources:
+
+  ECSClusterHighCPUUtilizationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "ecs-cluster-${ClusterName}-high-cpu-utilization"
+      Namespace: AWS/ECS
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref ClusterName
+      MetricName: CPUUtilization
+      ComparisonOperator: GreaterThanThreshold
+      Statistic: Average
+      Threshold: 80
+      Period: 900
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationArn
+      AlarmDescription:
+        !Sub "CPU utilization for ECS cluster ${ClusterName} is <currentvalue>%\
+              , exceeding the alarm threshold of 80%."
+
+  ECSClusterMemoryUtilizationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "ecs-cluster-${ClusterName}-high-memory-utilization"
+      Namespace: AWS/ECS
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref ClusterName
+      MetricName: MemoryUtilization
+      ComparisonOperator: GreaterThanThreshold
+      Statistic: Average
+      Threshold: 75
+      Period: 900
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationArn
+      AlarmDescription:
+        !Sub "Memory utilization for ECS cluster ${ClusterName} is \
+              <currentvalue>%, exceeding the alarm threshold of 75%."
+
+  ECSPendingTaskAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "ecs-cluster-${ClusterName}-pending-tasks"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: !Ref PendingThreshold
+      EvaluationPeriods: 10
+      DatapointsToAlarm: 10
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: clustertotal
+          Label: TotalPendingTaskCount
+          Expression: !Sub >
+            SELECT SUM(PendingTaskCount)
+            FROM SCHEMA("ECS/ContainerInsights", ServiceName, ClusterName)
+            WHERE ClusterName = '${ClusterName}'
+            GROUP BY PendingTaskCount
+          ReturnData: false
+          Period: 60
+        - Id: total
+          Expression: MAX(clustertotal)
+          ReturnData: true
+      AlarmActions:
+        - !Ref NotificationArn
+      AlarmDescription:
+        !Sub "Pending tasks for ${ClusterName} is <currentvalue> tasks, \
+              missing the alarm threshold of 0 over 10 minutes."
