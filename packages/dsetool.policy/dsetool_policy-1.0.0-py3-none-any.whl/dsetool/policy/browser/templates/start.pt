@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      metal:define-macro="master"
+      metal:use-macro="context/@@shell/macros/shell"
+      tal:define="
+        webhelpers nocall:here/@@webhelpers;
+        session view/session;
+        can_edit webhelpers/can_edit_session;
+        has_profile view/has_profile;
+      "
+      i18n:domain="euphorie"
+>
+
+  <!-- The equivalent template in the Jekyll prototype is preparation.html -->
+
+  <body>
+    <metal:slot fill-slot="content">
+      <tal:block replace="tile:statusmessages" />
+      <form class="pat-form pat-inject pat-validation"
+            action="${request/URL}"
+            method="POST"
+            data-pat-inject="history: record; source: #content; target: #content"
+            data-pat-validation="disable-selector: button[name='form.button.submit'];
+                                 ${webhelpers/pat_validation_messages};
+                           message-min: ${view/message_gt1};
+            "
+      >
+        <div class="pat-scroll-box"
+             id="content-pane"
+        >
+          <metal:call use-macro="webhelpers/macros/toolbar" />
+          <metal:messages_above_title define-slot="messages_above_title">
+            <p class="pat-message notice"
+               tal:repeat="message view/get_pat_messages_above_title"
+               tal:content="structure message"
+            ></p>
+          </metal:messages_above_title>
+
+          <article class="pat-well pat-rich info"
+                   tal:condition="tool_notification"
+          >
+            <h1>${tool_notification/title}</h1>
+            <tal:content content="structure tool_notification/text">
+                        TEXT
+            </tal:content>
+          </article>
+
+          <article class="pat-rich">
+            <h1>${python: view.session.title or context.title}</h1>
+            <section tal:condition="context/Description">
+              <p>${context/Description}</p>
+            </section>
+
+          </article>
+          <metal:messages_below_article define-slot="messages_below_article">
+            <div class="pat-message notice"
+                 tal:repeat="multiple_message view/get_pat_multiple_messages_below_article"
+            >
+              <p tal:repeat="message multiple_message"
+                 tal:content="structure message"
+              ></p>
+            </div>
+          </metal:messages_below_article>
+          <fieldset class="vertical pat-inject pat-subform ${python: 'pat-autosubmit' if view.data_pat_autosubmit else None}"
+                    data-pat-autosubmit="${python: view.data_pat_autosubmit if view.data_pat_autosubmit else None}"
+                    data-pat-inject="url: ; source: #main-content; target: #main-content"
+                    tal:condition="can_edit"
+          >
+            <metal:widgets define-slot="widgets">
+              <tal:for repeat="widgetid view/widgets">
+                <label tal:define="
+                         widget nocall:view/widgets/?widgetid;
+                         name widget/name;
+                         description widget/field/description|nothing;
+                       ">
+                                ${widget/label}
+                  <dfn class="icon-help-circle iconified pat-tooltip"
+                       data-pat-tooltip="source: content; position-list: lt"
+                       tal:condition="description"
+                  >
+                                    ${description}
+                  </dfn>
+                  <input tal:replace="structure widget/render" />
+                  <tal:error condition="widget/error"
+                             replace="structure widget/error/render|nothing"
+                  />
+                </label>
+              </tal:for>
+            </metal:widgets>
+            <tal:block-etoolspecific>
+              <style>
+                            label:has(#form-widgets-tool_subscription) {
+                                display: none;
+                            }
+              </style>
+              <article class="pat-rich">
+                <section tal:condition="python:len(context.aq_parent.objectIds()) &lt; 3">
+                                Seven questions will address your current practices with regard to dangerous substances
+                                and chemical products. If improvements are needed, you will immediately get tips and
+                                advice on what you need to do and on how you can do it as easily and efficiently as
+                                possible.
+                </section>
+                <tal:long-tool tal:condition="python:len(context.aq_parent.objectIds()) &gt;= 3">
+                  <section>
+                                    This is an interactive questionnaire and the questions might change related to given
+                                    answers. You can use the skip button if you are not sure about an answer yet and get
+                                    back to the question later. You will also receive a report containing your answers,
+                                    recommendations and advice.
+                  </section>
+                  <h2>Let's quickly check if this tool might be helpful for you&hellip;</h2>
+                  <p>Do you use, handle or store chemical products or chemical substances at work? Such
+                                    products will be labelled with one or more of the currently used hazard pictograms
+                    (black and white in red frames) depicted below.</p>
+                  <p><strong>Current hazard pictograms:</strong></p>
+                  <figure>
+                    <img src="/dangerous-substances/sites/default/files/HP1_v2.png" />
+                  </figure>
+                  <fieldset class="vertical">
+                    <fieldset class="pat-checklist radio">
+                      <label class="yes unchecked"><input class="pat-scroll"
+                               name="answer:list"
+                               type="radio"
+                               value="yes"
+                               data-pat-scroll="selector: #air-pollutants; trigger: click; delay: 200"
+                        />Yes</label>
+                      <label class="no unchecked"><input class="pat-scroll"
+                               name="answer:list"
+                               type="radio"
+                               value="no"
+                               data-pat-scroll="selector: #are-you-sure; trigger: click; delay: 200"
+                        />No</label>
+                    </fieldset>
+                  </fieldset>
+
+                  <fieldset class="pat-depends"
+                            id="are-you-sure"
+                            data-pat-depends="condition: answer:list = no"
+                  >
+                    <p>Are you sure that you have no chemical products or substances labelled with a
+                                        hazard pictogram? Examples of chemical products with such labels, which can be
+                      found in most workplaces, are detergents, adhesives and paints.</p>
+                    <p><strong>Current hazard pictograms:</strong></p>
+                    <figure>
+                      <img src="/dangerous-substances/sites/default/files/HP1_v2.png" />
+                    </figure>
+                    <fieldset class="pat-checklist radio pat-scroll">
+                      <label class="yes unchecked"><input class="pat-scroll"
+                               name="answer2:list"
+                               type="radio"
+                               value="yes"
+                               data-pat-scroll="selector: #air-pollutants; trigger: click; delay: 200"
+                        />Yes</label>
+                      <label class="no unchecked"><input class="pat-scroll"
+                               name="answer2:list"
+                               type="radio"
+                               value="no"
+                               data-pat-scroll="selector: #please-do-continue; trigger: click; delay: 200"
+                        />No</label>
+                    </fieldset>
+                  </fieldset>
+
+                  <fieldset class="pat-depends"
+                            id="air-pollutants"
+                            data-pat-depends="condition: (answer:list = no and answer2:list = yes ); transition: slide"
+                  >
+                    <p>Could air pollution of any kind be generated, for example dust from grinding or
+                                        sanding, combustion products such as exhausts and fumes, or degradation products
+                      from chemical products or hazardous waste?</p>
+                    <fieldset class="pat-checklist radio">
+                      <label class="yes unchecked"><input class="pat-scroll"
+                               name="airpollution:list"
+                               type="radio"
+                               value="yes"
+                               data-pat-scroll="selector: #please-do-continue; trigger: click; delay: 200"
+                        />Yes</label>
+                      <label class="no unchecked"><input class="pat-scroll"
+                               name="airpollution:list"
+                               type="radio"
+                               value="no"
+                               data-pat-scroll="selector: #no-need-to-continue; trigger: click; delay: 200"
+                        />No</label>
+                    </fieldset>
+                  </fieldset>
+
+
+                  <div class="pat-depends"
+                       id="no-need-to-continue"
+                       data-pat-depends="condition: answer:list = no and answer2:list = yes and airpollution:list = no"
+                  >
+                    <p class="pat-message notice">
+                      <strong>There is no need to continue with the survey.</strong>
+                      <br /><br />
+                      <a class="pat-button"
+                         href="${request/URL}/../../../../"
+                      >Exit</a>
+                    </p>
+                  </div>
+
+                  <div class="pat-depends"
+                       id="please-do-continue"
+                       data-pat-depends="condition: answer:list = yes or (answer:list = no and answer2:list = no) or (answer:list = no and answer2:list = yes and airpollution:list = yes)"
+                  >
+                    <p class="pat-message notice">
+                      <strong>It seems it would make sense for you to do this assessment.
+                      </strong>
+                      <br /><br />
+                                        Click the start button below to begin the assessment.
+                    </p>
+                  </div>
+                </tal:long-tool>
+              </article>
+            </tal:block-etoolspecific>
+          </fieldset>
+
+          <metal:special define-slot="special" />
+          <dl class="pat-grid-list"
+              tal:condition="not:can_edit"
+          >
+            <metal:widgets define-slot="widgets">
+              <tal:for repeat="widgetid view/widgets">
+                <dt tal:define="
+                      widget nocall:view/widgets/?widgetid;
+                    ">
+                                ${widget/label}
+                </dt>
+                <dd>${session/?widgetid}</dd>
+              </tal:for>
+            </metal:widgets>
+          </dl>
+        </div>
+        <div class="button-bar pat-bumper"
+             id="nav-bar"
+             tal:condition="can_edit"
+        >
+          <button class="pat-button pat-switch continue"
+                  name="form.button.submit"
+                  type="submit"
+                  data-pat-switch="selector: body; remove: sidebar-${python:has_profile and 'on' or 'off'}; add: sidebar-${python:has_profile and 'off' or 'on'}"
+                  i18n:translate="label_start_survey"
+          >Start</button>
+        </div>
+        <tal:csrf replace="structure context/@@authenticator/authenticator" />
+      </form>
+
+    </metal:slot>
+
+    <metal:slot fill-slot="splash_message_slot">
+      <!-- SPLASH SLOT -->
+      <div class="splash-message"
+           id="splash-message"
+      >
+        <tal:splash condition="python:tool_notification is not None">
+
+          <hr class="trigger pat-switch"
+              data-pat-switch="selector: body; remove: splash-on-tool*; add: splash-off-${tool_notification/id}; store: session"
+          />
+          <article class="pat-rich content">
+            <p>
+              <img src="${style_url}/oira-logo-colour.svg"
+                   width="20%"
+              />
+            </p>
+            <h1 tal:content="structure tool_notification/title">Message of the day!</h1>
+            <tal:content content="structure tool_notification/text">
+              <p>Sit amet consectetuer.</p>
+              <p>At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium
+                            voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati
+                            cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id
+                est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio.</p>
+              <p>OiRA Team</p>
+            </tal:content>
+          </article>
+        </tal:splash>
+      </div>
+    </metal:slot>
+
+  </body>
+
+</html>
