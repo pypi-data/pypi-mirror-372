@@ -1,0 +1,33 @@
+name: publish
+
+on:
+  release:
+    types:
+      - released
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: 3.12
+
+      - name: Install
+        run: uv sync --all-groups --all-extras --frozen --no-python-downloads
+
+      - name: Lint
+        run: uv run ruff check --output-format=github ./src ./tests && uv run pyright --project ./
+
+      - name: Test
+        run: uv run pytest --rootdir= ./tests --doctest-modules --junitxml=junit/test-results.xml
+
+      - name: Publish
+        run: uv build && uv publish
