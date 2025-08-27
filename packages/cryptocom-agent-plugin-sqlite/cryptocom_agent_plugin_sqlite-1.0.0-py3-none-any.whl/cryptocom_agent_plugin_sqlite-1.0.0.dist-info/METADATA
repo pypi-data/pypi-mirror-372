@@ -1,0 +1,150 @@
+Metadata-Version: 2.3
+Name: cryptocom_agent_plugin_sqlite
+Version: 1.0.0
+Summary: SQLite plugin for Crypto.com Agent Client
+Author: Ric Arcifa
+Author-email: ricardo.arcifa@crypto.com
+Requires-Python: >=3.12,<4.0
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Dist: cryptocom-agent-client (==1.2.1)
+Requires-Dist: langchain-core (==0.3.55)
+Description-Content-Type: text/markdown
+
+# **Crypto.com Agent Plugin – SQLite**
+
+The **Crypto.com Agent Plugin – SQLite** adds support for **persistent state storage** using SQLite in the [Crypto.com Agent Client](https://pypi.org/project/cryptocom-agent-client/) ecosystem.
+This plugin allows conversational agents to **store, retrieve, and manage session states** efficiently using a lightweight, file-based database.
+
+## **Features**
+
+### **SQLite Integration**
+
+- Stores and retrieves **agent conversation states** using a local SQLite database.
+- Supports **fast, lightweight persistence** — no external DB required.
+- Automatically creates the database and schema if they don't exist.
+- Ensures **thread-safe** database access via `check_same_thread=False`.
+
+### **Plugin Architecture**
+
+- Packaged as a **standalone Python plugin**.
+- Implements the `AgentPlugin` storage interface with full support for:
+
+  - `save_state()`
+  - `load_state()`
+  - `delete_state()`
+  - `list_keys()`
+
+- Uses Python **entry points** and **PEP 621** standards (`pyproject.toml`).
+
+### **Easy to Install and Extend**
+
+- Fully decoupled from the core Agent SDK.
+- Compatible with other plugins (e.g., **Discord**, **LangFuse**, **CLI**).
+- Automatically discovered and initialized by the SDK.
+
+## **Installation**
+
+Install the plugin into your environment:
+
+```bash
+pip install cryptocom-agent-plugin-sqlite
+```
+
+## **Usage**
+
+### **Importing the Plugin**
+
+```python
+from cryptocom_agent_plugin_sqlite import SQLitePlugin
+```
+
+### **Using with the Agent SDK**
+
+```python
+from cryptocom_agent_client import Agent
+from cryptocom_agent_plugin_sqlite import SQLitePlugin
+
+sqlite_plugin = SQLitePlugin(db_path="agent_state.db")
+
+agent = Agent.init(
+    llm_config={...},
+    blockchain_config={...},
+    plugins={...},
+    plugin_instances=[sqlite_plugin],
+)
+
+agent.start()
+```
+
+## **Plugin Lifecycle**
+
+This plugin defines:
+
+- `mode = "support"` — it **does not** control the event loop; multiple support plugins can run together.
+- `save_state(state, key)` — stores agent state for a specific `session_id:thread_id`.
+- `load_state(key)` — retrieves stored state by key.
+- `delete_state(key)` — removes stored state.
+- `list_keys()` — lists all session keys stored in the database.
+
+## **Example**
+
+```python
+from cryptocom_agent_plugin_sqlite import SQLitePlugin
+
+# Initialize storage
+storage = SQLitePlugin(db_path="agent_state.db")
+
+# Save a sample state
+state = {
+    "messages": [
+        {"type": "HumanMessage", "content": "Hello!"}
+    ]
+}
+storage.save_state(state, key="session1:thread1")
+
+# Load the saved state
+loaded = storage.load_state(key="session1:thread1")
+print(loaded)
+
+# List all saved keys
+print(storage.list_keys())
+
+# Delete the saved state
+storage.delete_state("session1:thread1")
+```
+
+## **Entry Point Declaration**
+
+This plugin is auto-discoverable via `pyproject.toml`:
+
+```toml
+[tool.poetry.plugins."crypto_com_agent.plugins"]
+sqlite = "cryptocom_agent_plugin_sqlite:SQLitePlugin"
+```
+
+This allows the Agent SDK to **dynamically discover and initialize** your plugin.
+
+## **File Structure**
+
+```
+crypto_com_agent_plugin_sqlite/
+├── __init__.py
+└── sqlite_plugin.py   # Main plugin implementation
+```
+
+## **Contributing**
+
+We welcome contributions!
+Please ensure your plugin:
+
+- Adheres to the `AgentPlugin` storage interface.
+- Includes proper **type hints**, **docstrings**, and **unit tests**.
+- Handles serialization and deserialization safely.
+
+## **License**
+
+This project is licensed under the **MIT License**.
+See the [LICENSE](./LICENSE) file for details.
+
