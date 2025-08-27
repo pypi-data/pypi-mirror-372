@@ -1,0 +1,78 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Many color libraries just need this to be set to any value, but at least
+  # one distinguishes color depth, where "3" -> "256-bit color".
+  FORCE_COLOR: 3
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - uses: prefix-dev/setup-pixi@8ca4608ef7f4daeb54f5205b20d0b7cb42f11143 # v0.8.14
+        with:
+          pixi-version: v0.50.2
+          cache: true
+          environments: lint
+
+      - name: Lint (if this step fails, please 'pixi run lint' locally and push the changes)
+        run: pixi run -e lint lint
+
+  checks:
+    name: Test ${{ matrix.environment }}
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - tests-py310
+          - tests-py313
+          - tests-numpy1
+          - tests-backends
+          - tests-nogil
+        runs-on: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - uses: prefix-dev/setup-pixi@8ca4608ef7f4daeb54f5205b20d0b7cb42f11143 # v0.8.14
+        with:
+          pixi-version: v0.50.2
+          cache: true
+          environments: ${{ matrix.environment }}
+
+      - name: Test package
+        # Save some time; also at the moment of writing coverage crashes on python 3.13t
+        if: ${{ matrix.environment != 'tests-nogil' }}
+        run: pixi run -e ${{ matrix.environment }} tests-ci
+
+      - name: Test free-threading
+        if: ${{ matrix.environment == 'tests-nogil' }}
+        run: pixi run -e tests-nogil tests --parallel-threads=4
+
+      - name: Upload coverage report
+        if: ${{ matrix.environment != 'tests-nogil' }}
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
