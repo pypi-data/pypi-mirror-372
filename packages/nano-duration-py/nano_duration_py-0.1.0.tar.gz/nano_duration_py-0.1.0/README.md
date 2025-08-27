@@ -1,0 +1,69 @@
+# nano-duration
+[![PyPI](https://img.shields.io/pypi/v/nano-duration.svg?color=blue)](https://pypi.org/project/nano-duration/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+![Size](https://img.shields.io/badge/size-~1KB-lightgrey.svg)
+[![CI](https://github.com/ozgunlu/nano-duration/actions/workflows/ci.yml/badge.svg)](https://github.com/ozgunlu/nano-duration/actions)
+
+Tiny **h/m/s ↔ seconds** converter — ~1 KB, zero deps.
+Single-file, CLI included. Perfect for code-golf, minimal containers, or just for fun.
+
+---
+
+## ✨ Features
+- ✅ `2h 15m 3s` → `8103` (seconds)
+- ✅ `8103` → `2h15m3s`
+- ✅ Accepts spaces/hybrids (`"1h5m"`, `"90s"`, `"  2H  "`), case-insensitive
+- ✅ Zero dependencies, single tiny file
+
+---
+
+## 🚀 Usage
+```bash
+# Local (from repo)
+python app_min.py "1h 5m 2s"   # 3902
+python app_min.py 3902         # 1h5m2s
+python app_min.py 90           # 1m30s
+```
+
+After installing:
+
+```bash
+# CLI
+pip install nano-duration
+nano-duration "2h 15m 3s"      # 8103
+nano-duration 8103             # 2h15m3s
+```
+
+---
+
+## 🤓 Why so small?
+
+- Minimal regex ((\d+)\s*([hms])) + tiny map {h:3600,m:60,s:1}
+- No heavy parsing; simple greedy division for formatting
+- Single module + tiny CLI wrapper
+
+---
+
+## 🎉 Fun Ideas
+
+- **Sum durations in shell**
+```bash
+echo $(( $(nano-duration "1h 2m") + $(nano-duration "35m") ))
+# -> 5820
+```
+- **Convert logs to readable**
+```bash
+awk '{print $1}' times.txt | xargs -I{} nano-duration {}  # each line seconds→hms
+```
+
+---
+
+> **Notes**
+> Only h/m/s units are supported (no days/ms). Negative values are not recommended.
+
+---
+
+## 📜 License
+
+MIT © 2025
+
