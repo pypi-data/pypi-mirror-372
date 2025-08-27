@@ -1,0 +1,33 @@
+
+services:
+  samba:
+    image: crazymax/samba:latest
+    container_name: smb-server
+    environment:
+      - TZ=UTC
+      - SAMBA_LOG_LEVEL=2
+      - WSDD2_ENABLE=1
+      - SAMBA_CONF_LOG_FILE=/dev/stdout
+    volumes:
+      - ./smb_server_volume/data:/data
+      - ./smb_server_volume/share:/samba/share
+    ports:
+      - "445:445"
+      - "137:137/udp"
+      - "138:138/udp"
+      - "139:139"
+    restart: unless-stopped
+    cap_add:
+      - CAP_NET_ADMIN
+      - CAP_NET_RAW
+    networks:
+      lab-network:
+        ipv4_address: 10.10.1.14
+
+networks:
+  lab-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.1.0/24
