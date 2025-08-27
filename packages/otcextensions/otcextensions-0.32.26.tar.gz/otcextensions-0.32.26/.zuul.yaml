@@ -1,0 +1,53 @@
+- job:
+    name: tox-functional-main
+    parent: tox-functional-eu-de
+    branches: main
+
+- job:
+    name: otce-build-image
+    parent: build-docker-image
+    description: Build apimon container image
+    timeout: 2700 # 45 minutes
+    provides: otce-container-image
+    vars: &otce_image_vars
+      docker_images:
+        - context: .
+          repository: opentelekomcloud/python-openstackclient
+          tags:
+            # If zuul.tag is defined: [ '3', '3.19', '3.19.0' ].  Only works for 3-component tags.
+            # Otherwise: ['latest']
+            &imagetag "{{ zuul.tag is defined | ternary([zuul.get('tag', '').split('.')[0], '.'.join(zuul.get('tag', '').split('.')[:2]), zuul.get('tag', '')], ['latest']) }}"
+
+- job:
+    name: otce-upload-image
+    parent: otcinfra-upload-image-quay
+    provides: otce-container-image
+    vars: *otce_image_vars
+    nodeset: ubuntu-jammy
+
+- project:
+    merge-mode: squash-merge
+    default-branch: main
+    templates:
+      - publish-to-pypi
+      - publish-otc-docs-hc-pti
+      - release-notes-jobs
+    check:
+      jobs:
+        - otc-tox-pep8
+        - otc-tox-py310
+        - tox-functional-eu-de
+        - tox-functional-eu-nl:
+            voting: false
+    check-post:
+      jobs:
+        - otce-upload-image
+    gate:
+      jobs:
+        - otc-tox-py310
+        - otc-tox-pep8
+        - tox-functional-eu-de
+        - otce-upload-image
+    periodic:
+      jobs:
+        - tox-functional-main
