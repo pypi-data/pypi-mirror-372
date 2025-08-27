@@ -1,0 +1,559 @@
+# Broadie
+
+A powerful multi-agent framework developed by the Broad Institute for building intelligent, collaborative AI systems with persistence, API integration, and agent-to-agent communication.
+
+## What is Broadie?
+
+Broadie enables you to create sophisticated AI agent systems that can work together, remember conversations, integrate with external services, and communicate with other agents. Whether you're building a simple chatbot or a complex multi-agent workflow, Broadie provides the infrastructure you need.
+
+**Key Features:**
+- **Two Usage Modes**: JSON configuration for quick setup or programmatic Python API for advanced customization
+- **Agent Collaboration**: Main agents coordinate with specialized sub-agents
+- **Persistent Memory**: Agents remember conversations and learn from interactions
+- **Tool Integration**: Built-in tools for file operations, Google Drive, Slack, and more
+- **Web Interface**: Chat with your agents through a web browser
+- **Agent Communication**: Secure peer-to-peer agent discovery and function calls
+- **Multiple AI Models**: Support for Google Gemini, Vertex AI, and more
+
+---
+
+## 🚀 Quick Start (5 minutes)
+
+### Step 1: Install Broadie
+
+```bash
+pip install broadie
+```
+
+**System Requirements:** Python 3.9–3.12 (Python 3.11 recommended)
+
+### Step 2: Get Your Google API Key
+
+1. Visit [Google AI Studio](https://ai.google.dev/)
+2. Create an API key
+3. Set it as an environment variable:
+
+**macOS/Linux:**
+```bash
+export GOOGLE_API_KEY="your_google_api_key"
+```
+
+**Windows PowerShell:**
+```powershell
+$env:GOOGLE_API_KEY = "your_google_api_key"
+```
+
+### Step 3: Create Your First Agent
+
+Create a file called `my_agent.json`:
+
+```json
+{
+  "name": "helpful_assistant",
+  "description": "A helpful AI assistant", 
+  "instruction": "You are a helpful AI assistant that can answer questions and help with tasks."
+}
+```
+
+### Step 4: Start Chatting
+
+```bash
+broadie serve my_agent.json
+```
+
+Open your browser to: **http://localhost:8000/**
+
+🎉 **That's it!** You now have a working AI agent with a web interface.
+
+---
+
+## 📖 Usage Guide
+
+There are two ways to use Broadie, depending on your needs:
+
+### Option 1: JSON Configuration (Recommended for Beginners)
+
+**Best for:** Quick prototypes, simple agents, getting started  
+**Limitations:** Cannot add custom tools or complex logic
+
+Create agents using simple JSON files:
+
+```json
+{
+  "name": "helpful_assistant",
+  "description": "A helpful AI assistant",
+  "instruction": "You are a helpful AI assistant that can answer questions and help with tasks."
+}
+```
+
+**Commands:**
+```bash
+# Chat in terminal
+broadie run my_agent.json
+
+# Start web interface  
+broadie serve my_agent.json
+```
+
+### Option 2: Python API (Advanced)
+
+**Best for:** Production systems, custom tools, complex workflows  
+**Advantages:** Full customization, custom tools, advanced logic
+
+Create agents programmatically with custom capabilities:
+
+```python
+from broadie import Agent, SubAgent, tool
+
+# Define custom tools that your agents can use
+@tool(name="analyze_data", description="Analyze data and return insights")
+def analyze_data(data: str) -> str:
+    # Your custom analysis logic here
+    return f"Analysis complete: {data} shows positive trends"
+
+# Create a specialized sub-agent
+class AnalystAgent(SubAgent):
+    def build_config(self):
+        return {
+            "name": "data_analyst",
+            "description": "Specializes in data analysis",
+            "instruction": "You are a data analysis expert."
+        }
+
+# Create the main coordination agent
+class ResearchCoordinator(Agent):
+    def build_config(self):
+        return {
+            "name": "research_coordinator", 
+            "description": "Coordinates research tasks",
+            "instruction": "You coordinate research tasks and delegate to specialists.",
+            "sub_agents": [AnalystAgent()]
+        }
+
+# Use your agent
+async def main():
+    agent = ResearchCoordinator()
+    response = await agent.process_message("Analyze our Q4 sales data")
+    print(response)
+```
+
+---
+
+## ⚙️ Configuration
+
+### Basic Setup (.env file)
+
+Create a `.env` file in your project directory:
+
+```bash
+# Required: Google API Key
+GOOGLE_API_KEY=your_google_api_key
+
+# Optional: Advanced settings
+A2A_ENABLED=true
+DB_DRIVER=sqlite
+SLACK_BOT_TOKEN=xoxb-your-slack-token
+GOOGLE_DRIVE_CREDENTIALS_PATH=/path/to/credentials.json
+```
+
+### Advanced Google Cloud Setup
+
+For production or advanced use cases:
+
+1. **Create Google Cloud Project**: Visit [Google Cloud Console](https://console.cloud.google.com/)
+2. **Enable Vertex AI API**: In "APIs & Services" → "Library" 
+3. **Set additional variables**:
+
+```bash
+export GOOGLE_CLOUD_PROJECT_ID="your-project-id"
+export GOOGLE_CLOUD_REGION="us-central1"
+```
+
+---
+
+## 🛠️ Built-in Tools
+
+Broadie agents automatically have access to powerful built-in tools:
+
+### File Operations
+- Read, write, and edit files
+- List directories and search content
+
+### Google Drive Integration *(when configured)*
+- Search documents and spreadsheets  
+- Read and write Google Docs
+- Create and update Google Sheets
+
+### Slack Integration *(when configured)*
+- Send messages to channels
+- Search message history
+- Upload files and create threads
+
+### Task Management
+- Create and manage todo lists
+- Track progress across conversations
+
+---
+
+## 🔔 Enabling Notifications/Destinations
+
+Broadie agents can send notifications, alerts, and messages to multiple destinations including Slack, email, webhooks, and more. The destination system provides powerful routing, environment-based configuration, and multi-target broadcasting.
+
+### Quick Setup
+
+#### Slack Notifications
+Set these environment variables to enable Slack notifications:
+
+```bash
+# Option 1: Using Slack Bot Token (Recommended)
+SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
+
+# Option 2: Using Slack Webhook URL  
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+
+# Default channel for notifications
+BROADIE_DEFAULT_SLACK_CHANNEL=#general
+```
+
+#### Email Notifications
+Configure SMTP settings for email notifications:
+
+```bash
+EMAIL_SMTP_HOST=smtp.gmail.com
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_USER=your-email@gmail.com
+EMAIL_SMTP_PASSWORD=your-app-password
+EMAIL_FROM_ADDRESS=broadie@yourcompany.com
+EMAIL_FROM_NAME="Broadie Agent"
+EMAIL_USE_TLS=true
+```
+
+### Agent Configuration
+
+Configure destinations in your agent JSON files or Python code:
+
+#### JSON Configuration
+```json
+{
+  "name": "notification_agent",
+  "instruction": "You can send notifications to multiple channels",
+  "destinations": {
+    "primary": {
+      "type": "slack", 
+      "target": "#general",
+      "enabled": true
+    },
+    "alerts": {
+      "type": "slack",
+      "target": "#alerts", 
+      "enabled": true
+    },
+    "escalation": {
+      "type": "email",
+      "target": "admin@company.com",
+      "enabled": true
+    },
+    "notifications": {
+      "type": "multi",
+      "target": [
+        {"type": "slack", "target": "#updates"},
+        {"type": "email", "target": "team@company.com"}
+      ],
+      "enabled": true
+    }
+  }
+}
+```
+
+#### Python Configuration
+```python
+from broadie import Agent
+
+class NotificationAgent(Agent):
+    def build_config(self):
+        return {
+            "name": "notification_agent",
+            "instruction": "You can send notifications",
+            "destinations": {
+                "primary": {
+                    "type": "slack",
+                    "target": "#general"
+                },
+                "alerts": {
+                    "type": "webhook", 
+                    "target": "https://api.company.com/alerts",
+                    "settings": {
+                        "method": "POST",
+                        "headers": {
+                            "Authorization": "${API_TOKEN}"
+                        }
+                    }
+                }
+            }
+        }
+```
+
+### Environment Variable Overrides
+
+Override any destination configuration using environment variables:
+
+```bash
+# Override primary destination
+BROADIE_AGENT_NAME_PRIMARY_TARGET=#development
+BROADIE_AGENT_NAME_PRIMARY_TYPE=slack
+
+# Override alert settings  
+BROADIE_AGENT_NAME_ALERTS_TARGET=https://webhook.site/unique-id
+BROADIE_AGENT_NAME_ALERTS_TYPE=webhook
+
+# Global defaults
+BROADIE_DEFAULT_SLACK_CHANNEL=#general
+BROADIE_DEFAULT_EMAIL_RECIPIENT=admin@company.com
+```
+
+### Using Notification Tools
+
+Agents automatically have access to notification tools with **context-aware formatting**:
+
+#### In Agent Code
+```python
+# Send a notification
+await agent.respond("Task completed successfully")
+
+# Send an alert
+await agent.alert("System error detected!")
+
+# Escalate an issue
+await agent.escalate("Manual intervention required")
+
+# Broadcast to multiple destinations
+await agent.broadcast("System maintenance starting", ["primary", "alerts"])
+```
+
+#### As Tools (agents can call these)
+```python
+# Agents can use these tools in their responses:
+# - send_notification("message", severity="info")
+# - send_alert("critical issue detected") 
+# - escalate_issue("needs human intervention")
+# - broadcast_message("announcement", ["primary", "notifications"])
+# - test_notification_destinations()
+```
+
+### 🎯 Context-Aware Response Formatting
+
+Broadie automatically formats responses appropriately based on how you're interacting:
+
+| Context | Format | Features |
+|---------|--------|----------|
+| **CLI** (`broadie run`) | Plain Text | Simple, readable text output |
+| **Web UI** (`broadie serve`) | Markdown | Rich formatting, links, emphasis |
+| **API Calls** | JSON | Structured data with metadata |
+| **Slack Notifications** | Block Kit | Rich Slack blocks and formatting |
+| **Email Notifications** | HTML | Professional email layout |
+| **Webhooks** | JSON | Structured payloads for integration |
+
+### 🔀 Dual/Tri Response Pattern
+
+When notifications are configured, Broadie supports **dual response patterns**:
+
+1. **Primary Response**: Formatted for your current interface (CLI, Web UI, API)
+2. **Notification Responses**: Simultaneously sent to configured channels with appropriate formatting
+
+**Example: CLI with Slack Notifications**
+- You see: Plain text response in terminal
+- Team sees: Rich Slack blocks in #alerts channel
+- Both happen automatically based on agent configuration!
+
+### Destination Types
+
+#### Slack Destinations
+```json
+{
+  "type": "slack",
+  "target": "#channel-name", 
+  "settings": {
+    "username": "Broadie Bot",
+    "icon_emoji": ":robot_face:",
+    "rich_formatting": true
+  }
+}
+```
+
+#### Email Destinations  
+```json
+{
+  "type": "email",
+  "target": "recipient@company.com",
+  "settings": {
+    "subject_template": "[Broadie] {category}: {message}",
+    "html_formatting": true,
+    "include_metadata": true
+  }
+}
+```
+
+#### Webhook Destinations
+```json
+{
+  "type": "webhook", 
+  "target": "https://api.company.com/notifications",
+  "settings": {
+    "method": "POST",
+    "headers": {
+      "Authorization": "${WEBHOOK_TOKEN}",
+      "Content-Type": "application/json"
+    },
+    "timeout": 30
+  }
+}
+```
+
+#### Multi Destinations (Broadcast)
+```json
+{
+  "type": "multi",
+  "target": [
+    {"type": "slack", "target": "#alerts"},
+    {"type": "email", "target": "admin@company.com"},
+    {"type": "webhook", "target": "https://monitor.company.com/alerts"}
+  ]
+}
+```
+
+### Message Context & Metadata
+
+All notifications support rich context:
+
+```python
+await agent.respond(
+    "User login successful",
+    severity="info",
+    category="security", 
+    tags=["auth", "login"],
+    metadata={
+        "user_id": "12345",
+        "ip_address": "192.168.1.1"
+    },
+    user_id="john.doe",
+    session_id="session-abc-123"
+)
+```
+
+### Testing & Troubleshooting
+
+Test your notification setup:
+
+```python
+# Test all destinations
+results = await agent.test_destinations()
+
+# Get destination information  
+info = agent.get_destination_info()
+
+# Send to specific destination for testing
+await agent.destination_resolver.send(
+    "Test message", 
+    destination_type="primary"
+)
+```
+
+### Production Best Practices
+
+1. **Environment Variables**: Use environment variables for sensitive configuration
+2. **Fallback Destinations**: Always configure a fallback destination
+3. **Rate Limiting**: Be mindful of API rate limits for external services
+4. **Error Handling**: Monitor failed delivery attempts
+5. **Testing**: Test destinations regularly in production
+
+---
+
+## 🖥️ Commands & API
+
+### CLI Commands
+```bash
+# Create new project from template
+broadie init my_project
+
+# Chat with agent in terminal
+broadie run agent.json
+
+# Start web interface
+broadie serve agent.json
+
+# Generate agent configs
+broadie create agent customer_support
+
+# List all templates
+broadie templates
+```
+
+### Web Interface
+When you run `broadie serve`, you get:
+- **Chat UI**: `http://localhost:8000/` - Web interface for chatting
+- **REST API**: `POST /agents/{id}/invoke` - Programmatic access  
+- **WebSocket**: `/ws` - Real-time communication
+- **Health Check**: `GET /health` - Service monitoring
+
+---
+
+## 🏗️ Advanced Features
+
+### Multi-Agent Communication
+Agents can work together in complex workflows:
+
+```python
+# Agent A can invoke functions on Agent B
+result = await coordinator_agent.invoke_peer_agent(
+    "analyst_agent_id", 
+    "analyze_sales_data",
+    {"data": sales_data, "period": "Q4"}
+)
+```
+
+### Project Templates
+Jump-start with built-in templates:
+
+```bash
+# Customer support system
+broadie init --template support my_support_system
+
+# Data integration specialist  
+broadie init --template integration my_data_agent
+
+# Generic multi-agent system
+broadie init --template generic my_system
+```
+
+### Example Use Cases
+
+**Customer Support:** Multi-agent system with specialized support, escalation, and knowledge base agents
+
+**Data Analysis:** Pipeline with ingestion, analysis, and reporting agents working together
+
+**Content Creation:** Research, writing, and editing agents coordinating content workflows
+
+---
+
+## 📚 Learn More
+
+### Documentation & Support
+- **Documentation**: [docs.broadie.ai](https://docs.broadie.ai)
+- **GitHub Issues**: [Report bugs & request features](https://github.com/broadinstitute/broadie/issues)
+- **Community**: [GitHub Discussions](https://github.com/broadinstitute/broadie/discussions)
+
+### Contributing
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and contribution guidelines.
+
+### License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
+**Developed by the [Broad Institute](https://www.broadinstitute.org/)**
+
+*Empowering researchers and developers with intelligent agent systems*
+
+</div>
