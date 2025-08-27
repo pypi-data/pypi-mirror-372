@@ -1,0 +1,107 @@
+import duckdb
+import os
+import pytest
+from pathlib import Path
+from qstrings import Engine, Q, QStringError
+from sqlglot.errors import ParseError
+
+
+def test_empty_string():
+    q = Q("", quiet=True)
+    assert q == ""
+    assert q.ast is None
+    assert q.errors
+
+
+def test_keys_missing():
+    s = "SELECT {num} AS {Q_name}"
+    with pytest.raises(QStringError, match="values missing for keys: {'Q_name'}"):
+        _ = Q(s, num=42)
+
+
+def test_keys_given_in_env():
+    s = "SELECT {num} AS {Q_name}"
+    os.environ["Q_name"] = "answer"
+    q = Q(s, num=42)
+    assert q == "SELECT 42 AS answer"
+    assert q.refs == {"num": 42, "Q_name": "answer"}
+    assert q.file is None
+
+
+def test_from_file():
+    args = dict(file="test_does_not_exist*.sql")
+    with pytest.raises(FileNotFoundError, match="File not found:"):
+        _ = Q(**args)
+    args = dict(file=Path(__file__).parent / "test_format.sql", num=42)
+    with pytest.raises(QStringError, match="values missing for keys: {'foo'}"):
+        _ = Q(**args)
+    os.environ["foo"] = "bar"
+    q = Q(**args)
+    assert q == "SELECT 42 AS answer, 'bar' AS foo  -- { ignore }"
+    assert q.refs == {"num": 42, "foo": "bar"}
+    assert q.file and q.file.name == "test_format.sql"
+
+
+def test_parse_error():
+    q = Q("SELE 42")
+    assert q.errors
+    with pytest.raises(ParseError):
+        _ = Q("SELE 42", validate=True)
+
+
+def test_select_42_ast_transpile():
+    q = Q("SELECT 42 LIMIT 1")
+    assert q.ast.sql() == "SELECT 42 LIMIT 1"
+    assert q.transpile(read="duckdb", write="tsql") == Q("SELECT TOP 1 42")
+
+
+def test_select_42_ast_patched_q():
+    q = Q("SELECT 42")
+    q1 = q.ast.from_("table").q()
+    assert isinstance(q1, Q)
+    assert q1 == "SELECT 42 FROM table"
+    assert q1 == q.ast.from_("table").sql()
+    q2 = q1.ast.from_("table").q(pretty=True)
+    assert "\n" in q2
+    assert q1.ast == q2.ast
+
+
+def test_select_42_ast_limit():
+    q = Q("SELECT 42")
+    q_limit = q.limit(1)
+    assert q_limit == "SELECT * FROM (SELECT 42) LIMIT 1"
+
+
+def test_select_42_ast_count():
+    q = Q("SELECT 42")
+    q_ct = q.count
+    assert q_ct == "SELECT COUNT(*) AS row_count FROM (SELECT 42)"
+
+
+def test_run_duckdb():
+    q = Q("SELECT 42 AS answer")
+    result = q.run(quiet=True)
+    assert result.fetchall() == [(42,)]
+    assert q.list(header=False, quiet=True) == [(42,)]
+    assert q.list(header=True, quiet=True) == [("answer",), (42,)]
+
+
+def test_run_new_engine():
+    class FunnyDuckDBEngine(Engine):
+        def run(q: Q):
+            result = duckdb.sql(q)
+            funny = "lol, running a funny query"
+            return result, funny
+
+        def df(q: Q):
+            return "funny", "df"
+
+    q = Q("SELECT 42")
+    result, funny = q.run(engine="FunnyDuckDB")
+    assert result.fetchall() == [(42,)]
+    assert funny == "lol, running a funny query"
+    assert q.df(engine="FunnyDuckDB") == ("funny", "df")
+    with pytest.raises(NotImplementedError):
+        q.list(engine="FunnyDuckDB")
+    with pytest.raises(KeyError):
+        q.run(engine="NonExistentEngine")
