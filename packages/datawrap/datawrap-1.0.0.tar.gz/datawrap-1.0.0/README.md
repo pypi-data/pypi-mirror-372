@@ -1,0 +1,78 @@
+DataWrap
+========
+
+Wrap dictionaries of data for quick traversal and provide **informative error messages** when data doesn't match expectations.
+
+Working with large JSON/YAML files often means drilling through deeply nested structures.
+Navigating those structures in Python either leads to additional code to check the shapes and attributes
+of the data:
+
+    with file.open('rt') as fh:
+        data = yaml.safe_load(fh)
+        if "sources" in data and isinstance(data["sources"], list):
+            for source in data["sources"]:
+                if "tables" in source and isinstance(source["tables"], list) and source["tables"]:
+                    for table in source["tables"]:
+                        print(f"{source['schema']}.{table['name']}")
+
+    KeyError: 'name'
+
+Or leads to a best-effort Duck typing that generates non-descriptive KeyError and IndexError exceptions that
+leave the developer digging through the source data.
+
+    with file.open('rt') as fh:
+        data = yaml.safe_load(fh)
+        for source in data["sources"]:
+            for table in source["tables"]:
+                print(f"{source['schema']}.{table['name']}")
+
+    TypeError: 'NoneType' object is not iterable
+
+
+---
+
+The DictWrapper class provides a simple wrapper around nested data structures which track path traversal to
+generate targeted exceptions.
+
+    with file.open('rt') as fh:
+        sources = DictWrapper(yaml.safe_load(fh), filename=str(file))
+        for source in sources['sources']:
+            for table in source['tables']:
+                print(f"{source['schema']}.{table['name']}")
+
+    KeyError: '[schema.yml] sources[0].tables[2] is missing key .name'
+
+
+Usage
+-----
+
+Install using pip
+
+    pip install datawrap
+
+Wrap any nested dict/list structure with DictWrapper to get clear, contextual error messages when keys or indices are missing.
+
+    from dict_wrapper import DictWrapper
+    import json
+    
+    # Load JSON or YAML
+    with open("schema.yml", "rt") as fh:
+        data = json.load(fh)
+    
+    # Wrap the root object
+    data = DictWrapper(data, filename="schema.yml")
+    
+    # Traverse as normal dicts/lists
+    for system in data["sources"]:
+        for table in system["tables"]:
+            print(table["name"])
+
+
+Key Features
+------------
+
+ - Drop-in replacement for normal dict/list access.
+ - Tracks path context across nested dicts/lists.
+ - Raises KeyError/IndexError with full path info.
+ - Use .get(key, default) for safe access without raising.
+ - Iteration yields wrapped elements, so the path context is preserved inside loops.
