@@ -1,0 +1,275 @@
+[build-system]
+requires = ["hatch", "hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "beaker-kernel"
+version = "1.13.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Matthew Printz", email = "matt@jataware.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "archytas>=1.5.0",
+  "adhoc-api",
+  "jupyterlab~=4.0",
+  "jupyterlab-server>=2.22.1,<3",
+  "requests>=2.24,<3",
+  "six",
+  "tornado>=6.4.0",
+  "jinja2~=3.1.2",
+  "watchdog~=3.0",
+  "click~=8.1",
+  "python-dotenv~=1.0",
+  "hatch",
+  "toml",
+  "dill",
+  "pandas",
+  "matplotlib",
+  "xarray",
+  "numpy",
+  "scipy",
+  "openpyxl",
+  "tree-sitter<0.25.0",
+  "tree-sitter-python",
+  "tree-sitter-julia",
+]
+
+[project.entry-points.hatch]
+beaker = "beaker_kernel.builder.hooks"
+
+[project.scripts]
+beaker = "beaker_kernel.cli.main:cli"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build]
+require-runtime-dependencies = true
+packages = [
+  "beaker_kernel",
+]
+include = [
+  "beaker_kernel/service/ui",
+]
+artifacts = [
+  "beaker_kernel/service/ui",
+]
+
+# Beaker builder, loaded as a custom hook since it's not yet registered.
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "beaker_kernel/builder/beaker.py"
+
+[tool.hatch.build.targets.wheel.shared-data]
+"beaker_kernel/kernel.json" = "share/jupyter/kernels/beaker_kernel/kernel.json"
+
+
+[tool.bumpversion]
+current_version="1.13.0"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)((?P<release>[ab])(?P<revision>\\d+))?"
+serialize = [
+  "{major}.{minor}.{patch}{release}{revision}",
+  "{major}.{minor}.{patch}"
+]
+search = "{current_version}"
+replace = "{new_version}"
+regex = false
+ignore_missing_version = false
+ignore_missing_files = false
+tag = true
+sign_tags = false
+tag_name = "v{new_version}"
+tag_message = "Bump version: {current_version} → {new_version}"
+allow_dirty = true
+commit = true
+message = "Bump version: {current_version} → {new_version}"
+commit_args = ""
+
+[tool.bumpversion.parts.release]
+values = [
+  "a",
+  "b",
+]
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+glob = "beaker-vue/package*.json"
+search = """beaker-kernel": "^{current_version}"""
+replace = """beaker-kernel": "^{new_version}"""
+
+[[tool.bumpversion.files]]
+glob = "beaker-*/package*.json"
+regex = true
+search = """
+([^\\n]*"[^\\n"]*beaker-(?:kernel|ts|vue)"[^\\n]*)
+([\\s]*)"version": "{current_version}"([^\\n]*)"""
+replace = """
+\\1
+\\2"version": "{new_version}"\\3"""
+
+[project.urls]
+Documentation = "https://github.com/jataware/beaker-kernel#readme"
+Issues = "https://github.com/jataware/beaker-kernel/issues"
+Source = "https://github.com/jataware/beaker-kernel"
+
+[tool.hatch.version]
+path = "beaker_kernel/__about__.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+  "bump-my-version",
+  "coverage[toml]>=6.5",
+  "pytest",
+  "pytest-asyncio",
+]
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+test-cov = "coverage run -m pytest {args:tests}"
+cov-report = [
+  "- coverage combine",
+  "coverage report",
+]
+cov = [
+  "test-cov",
+  "cov-report",
+]
+bump = [
+  "bump-my-version bump {args:--help}"
+]
+
+[[tool.hatch.envs.all.matrix]]
+python = ["3.10", "3.11"]
+
+[tool.hatch.envs.lint]
+detached = true
+dependencies = [
+  "black>=23.1.0",
+  "mypy>=1.0.0",
+  "ruff>=0.0.243",
+]
+[tool.hatch.envs.lint.scripts]
+typing = "mypy --install-types --non-interactive {args:beaker_kernel tests}"
+style = [
+  "ruff {args:.}",
+  "black --check --diff {args:.}",
+]
+fmt = [
+  "black {args:.}",
+  "ruff --fix {args:.}",
+  "style",
+]
+all = [
+  "style",
+  "typing",
+]
+
+[tool.black]
+target-version = ["py37"]
+line-length = 120
+skip-string-normalization = true
+
+[tool.ruff]
+target-version = "py37"
+line-length = 120
+select = [
+  "A",
+  "ARG",
+  "B",
+  "C",
+  "DTZ",
+  "E",
+  "EM",
+  "F",
+  "FBT",
+  "I",
+  "ICN",
+  "ISC",
+  "N",
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  "Q",
+  "RUF",
+  "S",
+  "T",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+ignore = [
+  # Allow non-abstract empty methods in abstract base classes
+  "B027",
+  # Allow boolean positional values in function calls, like `dict.get(... True)`
+  "FBT003",
+  # Ignore checks for possible passwords
+  "S105", "S106", "S107",
+  # Ignore complexity
+  "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+]
+unfixable = [
+  # Don't touch unused imports
+  "F401",
+]
+
+[tool.ruff.isort]
+known-first-party = ["beaker_kernel"]
+
+[tool.ruff.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.coverage.run]
+source_pkgs = ["beaker_kernel", "tests"]
+branch = true
+parallel = true
+omit = [
+  "beaker_kernel/__about__.py",
+]
+
+[tool.coverage.paths]
+beaker_kernel = ["beaker_kernel"]
+tests = ["tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+
+
+[tool.hatch.envs.hatch-test]
+extra-dependencies = [
+  "pytest",
+  "pytest-asyncio",
+  "rich",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[project.entry-points."nbconvert.exporters"]
+streamline = "beaker_kernel.lib.exporters.streamline:StreamlineExporter"
