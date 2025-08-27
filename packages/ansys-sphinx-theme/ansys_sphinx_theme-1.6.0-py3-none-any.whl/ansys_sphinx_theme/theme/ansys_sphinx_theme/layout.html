@@ -1,0 +1,65 @@
+{%- extends "pydata_sphinx_theme/layout.html" -%}
+
+{%- block extrahead %}
+  {{ super() }}
+  {%- if pyansys_tags is defined %}
+  <meta property="og:site_name" content="PyAnsys" />
+    {%- if pyansys_tags is iterable and not pyansys_tags is string %}
+      {%- for tag in pyansys_tags %}
+  <meta name="physics" content="{{ tag }}" />
+      {%- endfor %}
+    {%- else %}
+  <meta name="physics" content="{{ pyansys_tags }}" />
+    {%- endif %}
+  {%- endif %}
+{%- endblock %}
+
+{# Append our custom CSS after the bootstrap stylesheet so we can override where necessary #}
+{%- block css %}
+  {{ super() }}
+
+  <!-- Include desired assets -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  {% if page_assets is defined and page_assets|length > 0 %}
+  {% set assets = page_assets.get(pagename, {}) %}
+  {% if assets.get("needs_datatables") %}
+  <link href="https://cdn.datatables.net/v/dt/dt-2.2.0/datatables.min.css" rel="stylesheet">
+  <script src="https://cdn.datatables.net/v/dt/dt-2.2.0/datatables.min.js"></script>
+  {% endif %}
+  {% endif %}
+
+  {% if theme_show_breadcrumbs %}
+    <link href="{{ pathto('_static/css/breadcrumbs.css', 1) }}" rel="stylesheet" />
+  {% endif %}
+{%- endblock %}
+
+{% block docs_navbar %}
+  {{ super() }}
+  {% if theme_switcher %}
+    {% include 'components/announcement_version.html' %}
+  {% endif %}
+{% endblock %}
+
+{%- block content %}
+  {{ super() }}
+  {% if theme_use_ansys_search %}
+    {%- include "components/ast-search-button.html" %}
+  {%  endif %}
+{%- endblock %}
+
+{%- block scripts_end %}
+  {{ super() }}
+
+  <!-- Include desired assets -->
+  {% if page_assets is defined and page_assets|length > 0 %}
+  {% set assets = page_assets.get(pagename, {}) %}
+  {% if assets.get("needs_datatables") %}
+  <script>
+    $(document).ready(function () {
+      $("table.datatable").DataTable();
+    });
+  </script>
+  {% endif %}
+  {% endif %}
+
+{%- endblock %}
