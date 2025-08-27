@@ -1,0 +1,130 @@
+{% extends list_base_template|default:"sb_admin/sb_admin_base.html" %}
+{% load sb_admin_tags i18n static %}
+
+{% block view_class %}change-list{% endblock %}
+
+{% block content %}
+    {% block page_header %}
+        <div class="list-view-header py-16 md:pb-32 flex flex-wrap items-center max-xs:px-20 gap-x-16 gap-y-8">
+            {% block heading %}
+                <h1 class="text-24 md:text-30 text-dark-900 font-bold font-heading line-clamp-1 first-letter:uppercase">{{ list_title|capfirst }}</h1>
+            {% endblock %}
+            <ul class="ml-auto flex flex-wrap gap-8 md:gap-16">
+                {% if content_context.list_actions %}
+                    <li class="relative md:hidden">
+                        <button
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                data-bs-popper-placement="bottom-end"
+                                class="btn btn-empty btn-icon">
+                            <svg class="w-16 h-16">
+                                <use xlink:href="#More"></use>
+                            </svg>
+                            <span></span>
+                        </button>
+                        <div class="dropdown-menu w-248 max-h-432">
+                            <ul>
+                                {% block dropdown_actions %}
+                                    {% for list_action in content_context.list_actions %}
+                                        {% if not list_action.sub_actions %}
+                                            <li>
+                                                {% include "sb_admin/actions/partials/action_link.html" with action=list_action view_id=view_id extra_classes="dropdown-menu-link items-center" %}
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <script>
+                                        (function(){
+                                            if(document.currentScript && !document.currentScript.previousElementSibling) {
+                                                const li = document.currentScript.closest('li');
+                                                if(li) {
+                                                    li.classList.add('hidden');
+                                                }
+                                            }
+                                        }());
+                                    </script>
+                                {% endblock %}
+                            </ul>
+                        </div>
+                    </li>
+                {% endif %}
+
+                {% block actions %}
+                    {% for list_action in content_context.list_actions %}
+                        {% if list_action.sub_actions %}
+                            <button
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    data-bs-popper-placement="bottom-end"
+                                    class="btn btn-icon">
+                                {% if list_action.icon %}
+                                    <svg class="w-16 h-16 md:mr-8">
+                                        <use xlink:href="#{{ list_action.icon }}"></use>
+                                    </svg>
+                                {% endif %}
+                                <span>{{ list_action.title }}</span>
+                                <svg class="w-16 h-16 ml-4 max-sm:hidden">
+                                    <use xlink:href="#Down"></use>
+                                </svg>
+                            </button>
+                            <div class="dropdown-menu max-h-432">
+                                <ul>
+                                    {% for list_sub_action in list_action.sub_actions %}
+                                        <li>
+                                            {% include "sb_admin/actions/partials/action_link.html" with action=list_sub_action view_id=view_id extra_classes="dropdown-menu-link" %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% else %}
+                            <li class="max-sm:hidden">
+                                {% include "sb_admin/actions/partials/action_link.html" with action=list_action view_id=view_id extra_classes="btn btn-empty" %}
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                {% endblock %}
+                {% if content_context.new_url %}
+                    <li>
+                        <a href="{{ content_context.new_url }}" class="btn btn-secondary btn-icon">
+                            <svg class="w-20 h-20 md:mr-8">
+                                <use xlink:href="#Plus"></use>
+                            </svg>
+                            <span>{% trans 'Add' %} {{ model_name }}</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    {% endblock %}
+    {% block tabulator_card %}
+        <div class="list-view-card card p-0">
+            <form id="{{ view_id }}-filter-form" class="filter-form" action=""></form>
+            {% block tabulator_custom_header %}
+                {% include content_context.tabulator_header_template_name %}
+            {% endblock %}
+            {% block tabulator_body %}
+                <div id="{{ view_id }}-table" class="list-view-table"></div>
+            {% endblock %}
+            {% block tabulator_custom_footer %}
+                <div class="tabulator-custom-footer">
+                    <div class="flex items-center">
+                        <div class="mr-16 max-sm:hidden">{% trans 'For page' %}</div>
+                        <div id="{{ view_id }}-page-size-widget"></div>
+                    </div>
+                    <div id="{{ view_id }}-pagination-widget" class="ml-auto flex items-center"></div>
+                </div>
+            {% endblock %}
+        </div>
+    {% endblock %}
+{% endblock %}
+{% block additional_js %}
+    <script type="text/javascript" src="{% static 'sb_admin/dist/table.js' %}"></script>
+    {% block after_table_bundle %}{% endblock %}
+    {{ content_context.tabulator_definition|get_json_script:'tabulator_definition' }}
+    <script>
+        const tabulatorDefinition = window.loadJSONScriptData('tabulator_definition');
+        window.SBAdminTable = window.SBAdminTable || {};
+        window.addEventListener('DOMContentLoaded', () => {
+            window.SBAdminTable["{{ view_id }}"] = new window.SBAdminTableClass(tabulatorDefinition);
+        })
+    </script>
+{% endblock %}
