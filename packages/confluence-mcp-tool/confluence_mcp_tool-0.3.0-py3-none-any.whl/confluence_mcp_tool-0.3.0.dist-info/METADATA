@@ -1,0 +1,310 @@
+Metadata-Version: 2.3
+Name: confluence-mcp-tool
+Version: 0.3.0
+Summary: 
+Author: Michael Tan
+Author-email: michael.tan@scbtechx.io
+Requires-Python: >=3.11,<4.0
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Dist: atlassian-python-api (>=4.0.4,<5.0.0)
+Requires-Dist: fastapi (>=0.115.12,<0.116.0)
+Requires-Dist: fastmcp (>=2.8.1,<3.0.0)
+Requires-Dist: python-dotenv (>=1.1.0,<2.0.0)
+Requires-Dist: uvicorn (>=0.34.2,<0.35.0)
+Description-Content-Type: text/markdown
+
+# Confluence MCP Tool
+
+A Python-based tool for retrieving and processing Confluence page content via the Atlassian API. Provides both REST API and Model Context Protocol (MCP) interfaces for seamless integration with Claude and other AI systems.
+
+## Features
+
+- **Page Content Retrieval**: Fetch complete Confluence page content using URLs
+- **Advanced Search**: Search Confluence using CQL (Confluence Query Language) with support for:
+  - Simple text queries with automatic fallback
+  - Complex CQL expressions for precise filtering
+  - Space-based filtering
+  - Personal space search support
+- **PlantUML Extraction**: Extract and decode PlantUML diagrams from Confluence macros, including:
+  - Automatic filename detection
+  - Support for compressed PlantUML data
+  - URL-encoded content handling
+- **Related Page Discovery**: Parse and extract related page references with support for:
+  - Full Confluence URLs
+  - Shortened Confluence URLs (x/ format)
+- **Dual Interface Support**:
+  - REST API endpoints for HTTP-based integration
+  - MCP server for Claude desktop integration
+- **Type Safety**: Pydantic models for robust data handling and validation
+
+## Prerequisites
+
+- Python 3.11 or higher
+- Poetry for dependency management
+- Confluence API access credentials
+- pipx for package installation
+
+## Deployment Options
+
+This project provides two distinct service interfaces:
+
+1. **MCP Server** - For Claude desktop integration
+2. **FastAPI Server** - For REST API access
+
+## 1. MCP Server
+
+The MCP server provides tools for Claude desktop to interact with Confluence content.
+
+### Quick Start with Docker (Recommended)
+
+```bash
+docker build -t confluence-mcp .
+```
+
+### Claude Desktop Configuration
+
+Add the following to your Claude Desktop configuration file (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+    "mcpServers": {
+        "confluence_mcp": {
+            "command": "docker",
+            "args": [
+                "run",
+                "--name", "confluence-mcp",
+                "--interactive",
+                "-e", "ATLASSIAN_USERNAME",
+                "-e", "ATLASSIAN_API_KEY",
+                "-e", "CONFLUENCE_URL",
+                "confluence-mcp:latest"
+            ],
+            "env": {
+                "ATLASSIAN_USERNAME": "<your-username>",
+                "ATLASSIAN_API_KEY": "<your-api-key>",
+                "CONFLUENCE_URL": "<your-confluence-base-url>"
+            }
+        }
+    }
+}
+```
+
+### Local Development Setup
+
+If you want to run the service directly on your machine:
+
+1. Install Python 3.11 or higher
+
+2. Install Poetry for dependency management
+
+3. Install pipx
+
+   ```
+   brew install pipx && pipx ensurepath
+   ```
+
+4. Install dependencies:
+   ```bash
+   poetry install
+   ```
+
+5. Build for distribution:
+
+   ```
+   poetry build
+   pipx install dist/*.whl --force
+   ```
+
+
+
+#### Configuration for Local Installation
+
+Update your Claude Desktop configuration to use the locally installed binary:
+
+```json
+{
+    "mcpServers": {
+        "confluence_mcp": {
+            "command": "<path-to-confluence-mcp>",
+            "env": {
+                "ATLASSIAN_USERNAME": "<your-username>",
+                "ATLASSIAN_API_KEY": "<your-api-key>",
+                "CONFLUENCE_URL": "<your-confluence-base-url>"
+            }
+        }
+    }
+}
+```
+
+#### Configuration Parameters
+
+Replace the following placeholders with your actual values:
+
+- **command**: Execute `which confluence-mcp` and use the returned path
+- **ATLASSIAN_USERNAME**: Your [Atlassian username](https://id.atlassian.com/manage-profile/profile-and-visibility) (usually your email)
+- **ATLASSIAN_API_KEY**: Your [Atlassian API token](https://id.atlassian.com/manage-profile/security/api-tokens)
+- **CONFLUENCE_URL**: Your Confluence base URL (e.g., `https://your-company.atlassian.net/wiki`) 
+
+
+
+## 2. FastAPI Server
+
+The FastAPI server provides REST API endpoints for HTTP-based integration.
+
+### Environment Configuration
+
+Create a `.env` file in the root directory with your credentials:
+
+```env
+ATLASSIAN_USERNAME=your-email@company.com
+ATLASSIAN_API_KEY=your-api-token
+CONFLUENCE_URL=https://your-company.atlassian.net/wiki
+```
+
+### Quick Start with Docker Compose (Recommended)
+
+```bash
+docker compose -f docker-compose.api.yml up --build
+```
+
+The service will be available at `http://localhost:8000`
+
+### Local Development Setup
+
+For local development:
+
+1. **Install Dependencies**:
+   ```bash
+   poetry install
+   ```
+
+2. **Build and Install**:
+   ```bash
+   poetry build
+   pipx install dist/*.whl --force
+   ```
+
+3. **Start the Service**:
+   ```bash
+   poetry run confluence-tool
+   # or after installation:
+   confluence-tool
+   ```
+
+The service will be available at `http://localhost:8000` with interactive API documentation at `/docs`.
+
+
+
+## API Reference
+
+### Available Endpoints
+
+#### 1. Retrieve Page Content
+**POST** `/tool/confluence_reader/run`
+
+Fetch complete content from a Confluence page.
+
+**Request:**
+```json
+{
+    "input": "https://your-company.atlassian.net/wiki/spaces/DEV/pages/123456789/Page+Title",
+    "args": {}
+}
+```
+
+**Response:**
+```json
+{
+    "output": {
+        "title": "Page Title",
+        "content": "HTML content of the page",
+        "plant_uml": {
+            "filename": "diagram.puml",
+            "plant_uml": "@startuml\n...\n@enduml"
+        },
+        "related_pages_page_ids": ["123456", "789012"]
+    }
+}
+```
+
+#### 2. Search Content
+**POST** `/tool/confluence_reader/search`
+
+Search Confluence using CQL (Confluence Query Language).
+
+**Request:**
+```json
+{
+    "cql": "type=page AND space=DEV AND title~'documentation'",
+    "base_url": "https://your-company.atlassian.net/wiki",
+    "space_key": "DEV",
+    "args": {
+        "limit": 10
+    }
+}
+```
+
+**Response:**
+```json
+{
+    "output": [
+        {
+            "id": "123456789",
+            "title": "API Documentation",
+            "space_key": "DEV",
+            "url": "https://your-company.atlassian.net/wiki/spaces/DEV/pages/123456789",
+            "excerpt": "Search result excerpt..."
+        }
+    ]
+}
+```
+
+
+
+## MCP Tools Reference
+
+When using with Claude Desktop, the following tools are available:
+
+### `get_confluence_content`
+Retrieve complete page content including PlantUML diagrams and related page references.
+
+### `confluence_search`  
+Search Confluence content with support for:
+- **Simple queries**: `"project documentation"` (automatically converted to CQL)
+- **Advanced CQL**: `"type=page AND space=DEV AND lastModified > startOfMonth()"`
+- **Personal spaces**: `"space=\"~username\""`
+- **Complex filters**: `"text~'urgent' AND label='review-required'"`
+
+## Development
+
+### Code Quality Commands
+```bash
+# Format code
+poetry run black .
+
+# Sort imports
+poetry run isort .
+
+# Lint code
+poetry run flake8
+```
+
+### Architecture
+
+- **Core Logic**: `src/confluence/main.py` - Page retrieval and processing
+- **Search Engine**: `src/confluence/search.py` - CQL-based search functionality  
+- **API Services**: `src/service/` - FastAPI and MCP server implementations
+- **Data Models**: `src/confluence/models/` - Pydantic models for type safety
+- **Utilities**: `src/confluence/utility/` - URL parsing, PlantUML extraction
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+## Authors
+
+- Michael Tan <michael.tan@scbtechx.io>
+- Sathish Kumar <sathishkumar.gunasekaran@scbtechx.io>
