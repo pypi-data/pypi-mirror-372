@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      id="account-settings"
+      meta:interpolation="true"
+      metal:use-macro="context/@@shell/macros/shell"
+      tal:define="
+        client nocall:request/client;
+        webhelpers nocall:context/@@webhelpers;
+      "
+      i18n:domain="euphorie"
+>
+  <body>
+    <metal:content fill-slot="content">
+      <metal:macro use-macro="context/@@status_info/macros/status"
+                   tal:define="
+                     certificate_view nocall: webhelpers/traversed_session/@@certificate;
+                     country python: certificate_view.country;
+                   "
+      >
+        <metal:certificate fill-slot="certificate">
+          <div class="page-module"
+               id="section-certification"
+               tal:condition="python: certificate_view.can_display_certificate_notice() or certificate_view.certificates"
+          >
+            <section class="pat-rich">
+              <h2 i18n:translate="heading_certification">
+                  Certification
+              </h2>
+              <h3 class="pie-graph"
+                  data-percentage="${webhelpers/traversed_session/session/completion_percentage|string:0}"
+              >
+                  ${webhelpers/get_progress_indicator_title}
+              </h3>
+              <p tal:condition="certificate_view/can_display_certificate_teaser"
+                 i18n:translate="info_survey_completion_certificate"
+              >
+                You have completed
+                <tal:name i18n:name="completed">${certificate_view/completion_percentage}%</tal:name>
+                of the risk assessment.
+                When you have completed
+                <tal:name i18n:name="required">${country/certificate_completion_threshold}%</tal:name>
+                of the risk assessment,
+                you will be eligible for a certificate.
+              </p>
+              <p tal:condition="certificate_view/can_display_certificate_earned">
+                <strong i18n:translate="info_survey_complete_certificate">
+                  <tal:name i18n:name="required">${certificate_view/completion_percentage}%</tal:name>
+                  Complete!
+                </strong>
+                <tal:i18n i18n:translate="">
+                You have earned a certificate for this tool.
+                </tal:i18n>
+              </p>
+              <p tal:replace="structure country/certificate_explanatory_sentence"></p>
+            </section>
+            <tal:certificates condition="certificate_view/certificates|nothing">
+              <div class="pat-rich">
+                <h3 i18n:translate="">Awarded certificates</h3>
+                <p i18n:translate="">
+                        The following certificates were awarded for this assessment.
+                </p>
+              </div>
+              <div class="certificate-overview col-3">
+                <tal:certificates tal:repeat="info certificate_view/certificates">
+                  <figure class="certificate-preview">
+                    <a class="certificate pat-auto-scale pat-inject"
+                       href="${info/link}"
+                       data-pat-inject="source: #content; target: #content; history: record"
+                       tal:condition="nocall:info/content"
+                    >
+                      <tal:certificate replace="structure info/content" />
+                    </a>
+                  </figure>
+                </tal:certificates>
+              </div>
+            </tal:certificates>
+          </div>
+        </metal:certificate>
+      </metal:macro>
+    </metal:content>
+  </body>
+</html>
