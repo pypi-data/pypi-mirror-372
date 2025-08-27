@@ -1,0 +1,43 @@
+name: Lila integration test
+
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - ".github/workflows/integration_test.yml"
+      - "integration/**"
+      - "**.py"
+      - "uv.lock"
+      - "pyproject.toml"
+  pull_request:
+    paths:
+      - ".github/workflows/integration_test.yml"
+      - "integration/**"
+      - "**.py"
+      - "uv.lock"
+      - "pyproject.toml"
+
+jobs:
+  lila:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    container: ubuntu:latest
+    services:
+      bdit_lila:
+        image: ghcr.io/lichess-org/lila-docker:main
+        options: --restart=always
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install make and curl
+        run: apt update && apt install -y make curl
+      - name: Install dependencies
+        run: make setup
+      - name: Run integration tests
+        run: |
+          ./integration/run-tests.sh

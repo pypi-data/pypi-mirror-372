@@ -1,0 +1,34 @@
+name: Typing
+
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - ".github/workflows/typing.yml"
+      - "**.py"
+      - "uv.lock"
+      - "pyproject.toml"
+  pull_request:
+    paths:
+      - ".github/workflows/typing.yml"
+      - "**.py"
+      - "uv.lock"
+      - "pyproject.toml"
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: make setup
+      - name: Typecheck
+        run: make typecheck
