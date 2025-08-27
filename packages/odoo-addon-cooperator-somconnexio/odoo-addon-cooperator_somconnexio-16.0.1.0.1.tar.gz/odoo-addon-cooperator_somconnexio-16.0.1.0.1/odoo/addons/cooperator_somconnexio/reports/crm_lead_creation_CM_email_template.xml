@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+  <record id="somconnexio.crm_lead_creation_CM_email_template" model="mail.template">
+    <field name="email_to">${(object.partner_id.email or object.subscription_request_id.email)|safe}</field>
+    <field name="lang">${(object.partner_id.lang or object.subscription_request_id.lang)|safe}</field>
+    <field name="body_html"><![CDATA[
+        <div style="font-size:13px;font-family: 'Lucica Grande', Ubuntu, Arial, Verdana, sans-serif; font-size: 12px; color: rgb(34, 34, 34); background-color: #FFF; ">
+          % if object.partner_id.is_company == True or object.subscription_request_id.is_company == True:
+          Hola,<br/>
+          % else
+            Hola ${object.partner_id.firstname or object.subscription_request_id.firstname},<br/>
+          % endif
+          <p>Tal com hem parlat per telèfon, et confirmem que ja hem fet la petició dels següents serveis:</p>
+          % if object.lead_line_ids.filtered('is_mobile'):
+            <p>Mòbil:</p>
+            <ul>
+            % for line in object.lead_line_ids.filtered('is_mobile'):
+              <li>Número de telèfon:
+              % if line.mobile_isp_info.type == 'portability':
+                <b>${line.mobile_isp_info.phone_number}</b>
+              % else
+                <b>Tindràs una numeració nova de mòbil.</b>
+              % endif
+              Tarifa sel·leccionada: <b>${line.product_id.showed_name}.</b>
+              </li>
+            % endfor
+            </ul>
+          % endif
+          % if object.broadband_w_fix_lead_line_ids:
+            <p>Fibra/Router4G:</p>
+            <ul>
+            % for line in object.broadband_w_fix_lead_line_ids:
+              <li>Número de telèfon:
+              % if line.broadband_isp_info.type == 'portability':
+                <b>${line.broadband_isp_info.phone_number}.</b>
+              % else
+                <b>Tindràs una numeració nova de fixe.</b>
+              % endif
+              Tarifa sel·leccionada: <b>${line.product_id.showed_name}.</b>
+              </li>
+            % endfor
+            </ul>
+          % endif
+          % if object.broadband_wo_fix_lead_line_ids:
+            <p>Fibra/Router4G:</p>
+            <ul>
+            % for line in object.broadband_wo_fix_lead_line_ids:
+              <li>Tarifa sel·leccionada: <b>${line.product_id.showed_name}.</b></li>
+            % endfor
+            </ul>
+          % endif
+          Ara només cal que ens contestis aquest correu dient que has llegit i que acceptes les següents condicions de contractació:
+          <ol>
+            <li>Les que trobaràs en el <a href="https://somconnexio.coop/condicions-generals">següent enllaç</a></li>
+            <li>Les del document adjunt "Condicions particulars.pdf"</li>
+          </ol>
+          <br>
+          <p>Un cop rebem la teva resposta iniciarem l'activació dels serveis.</p>
+          <p>Estem a la teva disposició per qualsevol dubte o pregunta. Si necessites que ens truquem, envia'ns un correu demanant que la Gemma o jo (Benedetta) et truquem.</p>
+          <p>Una abraçada!</p>
+          <p>L'equip de Som Connexió.</p>
+        </div>
+        ]]></field>
+  </record>
+</odoo>
