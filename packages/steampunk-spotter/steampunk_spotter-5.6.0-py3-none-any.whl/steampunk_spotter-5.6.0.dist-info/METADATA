@@ -1,0 +1,197 @@
+Metadata-Version: 2.4
+Name: steampunk-spotter
+Version: 5.6.0
+Summary: Ansible Playbook Platform that scans, analyzes, enhances, and provides insights for your playbooks.
+Home-page: https://spotter.steampunk.si/
+Author: XLAB d.o.o.
+Author-email: "XLAB d.o.o." <pypi@xlab.si>
+Project-URL: Homepage, https://spotter.steampunk.si/
+Project-URL: Source Code, https://gitlab.com/xlab-steampunk/steampunk-spotter-client/spotter-cli
+Project-URL: Bug Tracker, https://gitlab.com/xlab-steampunk/steampunk-spotter-client/spotter-cli/-/issues
+Project-URL: Documentation, https://spotter.steampunk.si/docs/
+Project-URL: Changelog, https://gitlab.com/xlab-steampunk/steampunk-spotter-client/spotter-cli/-/blob/main/CHANGELOG.txt
+Keywords: ansible,automation,spotter,scanner,quality,playbook,steampunk
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: System Administrators
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Information Technology
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: POSIX
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development
+Classifier: Topic :: Software Development :: Bug Tracking
+Classifier: Topic :: Software Development :: Quality Assurance
+Classifier: Topic :: Software Development :: Testing
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Framework :: Ansible
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: ruamel.yaml>=0.17.22
+Requires-Dist: requests
+Requires-Dist: colorama
+Requires-Dist: pydantic>=2
+Requires-Dist: detect-secrets
+Requires-Dist: rich>=10.2.0
+Provides-Extra: build
+Requires-Dist: ansible-builder; extra == "build"
+Requires-Dist: ansible-core; extra == "build"
+Dynamic: license-file
+
+# Steampunk Spotter Command-Line Interface (CLI)
+
+[![PyPI](https://img.shields.io/pypi/v/steampunk-spotter)](https://pypi.org/project/steampunk-spotter/)
+
+[Steampunk Spotter] is an Ansible Playbook Platform that scans, analyzes,
+enhances, and provides insights for your playbooks.
+
+The Steampunk Spotter CLI enables the use from the console with the ability
+to scan Ansible content such as playbooks, roles, collections, or task files.
+
+The following instructions explain how to get started with the Steampunk
+Spotter CLI to scan Ansible content and get recommendations.
+
+## Installation
+Steampunk Spotter CLI requires Python 3 and is available as a
+[steampunk-spotter] Python package.
+
+```shell
+$ pip install steampunk-spotter
+```
+
+We recommend installing the package into a clean Python virtual environment.
+
+## Usage
+After the CLI is installed, you can explore its commands and options by
+running `spotter --help`.
+The `--help/-h` option is also available for every command.
+
+### Limitations
+The current release version of Steampunk Spotter contains the following
+limitations that also apply to the CLI: 
+
+- with the FREE subscription plan, you can perform up to 100 scans/month,
+- with the INDIVIDUAL, TEAM, or ENTERPRISE subscription plan you can perform 
+  an unlimited number of scans,
+- for the ENTERPRISE subscription plan, contact us at steampunk@xlab.si to
+  discuss your needs.
+
+### Authentication
+To use CLI, you have to supply your Steampunk Spotter user account credentials.
+If you don't have an account, use `spotter register` command that will direct
+you to the page where you can create one.
+
+Steampunk Spotter supports two kinds of credentials: 1) API token (can be
+generated in the user settings within the Spotter App), and 2) username and
+password.
+
+- Use `--token/-t` global option to supply your token credential.
+  Alternatively, set the `SPOTTER_TOKEN` environment variable to contain 
+  the API token.
+- Use `--username/-u` and `--password/-p` global options to supply your
+  username and password. Alternatively, set the `SPOTTER_USERNAME` and
+  `SPOTTER_PASSWORD` environment variables.
+- You can run `spotter <options> login` to persist your credentials in the
+  Steampunk Spotter CLI's local storage, where `<options>` stand for one
+  of the approaches described above.
+
+After that, you can start scanning right away.
+
+### Scanning
+The CLI `spotter scan` command is used for scanning Ansible
+content (playbooks, roles, collections, or task files) and returning the
+scan results.
+
+#### Ansible content
+The `scan` command will automatically detect the type of your Ansible content
+and scan it.
+Here are some examples of running scans:
+
+```shell
+# scan playbook
+$ spotter scan path/to/playbook.yaml
+
+# scan multiple files at once
+$ spotter scan path/to/taskfile.yaml \
+               path/to/playbook.yaml \
+               path/to/role \
+               path/to/collection
+
+# scan any folder that contains Ansible content
+$ spotter scan path/to/folder
+```
+
+#### Selecting the target project
+*This part is only relevant for users with a TEAM plan or higher.*
+
+By default, the scan results are stored in the first project of the user's
+first organization (in the app).
+
+Users that have multiple organizations or projects in the app can use
+`--project-id` option to specify the UUID of an existing target project, where
+the scan result will be stored.
+
+```shell
+$ spotter scan --project-id <project-id> .
+```
+
+You can learn your project id by logging into the app, selecting the
+appropriate organization and navigating to the project's dashboard.
+
+#### Excluding values
+By default, CLI parses full Ansible YAML content with all values from
+playbooks (e.g., parameter values from Ansible modules,
+variables from Ansible plays, etc.).
+With values, we can discover additional tips for improvements.
+CLI will try to detect and omit any secrets (e.g., passwords, SSH keys, 
+cloud credentials, etc.) from being transmitted.
+If you want to omit parsing and sending the values, you can use
+`--exclude-values` option.
+
+```shell
+$ spotter scan --exclude-values playbook.yaml
+```
+
+#### Excluding metadata
+By default, CLI collects metadata (i.e., file names, line, and column numbers,
+YAML markers) from Ansible content.
+This is needed for enriched user experience in the Spotter App and to get
+additional tips for improvements.
+If you want to use metadata just for displaying the scan output, which means
+that no data about your Ansible content structure is sent to the backend
+server, you can use `--exclude-metadata` option.
+
+```shell
+$ spotter scan --exclude-metadata playbook.yaml
+```
+
+#### Automated application of suggestions to your code
+There is also a `--rewrite` option that rewrites your files with fixes after
+scanning.
+This action will modify your files.
+
+```shell
+$ spotter scan --rewrite playbook.yaml
+```
+
+### Next steps
+For more comprehensive usage, issue `spotter scan --help`.
+Please refer to [Steampunk Spotter Documentation] for further instructions.
+
+## Acknowledgment
+This tool was created by [XLAB Steampunk], IT automation specialists and
+leading experts in building Enterprise Ansible Collections.
+
+[Steampunk Spotter]: https://spotter.steampunk.si/
+[steampunk-spotter]: https://pypi.org/project/steampunk-spotter/
+[Steampunk Spotter Documentation]: https://spotter.steampunk.si/docs/
+[XLAB Steampunk]: https://steampunk.si/
