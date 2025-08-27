@@ -1,0 +1,138 @@
+Metadata-Version: 2.4
+Name: airflow-balancer
+Version: 0.7.7
+Summary: Utilities for tracking hosts and ports and load balancing DAGs
+Project-URL: Repository, https://github.com/airflow-laminar/airflow-balancer
+Project-URL: Homepage, https://github.com/airflow-laminar/airflow-balancer
+Author-email: the airflow-balancer authors <t.paine154@gmail.com>
+License: Apache-2.0
+License-File: LICENSE
+Classifier: Development Status :: 3 - Alpha
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Requires-Python: >=3.9
+Requires-Dist: airflow-config<1.12,>=1.10
+Requires-Dist: airflow-pydantic<1.6,>=1.4
+Requires-Dist: paramiko<4
+Requires-Dist: pydantic>=2
+Provides-Extra: develop
+Requires-Dist: apache-airflow-providers-ssh; extra == 'develop'
+Requires-Dist: apache-airflow-providers-standard; extra == 'develop'
+Requires-Dist: apache-airflow<3.1,>=2.8; extra == 'develop'
+Requires-Dist: build; extra == 'develop'
+Requires-Dist: bump-my-version; extra == 'develop'
+Requires-Dist: check-manifest; extra == 'develop'
+Requires-Dist: codespell<2.5,>=2.4; extra == 'develop'
+Requires-Dist: fastapi; extra == 'develop'
+Requires-Dist: flask; extra == 'develop'
+Requires-Dist: flask-appbuilder; extra == 'develop'
+Requires-Dist: hatch-js; extra == 'develop'
+Requires-Dist: hatchling; extra == 'develop'
+Requires-Dist: mdformat-tables>=1; extra == 'develop'
+Requires-Dist: mdformat<0.8,>=0.7.22; extra == 'develop'
+Requires-Dist: pytest; extra == 'develop'
+Requires-Dist: pytest-cov; extra == 'develop'
+Requires-Dist: ruff; extra == 'develop'
+Requires-Dist: twine; extra == 'develop'
+Requires-Dist: uv; extra == 'develop'
+Requires-Dist: uvicorn; extra == 'develop'
+Requires-Dist: wheel; extra == 'develop'
+Description-Content-Type: text/markdown
+
+# airflow balancer
+
+Utilities for tracking hosts and ports and load balancing DAGs
+
+[![Build Status](https://github.com/airflow-laminar/airflow-balancer/actions/workflows/build.yaml/badge.svg?branch=main&event=push)](https://github.com/airflow-laminar/airflow-balancer/actions/workflows/build.yaml)
+[![codecov](https://codecov.io/gh/airflow-laminar/airflow-balancer/branch/main/graph/badge.svg)](https://codecov.io/gh/airflow-laminar/airflow-balancer)
+[![License](https://img.shields.io/github/license/airflow-laminar/airflow-balancer)](https://github.com/airflow-laminar/airflow-balancer)
+[![PyPI](https://img.shields.io/pypi/v/airflow-balancer.svg)](https://pypi.python.org/pypi/airflow-balancer)
+
+## Overview
+
+`airflow-balancer` is a utility library for Apache Airflow to track host and port usage via yaml files.
+It is tightly integrated with [airflow-laminar/airflow-config](https://github.com/airflow-laminar/airflow-config).
+
+With `airflow-balancer`, you can register host and port usage in configuration:
+
+```yaml
+_target_: airflow_balancer.BalancerConfiguration
+default_username: timkpaine
+hosts:
+  - name: host1
+    size: 16
+    os: ubuntu
+    queues: [primary]
+
+  - name: host2
+    os: ubuntu
+    size: 16
+    queues: [workers]
+
+  - name: host3
+    os: macos
+    size: 8
+    queues: [workers]
+
+ports:
+  - host: host1
+    port: 8080
+
+  - host_name: host2
+    port: 8793
+```
+
+Either via `airflow-config` or directly, you can then select amongst available hosts for use in your DAGs.
+
+```python
+from airflow_balaner import BalancerConfiguration, load
+
+balancer_config: BalancerConfiguration = load("balancer.yaml")
+
+host = balancer_config.select_host(queue="workers")
+port = balancer_config.free_port(host=host)
+
+...
+
+operator = SSHOperator(ssh_hook=host.hook(), ...)
+
+```
+
+### Visualization
+
+Configuration, and Host and Port listing is built into the extension, available either from the topbar in Airflow or as a standalone viewer (via the `airflow-balancer-viewer` CLI).
+
+<img src="https://raw.githubusercontent.com/airflow-laminar/airflow-balancer/refs/heads/main/docs/img/toolbar.png" width=400>
+
+<img src="https://raw.githubusercontent.com/airflow-laminar/airflow-balancer/refs/heads/main/docs/img/home.png" width=400>
+
+<img src="https://raw.githubusercontent.com/airflow-laminar/airflow-balancer/refs/heads/main/docs/img/hosts.png" width=800>
+
+## Installation
+
+You can install from pip:
+
+```bash
+pip install airflow-balancer
+```
+
+Or via conda:
+
+```bash
+conda install airflow-balancer -c conda-forge
+```
+
+## License
+
+This software is licensed under the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.
+
+> [!NOTE]
+> This library was generated using [copier](https://copier.readthedocs.io/en/stable/) from the [Base Python Project Template repository](https://github.com/python-project-templates/base).
