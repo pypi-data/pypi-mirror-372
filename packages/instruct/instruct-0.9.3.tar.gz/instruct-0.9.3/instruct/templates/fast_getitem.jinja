@@ -1,0 +1,50 @@
+
+{% set applicable_fields = chain(fields, properties)|deduplicate %}
+
+def __getitem__(self: Self, key: str | int | slice) -> Any:
+    {%- if applicable_fields %}
+    '''
+    Set attributes or properies via {{ class_name }}(...)[name] = ...
+    where key may one of {% for field in applicable_fields %}"{{ field }}"{% if not loop.last %} | {% endif %}
+    {%- endfor%}
+    '''
+    {%- endif %}
+    {% set num_fields = applicable_fields | length %}
+    if isinstance(key, builtins.slice):
+        start, stop, step = key.indices({{ num_fields }})
+        buf = []
+        for index in range(start, stop, step):
+            buf.append(self[index])
+        return tuple(buf)
+    else:
+        {%- for field in applicable_fields %}
+        {%if not loop.first%}el{%endif%}if key in ('{{ field }}', {{ loop.index0 }} , {{ -num_fields + loop.index0 }}, ):
+            {{get_variable_template|format(key=field)|indent(8)}}
+            raise RuntimeError("{{class_name}} has broken __getter_template__! Should've had a return!")
+        {%- endfor %}
+    raise KeyError(key)
+
+def __setitem__(self: Self, key: str | int | slice, val: Any) -> None:
+    {%- if applicable_fields %}
+    '''
+    Set attributes or properies via {{ class_name }}(...)[name] = ...
+    where key may one of {% for field in applicable_fields %}"{{ field }}"{% if not loop.last %} | {% endif %}
+    {%- endfor%}
+    '''
+    {%- endif %}
+    {% set num_fields = applicable_fields | length %}
+    if isinstance(key, builtins.slice):
+        if not isinstance(val, abc.Iterable):
+            raise TypeError(f"{val!r} ({type(val)!r}) is not an Iterable!")
+        iterable = val
+        start, stop, step = key.indices({{ num_fields }})
+        for index, new_value in zip(range(start, stop, step), iterable):
+            self[index] = new_value
+        return None
+    else:
+        {%- for field in applicable_fields %}
+        {%if not loop.first%}el{%endif%}if key in ('{{ field }}', {{ loop.index0 }} , {{ -num_fields + loop.index0 }}, ):
+            self.{{field}} = val
+            return
+        {%- endfor %}
+    raise KeyError(key)
