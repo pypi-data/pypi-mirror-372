@@ -1,0 +1,203 @@
+Metadata-Version: 2.4
+Name: idc-index
+Version: 0.9.2
+Summary: Package to query and download data from an index of ImagingDataCommons
+Project-URL: Homepage, https://github.com/ImagingDataCommons/idc-index
+Project-URL: Bug Tracker, https://github.com/ImagingDataCommons/idc-index/issues
+Project-URL: Discussions, https://discourse.canceridc.dev/
+Project-URL: Changelog, https://github.com/ImagingDataCommons/idc-index/releases
+Author-email: Andrey Fedorov <andrey.fedorov@gmail.com>, Vamsi Thiriveedhi <vthiriveedhi@mgh.harvard.edu>
+License: MIT License
+        
+        Copyright (c) 2023 Imaging Data Commons
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy of
+        this software and associated documentation files (the "Software"), to deal in
+        the Software without restriction, including without limitation the rights to
+        use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+        of the Software, and to permit persons to whom the Software is furnished to do
+        so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering
+Classifier: Typing :: Typed
+Requires-Python: >=3.8
+Requires-Dist: click
+Requires-Dist: duckdb<=1.2.1,>=0.10.0
+Requires-Dist: idc-index-data==21.0.0
+Requires-Dist: packaging
+Requires-Dist: pandas<=2.2.4
+Requires-Dist: platformdirs
+Requires-Dist: psutil
+Requires-Dist: pyarrow
+Requires-Dist: requests
+Requires-Dist: s5cmd
+Requires-Dist: sphinx-click
+Requires-Dist: tqdm
+Provides-Extra: dev
+Requires-Dist: pytest-cov>=3; extra == 'dev'
+Requires-Dist: pytest>=6; extra == 'dev'
+Provides-Extra: docs
+Requires-Dist: furo>=2023.08.17; extra == 'docs'
+Requires-Dist: myst-parser>=0.13; extra == 'docs'
+Requires-Dist: sphinx-autodoc-typehints; extra == 'docs'
+Requires-Dist: sphinx-copybutton; extra == 'docs'
+Requires-Dist: sphinx>=7.0; extra == 'docs'
+Provides-Extra: test
+Requires-Dist: pytest-cov>=3; extra == 'test'
+Requires-Dist: pytest>=6; extra == 'test'
+Description-Content-Type: text/markdown
+
+# idc-index
+
+[![Actions Status][actions-badge]][actions-link]
+[![Documentation Status][rtd-badge]][rtd-link]
+
+[![PyPI version][pypi-version]][pypi-link]
+[![PyPI platforms][pypi-platforms]][pypi-link]
+
+[![Discourse Forum][discourse-forum-badge]][discourse-forum-link]
+
+> [!WARNING]
+>
+> This package is in its early development stages. Its functionality and API
+> will change.
+>
+> Stay tuned for the updates and documentation, and please share your feedback
+> about it by opening issues in this repository, or by starting a discussion in
+> [IDC User forum](https://discourse.canceridc.dev/).
+
+<!-- SPHINX-START -->
+
+## About
+
+`idc-index` is a Python package that enables basic operations for working with
+[NCI Imaging Data Commons (IDC)](https://imaging.datacommons.cancer.gov):
+
+- subsetting of the IDC data using selected metadata attributes
+- download of the files corresponding to selection
+- generation of the viewer URLs for the selected data
+
+## Getting started
+
+Install the latest version of the package.
+
+```bash
+$ pip install --upgrade idc-index
+```
+
+Instantiate `IDCClient`, which provides the interface for main operations.
+
+```python
+from idc_index import IDCClient
+
+client = IDCClient.client()
+```
+
+You can use [IDC Portal](https://imaging.datacommons.cancer.gov/explore/) to
+browse collections, cases, studies and series, copy their identifiers and
+download the corresponding files using `idc-index` helper functions.
+
+You can try this out with the `rider_pilot` collection, which is just 10.5 GB in
+size:
+
+```
+client.download_from_selection(collection_id="rider_pilot", downloadDir=".")
+```
+
+... or run queries against the "mini" index of Imaging Data Commons data, and
+download images that match your selection criteria! The following will select
+all Magnetic Resonance (MR) series, and will download the first 10.
+
+```python
+from idc_index import index
+
+client = index.IDCClient()
+
+query = """
+SELECT
+  SeriesInstanceUID
+FROM
+  index
+WHERE
+  Modality = 'MR'
+"""
+
+selection_df = client.sql_query(query)
+
+client.download_from_selection(
+    seriesInstanceUID=list(selection_df["SeriesInstanceUID"].values[:10]),
+    downloadDir=".",
+)
+```
+
+## Tutorial
+
+Please check out
+[this tutorial notebook](https://github.com/ImagingDataCommons/IDC-Tutorials/blob/master/notebooks/labs/idc_rsna2023.ipynb)
+for the introduction into using `idc-index`.
+
+## Resources
+
+- [Imaging Data Commons Portal](https://imaging.datacommons.cancer.gov/) can be
+  used to explore the content of IDC from the web browser
+- [s5cmd](https://github.com/peak/s5cmd) is a highly efficient, open source,
+  multi-platform S3 client that we use for downloading IDC data, which is hosted
+  in public AWS and GCS buckets. Distributed on PyPI as
+  [s5cmd](https://pypi.org/project/s5cmd/).
+- [SlicerIDCBrowser](https://github.com/ImagingDataCommons/SlicerIDCBrowser) 3D
+  Slicer extension that relies on `idc-index` for search and download of IDC
+  data
+
+## Acknowledgment
+
+This software is maintained by the IDC team, which has been funded in whole or
+in part with Federal funds from the NCI, NIH, under task order no. HHSN26110071
+under contract no. HHSN261201500003l.
+
+If this package helped your research, we would appreciate if you could cite IDC
+paper below.
+
+> Fedorov, A., Longabaugh, W. J. R., Pot, D., Clunie, D. A., Pieper, S. D.,
+> Gibbs, D. L., Bridge, C., Herrmann, M. D., Homeyer, A., Lewis, R., Aerts, H.
+> J. W., Krishnaswamy, D., Thiriveedhi, V. K., Ciausu, C., Schacherer, D. P.,
+> Bontempi, D., Pihl, T., Wagner, U., Farahani, K., Kim, E. & Kikinis, R.
+> _National Cancer Institute Imaging Data Commons: Toward Transparency,
+> Reproducibility, and Scalability in Imaging Artificial Intelligence_.
+> RadioGraphics (2023). https://doi.org/10.1148/rg.230180
+
+<!-- prettier-ignore-start -->
+[actions-badge]:            https://github.com/ImagingDataCommons/idc-index/workflows/CI/badge.svg
+[actions-link]:             https://github.com/ImagingDataCommons/idc-index/actions
+[discourse-forum-badge]: https://img.shields.io/discourse/https/discourse.canceridc.dev/status.svg
+[discourse-forum-link]:  https://discourse.canceridc.dev/
+[pypi-link]:                https://pypi.org/project/idc-index/
+[pypi-platforms]:           https://img.shields.io/pypi/pyversions/idc-index
+[pypi-version]:             https://img.shields.io/pypi/v/idc-index
+[rtd-badge]:                https://readthedocs.org/projects/idc-index/badge/?version=latest
+[rtd-link]:                 https://idc-index.readthedocs.io/en/latest/?badge=latest
+
+<!-- prettier-ignore-end -->
