@@ -1,0 +1,54 @@
+# Intputlib
+
+**Because typing `int(input())` everywhere is too mainstream.**
+
+---
+
+## What is this?
+
+IntputLib is a tiny Python library that solves the age-old struggle of reading integers from the user without the headache. No more repeating:
+
+```python
+x = int(input("Enter a number: "))
+```
+
+Over. And. Over. And over again.
+
+---
+
+## Installation
+
+Just install it with pip (if only life were this easy):
+
+```bash
+pip install intputlib
+```
+
+---
+
+## Usage
+
+```python
+from intputlib import intput
+
+age = intput("Enter your age (or fake it, we won't judge): ")
+print(f"You are {age} years old!")
+```
+
+### Features
+
+- Reads an integer from user input.
+- Keeps asking until you actually enter a number (yes, it’s like your mom nagging you to clean your room). 🏠
+- Saves you from the eternal curse of `ValueError`. 💀
+
+---
+
+## Why use this?
+
+Because `int(input())` is a pain, and life is too short for repetitive error handling. Just use `intput()` and pretend Python is doing all the heavy lifting for you.
+
+---
+
+## License
+
+MIT License. Because sharing is caring. 💛
