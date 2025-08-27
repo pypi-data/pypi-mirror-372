@@ -1,0 +1,135 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "laktory"
+# version = dynamic
+requires-python = ">=3.10"
+authors = [
+    {name = "Olivier Soucy", email = "olivier.soucy@okube.ai"},
+]
+description = "An ETL and DataOps framework for building a lakehouse"
+readme = "README.md"
+keywords = ["data-pipeline", "dataframes", "etl", "sql", "infrastructure-as-code", "apache-spark",  "polars",  "python"]
+license = {file = "LICENSE.md"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Pydantic :: 2",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dynamic = ["version"]
+dependencies = [
+    "inflect",
+    "narwhals>=1.46",
+    "networkx",
+    "planck>=0.0.8",
+    "platformdirs",
+    "prompt_toolkit",
+    "pyyaml",
+    "pydantic>=2",
+    "pydantic-settings",
+    # "python-dateutil",
+    "sqlglot[rs]",
+    "typer",
+    "tzdata; sys_platform == 'win32'"
+]
+
+[project.optional-dependencies]
+polars = [
+    "deltalake",
+    "polars<1.32.1",  # issue with 1.32.1 .__version__ is invalid
+    "sqlparse",
+]
+pyspark = [
+    "delta-spark",
+    "pyarrow",
+    "pyspark[connect]<4.0",
+    "setuptools; python_version >= '3.12'"
+]
+dev = [
+    "databricks-sdk",
+    "flit",
+    "griffe_fieldz",
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-video",
+    "mkdocstrings[python]",
+    "pandas",
+    "plotly",
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+    "pytest-examples",
+    "pytest-mock",
+    "ruff",
+    "yfinance",
+#    "mkdocs-snippets",
+]
+
+# IaC
+pulumi = [
+    "pulumi",
+    "pulumi_databricks>=1.49",  # required to support Databricks Lakeview Dashboard
+]
+
+# Orchestrators
+databricks = [
+#    "databricks-connect",  # causing conflicts with local spark installation
+    "databricks-sdk",
+]
+
+[project.urls]
+Homepage = "https://github.com/okube-ai/laktory"
+Documentation = "https://www.laktory.ai"
+Repository = "https://github.com/okube-ai/laktory"
+"Bug Tracker" = "https://github.com/opencubes-ai/laktory/issues"
+
+[tool.hatch.build]
+include = ["laktory*"]
+
+[tool.hatch.version]
+path = "laktory/_version.py"
+
+# CLI
+[project.scripts]
+laktory = "laktory.cli.app:app"
+
+[tool.ruff]
+builtins = ["spark", "display", "dbutils"]
+extend-exclude=["scripts/*"]
+fix = true
+indent-width = 4
+line-length = 88  # default length. standard or many python projects
+target-version = "py312"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+ignore=[
+    "E741",  # ambiguous variable name
+]
+extend-select = [
+    "I",
+]
+pydocstyle.convention = "numpy"
+isort.force-single-line = true
+isort.required-imports = [
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = [
+    "E402",  # module level import not at top of file
+    "F401",  # import not used
+    "F403",  # import * (unable to detect undefined names)
+]
+"laktory/resources/quickstart-stacks/workflows/notebooks/*" = [
+    "E402",  # module level import not at top of file
+]
