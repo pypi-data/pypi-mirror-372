@@ -1,0 +1,78 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "paramdb"
+version = "0.15.3"
+description = "Python package for storing and retrieving experiment parameters."
+authors = ["Alex Hadley <contact@alexhadley.net>"]
+license = "BSD-3-Clause"
+readme = "README.md"
+repository = "https://github.com/PainterQubits/paramdb"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+typing-extensions = "^4.12.2"
+sqlalchemy = "^2.0.31"
+zstandard = "^0.24.0"
+pandas = { version = "^2.2.2", optional = true }
+astropy = { version = "^6.0.1", optional = true }
+pydantic = { version = "^2.7.4", optional = true }
+eval-type-backport = { version = "^0.2.0", optional = true }
+
+[tool.poetry.extras]
+all = ["pandas", "astropy", "pydantic", "eval-type-backport"]
+pandas = ["pandas"]
+astropy = ["astropy"]
+pydantic = ["pydantic", "eval-type-backport"]
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.10.1"
+flake8 = "^7.1.0"
+pylint = "^3.2.4"
+black = "^24.4.2"
+pytest = "^8.2.2"
+pytest-cov = "^5.0.0"
+pandas-stubs = "^2.2.2.240603"
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^7.3.7"
+myst-parser = "^3.0.1"
+furo = "^2024.5.6"
+sphinx-copybutton = "^0.5.2"
+jupyter-sphinx = "^0.5.3"
+ipykernel = "^6.29.4"
+sphinx-autobuild = "^2024.4.16"
+
+[tool.poe]
+poetry_command = ""
+
+[tool.poe.tasks]
+lint = [
+    { cmd = "black --check paramdb tests" },
+    { cmd = "flake8 paramdb tests" },
+    { cmd = "pylint paramdb tests" },
+    { cmd = "mypy paramdb tests" },
+]
+test = "pytest"
+docs = [
+    { script = "shutil:rmtree('docs/build', ignore_errors=True)" },
+    { script = "shutil:rmtree('docs/jupyter_execute', ignore_errors=True)" },
+    { cmd = "sphinx-autobuild --open-browser docs docs/build" },
+]
+
+[tool.mypy]
+strict = true
+
+[tool.pylint.basic]
+good-names-rgxs = ["^[a-z][a-z0-9]?$"]
+
+[tool.pylint.messages_control]
+disable = ["too-few-public-methods", "too-many-return-statements"]
+
+[tool.pylint.typecheck]
+ignored-classes = ["sqlalchemy.orm.session.sessionmaker"]
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
