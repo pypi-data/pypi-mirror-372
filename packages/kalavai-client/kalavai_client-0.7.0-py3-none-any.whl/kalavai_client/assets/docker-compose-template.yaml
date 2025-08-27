@@ -1,0 +1,75 @@
+services:
+{% if vpn %}
+  {{vpn_name}}:
+    image: gravitl/netclient:v0.90.0
+    container_name: {{vpn_name}}
+    platform: linux/{{target_platform}}
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    network_mode: host
+    environment:
+      - HOST_NAME={{node_name}}
+      - TOKEN={{vpn_token}}
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+    restart: unless-stopped
+{% endif %}
+# run worker only if command is set
+{%if command %}
+  {{service_name}}:
+    image: docker.io/bundenth/kalavai-runner:{{target_platform}}-latest
+    pull_policy: always
+    container_name: {{service_name}}
+    platform: linux/{{target_platform}}
+  {% if vpn %}
+    depends_on:
+    - {{vpn_name}}
+    network_mode: "service:{{vpn_name}}"
+  {% else %}
+    network_mode: host
+  {% endif %}
+    privileged: true
+    restart: unless-stopped
+    command: >
+      --command={{command}}
+    {% if user_id %}
+      --user_id={{user_id}}
+    {% endif %}
+      --node_name="{{node_name}}"
+      --node_ip="{{node_ip_address}}"
+    {% if random_suffix %}
+      --random_suffix="{{random_suffix}}"
+    {% endif %}
+      {% if command == "server" %}
+      --port_range="30000-32767"
+      {% else %}
+      --server_ip={{pool_ip}}
+      --token={{pool_token}}
+      {% endif %}
+      {%if vpn %}
+      --flannel_iface={{flannel_iface}}
+      {% endif %}
+      {% if num_gpus and num_gpus > 0 %}
+      --gpu=on
+      {% else %}
+      --gpu=off
+      {% endif %}
+      {% if node_labels %}
+      --extra="{{node_labels}}"
+      {% endif %}
+
+    # volumes:
+    # - {{k3s_path}}:/var/lib/rancher/k3s # Persist data
+    # - {{etc_path}}:/etc/rancher/k3s # Config files
+
+  {% if num_gpus and num_gpus > 0 %}
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: {{num_gpus}}
+            capabilities: [gpu]
+  {% endif %}
+{% endif %}
