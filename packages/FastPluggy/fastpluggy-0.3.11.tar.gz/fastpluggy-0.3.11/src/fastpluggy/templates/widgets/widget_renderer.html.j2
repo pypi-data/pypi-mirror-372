@@ -1,0 +1,100 @@
+{% macro render_widget(widget, request, depth=0) %}
+    {% set max_depth = 15 %}
+    {% if depth > max_depth %}
+        <div class="alert alert-danger">
+            <strong>Recursion Error:</strong> Maximum widget depth exceeded ({{ max_depth }})
+            <br><small>Widget: {{ widget.widget_type  | default('unknown') }} ({{ widget.__class__.__name__ }})</small>
+        </div>
+    {% else %}
+        {% set widget_type = widget.widget_type | default('unknown') %}
+
+        {# ==== Special cases “raw” and “error” stay the same ==== #}
+        {% if widget_type == 'raw' %}
+            {{ widget.source | safe }}
+
+        {% elif widget_type == 'error' %}
+            <div class="alert alert-danger">
+                <p><strong>Widget Error:</strong> {{ widget.title | default('Error') }}</p>
+                <strong>Message:</strong>
+                <p>{{ widget.error_message | default('Unknown error') | e }}</p>
+                {% if widget.traceback_str %}
+                    <details>
+                        <summary>Show Traceback</summary>
+                        <pre class="mt-2 small">{{ widget.traceback_str | e }}</pre>
+                    </details>
+                {% endif %}
+            </div>
+
+            {# ==== If this widget wants to render via “macro” ==== #}
+        {% elif widget.render_method == 'macro' and widget.macro_name %}
+            {% set widget_templates = widget.template_name %}
+
+            {# Import that entire template as a namespace:
+                “widget_ns” will contain all macros defined in template_to_use.
+            #}
+            {% import widget_templates as widget_ns %}
+
+            {# Attempt to grab the macro by indexing the namespace #}
+            {% set macro_callable = widget_ns[widget.macro_name] %}
+
+            {% if macro_callable is defined %}
+                {% if 'request' in macro_callable.arguments and 'depth' in macro_callable.arguments %}
+                    {# Check for both “request” and “depth” #}
+                    {{ macro_callable(widget, request=request, depth=depth + 1) }}
+                {% elif 'request' in macro_callable.arguments %}
+                    {# If the macro only takes “request” #}
+                    {{ macro_callable(widget, request=request) }}
+                {% elif 'depth' in macro_callable.arguments %}
+                    {# If the macro only takes “depth” #}
+                    {{ macro_callable(widget, depth=depth + 1) }}
+                {% else %}
+                    {# Otherwise, only pass “widget” #}
+                    {{ macro_callable(widget) }}
+                {% endif %}
+            {% else %}
+                <div class="alert alert-warning">
+                    <strong>Macro Not Found:</strong>
+                    Could not find “{{ widget.macro_name }}” inside “{{ template_to_use }}”.
+                    <br><small>Widget type: {{ widget_type }}</small>
+                </div>
+            {% endif %}
+
+            {# ==== Otherwise, fall back to “include the template” ==== #}
+        {% else %}
+            {% set widget_templates = widget_templates | default({}) %}
+            {% set registered_widget_types = registered_widget_types | default([]) %}
+
+            {% set template_to_use = widget.template_name %}
+
+            {% if template_to_use %}
+                {% with depth = depth + 1 %}
+                    {% include template_to_use  with context %}
+                {% endwith %}
+            {% endif %}
+
+            {# Warning if nothing matched #}
+            {% if (not widget.template_name)
+                   and (widget_type not in widget_templates)
+                   and (widget_type not in ['raw','error','alert']) %}
+                <div class="alert alert-warning">
+                    <strong>Unknown Widget Type:</strong> {{ widget_type }}
+                    <br><small>Class: {{ widget.__class__.__name__ }}</small>
+                    <br><small>Expected template: {{ template_to_use }}</small>
+                    {% if registered_widget_types %}
+                        <br><small>Available widget types: {{ registered_widget_types | join(', ') }}</small>
+                    {% endif %}
+                    <details class="mt-2">
+                        <summary>Debug Information</summary>
+                        <ul class="small mb-0">
+                            <li><strong>Widget Type:</strong> {{ widget_type }}</li>
+                            <li><strong>Template Name:</strong> {{ widget.template_name | default('Not set') }}</li>
+                            <li><strong>Registry
+                                Check:</strong> {{ 'Found' if widget_type in widget_templates else 'Not found' }}</li>
+                            <li><strong>Template Used:</strong> {{ template_to_use }}</li>
+                        </ul>
+                    </details>
+                </div>
+            {% endif %}
+        {% endif %}
+    {% endif %}
+{% endmacro %}
