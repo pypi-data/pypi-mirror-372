@@ -1,0 +1,81 @@
+---
+Description: OMBU Alarms / Cluster / Database / Alarms
+
+Parameters:
+
+  DatabaseInstance:
+    Description: The instance identifier of the database to watch.
+    Type: String
+
+  DatabaseStorageThreshold:
+    Description: The freespace left threshold in bytes.
+    Type: String
+
+  NotificationArn:
+    Description: The ARN of the SNS topic to send notifications to.
+    Type: String
+
+Resources:
+
+  DatabaseCPUUtilizationHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "database-${DatabaseInstance}-high-cpu-utilization"
+      Namespace: AWS/RDS
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DatabaseInstance
+      MetricName: CPUUtilization
+      ComparisonOperator: GreaterThanThreshold
+      Statistic: Average
+      Threshold: 80
+      Period: 900
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationArn
+      AlarmDescription:
+        !Sub "CPU utilization for database ${DatabaseInstance} is \
+              <currentvalue>%, exceeding the alarm threshold of 80%."
+
+  DatabaseClusterMemoryUtilizationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "database-${DatabaseInstance}-high-memory-utilization"
+      Namespace: AWS/RDS
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DatabaseInstance
+      MetricName: MemoryUtilization
+      ComparisonOperator: GreaterThanThreshold
+      Statistic: Average
+      Threshold: 80
+      Period: 900
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationArn
+      AlarmDescription:
+        !Sub "Memory utilization for database ${DatabaseInstance} is \
+              <currentvalue>%, exceeding the alarm threshold of 75%."
+
+  DatabaseFreeStorageSpaceTooLowAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "database-${DatabaseInstance}-low-storage-space"
+      Namespace: AWS/RDS
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DatabaseInstance
+      MetricName: FreeStorageSpace
+      ComparisonOperator: LessThanThreshold
+      Statistic: Average
+      Threshold: !Ref DatabaseStorageThreshold
+      Period: 900
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationArn
+      AlarmDescription:
+        !Sub "Free storage space for instance ${DatabaseInstance} is \
+              <currentvalue> bytes, below the 15% alarm threshold"
