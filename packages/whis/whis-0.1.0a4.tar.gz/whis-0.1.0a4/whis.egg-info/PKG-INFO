@@ -1,0 +1,126 @@
+Metadata-Version: 2.4
+Name: whis
+Version: 0.1.0a4
+Summary: A tiny Linux command whisperer that suggests shell commands based on natural language.
+Author-email: Milan Slesarik <milslesarik@gmail.com>
+License: The MIT License (MIT)
+        
+        Copyright (c) 2025 Milan Slesarik
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+        THE SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/milano-slesarik/whis
+Project-URL: Bug Tracker, https://github.com/milano-slesarik/whis/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Environment :: Console
+Classifier: Topic :: Utilities
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: openai
+Requires-Dist: ollama
+Requires-Dist: pyperclip
+Requires-Dist: tomli>=1.2.0; python_version < "3.11"
+Provides-Extra: dev
+Requires-Dist: dotenv; extra == "dev"
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: pre-commit<5,>=4.3.0; extra == "dev"
+Dynamic: license-file
+
+# A tiny Linux command whisperer (Alpha version)
+
+
+WHIS is a tiny Linux command whisperer/generator based on LLM, written in Python.
+
+The main goals are:
+- minimal interruption of the workflow
+- fast
+- free and unlimited suggestions (with local LLM)
+- privacy (with local LLM)
+- minimalistic interface
+
+## Alpha version
+Please note that this is an Alpha version and is not ready for production use.<br/>
+So far it's only tested on **Ubuntu 24.04** and **Python 3.12**.
+
+## Usage
+
+# ![Showcase](_showcase.gif)
+
+## Install
+
+1. Install pipx
+   - Follow the official guide: https://github.com/pipxproject/pipx
+2. Install WHIS with pipx
+   - `pipx install whis`
+3. Configure your provider and model by either
+   - a) Config file: `~/.config/whis/config.toml` (or `XDG_CONFIG_HOME/whis/config.toml` if you use a different location)
+     - create/edit the file with:
+       ```toml
+       llm_provider = "ollama"   # e.g. ollama, openai
+       llm_model = "qwen2:7b"    # e.g. qwen2:7b, gpt-4o-mini
+       ```
+   - b) Environment variables (have priority over config file)
+     - `WHIS_LLM_PROVIDER`
+     - `WHIS_LLM_MODEL`
+4. Run `whis` interactive session by running `whis` in terminal
+
+---
+## Todo (business logic)
+
+- one-shot mode: `whis "list mp3 files"` without the interactive session
+- `explain` command that sends request for a brief explanation of the command
+  - should use a new conversation without a previous context
+- `continue` - loads old session and continues refining
+- API support
+  - Gemini
+  - Anthropic
+  - OpenAI-compatible API (LM Studio, LocalAI...)
+- dangerous commands red warning (e.g. `rm` stuff)
+- `whis` inner history - arrow up should get the latest input even after session restart
+- #### interactive configuration
+  - `whis config`
+    - **provider, model**
+    - **action** - copy+paste, copy, maybe execute?
+- other modes (current "quit then paste" feels unreliable)
+  - copy to clipboard
+  - execute directly (dangerous)
+- more dynamic context in system prompt (OS, pwd, git branch, etc.) - some might need user permission
+- command syntax check before suggestion
+- use one specific color for all responses and another for user inputs
+
+## Todo (technical)
+- Python versions support (3.10+)
+- tests
+- consider [click](https://github.com/pallets/click/) for CLI
+- checks
+  - flake8
+  - black
+  - isort
+  - mypy
+- better command pasting (now it uses xdotool and xclip with process forking) using bash functions
+- there seems to be a conflict between `black` and `ruff`
