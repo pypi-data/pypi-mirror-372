@@ -1,0 +1,1 @@
+This projects main focus is to provide some api credentials and pull oneroster data. As of right now I want to make options for downloading as a csv, or just pull in as a list of object instances. 
