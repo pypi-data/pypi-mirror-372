@@ -1,0 +1,123 @@
+# AMCL Python Bindings
+
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org)
+[![C++17](https://img.shields.io/badge/c%2B%2B-17-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B17)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-yellow.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+[![Build](https://github.com/damanikjosh/amcl_python/actions/workflows/build.yml/badge.svg)](https://github.com/damanikjosh/amcl_python/actions/workflows/build.yml)
+
+Python bindings for Adaptive Monte Carlo Localization (AMCL) adapted from the [Nav2 AMCL](https://github.com/ros-navigation/navigation2/tree/main/nav2_amcl).
+
+Vibe-coded with love ❤️
+
+## 📦 Installation
+
+You can install the package using pip:
+```bash
+pip install amcl
+```
+
+Or install from source:
+```bash
+git clone https://github.com/damanikjosh/amcl_python.git
+cd amcl_python
+pip install -e .
+```
+
+## 🎯 Quick Start
+
+### Basic Usage
+
+```python
+import amcl
+import numpy as np
+
+# Create motion and laser parameters
+motion_params = amcl.MotionParameters(
+    alpha1=0.1,
+    alpha2=0.1,
+    alpha3=0.1,
+    alpha4=0.1,
+    alpha5=0.1
+)
+laser_params = amcl.LaserParameters(
+    z_hit=0.5,
+    z_short=0.05,
+    z_max=0.05,
+    z_rand=0.5,
+    sigma_hit=0.2,
+    lambda_short=0.1,
+    chi_outlier=0.05,
+    max_beams=60
+)
+
+# Create AMCL localizer
+localizer = amcl.AMCL(
+    min_particles=100,
+    max_particles=500,
+    alpha_slow=0.001,
+    alpha_fast=0.1,
+    motion_params=motion_params,
+    laser_likelihood_max_dist=2.0,
+    laser_params=laser_params,
+    robot_model_type="differential"
+)
+
+# Create occupancy grid map
+grid_data = [[0 for _ in range(100)] for _ in range(100)]
+grid_data[50][50] = 100  # Add obstacle
+grid = amcl.create_occupancy_grid_from_list(grid_data, 0.1, -5.0, -5.0)
+
+# Set map and initial pose
+localizer.set_map(grid)
+initial_pose = amcl.Vector3D(0.0, 0.0, 0.0)
+initial_cov = amcl.Matrix3D()
+localizer.set_initial_pose(initial_pose, initial_cov)
+
+# Set laser pose relative to robot base
+localizer.set_laser_pose(amcl.Vector3D(0.0, 0.0, 0.0))
+
+# Update with laser scan
+ranges = [[i * 0.1, i * 0.017] for i in range(181)]  # [range, bearing] pairs
+scan = amcl.create_laser_scan_from_list(ranges, 10.0)
+odom_pose = amcl.Vector3D(0.1, 0.0, 0.0)
+
+localizer.update(scan, odom_pose)
+pose = localizer.get_pose_mean()
+print(f"Estimated pose: ({pose.x:.3f}, {pose.y:.3f}, {pose.theta:.3f})")
+```
+
+## 📚 API Reference
+
+### Core Classes
+
+- **`AMCL`**: Main localization class implementing particle filter
+- **`Vector3D`**: 3D vector for poses (x, y, theta)
+- **`Matrix3D`**: 3x3 matrix for covariances  
+- **`LaserScan`**: Laser scanner data structure
+- **`OccupancyGrid`**: 2D occupancy grid map
+- **`MotionParameters`**: Robot motion model parameters
+- **`LaserParameters`**: Laser sensor model parameters
+
+### Utility Functions
+
+- **`create_laser_scan_from_list()`**: Create LaserScan from Python lists
+- **`create_occupancy_grid_from_list()`**: Create OccupancyGrid from Python lists
+- **`get_version()`**: Get library version
+
+### NumPy Integration (amcl_numpy module)
+
+- **`create_occupancy_grid_from_numpy()`**: Create OccupancyGrid from NumPy array
+- **`create_laser_scan_from_numpy()`**: Create LaserScan from NumPy array  
+- **`occupancy_grid_to_numpy()`**: Convert OccupancyGrid to NumPy array
+- **`laser_scan_to_numpy()`**: Convert LaserScan to NumPy array
+
+## 📄 License
+
+This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Nav2 Team**: Original AMCL implementation
+- **ROS Community**: Foundational robotics algorithms
+- **nanobind**: Excellent Python binding framework
+- **Claude Sonnet 4**: For helping with code generation
