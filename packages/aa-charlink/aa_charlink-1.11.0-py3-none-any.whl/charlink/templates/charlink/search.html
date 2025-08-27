@@ -1,0 +1,64 @@
+{% extends 'charlink/base.html' %}
+{% load i18n %}
+
+{% block page_title %}{% translate "Charlink Search" %}{% endblock page_title %}
+
+{% block charlink_page_header %}<h1 class="page-header text-center">{% translate "Links Audit" %}</h1>{% endblock charlink_page_header %}
+
+{% block extra_css %}
+    {% include "bundles/datatables-css-bs5.html" %}
+{% endblock %}
+
+{% block charlink_content %}
+    <div class="card">
+        <div class="card-header text-center">
+            <h3 class="card-title">{% translate "Search results" %}</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-aa table-hover" id="tableCharacters">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th class="text-center">{% translate "Character" %}</th>
+                            <th class="text-center">{% translate "Corporation" %}</th>
+                            <th class="text-center">{% translate "Main Character" %}</th>
+                            <th class="text-center">{% translate "Main Corporation" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for character in characters %}
+                            <tr>
+                                <td><img src="{{ character.portrait_url }}" class="rounded" alt="{{ character }}"></td>
+                                <td class="text-center">{{ character }}</td>
+                                <td class="text-center">{{ character.corporation_name }}</td>
+                                <td class="text-center">
+                                    {% if character.character_ownership.user.profile.main_character %}
+                                        <a href="{% url 'charlink:audit_user' character.character_ownership.user_id %}">{{ character.character_ownership.user.profile.main_character }} <i class="fas fa-external-link-alt fa-xs"></i></a>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ character.character_ownership.user.profile.main_character.corporation_name }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock charlink_content %}
+
+{% block extra_javascript %}
+    {% include "bundles/datatables-js-bs5.html" %}
+{% endblock extra_javascript %}
+
+{% block extra_script %}
+    $(document).ready(function() {
+        $('#tableCharacters').DataTable({
+            columnDefs: [
+                { orderable: false, targets: 0 },
+            ],
+            order: [],
+            searching: false
+        });
+    });
+{% endblock extra_script %}
