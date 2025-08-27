@@ -1,0 +1,105 @@
+name: Publish release to PyPi
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  check-versions:
+    name: Check package versions on PyPi
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install CURL and jq
+        run: sudo apt install curl jq -y
+
+      - name: Get package versions on PyPi
+        run: |
+          curl -s https://test.pypi.org/pypi/learning-br/json | jq -r '.releases | keys[]' > pypi-versions.txt
+          echo "Versions on Pypi:"
+          cat pypi-versions.txt
+
+      - name: Get package version in pyproject.toml
+        run: |
+          grep 'version' pyproject.toml | cut -d'=' -f2 | tr -d ' "' > pyproject-version.txt
+          echo "Last version in pyproject.toml:"
+          cat pyproject-version.txt
+      
+      - name: Check availability
+        run: |
+          if grep -Fxq "$(cat pyproject-version.txt)" pypi-versions.txt; then
+            echo "The version $PYPROJECT_VERSION already exists on PyPi, please use a version number superior to the latest version on PyPi."
+            exit 1
+          fi
+        
+      - name: Delete the invalid release
+        if: failure()
+        run: |
+          export TAG=${{ github.event.release.tag_name }}
+          echo "The invalid release ${{ github.event.release.name }} will be deleted with its tag"
+          gh release delete "$TAG" --yes
+          git push origin --delete refs/tags/$TAG
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: build
+    needs: check-versions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the source ode
+        uses: actions/checkout@v3 
+
+      - name: Setup the Python environment
+        uses: actions/setup-python@v5
+        with:
+            python-version: "3.11"
+
+      - name: Build the universal wheel
+        run: |
+          python -m pip install hatchling
+          python -m hatchling build
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: dist/
+  
+  publish:
+    name: publish
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    environment:
+      name: pypi
+      url: https://pypi.org/p/appabuild
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist/
+
+      - name: Publish distribution package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+          packages-dir: dist
+          password: ${{ secrets.PYPI_TOKEN }}
+
+  update-doc:
+    name: update-doc
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Send notification to update the documentation
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.DOC_PAT }}
+          repository: appalca/appalca.github.io
+          event-type: update_documentation
