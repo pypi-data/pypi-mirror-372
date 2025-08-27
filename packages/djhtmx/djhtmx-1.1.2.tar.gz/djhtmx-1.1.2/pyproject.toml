@@ -1,0 +1,246 @@
+[project]
+name = "djhtmx"
+dynamic = ["version"]
+description = "Interactive UI Components for Django using HTMX"
+authors = [
+    { name = "Eddy Ernesto del Valle Pino", email = "eddy@edelvalle.me" },
+]
+keywords = [
+    "django",
+    "htmx",
+    "liveview",
+    "real-time",
+    "websockets",
+    "spa",
+    "reactive",
+]
+
+readme = "README.md"
+license = "MIT"
+requires-python = ">= 3.11"
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 4.1",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+   "django>=4.1",
+   "pydantic>=2,<3",
+   "xotl.tools>=3.1.1",
+   "orjson>=3.10.7",
+   "channels>=4.1.0",
+   "uuid6>=2024.7.10",
+   "redis[hiredis]>=5.0.8",
+   "mmh3>=5.1.0",
+]
+
+
+[project.optional-dependencies]
+sentry = ["sentry_sdk>=2.19"]
+logfire = ["logfire[django]>=3.8.0"]
+
+
+[dependency-groups]
+cli = [
+   "click>=8.1.3, <8.2",
+   "django-click>=2.3.0,<3",
+]
+test = [
+   "lxml>=5.3.0",
+   "cssselect>=1.2.0",
+   "coverage[toml]>=7.6.9",
+]
+typing = [
+    "basedpyright==1.28.1",
+    "django-types>=0.22.0",
+    "types-lxml>=2024.11.8",
+]
+lint = [
+    "ruff==0.11.*",
+    "djlint~=1.34.1",
+]
+devtools = [
+    "ipython~=8.26.0",
+    "whitenoise~=6.7.0",
+    "ipdb~=0.13.13",
+    "django-extensions~=3.2.3",
+    "uvicorn[standard]>=0.30.6",
+    "pygments>=2.18.0",
+]
+dev = [
+  { include-group = "cli" },
+  { include-group = "typing" },
+  { include-group = "test" },
+  { include-group = "lint" },
+  { include-group = "devtools" },
+]
+
+[project.urls]
+Homepage = "https://github.com/edelvalle/djhtmx"
+Documentation = "https://github.com/edelvalle/djhtmx#readme"
+Repository = "https://github.com/edelvalle/djhtmx.git"
+Issues = "https://github.com/edelvalle/djhtmx/issues"
+Changelog = "https://github.com/edelvalle/djhtmx/blob/master/CHANGELOG.md"
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/djhtmx/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src/djhtmx",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/MANIFEST.in",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/djhtmx"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+fix = true
+
+
+[tool.ruff.lint]
+preview = true
+ignore = [
+  "E501", # line too long
+  "E741", # do not use variables named ‘l’, ‘O’, or ‘I’
+  "B011",   # 'assert False' is fine.
+  "ISC001", # {name} should be imported as {asname}
+  "SIM300", # rewrite `4 < rating` as `raging > 4` (this is done to show that 4 is less than rating)
+  "SIM905", # [*] Consider using a list literal instead of `'a b c d....'.split`, (short code)
+  "PLC0415", # import should be at the top of the file, (we have circular imports we need this)
+  "S308",   # It's ok to use mark_safe
+  "S101",   # Do not user asserts (we need assertions to check invariant conditions)
+  "S311", # Use pseudo random number generators (we don't do cryptography, I hope)
+  "TRY003", # No long messages in exception message (it's fine (╯°□°）╯︵ ┻━┻)
+  "C901", # Complex functions
+]
+select = [
+  "C",
+  "E",
+  "F",
+  "W",
+  "B",
+  "I",
+  "INT",
+  "ISC",    # Implicit string concat
+  "G",      # f-string, %, and format in loggers is not logger-friendly.
+  "S",      # Bandit (security stuff)
+  "SIM",    # Simplifications
+  "PLC",    # Pylint rule
+  "PLE",    # Basic errors
+  "UP",     # Py upgrade
+  "FURB",   # Refurb
+  "RUF",    # Ruff specific rules
+  "TRY",    # Tryceraptos (Error handling)
+  "DTZ005", # avoid usage of datetime.now()
+  "W191",   # Indentation contains tabs
+  "W605",   # Invalid escape sequence
+  "W291",   # Trailing whitespace
+  "W292",   # No newline at end of file
+  "W293",   # Blank line contains whitespace
+  "TID251", # enable: tool.ruff.lint.flake8-tidy-imports.banned-api
+  "DTZ003", # Disable utcnow: https://docs.astral.sh/ruff/rules/call-datetime-utcnow/#call-datetime-utcnow-dtz003
+]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"django.utils.functional.cached_property".msg = "Use `from functools import cached_property` instead"
+
+[tool.ruff.lint.per-file-ignores]
+# PLC2801: calling `__enter__()` and `__exit__()` is needed in some test setups
+# S105: hardcoded passwords for testing
+# S106: hardcoded password argument
+# RUF012: Mutable class attributes should be annotated with `typing.ClassVar`
+# RUF029: async functions without await are needed for testing async middleware compatibility
+# RUF039: regex in migrations are translated from raw into string
+"**/tests.py" = ["PLC2801", "S105", "S106", "RUF029"]
+"**/tests/**" = ["PLC2801", "S105", "S106", "RUF029"]
+"**/models.py" = ["RUF012"]
+"**/models/**" = ["RUF012"]
+"**/migrations/**" = ["RUF012", "RUF039"]
+
+
+[tool.ruff.format]
+preview = true
+
+[tool.basedpyright]
+typeCheckingMode="standard"
+reportIncompatibleMethodOverride = false
+reportIncompatibleVariableOverride = false
+strictParameterNoneValue = false
+reportMatchNotExhaustive = "error"
+exclude = [
+  "**/static",
+  "**/migrations",
+  "**/__pycache__",
+]
+
+[tool.djlint]
+# Here we ignore
+# H006: Img tag should have height and width attributes
+# H012: There should be no spaces around attribute =. (alpine js bindings)
+# H021: Inline styles.
+# H031: Metadata in html tag.
+ignore = "H021,H006,H031,H012"
+indent = 2
+profile="django"
+blank_line_after_tag="load,extends,endblock"
+close_void_tags=true
+
+[tool.coverage.run]
+branch = false
+
+[tool.coverage.report]
+skip_covered = false
+show_missing = true
+exclude_also = [
+  "pragma: no cover",
+  "case _ as unreachable:",
+  "if .*TYPE_CHECKING:",
+  "assert False",
+  # "def __repr__",
+  # "def __hash__",
+  # "def __str__",
+  # "raise AssertionError",
+  # "raise NotImplementedError",
+  # "return NotImplemented",
+  # "if __name__ == .__main__.:",
+  # "@(abc\\.)?abstractmethod",
+  # "class .*\\bProtocol\\):",
+  # "if ((t|typing)\\.)?TYPE_CHECKING:",
+  # "@((t|typing)\\.)?overload",
+  # "((t|typing)\\.)?assert_never",
+]
+
+omit = [
+    "**/djhtmx/tracing.py",
+    "**/djhtmx/consumer.py",
+    "fision/*",
+    "manage.py",
+]
