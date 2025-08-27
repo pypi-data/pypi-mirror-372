@@ -1,0 +1,42 @@
+{# templates/widgets/input/button_list.html.j2 #}
+{% from "widgets/partials/card_header.html.j2" import render_card_header %}
+
+{% from "widgets/widget_renderer.html.j2" import render_widget %}
+
+
+{% macro render_button_list(widget, request, depth=0) %}
+
+    <div class="card" id="{{ widget.widget_id }}">
+        {{ render_card_header(widget) }}
+
+        {# CARD BODY: starts expanded (“show”) and is collapsible #}
+        <div id="collapse-{{ widget.widget_id }}" class="card-body collapse show p-2">
+            {% if widget.buttons %}
+                <div class="{{ widget.list_classes }}"
+                     {% if widget.style == 'group' %}role="group"
+                     aria-label="{{ widget.display_title or 'Button group' }}"{% endif %}>
+                    {% for button in widget.buttons %}
+                        {# Try rendering via universal_widget_renderer; if that fails, fall back #}
+                        {% set button_html = render_widget(button, request, (current_depth|default(0) + 1)) %}
+
+                        {# Now place button_html in the chosen layout #}
+                        {% if style == 'group' %}
+                            {{ button_html }}
+                        {% elif layout == "horizontal" %}
+                            <div class="button-list-item">
+                                {{ button_html }}
+                            </div>
+                        {% else %}
+                            {{ button_html }}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="button-list-empty text-muted text-center py-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <small>No buttons available</small>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endmacro %}
