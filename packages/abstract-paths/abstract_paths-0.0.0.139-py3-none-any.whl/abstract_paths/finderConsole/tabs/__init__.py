@@ -1,0 +1,8 @@
+
+from ...file_filtering.req import call_for_all_tabs
+call_for_all_tabs()
+from .diffParserTab import diffParserTab
+from .directoryMapTab import directoryMapTab
+from .extractImportsTab import extractImportsTab
+from .finderTab import finderTab
+from .collectFilesTab import collectFilesTab
