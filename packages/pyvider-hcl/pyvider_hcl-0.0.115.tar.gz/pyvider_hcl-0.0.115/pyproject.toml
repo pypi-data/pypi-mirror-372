@@ -1,0 +1,153 @@
+#
+# pyvider-hcl/pyproject.toml
+#
+
+[project]
+name = "pyvider-hcl"
+description = "Pyvider HCL: A wrapper for python-hcl2 integrating with Pyvider's Cty type system."
+version = "0.0.115"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Tim Perkins", email = "code@tim.life" },
+]
+maintainers = [
+    { name = "provide.io", email = "code@provide.io" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "attrs>=25.3.0",
+    "python-hcl2>=7.2.1",
+    #"pyvider-cty",
+    "pyvider>=0.0.0.post0",
+    "pyvider-cty>=0.0.113",
+    "pyvider-telemetry",
+    "regex>=2024.11.6",
+]
+
+[dependency-groups]
+dev = [
+    "bandit>=1.8.3",
+    "hypothesis>=1.8.3",
+    "mypy>=1.16.0",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest-benchmark>=5.1.0",
+    "pytest-cov>=6.1.1",
+    "pytest-xdist>=3.7.0",
+    "ruff>=0.9.0",
+    "ty>=0.0.1a8",
+    "uv>=0.7.12",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"} # Specifies that packages are under src
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true # Important for pyvider.hcl as a namespace package
+
+################################################################################
+# Pytest Configuration
+################################################################################
+
+[tool.pytest.ini_options]
+log_cli = true
+asyncio_mode = "auto"
+pythonpath = ["src", ".",]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore:cannot collect test class.*:pytest.PytestCollectionWarning",
+]
+norecursedirs = [
+    ".git",
+    "build",
+    "dist",
+    "*.egg-info",
+    ".venv",
+    "htmlcov",
+    ".hypothesis",
+]
+addopts = "-ra -q --color=yes"
+
+# ---------------------------------------------------------------------------- #
+# ruff configuration
+# ---------------------------------------------------------------------------- #
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "ANN", "B", "C90", "SIM", "PTH", "RUF"]
+ignore = ["ANN401", "B008", "E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pyvider", "tests"]
+force-sort-within-sections = true
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# ---------------------------------------------------------------------------- #
+# mypy configuration
+# ---------------------------------------------------------------------------- #
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+strict = true
+pretty = true
+show_error_codes = true
+show_column_numbers = true
+warn_unused_ignores = true
+warn_unused_configs = true
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = ["hcl2.*", "pytest.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------- #
+# coverage configuration
+# ---------------------------------------------------------------------------- #
+
+[tool.coverage.run]
+source = ["pyvider.hcl"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "def __repr__",
+    "def __str__",
+    "pass",
+]
