@@ -1,0 +1,214 @@
+"""
+DO NOT MODIFY THIS FILE. {# Unless you see this comment, in which case you are modifying the template. #} It is automatically generated and changes will be over-written
+on the next generation.
+
+This is the Server for the {{stinger.name}} interface.
+"""
+
+import json
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
+from typing import Callable, Dict, Any, Optional, List
+from connection import BrokerConnection
+from method_codes import *
+import {{stinger.get_enum_module_name()}} as {{stinger.get_enum_module_alias()}}
+{%macro method_type_annotation(method) %}Callable[[{%if method.arg_list | length > 0%}{%for arg in method.arg_list%}{{arg.python_type}}{%if not loop.last%}, {%endif%}{%endfor%}{%else%}None{%endif%}], {{method.return_value_python_type}}]{%endmacro%}
+
+class {{stinger.python.server_class_name}}:
+
+    def __init__(self, connection: BrokerConnection):
+        self._logger = logging.getLogger('{{stinger.python.server_class_name}}')
+        self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("Initializing {{stinger.python.server_class_name}}")
+        self._conn = connection
+        self._conn.set_message_callback(self._receive_message)
+        self._conn.set_last_will(topic="{{stinger.interface_info.0}}", payload=None, qos=1, retain=True)
+        {%for prop_name, prop_spec in stinger.properties.items()-%}
+        self._property_{{prop_name}} = None
+        self._conn.subscribe("{{prop_spec.update_topic}}")
+        self.changed_value_callback_for_{{pprop_name}} = None
+        self._publish_interface_info()
+        {%endfor-%}
+        {%-for method in stinger.methods.values()%}
+        self._conn.subscribe("{{method.topic}}")
+        {%endfor-%}
+        {%for method_name, method in stinger.methods.items()-%}
+        self._{{method_name|snake_case}}_method_handler: Optional[{{method_type_annotation(method)}}] = None
+        {%endfor%}
+    
+    def _receive_message(self, topic: str, payload: str, properties: Dict[str, Any]):
+        """ This is the callback that is called whenever any message is received on a subscribed topic.
+        """
+        self._logger.debug("Received message to %s", topic)
+        {%if stinger.methods | length > 0 -%}
+        {%for method_name, method in stinger.methods.items()-%}
+        {%if not loop.first%}el{%endif%}if self._conn.is_topic_sub(topic, "{{method.topic}}"):
+            try:
+                payload_obj = json.loads(payload)
+            except json.decoder.JSONDecodeError:
+                self._logger.warning("Invalid JSON payload received at topic '%s'", topic)
+            else:
+                self._process_{{method_name | snake_case}}_call(topic, payload_obj, properties)
+        {%endfor%}
+        {%-else%}pass{%-endif%}
+
+    def _publish_interface_info(self):
+        self._conn.publish("{{stinger.interface_info.0}}", '''{{stinger.interface_info.1 | tojson}}''', qos=1, retain=True)
+
+    {%for sig_name, sig in stinger.signals.items()-%}
+    def emit_{{sig_name}}(self, {%for arg in sig.arg_list%}{{arg.name}}: {{arg.python_type}}{%if not loop.last%}, {%endif%}{%endfor%}):
+        """ Server application code should call this method to emit the '{{sig_name}}' signal.
+        """
+        {%-for arg in sig.arg_list%}
+        if not isinstance({{arg.name}}, {{arg.python_class}}){%if arg.optional%} and {{arg.name}} is not None{%endif%}:
+            raise ValueError(f"The '{{arg.name}}' value must be {{arg.python_type}}.")
+        {%-endfor%}
+        
+        payload = { {%-for arg in sig.arg_list%}
+            {%if arg.arg_type.name.lower() == 'primitive'%}"{{arg.name}}": {{arg.python_type}}({{arg.name}}){%if arg.optional%} if {{arg.name}} is not None else None{%endif%},{%endif-%}
+            {%if arg.arg_type.name.lower() == 'enum'%}"{{arg.name}}": {{arg.python_class}}({{arg.name}}).value{%if arg.optional%} if {{arg.name}} is not None else None{%endif%},{%endif%}{%endfor%}
+        }
+        self._conn.publish("{{sig.topic}}", json.dumps(payload), qos=1, retain=False)
+
+    {%endfor%}
+
+    {%for method_name, method in stinger.methods.items()%}
+    def handle_{{method_name | snake_case}}(self, handler: {{method_type_annotation(method)}}):
+        """ This is a decorator to decorate a method that will handle the '{{method_name}}' method calls.
+        """
+        if self._{{method_name|snake_case}}_method_handler is None and handler is not None:
+            self._{{method_name|snake_case}}_method_handler = handler
+        else:
+            raise Exception("Method handler already set")
+
+    def _process_{{method_name | snake_case}}_call(self, topic: str, payload: Dict[str, Any], properties: Dict[str, Any]):
+        """ This processes a call to the '{{method_name}}' method.  It deserializes the payload to find the method arguments,
+        then calls the method handler with those arguments.  It then builds and serializes a response and publishes it to the response topic.
+        """
+        correlation_id = properties.get('CorrelationData') # type: Optional[bytes]
+        response_topic = properties.get('ResponseTopic') # type: Optional[str]
+        self._logger.info("Correlation Data %s", correlation_id)
+        if self._{{method_name|snake_case}}_method_handler is not None:
+            method_args = [] # type: List[Any]
+            {%for arg in method.arg_list -%}
+            if "{{arg.name}}" in payload:
+                if not isinstance(payload["{{arg.name}}"], {{arg.python_class}}){%if arg.optional%} or {{arg.name}} is None{%endif%}:
+                    self._logger.warning("The '{{arg.name}}' property in the payload to '%s' wasn't the correct type.  It should have been {{arg.python_type}}.", topic)
+                    # TODO: return an error via MQTT
+                    return
+                else:
+                    method_args.append(payload["{{arg.name}}"])
+            else:
+                {%if arg.optional%}
+                method_args.append(None)
+                {%else%}
+                self._logger.warning("The '{{arg.name}}' property in the payload to '%s' wasn't present", topic)
+                # TODO: return an error via MQTT
+                return
+                {%endif%}
+            {%endfor%}
+            
+            if response_topic is not None:
+                return_json = ""
+                debug_msg = None # type: Optional[str]
+                try:
+                    return_struct = self._{{method_name|snake_case}}_method_handler(*method_args)
+                    self._logger.debug("Return value is %s", return_struct)
+                    {%if method.return_value is false%}
+                        return_json = "{}"
+                    {%else%}
+                    if return_struct is not None:
+                        {%-if method.return_value_type == "primitive" %}
+                        return_json = json.dumps({
+                            "{{method.return_value_property_name}}": return_struct
+                        })
+                        {%-elif method.return_value_type == "enum" %}
+                        return_json = json.dumps({
+                            "{{method.return_value_property_name}}": return_struct.value
+                        })
+                        {%-elif method.return_value_type == "struct" %}
+                        return_json = json.dumps({
+                            "{{method.return_value_property_name}}": return_struct.model_dump_json()
+                        })
+                        {%else%}                        
+                        return_json = return_struct.model_dump_json()
+                        {%endif%}
+                    {%-endif%}
+                except Exception as e:
+                    self._logger.exception("Exception while handling {{method_name}}", exc_info=e)
+                    return_code = MethodResultCode.SERVER_ERROR
+                    debug_msg = str(e)
+                else:
+                    return_code = MethodResultCode.SUCCESS
+                    debug_msg = None
+
+                self._conn.publish(response_topic, return_json, qos=1, retain=False, 
+                    correlation_id=correlation_id, return_value=return_code, debug_info=debug_msg)
+    {%endfor%}
+
+
+class {{stinger.python.server_class_name}}Builder:
+    """
+    This is a builder for the {{stinger.python.server_class_name}}.  It is used to create a server with the desired parameters.
+    """
+
+    def __init__(self, connection: BrokerConnection):
+        self._conn = connection
+        {%for method_name, method in stinger.methods.items()%}
+        self._{{method_name|snake_case}}_method_handler: Optional[{{method_type_annotation(method)}}] = None
+        {%-endfor%}
+    {%for method_name, method in stinger.methods.items()%}
+    def handle_{{method_name | snake_case}}(self, handler: {{method_type_annotation(method)}}):
+        if self._{{method_name|snake_case}}_method_handler is None and handler is not None:
+            self._{{method_name|snake_case}}_method_handler = handler
+        else:
+            raise Exception("Method handler already set")
+    {%endfor%}
+    def build(self) -> {{stinger.python.server_class_name}}:
+        new_server = {{stinger.python.server_class_name}}(self._conn)
+        {%for method_name, method in stinger.methods.items()%}
+        if self._{{method_name|snake_case}}_method_handler is not None:
+            new_server.handle_{{method_name|snake_case}}(self._{{method_name|snake_case}}_method_handler)
+        {%-endfor%}
+        return new_server
+
+if __name__ == '__main__':
+    """
+    This shows an example on how to run the code.  Ideally, your app should do something similar, but use the methods in
+    a more meaningful way.
+    """
+    from time import sleep
+    import signal
+    {%set broker = stinger.get_example_broker()%}
+    from connection import {{broker.class_name}}
+
+    conn = {{broker.class_name}}({%if broker.hostname is none%}'localhost', 1883{%endif%})
+    server = {{stinger.python.server_class_name}}(conn)
+
+    {%for method_name, method in stinger.methods.items()%}
+    @server.handle_{{method_name | snake_case}} 
+    def {{method_name | snake_case}}({%for arg in method.arg_list%}{{arg.name}}: {{arg.python_type}}{%if not loop.last%}, {%endif%}{%endfor%}) -> {{method.return_value_python_type}}:
+        """ This is an example handler for the '{{method_name}}' method.  """
+        print(f"Running {{method_name | snake_case}}'({%for arg in method.arg_list %}{ {{-arg.name-}} }{%if not loop.last%}, {%endif%}{%endfor%})'")
+        return {{method.get_return_value_random_example_value('python')}}
+    {%endfor%}
+
+    print("Ctrl-C will stop the program.")
+
+    while True:
+        try:
+            {%for sig_name, sig in stinger.signals.items()-%}
+            server.emit_{{sig_name}}({%for arg in sig.arg_list%}{{arg.get_random_example_value()}}{%if not loop.last%}, {%endif%}{%endfor%})
+            {%endfor%}
+            sleep(4)
+            {%for sig_name, sig in stinger.signals.items()-%}
+            server.emit_{{sig_name}}({%for arg in sig.arg_list%}{{arg.name}}={{arg.get_random_example_value()}}{%if not loop.last%}, {%endif%}{%endfor%})
+            {%endfor%}
+            sleep(6)
+        except KeyboardInterrupt:
+            break
+
+
+    signal.pause()
