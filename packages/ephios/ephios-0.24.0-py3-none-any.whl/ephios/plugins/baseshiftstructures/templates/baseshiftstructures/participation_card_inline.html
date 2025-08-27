@@ -1,0 +1,72 @@
+{% load guardian_tags %}
+{% load user_extras %}
+{% load i18n %}
+
+{% if participation.show_participant_data %}
+
+    <div id="participant-popover-title-{{ participation.id }}" class="d-none">
+        <span class="text-dark pe-1">{{ participation.participant.icon }}</span>
+        {{ participation.participant }}
+    </div>
+
+    <div id="participant-popover-content-{{ participation.id }}" class="d-none">
+        {% if participation.individual_start_time or participation.individual_end_time %}
+            <div class="mb-3">
+                <i class="fas fa-user-clock"></i>
+                <strong>{{ participation.get_time_display }}</strong>
+            </div>
+        {% endif %}
+        {% if participation.comments.exists %}
+            {% for comment in participation.comments.all %}
+                {% if show_comments or comment.visible_for == 2 or participation == own_participation and comment.visible_for == 1 %}
+                    <div class="mb-3">
+                        <i class="fas fa-comment"></i>
+                        <div class="d-inline">
+                            <span><b>{{ comment.author }}</b></span><br />
+                            <span>{{ comment.text }}</span>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        <div>
+            {% if participation.participant.is_minor %}
+                <span class="badge bg-warning">{% translate "Minor" %}</span>
+            {% endif %}
+            {% for abbreviation in participation.participant.qualifications|qualifications_to_essential_abbreviations %}
+                <span class='badge bg-secondary text-dark'>{{ abbreviation }}</span>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+
+<a class="badge badge-participant
+          {% if participation.state == participation.States.CONFIRMED %}bg-secondary text-dark{% else %}bg-light text-body-secondary{% endif %}
+          {% if participation.participant.is_minor %}participation-card-minor{% endif %}
+         "
+   tabindex="0"
+   {% if participation.show_participant_data %}
+       data-bs-toggle="popover"
+       data-bs-trigger="hover"
+       data-bs-placement="bottom"
+       data-html="true"
+       data-bs-title-ref="#participant-popover-title-{{ participation.id }}"
+       data-bs-content-ref="#participant-popover-content-{{ participation.id }}"
+   {% endif %}
+>
+    {% if participation.state == participation.States.CONFIRMED %}
+        {% if participation.has_customized_signup %}
+            <i class="fas fa-cog"></i>
+        {% else %}
+            <i class="fas fa-check"></i>
+        {% endif %}
+    {% else %}
+        <i class="far fa-clock"></i>
+    {% endif %}
+    {% if  participation.show_participant_data %}
+        {{ participation.participant }}
+    {% else %}
+        <span class="participant-anon">{% translate "Redacted Name" context "blurred participant name" %}</span>
+    {% endif %}
+</a>
