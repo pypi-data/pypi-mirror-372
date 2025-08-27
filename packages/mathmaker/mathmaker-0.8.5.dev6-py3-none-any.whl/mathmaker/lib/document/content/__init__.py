@@ -1,0 +1,98 @@
+# -*- coding: utf-8 -*-
+
+# Mathmaker creates automatically maths exercises sheets
+# with their answers
+# Copyright 2006-2017 Nicolas Hainaux <nh.techn@gmail.com>
+
+# This file is part of Mathmaker.
+
+# Mathmaker is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# any later version.
+
+# Mathmaker is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Mathmaker; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+"""All possible questions."""
+from .algebra import expand_simple, expand_double
+from .calculation import order_of_operations, multi_direct
+from .calculation import multi_reversed, multi_hole, divi_direct, multi_clever
+from .calculation import addi_direct, subtr_direct, digitplace_direct
+from .calculation import digitplace_reversed
+from .calculation import digitplace_numberof
+from .calculation import estimation_of_number
+from .calculation import round_number
+from .calculation import vocabulary_simple_part_of_a_number
+from .calculation import vocabulary_simple_multiple_of_a_number
+from .calculation import vocabulary_multi, vocabulary_divi
+from .calculation import vocabulary_addi, vocabulary_subtr
+from .calculation import fraction_of_a_rectangle, fraction_of_a_linesegment
+from .calculation import fraction_of_a_quantity
+from .calculation import addi_hole, subtr_hole
+from .calculation import units_conversion, time_units_conversion
+from .calculation import decimal_numerals
+from .calculation import percent_direct, divi_euclidean
+from .calculation import mini_pb_proportionality, mini_pb_time
+from .calculation import numeric_expansion, numeric_factorization
+from .calculation import divisibility_vocabulary
+from .calculation import divisibility_rule
+from .calculation import fraction_simplification
+from .calculation import fractions_conversions
+from .calculation import read_abscissa
+from .calculation import read_coordinates
+from .calculation import proportionality_coefficient
+from .calculation import proportionality_findout
+from .calculation import proportionality_fill
+from .calculation import spreadsheet_formula
+from .calculation import evaluate_expression
+from .calculation import compare_signed_numbers
+from .geometry import trigonometry_calculate_length
+from .geometry import trigonometry_calculate_angle
+from .geometry import trigonometry_formula
+from .geometry import trigonometry_vocabulary
+from .geometry import area_rectangle, perimeter_rectangle, perimeter_polygon
+from .geometry import area_righttriangle, perimeter_righttriangle
+from .geometry import rectangle_length_or_width
+from .geometry import volume_rightcuboid
+from .geometry import pythagorean_theorem, converse_of_pythagorean_theorem
+from .geometry import contrapositive_of_pythagorean_theorem
+from .geometry import angle_measure, angle_construction
+
+__all__ = [expand_simple, expand_double,
+           multi_direct, multi_reversed, multi_hole, divi_direct,
+           multi_clever,
+           addi_direct, subtr_direct, digitplace_direct,
+           digitplace_reversed, estimation_of_number,
+           digitplace_numberof, round_number,
+           vocabulary_simple_part_of_a_number,
+           vocabulary_simple_multiple_of_a_number, vocabulary_multi,
+           vocabulary_divi, vocabulary_addi, vocabulary_subtr,
+           fraction_of_a_rectangle, fraction_of_a_linesegment,
+           fraction_of_a_quantity,
+           order_of_operations, read_abscissa, read_coordinates,
+           addi_hole, subtr_hole,
+           units_conversion, time_units_conversion, decimal_numerals,
+           percent_direct, divi_euclidean, mini_pb_proportionality,
+           mini_pb_time, compare_signed_numbers,
+           numeric_expansion, numeric_factorization,
+           divisibility_vocabulary, divisibility_rule,
+           fraction_simplification, fractions_conversions,
+           proportionality_coefficient, proportionality_findout,
+           proportionality_fill, spreadsheet_formula, evaluate_expression,
+           area_rectangle, perimeter_rectangle, perimeter_polygon,
+           rectangle_length_or_width, area_righttriangle,
+           perimeter_righttriangle, volume_rightcuboid,
+           trigonometry_calculate_length,
+           trigonometry_calculate_angle,
+           trigonometry_formula,
+           trigonometry_vocabulary,
+           pythagorean_theorem, converse_of_pythagorean_theorem,
+           contrapositive_of_pythagorean_theorem,
+           angle_measure, angle_construction]
