@@ -1,0 +1,178 @@
+## gig-lib
+
+Pequeña librería para FastAPI que centraliza la validación de JWT y verificación de roles/acceso para el ecosistema GIG. Expone dependencias listas para usar en rutas de FastAPI, utilidades para obtener datos del usuario y helpers para restricciones por rol o por aplicación.
+
+- **Lenguaje**: Python 3.12+
+- **Framework**: FastAPI / Starlette
+- **Nombre del paquete (PyPI)**: `gig-lib`
+
+---
+
+## Instalación
+
+```bash
+pip install gig-lib
+```
+
+Para instalar desde TestPyPI (opcional):
+```bash
+python -m pip install --index-url https://test.pypi.org/simple/ \
+  --extra-index-url https://pypi.org/simple gig-lib
+```
+
+---
+
+## Configuración
+Esta librería usa variables de entorno mediante `pydantic-settings`. Debes proveer:
+- **public_key_path**: ruta absoluta al fichero PEM de la clave pública para verificar el JWT
+- **algorithm**: algoritmo JWT (por ejemplo, `RS256`)
+
+Puedes usar un fichero `.env` en la raíz del proyecto:
+```bash
+public_key_path="C:\\ruta\\a\\public_key.pem"  # Windows
+algorithm="RS256"
+```
+O en Linux/Mac:
+```bash
+public_key_path="/etc/keys/public_key.pem"
+algorithm="RS256"
+```
+
+La clave pública se lee una sola vez y se cachea. Si la ruta no existe, se lanzará una excepción en el arranque.
+
+---
+
+## Uso rápido con FastAPI
+Funciones principales expuestas por `gig-lib`:
+- `decode_jwt`
+- `verify_superuser`, `verify_superadmin_gig`, `verify_superuser_gig`, `verify_access_gig`, `verify_supers`
+- `require_role([...])`, `require_app("GIG")`
+- `user_name(correo)`, `user_id`, `verify_user(correo)`
+
+Ejemplos:
+```python
+from fastapi import FastAPI, Depends
+from gig import (
+    decode_jwt, require_role, require_app,
+    verify_superuser_gig, user_id, user_name, verify_user
+)
+
+app = FastAPI()
+
+# 1) Proteger y acceder al payload
+@app.get("/payload")
+def payload_info(payload: dict = Depends(decode_jwt)):
+    return payload
+
+# 2) Restringir por rol específico
+@app.get("/solo-admin", dependencies=[require_role(["SUPERADMIN"])])
+def admin_only():
+    return {"ok": True}
+
+# 3) Restringir a la app GIG (SUPERUSER o SUPERADMIN dentro de GIG)
+@app.get("/gig-access", dependencies=[require_app("GIG")])
+def gig_access():
+    return {"ok": True}
+
+# 4) Dependencia específica de SUPERUSER en GIG
+@app.get("/gig-superuser", dependencies=[Depends(verify_superuser_gig)])
+def gig_superuser():
+    return {"ok": True}
+
+# 5) Obtener idUsuario desde el JWT
+@app.get("/me")
+def me(id_usuario: int = Depends(user_id)):
+    return {"idUsuario": id_usuario}
+```
+
+Utilidades contra el servicio externo (timeouts y errores ya manejados internamente):
+```python
+# Obtener nombre en Azure
+nombre = user_name("usuario@dominio.com")
+
+# Verificar si existe usuario en Azure
+existe = verify_user("usuario@dominio.com")
+```
+
+---
+
+## Estructura esperada del JWT
+Las validaciones de roles usan campos del payload como `usuario_meta` con una estructura similar a:
+```json
+{
+  "idUsuario": 123,
+  "usuario_meta": [
+    {
+      "nombre-app": "GIG",
+      "app-meta": [
+        {
+          "empresa": "GIG",
+          "roles": ["SUPERADMIN", "SUPERUSER"]
+        }
+      ]
+    }
+  ]
+}
+```
+- Para `verify_superadmin_gig`/`verify_superuser_gig` se valida que `nombre-app == "GIG"` y que el rol requerido exista.
+- `require_role(["ROL1", "ROL2"])` permite la ruta si el usuario tiene al menos uno de esos roles en cualquiera de sus apps.
+- `require_app("GIG")` verifica que el usuario tenga acceso a la app indicada.
+
+---
+
+## Desarrollo local
+Instalación editable:
+```bash
+pip install -e .
+```
+Requisitos de desarrollo (opcional para publicar):
+```bash
+pip install build twine
+```
+
+---
+
+## Publicar en PyPI
+1) Prepara tu cuenta y token:
+- Crea una cuenta en `https://pypi.org` y genera un token de API.
+- Opcional: crea también cuenta/token en `https://test.pypi.org` para pruebas.
+
+2) Sube primero a TestPyPI (recomendado):
+```bash
+# Limpia artefactos previos
+rm -rf dist build  # PowerShell: Remove-Item -Recurse -Force dist, build
+
+# Construye el paquete
+python -m build
+
+# Sube a TestPyPI
+python -m twine upload --repository testpypi dist/* -u __token__ -p <TU_TOKEN_TESTPYPI>
+
+# Probar instalación desde TestPyPI
+python -m pip install --index-url https://test.pypi.org/simple/ \
+  --extra-index-url https://pypi.org/simple gig-lib --upgrade
+```
+
+3) Sube a PyPI (producción):
+```bash
+# Asegura que [project].version en pyproject.toml se ha incrementado
+python -m build
+python -m twine upload dist/* -u __token__ -p <TU_TOKEN_PYPI>
+```
+
+Consejos:
+- Incrementa la versión en `pyproject.toml` siguiendo SemVer (por ejemplo, `1.0.1`).
+- Si `twine` rechaza el README, instala `readme_renderer` y corrige el Markdown.
+- Evita reutilizar artefactos antiguos: borra `dist/` antes de reconstruir.
+
+---
+
+## Licencia
+MIT
+
+---
+
+## Enlaces útiles
+- PyPI: `https://pypi.org/project/gig-lib/`
+- TestPyPI: `https://test.pypi.org/project/gig-lib/`
+- FastAPI: `https://fastapi.tiangolo.com/`
