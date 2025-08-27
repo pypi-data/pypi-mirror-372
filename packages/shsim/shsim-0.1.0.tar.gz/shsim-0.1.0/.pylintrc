@@ -1,0 +1,71 @@
+# ---------------------------
+# Pylint config for shsim
+# ---------------------------
+
+[MAIN]
+# If you use a src/ layout, this makes "import shsim" work when linting locally.
+# Comment out if you don't use src/.
+#init-hook = import sys, os; p=os.path.join(os.getcwd(), "src"); sys.path.insert(0, p) if os.path.isdir(p) and p not in sys.path else None
+init-hook = import sys, os; p=os.path.join(os.getcwd(), "src"); sys.path.insert(0, p)
+
+# Fail CI if score drops below this (tune as you like).
+fail-under = 8.5
+
+[MESSAGES CONTROL]
+# Turn off messages that are too noisy for this project.
+disable =
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring
+    R0903,  # too-few-public-methods (helpers/DTOs are fine)
+    R0401,  # cyclic-import (unlikely here; avoid false positives)
+    W1203,  # logging-fstring-interpolation (we're not using logging module)
+    W1514,  # unspecified-encoding (we set encodings explicitly; keep this off if you already did)
+    W0703,  # broad-except (used intentionally in _log best-effort writes)
+    C0415,  # import-outside-toplevel (ok for optional deps / platform branches)
+
+[REPORTS]
+score = yes
+output-format = text
+
+[FORMAT]
+max-line-length = 80
+indent-string = "    "
+max-module-lines = 2000
+
+[BASIC]
+# Allow short names commonly used in shell helpers.
+good-names = i,j,k,x,y,z,_,f,p,fp,rx,kw,dt,ts,n,v,e
+# Allow 2–30 char snake_case for functions, BUT also whitelist specific short names.
+# Adjust or extend the explicit list as your API grows.
+function-rgx = (^([a-z_][a-z0-9_]{2,30})$)|^(ls|lsa|lss|cat|head|tail|grep|egrep|grepn|egrepn|ln|rmrf|cprf|mv|mkp|touch|zipdir|cd|unzip|run|run_list|isd|ise|has)$
+method-rgx   = (^([a-z_][a-z0-9_]{2,30})$)|^(ls|lsa|lss|cat|head|tail|grep|egrep|grepn|egrepn|ln|rmrf|cprf|mv|mkp|touch|zipdir|cd|unzip|run|run_list|isd|ise|has)$
+variable-rgx = ^([a-z_][a-z0-9_]{1,30}|i|j|k|x|y|z|_|f|p|fp|rx|kw|dt|ts|e)$
+argument-rgx = ^([a-z_][a-z0-9_]{1,30}|_|unused_.*)$
+attr-rgx     = ^[a-z_][a-z0-9_]{1,30}$
+const-rgx    = ^[A-Z_][A-Z0-9_]{1,50}$
+
+[LOGGING]
+# Not using the logging module; keep defaults.
+logging-modules = logging
+
+[TYPECHECK]
+# If you have optional imports behind try/except, list them here to silence import-error.
+ignored-modules =
+ignored-classes =
+
+[DESIGN]
+# Keep these generous for convenience-style helpers.
+max-args = 7
+max-locals = 25
+max-branches = 20
+max-statements = 80
+max-attributes = 12
+min-public-methods = 0
+
+[SIMILARITIES]
+# Don’t over-alert on small repeats in tiny wrappers.
+min-similarity-lines = 8
+ignore-comments = yes
+ignore-docstrings = yes
+ignore-imports = yes
