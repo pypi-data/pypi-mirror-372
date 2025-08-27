@@ -1,0 +1,7 @@
+DEFAULT_IMAGE = "petew/gantry"
+ENTRYPOINT = "entrypoint.sh"
+GITHUB_TOKEN_SECRET = "GITHUB_TOKEN"
+RUNTIME_DIR = "/gantry-runtime"
+RESULTS_DIR = "/results"
+RUNTIME_DIR = "/gantry-runtime"
+METRICS_FILE = f"{RESULTS_DIR}/metrics.json"
