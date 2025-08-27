@@ -1,0 +1,234 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+# See https://www.python.org/dev/peps/pep-0621/
+name = "aiida-fireball"
+dynamic = ["version"]  # read from aiida_fireball/src/__init__.py
+description = "AiiDA plugin for Fireball"
+authors = [{name = "Valk Scripter", email = "valkscode@gmail.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Development Status :: 3 - Alpha",
+    "Framework :: AiiDA"
+]
+keywords = ["aiida", "plugin"]
+requires-python = ">=3.9"
+dependencies = [
+    "aiida-core>=2.5,<3",
+    "voluptuous",
+    'aiida-pseudo~=1.1',
+    'click~=8.0',
+    'importlib_resources',
+    'jsonschema',
+    'numpy',
+    'pydantic~=2.0',
+    'packaging',
+    'xmlschema~=2.0',
+    'ase',
+    'pymc',
+]
+
+[project.optional-dependencies]
+docs = [
+    'sphinx~=6.2.1',
+    'sphinx_rtd_theme',
+    'sphinx-copybutton~=0.5.2',
+    'sphinx-book-theme~=1.0.1',
+    'sphinx-click~=4.4.0',
+    'sphinx-design~=0.4.1',
+    'sphinxcontrib-details-directive~=0.1.0',
+    'sphinx-autoapi~=3.0',
+    'myst_parser~=1.0.0',
+    'linkify-it-py',
+]
+pre-commit = [
+    'pre-commit~=2.17',
+    'pylint~=2.17.2',
+    'pylint-aiida~=0.1.1',
+    'toml',
+    'hatch',
+]
+tests = [
+    'pgtest',
+    'pytest~=7.0',
+    'pytest-regressions',
+    'pytest-cov',
+]
+
+[project.urls]
+Source = "https://github.com/ValkScripter/aiida-fireball"
+
+[project.entry-points."aiida.data"]
+
+[project.entry-points."aiida.calculations"]
+"fireball.structure.interpolate" = "aiida_fireball.calculations.structure.tools:interpolate_structures"
+"fireball.structure.scale" = "aiida_fireball.calculations.structure.tools:scale_structure"
+"fireball.fireball" = "aiida_fireball.calculations.fireball:FireballCalculation"
+"fireball.birch_murnaghan_fit_bayesian" = "aiida_fireball.calculations.birch_murnaghan_fit_bayesian:birch_murnaghan_fit_bayesian"
+
+[project.entry-points."aiida.workflows"]
+"fireball.birch_murnaghan_relax" = "aiida_fireball.workflows.birch_murnaghan_relax:FireballBirchMurnaghanRelaxWorkChain"
+"fireball.transport_scan" = "aiida_fireball.workflows.transport_calc:TransportScanWorkChain"
+
+[project.entry-points."aiida.parsers"]
+"fireball.fireball" = "aiida_fireball.parsers.fireball:FireballParser"
+
+[project.entry-points."aiida.cmdline.data"]
+
+[tool.pytest.ini_options]
+# Configuration for [pytest](https://docs.pytest.org)
+python_files = "test_*.py example_*.py"
+addopts = "--pdbcls=IPython.terminal.debugger:TerminalPdb"
+filterwarnings = [
+    "ignore::DeprecationWarning:aiida:",
+    "ignore:Creating AiiDA configuration folder:",
+    "ignore::DeprecationWarning:plumpy:",
+    "ignore::DeprecationWarning:yaml:",
+]
+
+[tool.flynt]
+line-length = 150
+fail-on-change = true
+
+[tool.isort]
+force_sort_within_sections = true
+include_trailing_comma = true
+line_length = 150
+multi_line_output = 3  # this configuration is compatible with yapf
+
+[tool.coverage.run]
+# Configuration of [coverage.py](https://coverage.readthedocs.io)
+# reporting which lines of your plugin are covered by tests
+source = ["src/aiida_fireball"]
+
+[tool.ruff]
+line-length = 150
+
+[tool.ruff.lint]
+ignore = [
+    'N802',  # Function name should be lowercase
+    'N803',  # Argument name should be lowercase
+    'N806',  # Variable in function should be lowercase
+    'F403',  # Star imports unable to detect undefined names
+    'F405',  # Import may be undefined or defined from star imports
+    'PLR0911',  # Too many return statements
+    'PLR0912',  # Too many branches
+    'PLR0913',  # Too many arguments in function definition
+    'PLR0915',  # Too many statements
+    'PLR2004',  # Magic value used in comparison
+    'RUF005',  # Consider iterable unpacking instead of concatenation
+    'RUF012'  # Mutable class attributes should be annotated with `typing.ClassVar`
+]
+select = [
+  'E',  # pydocstyle
+  'W',  # pydocstyle
+  'F',  # pyflakes
+  'I',  # isort
+  'N',  # pep8-naming
+  'PLC',  # pylint-convention
+  'PLE',  # pylint-error
+  'PLR',  # pylint-refactor
+  'PLW',  # pylint-warning
+  'RUF'  # ruff
+]
+
+[tool.pylint.master]
+load-plugins = ['pylint_aiida','pylint.extensions.no_self_use']
+
+[tool.pylint.format]
+max-line-length = 150
+
+[tool.pylint.tool-check]
+generated-members = 'self.exit_codes.*'
+
+[tool.pylint.messages_control]
+disable = [
+    'duplicate-code',
+    'fixme',
+    'inconsistent-return-statements',
+    'import-outside-toplevel',
+    'locally-disabled',
+    'logging-format-interpolation',
+    'no-else-raise',
+    'too-many-arguments',
+    'too-many-ancestors',
+    'too-many-branches',
+    'too-many-locals',
+    'use-dict-literal',
+]
+
+[tool.pylint.basic]
+good-names = [
+    'i',
+    'j',
+    'k',
+    'StructureData',
+    'SinglefileData',
+]
+
+[tool.yapf]
+align_closing_bracket_with_visual_indent = true
+based_on_style = 'google'
+coalesce_brackets = true
+column_limit = 150
+dedent_closing_brackets = true
+indent_dictionary_value = false
+split_arguments_when_comma_terminated = true
+
+## Hatch configurations
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/aiida_fireball/_version.py"
+
+[tool.hatch.envs.hatch-test]
+dependencies = [
+    'pgtest~=1.3,>=1.3.1',
+    'coverage~=7.0',
+    'pytest~=7.0',
+    "pytest-cov~=4.1",
+    "ipdb"
+]
+
+[tool.hatch.envs.hatch-test.scripts]
+# These are the efault scripts provided by hatch.
+# The have been copied to make the execution more transparent
+
+# This command is run with the command `hatch test`
+run = "pytest{env:HATCH_TEST_ARGS:} {args}"
+# The three commands below are run with the command `hatch test --coverage`
+run-cov = "coverage run -m pytest{env:HATCH_TEST_ARGS:} {args}"
+cov-combine = "coverage combine"
+cov-report = "coverage report"
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.9", "3.10", "3.11", "3.12"]
+
+[tool.hatch.envs.hatch-static-analysis]
+dependencies = ["ruff==0.4.3"]
+
+[tool.hatch.envs.hatch-static-analysis.scripts]
+# Fixes are executed with `hatch fmt`.
+# Checks are executed with `hatch fmt --check`.
+
+format-check = "ruff format --check --config pyproject.toml {args:.}"
+format-fix = "ruff format --config pyproject.toml {args:.}"
+lint-check = "ruff check --config pyproject.toml {args:.}"
+lint-fix = "ruff check --config pyproject.toml --fix --exit-non-zero-on-fix --show-fixes {args:.}"
+
+[tool.hatch.envs.docs]
+features = ["docs"]
+
+[tool.hatch.envs.docs.scripts]
+build = [
+  "make -C docs"
+]
