@@ -1,0 +1,1 @@
+from .resize_utils_test import test_resize_ratio
