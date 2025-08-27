@@ -1,0 +1,56 @@
+inherit: null # relative path for inherit yaml
+
+alias:
+  dd: dac.core.data
+  da: dac.core.actions
+  mt: dac.modules.timedata
+  mv: dac.modules.nvh
+  md: dac.modules.drivetrain
+
+data:
+  _: # for now only add data to global context
+  - /dd/SimpleDefinition
+  - /md/GearboxDefinition
+
+actions:
+  _: # the actions for global context
+  - /da/Separator
+  - "[Drivetrain]"
+  - /md/actions.CreateBearing
+  - /md/actions.CreateGearboxWithBearings
+  - /md/actions.CreateOrdersOfGearbox
+  
+  /dd/SimpleDefinition:
+  - /da/Separator
+  - "[Time domain]" # section hint
+  - /mt/actions.LoadAction
+  - dac.modules.timedata.construct.SignalConstructAction # same as /mt/construct.SignalConstructAction
+  - /mt/actions.ShowTimeDataAction
+  - /md/actions.ShowTimeDataWithFreqLines
+  - "[Time data>]"
+  - /mt/actions.CounterToTachoAction
+  - /mt/actions.PulseToAzimuthAction
+  - /mt/actions.TruncAction
+  - /mt/actions.FilterAction
+  - "[<]"
+  - "[Freq domain]"
+  - /mv/actions.ToFreqDomainAction
+  - /md/actions.ShowSpectrumWithFreqLines
+  - /mv/actions.ToFreqIntermediateAction
+  - /mv/actions.ViewFreqIntermediateAction
+  - "[Freq data>]"
+  - /mv/actions.AverageIntermediateAction
+  - /mv/actions.FilterSpectrumAction
+  - /mv/actions.SpectrumToTimeAction
+  - "[<]"
+  - /mv/actions.ShowSpectrumWithGuesser
+
+quick_actions: # temporary action creation for immediate run (action take only one parameter)
+  /mt/TimeData:
+  - [/mt/actions.ShowTimeDataAction, channels, {}]
+  /mv/data.FreqDomainData:
+  - [/mv/actions.ViewFreqDomainAction, channels, {with_phase: true}]
+
+quick_tasks:
+  /mt/actions.LoadAction:
+  - [/mt/tasks.FillFpathsTask, "Select measurement files"]
