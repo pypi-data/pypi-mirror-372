@@ -1,0 +1,158 @@
+Metadata-Version: 2.4
+Name: nomenklatura
+Version: 4.1.2
+Summary: Make record linkages in followthemoney data.
+Project-URL: Documentation, https://github.com/opensanctions/nomenklatura/
+Project-URL: Repository, https://github.com/opensanctions/nomenklatura.git
+Project-URL: Issues, https://github.com/opensanctions/nomenklatura/issues
+Author-email: OpenSanctions <info@opensanctions.org>
+License: Copyright (c) 2013-2022, Friedrich Lindenberg
+        Copyright (c) 2023-2025, OpenSanctions Datenbanken GmbH
+        
+        Permission is hereby granted, free of charge, to any person obtaining a
+        copy of this software and associated documentation files (the
+        "Software"), to deal in the Software without restriction, including
+        without limitation the rights to use, copy, modify, merge, publish,
+        distribute, sublicense, and/or sell copies of the Software, and to
+        permit persons to whom the Software is furnished to do so, subject to
+        the following conditions:
+        
+        The above copyright notice and this permission notice shall be included
+        in all copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+License-File: LICENSE
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.11
+Requires-Dist: click<9.0.0
+Requires-Dist: fingerprints<2.0.0,>=1.3.1
+Requires-Dist: followthemoney<5.0.0,>=4.1.1
+Requires-Dist: lxml<7.0.0,>4.0.0
+Requires-Dist: pydantic<3.0.0,>2.0.0
+Requires-Dist: rich<15.0.0,>=13.0.0
+Requires-Dist: rigour<2.0.0,>=1.1.1
+Requires-Dist: scikit-learn==1.7.1
+Requires-Dist: shortuuid<2.0.0,>=1.0.11
+Requires-Dist: sqlalchemy>=2.0.0
+Requires-Dist: textual<5.0.0,>=3.0.0
+Provides-Extra: dev
+Requires-Dist: build; extra == 'dev'
+Requires-Dist: coverage>=4.1; extra == 'dev'
+Requires-Dist: fakeredis; extra == 'dev'
+Requires-Dist: flake8>=2.6.0; extra == 'dev'
+Requires-Dist: lxml-stubs; extra == 'dev'
+Requires-Dist: mypy; extra == 'dev'
+Requires-Dist: plyvel<2.0.0; extra == 'dev'
+Requires-Dist: psycopg2-binary; extra == 'dev'
+Requires-Dist: pytest; extra == 'dev'
+Requires-Dist: pytest-cov; extra == 'dev'
+Requires-Dist: redis<7.0.0,>5.0.0; extra == 'dev'
+Requires-Dist: requests-mock; extra == 'dev'
+Requires-Dist: twine; extra == 'dev'
+Requires-Dist: types-pyyaml; extra == 'dev'
+Requires-Dist: types-redis; extra == 'dev'
+Requires-Dist: types-requests; extra == 'dev'
+Requires-Dist: types-setuptools; extra == 'dev'
+Requires-Dist: wheel>=0.29.0; extra == 'dev'
+Provides-Extra: leveldb
+Requires-Dist: plyvel<2.0.0; extra == 'leveldb'
+Provides-Extra: redis
+Requires-Dist: redis<7.0.0,>5.0.0; extra == 'redis'
+Description-Content-Type: text/markdown
+
+# nomenklatura
+
+Nomenklatura de-duplicates and integrates different [Follow the Money](https://followthemoney.tech/) entities. It serves to clean up messy data and to find links between different datasets.
+
+![screenshot](./docs/screenshot.png)
+
+## Usage
+
+You can install `nomenklatura` via PyPI:
+
+```bash
+$ pip install nomenklatura
+```
+
+### Command-line usage
+
+Much of the functionality of `nomenklatura` can be used as a command-line tool. In the following example, we'll assume that you have a file containing [Follow the Money](https://followthemoney.tech/) entities in your local directory, named `entities.ijson`. If you just want try it out, you can use the file `tests/fixtures/donations.ijson` in this repository for testing (it contains German campaign finance data).
+
+With the file in place, you will cross-reference the entities to generate de-duplication candidates, then run the interactive de-duplication UI in your console, and eventually apply the judgements to generate a new file with merged entities:
+
+```bash
+# generate merge candidates using an in-memory index:
+$ nomenklatura xref entities.ijson
+# note there is now a sqlite database, `nomenklatura.db` that contains de-duplication info.
+$ nomenklatura dedupe entities.ijson
+# will pop up a user interface.
+$ nomenklatura apply entities.ijson -o merged.ijson
+# de-duplicated data goes into `merged.ijson`:
+$ cat entities.ijson | wc -l 
+474
+$ cat merged.ijson | wc -l 
+468 
+```
+
+The resolver graph database location can be customised by setting the environment variable `NOMENKLATURA_DB_URL`
+
+### Programmatic usage
+
+The command-line use of `nomenklatura` is targeted at small datasets which need to be de-duplicated. For more involved scenarios, the package also offers a Python API which can be used to control the semantics of de-duplication.
+
+* `nomenklatura.Dataset` - implements a basic dataset for describing a set of entities.
+* `nomenklatura.Store` - a general purpose access mechanism for entities. By default, a store is used to access entity data stored in files as an in-memory cache, but the store can be subclassed to work with entities from a database system.
+* `nomenklatura.Index` - a full-text in-memory search index for FtM entities. In the application, this is used to block de-duplication candidates, but the index can also be used to drive an API etc.
+* `nomenklatura.index.TantivyIndex` - a wrapper around Tantivy for indexing and matching FtM entities.
+* `nomenklatura.Resolver` - the core of the de-duplication process, the resolver is essentially a graph with edges made out of entity judgements. The resolver can be used to store judgements or get the canonical ID for a given entity.
+
+All of the API classes have extensive type annotations, which should make their integration in any modern Python API simpler.
+
+## Design
+
+This package offers an implementation of an in-memory data deduplication framework centered around the FtM data model. The idea is the following workflow:
+
+* Accept FtM-shaped entities from a given loader (e.g. a JSON file, or a database)
+* Build an in-memory inverted index of the entities for dedupe blocking
+* Generate merge candidates using the blocking index and FtM compare
+* Provide a file-based storage format for merge challenges and decisions
+* Provide a text-based user interface to let users make merge decisions
+
+Later on, the following might be added:
+
+* A web application to let users make merge decisions on the web
+
+### Resolver graph
+
+The key implementation detail of nomenklatura is the `Resolver`, a graph structure that
+manages user decisions regarding entity identity. Edges are `Judgements` of whether
+two entity IDs are the same, not the same, or undecided. The resolver implements an
+algorithm for computing connected components, which can the be used to find the best
+available ID for a cluster of entities. It can also be used to evaluate transitive
+judgements, e.g. if A <> B, and B = C, then we don't need to ask if A = C.
+
+## Reading
+
+* https://dedupe.readthedocs.org/en/latest/
+* https://github.com/OpenRefine/OpenRefine/wiki/Reconcilable-Data-Sources
+* https://github.com/OpenRefine/OpenRefine/wiki/Clustering-In-Depth
+* https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
+
+
+## Contact, contributions etc.
+
+This codebase is licensed under the terms of an MIT license (see LICENSE).
+
+We're keen for any contributions, bug fixes and feature suggestions, please use the GitHub issue tracker for this repository. 
+
+Nomenklatura is currently developed thanks to a Prototypefund grant for [OpenSanctions](https://opensanctions.org). Previous iterations of the package were developed with support from [Knight-Mozilla OpenNews](http://opennews.org) and the [Open Knowledge Foundation Labs](http://okfnlabs.org).
