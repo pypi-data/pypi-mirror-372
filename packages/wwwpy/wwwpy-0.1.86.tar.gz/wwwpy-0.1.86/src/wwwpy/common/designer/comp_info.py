@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+from functools import cached_property
+from pathlib import Path
+from typing import Iterator
+
+from wwwpy.common.designer import code_info
+from wwwpy.common.designer.code_strings import html_from_source
+from wwwpy.common.designer.element_library import ElementDefBase
+from wwwpy.common.designer.html_locator import node_path_from_leaf
+from wwwpy.common.designer.html_parser import CstTree, html_to_tree, CstNode
+from wwwpy.common.designer.locator_lib import Locator, Origin
+
+logger = logging.getLogger(__name__)
+
+
+class LocatorNode:
+    _cst_children: list[CstNode]
+
+    def __init__(self, parent: CompInfo, cst: CstTree | CstNode):
+        self._parent = parent
+        if isinstance(cst, CstTree):
+            self._cst_children = list(cst)
+        elif isinstance(cst, CstNode):
+            self._cst_children = list(cst.children)
+            ep = node_path_from_leaf(cst)
+            self.locator = Locator(self._parent.class_package, self._parent.class_name, ep, Origin.source)
+            self.cst_node = cst
+        else:
+            raise TypeError(f'Expected CstTree or CstNode, got {type(cst)}')
+
+    @cached_property
+    def children(self) -> list[LocatorNode]:
+        """The children of this node in the CST tree."""
+        return [LocatorNode(self._parent, c) for c in self._cst_children]
+
+
+# todo extend CompInfo such as it provides the means for CompStructure component to show
+#  the tree structure of the component's HTML.
+#  think about a couple of design patterns to achieve this.
+@dataclass
+class CompInfo:
+    """If the html is not found, no instance of this class is created."""
+    class_package: str  # todo rename to class_module
+    class_name: str
+    tag_name: str
+    path: Path
+    source_code: str
+    _html_found: bool = None
+
+    @cached_property
+    def html(self) -> str:
+        html = html_from_source(self.source_code, self.class_name)
+        self._html_found = html is not None
+        if html is None:
+            logger.debug(f'Cannot find html for {self.class_name} in {self.path}')
+            return ''
+        return html
+
+    @property
+    def html_found(self) -> bool:
+        x = self.html
+        return self._html_found
+
+    @cached_property
+    def cst_tree(self) -> CstTree:
+        return html_to_tree(self.html)
+
+    @cached_property
+    def locator_root(self) -> LocatorNode:
+        """The CST tree of the component's HTML.
+        This is lazy initialized"""
+        return LocatorNode(self, self.cst_tree)
+
+    @property
+    def class_full_name(self) -> str:
+        return f'{self.class_package}.{self.class_name}'
+
+
+@dataclass
+class ComponentDef(ElementDefBase):
+    comp_info: CompInfo
+
+
+def iter_comp_info_folder(folder: Path, package: str) -> Iterator[CompInfo]:
+    """Iterate over all components in the folder."""
+    logger.debug(f'Iterating over components in {folder}')
+    for path in sorted(folder.glob('*.py'), key=lambda p: p.stem):
+        infos = iter_comp_info(path, package + '.' + path.stem)
+        for info in infos:
+            if info.html_found:
+                yield info
+
+
+def iter_comp_info(path: Path, package: str) -> Iterator[CompInfo]:
+    """Return a generator that yields CompInfo for each Component in the given python file."""
+    logger.debug(f'Iterating over components in {path}')
+    source_code = path.read_text()
+    ci = code_info.info(source_code)
+    return (c for c in (CompInfo(package, cl.name, cl.tag_name, path, source_code) for cl in ci.classes) if
+            c is not None)
