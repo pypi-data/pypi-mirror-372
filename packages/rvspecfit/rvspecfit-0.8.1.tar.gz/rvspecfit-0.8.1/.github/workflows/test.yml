@@ -1,0 +1,67 @@
+name: Testing
+
+# Run this workflow every time a new commit pushed to your repository
+on: push
+
+jobs:
+  tester:
+    name: Test the code
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v4
+      - name: System packages
+        run: |
+          sudo apt install libbz2-dev
+          # needed for fitsio... 
+      - name: Python setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: 'x64'
+          cache: 'pip'
+      - name: Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install pytest-cov
+          pip install coveralls
+          pip install scikit-learn torch
+          pip install wheel
+          pip install .
+          pip install pytz numba healpy speclite fitsio photutils==1.6.0
+          pip install git+https://github.com/desihub/desiutil@3.2.2
+          pip install  --no-build-isolation git+https://github.com/desihub/desitarget@2.7.0
+        # for desitarget
+      - name: Fetching data
+        run: |
+          cd tests
+          mkdir templ_data
+          wget -q https://people.ast.cam.ac.uk/~koposov/files/rvspecfit_files/v2411/small_phoenix.tar.gz
+          tar xfz small_phoenix.tar.gz
+          mkdir templ_data_desi
+          cd templ_data_desi/
+          wget -q -r -np -nd https://people.ast.cam.ac.uk/~koposov/files/rvspecfit_files/v2411/templ_data_desi/
+          cd ..
+          mkdir templ_data_sdss
+          cd templ_data_sdss/
+          wget -q -r -np -nd https://people.ast.cam.ac.uk/~koposov/files/rvspecfit_files/v2411/templ_data_sdss/
+          cd ../data/
+          wget -q https://data.desi.lbl.gov/public/edr/spectro/redux/fuji/healpix/sv1/bright/103/10378/coadd-sv1-bright-10378.fits
+          wget -q https://data.desi.lbl.gov/public/edr/spectro/redux/fuji/healpix/sv1/bright/103/10378/redrock-sv1-bright-10378.fits
+          cd ../../
+      - name: EnvVar
+        run: |
+          echo "RVS_NN_DEVICE=cpu" >> "$GITHUB_ENV"
+      - name: Testing
+        run: |
+          pytest --cov=rvspecfit
+      - name: Coveralls
+        if: ${{ success() }}
+        run: coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
