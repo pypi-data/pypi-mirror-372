@@ -1,0 +1,18 @@
+%% Training Mode Sequence (Condensed)
+sequenceDiagram
+	participant Pre as DataPreprocessor
+	participant Env as XTradeEnvironment
+	participant SB3 as Baseline3Integration
+	participant RS as RewardShaper
+	participant Mon as Monitoring
+
+	Pre->>Pre: fit(train ohlcv, indicators)
+	Pre->>Env: create(preprocessed)
+	SB3->>Env: learn(total_timesteps)
+	loop per step
+		Env->>RS: update_equity(equity)
+		RS-->>Env: penalties (cost, drawdown, vol)
+		Env->>Mon: record_step(reward, info)
+	end
+	Env->>Mon: record_episode
+	Mon-->>User: reports/plots

@@ -1,0 +1,62 @@
+%% End-to-End Flowchart (Training, Inference, Fine-Tune)
+flowchart LR
+
+subgraph Inputs
+	A1[OHLCV (N x 5)]
+	A2[Indicators (N x K)]
+	A3[Config]
+end
+
+A1 --> B[DataPreprocessor\n- fit(train) / transform(eval)]
+A2 --> B
+A3 --> C[XTradeAIConfig\n- algo params\n- env shaping weights\n- persistence]
+
+B --> D[XTradeEnvironment\n(Gymnasium)]
+C --> D
+
+subgraph Framework
+	E[XTradeAIFramework]
+	E --> E1[Baseline3Integration\n(SB3/SB3-Contrib)]
+	E --> E2[TechnicalAnalysis\n(CNN-LSTM)]
+	E --> E3[CloseOrderDecision\n(Transformer)]
+	E --> E4[RiskManagement\n(GRU)]
+	E --> E5[AdaptiveIndicator\n(Autoencoder)]
+	E --> E6[XGBoostModule\n(optional)]
+	E --> E9[Calibrators\n(TempScale / Ensemble)]
+	E --> E7[ActionSelector]
+	E --> E8[Monitoring]
+end
+
+D -->|observation| E
+E1 -.predict/train.-> D
+E7 -->|TradingDecision| D
+D -->|experience| E1
+
+%% Training Path
+E -.train(env, algo, timesteps, xgb?) .-> E1
+E6 -.fit(X,y)?.-> E6
+E8 -.log training/trading.-> E8
+
+%% Inference Path
+E -.predict(ohlcv, ind, state, pos).-> E7
+E3 -.close indices.-> E7
+E2 -.logits.-> E7
+E4 -.risk.-> E7
+E9 -.scaled logits / weights.-> E7
+E6 -.aux.-> E7
+
+%% Fine-Tune Path
+FT[SB3 Model.zip] --> E1
+E -.fine_tune(env, algo, path).-> E1
+
+%% Meta-Learning Simulation
+S[MarketSimulation\n(trending/ranging/volatile/quiet)] --> E
+E -.simulate_and_train_or_evaluate.-> S
+
+%% Persistence
+E --> P[ModelSaver\n.zip + AES-256 => .models]
+C --> P
+
+%% Monitoring
+D -->|steps| E8
+E8 -->|performance| Q[(Reports/Plots/JSON)]

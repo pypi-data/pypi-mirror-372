@@ -1,0 +1,85 @@
+%% End-to-End Sequence
+sequenceDiagram
+	participant User
+	participant Pre as DataPreprocessor
+	participant Env as XTradeEnvironment
+	participant FW as XTradeAIFramework
+	participant SB3 as Baseline3Integration
+	participant TA as TechnicalAnalysis
+	participant Close as CloseOrder
+	participant Risk as RiskMgmt
+	participant Cal as Calibrators
+	participant Sim as MarketSimulation
+	participant Sel as ActionSelector
+	participant Mon as Monitoring
+
+	rect rgb(230,245,255)
+	Note over User,Mon: Training Phase
+	User->>Pre: fit(train_ohlcv, train_indicators)
+	User->>Pre: tr = transform(train_ohlcv, train_indicators)
+	User->>Env: create(tr.ohlcv, tr.indicators, monitor=Mon)
+	User->>FW: train(env, algo, timesteps, xgb_features?, xgb_labels?)
+	FW->>SB3: create(algo, env)
+	alt XGB data provided
+		FW->>FW: fit XGBoost in thread (no leakage)
+	else
+		Note right of FW: skip XGB to avoid leakage
+	end
+	loop steps
+		SB3->>Env: step(action)
+		Env->>SB3: experience
+		Env->>Mon: record_step
+	end
+	FW->>Mon: export_json / plots
+	end
+
+	rect rgb(235,255,235)
+	Note over User,Mon: Prediction Phase (evaluation session)
+	User->>Pre: te = transform(test_ohlcv, test_indicators)
+	User->>FW: predict(te.last_window, te.last_indicators, market_state, positions)
+	FW->>TA: logits
+	FW->>Close: close candidates
+	FW->>Risk: risk assessment
+	FW->>SB3: policy action
+	TA-->>FW: logits
+	Close-->>FW: indices
+	Risk-->>FW: score/size
+	SB3-->>FW: action/conf
+	FW->>Cal: temperature/ensemble (optional, fitted on validation)
+	Cal-->>FW: scaled logits / ensemble_weights
+	FW->>Sel: select(policy, ta, close, risk, weights?)
+	Sel-->>FW: TradingDecision
+	FW-->>User: action/size/confidence
+	end
+
+	rect rgb(255,245,230)
+	Note over User,Mon: Fine-Tune Phase
+	User->>Pre: new = transform(new_ohlcv, new_indicators)
+	User->>Env: create(new.ohlcv, new.indicators, monitor=Mon)
+	User->>FW: fine_tune(env, algo, model_path, timesteps, X?, y?)
+	FW->>SB3: load(algo, env, model_path)
+	alt XGB data provided
+		FW->>FW: fit XGBoost (thread)
+	else
+		Note right of FW: skip XGB
+	end
+	loop steps
+		SB3->>Env: step(action)
+		Env->>SB3: experience
+		Env->>Mon: record_step/episode
+	end
+	FW->>Mon: export_json / plots
+	end
+
+	rect rgb(245,235,255)
+	Note over User,Mon: Meta-Learning with Simulation (optional)
+	User->>FW: simulate_and_train_or_evaluate(build_env, ohlcv, ind, algo, steps, mode)
+	FW->>Sim: simulate(regimes, multiplier, drift_range, vol_multipliers)
+	loop per-regime dataset
+		FW->>Env: build_env(cfg, data, ind, session=mode)
+		FW->>FW: train(env, algo, steps)
+		Env->>Mon: export regime report
+	end
+	FW->>Mon: export original report
+	FW-->>User: comparison (per_action, reward_dist, penalties, performance)
+	end

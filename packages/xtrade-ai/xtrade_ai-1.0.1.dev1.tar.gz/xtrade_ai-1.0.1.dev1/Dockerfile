@@ -1,0 +1,74 @@
+# XTrade-AI Framework Production Dockerfile
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=1.0.0
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    wget \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements-minimal.txt requirements.txt pyproject.toml setup.py ./
+
+# Install Python dependencies with better error handling and order
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel setuptools_scm[toml] && \
+    pip install --no-cache-dir cython numpy && \
+    pip install --no-cache-dir --prefer-binary scikit-learn && \
+    pip install --no-cache-dir -r requirements-minimal.txt
+
+# Copy source code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /app/data /app/models /app/logs /app/config
+
+# Ensure xtrade_ai directory exists and has proper permissions
+RUN mkdir -p xtrade_ai && \
+    chmod 755 xtrade_ai
+
+# Create version file if it doesn't exist
+RUN if [ ! -f xtrade_ai/_version.py ]; then \
+        echo "__version__ = '1.0.0'" > xtrade_ai/_version.py; \
+    fi
+
+# Install package with multiple fallback strategies
+RUN set -e; \
+    echo "Attempting package installation..."; \
+    pip install --no-cache-dir -e . || \
+    (echo "Editable install failed, trying regular install..."; \
+     pip install --no-cache-dir .) || \
+    (echo "Regular install failed, trying without setuptools_scm..."; \
+     SETUPTOOLS_SCM_PRETEND_VERSION=1.0.0 pip install --no-cache-dir .) || \
+    (echo "All install methods failed, creating minimal package..."; \
+     echo "__version__ = '1.0.0'" > xtrade_ai/_version.py && \
+     pip install --no-cache-dir .)
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash xtrade && \
+    chown -R xtrade:xtrade /app
+USER xtrade
+
+# Set default environment
+ENV XTRADE_DATA_DIR=/app/data
+ENV XTRADE_MODEL_DIR=/app/models
+ENV XTRADE_LOG_DIR=/app/logs
+ENV XTRADE_CONFIG_DIR=/app/config
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import xtrade_ai; print('XTrade-AI Framework is healthy')" || exit 1
+
+# Default command
+CMD ["xtrade-ai", "--help"]
