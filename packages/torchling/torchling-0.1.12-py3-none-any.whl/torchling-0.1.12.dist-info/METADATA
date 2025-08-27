@@ -1,0 +1,109 @@
+Metadata-Version: 2.4
+Name: torchling
+Version: 0.1.12
+Summary: A minimal deep learning library using numpy.
+Author-email: Piotr Brutkowski <piotrbrutkowski@yahoo.com>
+License: MIT License
+        
+        Copyright (c) 2025 Piotr Brutkowski
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/pbrut/torchling
+Project-URL: Repository, https://github.com/pbrut/torchling
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=2.3.1
+Dynamic: license-file
+
+# torchling
+
+A minimal neural network library. `torchling` is a work in progress.
+
+## Installation
+```bash
+pip install torchling
+```
+
+## Example: Boston Housing Regression
+```python
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+
+from torchling.models import Sequential
+from torchling.layers import Linear, Tanh
+from torchling.losses import MSE
+from torchling.optimisers import SGD
+
+
+def load_dataset():
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/housing/housing.data"
+    df = pd.read_csv(url, sep=r'\s+')
+    X = df.iloc[:, :-1].values.astype(np.float64)
+    Y = df.iloc[:, -1].values.astype(np.float64)
+    return X, Y
+
+
+def normalize(X, Y):
+    scaler_X = StandardScaler()
+    scaler_Y = StandardScaler()
+    X_norm = scaler_X.fit_transform(X)
+    Y_norm = scaler_Y.fit_transform(Y.reshape(-1, 1)).flatten()
+    return X_norm, Y_norm, scaler_X, scaler_Y
+
+
+def denormalize(scaler, arr):
+    return scaler.inverse_transform(np.array(arr).reshape(-1, 1)).flatten()
+
+
+X, Y = load_dataset()
+X, Y, _, Y_metadata = normalize(X, Y)
+
+X_TRAIN, Y_TRAIN = X[1:], Y[1:]
+X_TEST, Y_TEST = X[:1], Y[0]
+
+epochs = 3000
+lr = 0.6
+input_size = X_TRAIN.shape[1]
+
+model = Sequential(
+    Linear(50, input_size=input_size),
+    Tanh(),
+    Linear(50),
+    Tanh(),
+    Linear(1),
+)
+
+optimizer = SGD(alpha=lr)
+loss = MSE()
+model.train(X_TRAIN, Y_TRAIN, optimizer, loss, epochs=epochs, print_every=250)
+
+pred = model.predict(X_TEST)
+print(f"Prediction - {denormalize(Y_metadata, pred)} | Actual - {denormalize(Y_metadata, [Y_TEST])}")
+```
+
+## License
+MIT
