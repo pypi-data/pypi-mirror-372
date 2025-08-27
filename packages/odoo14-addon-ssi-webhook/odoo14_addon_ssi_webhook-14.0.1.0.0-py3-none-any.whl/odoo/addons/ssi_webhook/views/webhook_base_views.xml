@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2025 OpenSynergy Indonesia
+     Copyright 2025 PT. Simetri Sinergi Indonesia
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="webhook_base_view_tree" model="ir.ui.view">
+        <field name="name">webhook_base - Tree</field>
+        <field name="model">webhook_base</field>
+        <field
+            name="inherit_id"
+            ref="ssi_master_data_mixin.mixin_master_data_view_tree"
+        />
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <data>
+            </data>
+        </field>
+    </record>
+
+    <record id="webhook_base_view_search" model="ir.ui.view">
+        <field name="name">webhook_base - Search</field>
+        <field name="model">webhook_base</field>
+        <field
+            name="inherit_id"
+            ref="ssi_master_data_mixin.mixin_master_data_view_search"
+        />
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <data />
+        </field>
+    </record>
+
+    <record id="webhook_base_view_form" model="ir.ui.view">
+        <field name="name">webhook_base - Form</field>
+        <field name="model">webhook_base</field>
+        <field
+            name="inherit_id"
+            ref="ssi_master_data_mixin.mixin_master_data_view_form"
+        />
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <data>
+            <xpath expr="//header" position="inside">
+                <button
+                        name="create_action"
+                        string="Create Action"
+                        type="object"
+                        attrs="{'invisible': [('action_id', '!=', False)]}"
+                    />
+                <button
+                        name="unlink_action"
+                        string="Remove Action"
+                        type="object"
+                        attrs="{'invisible': [('action_id', '=', False)]}"
+                    />
+            </xpath>
+                <xpath expr="//group[@name='group_1']" position="replace">
+                    <group name="header" colspan="4" col="2">
+                        <group name="header_left" colspan="1" col="2">
+                            <field name="name" />
+                            <field name="code" />
+                            <field name="model_id" />
+                            <field name="model_name" />
+                            <field name="action_id" invisible="1" />
+                            <field
+                                name="company_id"
+                                groups="base.group_multi_company"
+                            />
+                            <field name="active" widget="boolean_toggle" />
+                        </group>
+                        <group name="header_right" colspan="1" col="2">
+                            <field name="use_header_code" widget="boolean_toggle" />
+                            <field name="use_payload_code" widget="boolean_toggle" />
+                            <field name="use_response_code" widget="boolean_toggle" />
+                            <field name="use_auth" widget="boolean_toggle" />
+                        </group>
+                    </group>
+                </xpath>
+                <xpath expr="//page[@name='note']" position="before">
+                    <page name="general" string="General">
+                        <group name="general_1">
+                            <field name="webhook_address" />
+                            <field name="webhook_method" />
+                        </group>
+                    </page>
+                    <page
+                        name="auth"
+                        string="Authentication"
+                        attrs="{'invisible': [('use_auth', '=', False)]}"
+                    >
+                        <group name="auth_1" colspan="4" col="2">
+                            <group name="auth_left" colspan="1" col="2">
+                                <field
+                                    name="webhook_auth_id"
+                                    attrs="{'required': [('use_auth', '=', True)]}"
+                                />
+                            </group>
+                            <group name="auth_right" colspan="1" col="2">
+                            </group>
+                        </group>
+                    </page>
+                    <page
+                        name="header"
+                        string="Headers"
+                        attrs="{'invisible': [('use_header_code', '=', False)]}"
+                    >
+                        <field
+                            name="python_header_code"
+                            widget="ace"
+                            options="{'mode': 'python'}"
+                            nolabel="1"
+                        />
+                    </page>
+                    <page
+                        name="payload"
+                        string="Payloads"
+                        attrs="{'invisible': [('use_payload_code', '=', False)]}"
+                    >
+                        <field
+                            name="python_payload_code"
+                            widget="ace"
+                            options="{'mode': 'python'}"
+                            nolabel="1"
+                        />
+                    </page>
+                    <page
+                        name="response"
+                        string="Responses"
+                        attrs="{'invisible': [('use_response_code', '=', False)]}"
+                    >
+                        <field
+                            name="python_response_code"
+                            widget="ace"
+                            options="{'mode': 'python'}"
+                            nolabel="1"
+                        />
+                    </page>
+                    <page name="history" string="Histories">
+                        <button
+                            name="action_refresh_latest_history"
+                            type="object"
+                            icon="fa-refresh"
+                            string="Refresh"
+                            title="Refresh Latest History"
+                        />
+                        <group name="history_1" colspan="1" col="2">
+                            <field name="latest_history_id" force_save="1" />
+                        </group>
+                        <field name="history_ids" nolabel="1" />
+                    </page>
+                </xpath>
+            </data>
+        </field>
+    </record>
+
+    <record id="webhook_base_action" model="ir.actions.act_window">
+        <field name="name">Webhooks</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">webhook_base</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem
+        id="webhook_base_menu"
+        name="Webhooks"
+        parent="webhook_configuration_menu"
+        action="webhook_base_action"
+        groups="webhook_base_group"
+        sequence="100"
+    />
+
+</odoo>
