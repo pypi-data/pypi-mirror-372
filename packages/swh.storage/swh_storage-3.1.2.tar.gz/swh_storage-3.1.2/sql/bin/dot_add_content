@@ -1,0 +1,20 @@
+#!/bin/bash
+
+DOT_FILE="$1"
+DOT_EXTRA="$2"
+SQL_SCHEMA="../swh/storage/sql/30-schema.sql"
+if [ -z "$DOT_FILE" -o -z "$DOT_EXTRA" ] ; then
+    echo "Usage: $0 DOT_FILE DOT_EXTRA"
+    exit 1
+fi
+
+if ! [ -f "$SQL_SCHEMA" ] ; then
+    echo "Cannot find SQL schema ${SQL_SCHEMA}" 1>&2
+    exit 2
+fi
+schema_version=$(grep -i -A 1 '^insert into dbversion' "$SQL_SCHEMA" | tail -n 1 \
+	      | sed -e 's/.*values(//i' -e 's/,.*//')
+
+head -n -1 "$DOT_FILE"  # all of $DOT_FILE but last line
+sed "s/@@VERSION@@/$schema_version/" "$DOT_EXTRA"
+echo "}"

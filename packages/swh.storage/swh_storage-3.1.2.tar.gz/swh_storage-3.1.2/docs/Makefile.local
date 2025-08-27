@@ -1,0 +1,30 @@
+sphinx/html: sql-autodoc images
+sphinx/clean: clean-sql-autodoc clean-images
+assets: sql-autodoc images
+
+sql-autodoc:
+	make -C ../sql/ doc
+	cp ../sql/doc/sql/db-schema.svg images/
+
+cql-autodoc:
+	python3 -c "from swh.storage.cassandra.diagram import dot_diagram; print(dot_diagram())" | dot -T svg > images/cassandra-schema.svg
+
+images: sql-autodoc cql-autodoc
+	make -C images/
+clean-images:
+	make -C images/ clean
+
+clean: clean-sql-autodoc clean-images
+clean-sql-autodoc:
+	make -C ../sql/ clean
+
+distclean: clean distclean-sql-autodoc
+distclean-sql-autodoc:
+	make -C ../sql/ distclean
+
+.PHONY: sql-autodoc clean-sql-autodoc images clean-images
+
+
+# Local Variables:
+# mode: makefile
+# End:
