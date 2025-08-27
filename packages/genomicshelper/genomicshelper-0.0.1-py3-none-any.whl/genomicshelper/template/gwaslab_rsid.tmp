@@ -1,0 +1,34 @@
+#!/bin/bash
+## Annotate rsID for the given sumstats using VCF from dbSNP
+#################################
+## NOTE #########################
+## 
+#################################
+## ARGUMENTS ####################
+## file :
+## in_fmt = auto:
+## out_fmt = gwaslab:
+## n_cores = 5 :
+## vcf : dbsnp VCF 
+## tsv : SNPID rsID conversion table
+## build=19 :
+## SCRIPT #####################
+
+python3 <<EOF
+import gwaslab as gl
+
+mysumstats = gl.Sumstats("${sumstats}",
+             fmt="${in_fmt}",
+             build="${build}", 
+             verbose=True)
+
+mysumstats.basic_check()
+
+mysumstats.assign_rsid( n_cores = ${n_cores},
+                        ref_rsid_tsv = gl.get_path("${tsv}")
+                        ref_rsid_vcf="${vcf}",
+                        chr_dict=gl.get_number_to_NC(build="${build}"))
+
+mysumstats.to_format("${out}", fmt="${out_fmt}")
+
+EOF

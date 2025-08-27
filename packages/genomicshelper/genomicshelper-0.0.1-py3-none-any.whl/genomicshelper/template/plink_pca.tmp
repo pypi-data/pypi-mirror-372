@@ -1,0 +1,48 @@
+#!/bin/bash
+## Run PCA using PLINK
+#################################
+## NOTE #########################
+##
+#################################
+## ARGUMENTS ####################
+## bfile = plink bfile prefix
+## out ="plink_results"
+## threads = 2
+## hildset = hild.set 
+#################################
+
+# LD-pruning, excluding high-LD and HLA regions
+plink2 \
+        --bfile ${bfile} \
+        --maf 0.01 \
+        --threads ${threads} \
+        --exclude ${hildset} \ 
+        --indep-pairwise 500 50 0.2 \
+        --out ${out}
+
+# Remove related samples using king-cuttoff
+plink2 \
+        --bfile ${bfile} \
+        --extract ${out}.prune.in \
+        --king-cutoff 0.0884 \
+        --threads ${threads} \
+        --out ${out}
+
+# PCA after pruning and removing related samples
+plink2 \
+        --bfile ${bfile} \
+        --keep ${out}.king.cutoff.in.id \
+        --extract ${out}.prune.in \
+        --freq counts \
+        --threads ${threads} \
+        --pca approx allele-wts 10 \     
+        --out ${out}
+
+# Projection (related and unrelated samples)
+plink2 \
+        --bfile ${bfile} \
+        --threads ${threads} \
+        --read-freq ${out}.acount \
+        --score ${out}.eigenvec.allele 2 6 header-read no-mean-imputation variance-standardize \
+        --score-col-nums 7-16 \
+        --out ${out}_projected
