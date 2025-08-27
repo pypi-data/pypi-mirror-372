@@ -1,0 +1,138 @@
+Metadata-Version: 2.4
+Name: bkflow-django-webhook
+Version: 1.2.2
+Summary: A Django app to make it easy for integrating webhook into service.
+Author-email: normal-wls <weishi.swee@qq.com>
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: Django >2, <4
+Requires-Dist: pyyaml >5, <7
+Requires-Dist: pydantic <3
+Requires-Dist: pytest >=7.0.1,<8 ; extra == "test"
+Requires-Dist: pytest-django>=4.5.2,<5.0 ; extra == "test"
+Requires-Dist: djangorestframework >3, <4 ; extra == "test"
+Project-URL: Home, https://github.com/TencentBlueKing/bkflow-django-webhook
+Provides-Extra: test
+
+# bkflow-django-webhook
+
+## 简介
+bkflow-django-webhook 是一款支持系统快速集成 webhook 功能的 Django app。
+
+webhook 是一种在特定事件发生时，通过 HTTP 请求将数据发送到指定的 URL 的实时通信的机制。
+
+webhook 的使用场景非常广泛。例如，当用户在某个网站上进行了特定操作（如提交表单、创建账户或进行支付）时，网站可以使用 webhook 将相关数据发送给其他应用程序或服务。这样，接收方应用程序就能够实时获取到这些数据，并根据需要进行处理。
+
+集成 bkflow-django-webhook，可以让 Django 应用快速获得 webhook 所需要的能力，帮助应用实现基于事件的服务自动化调用。
+
+## 相关概念
+![bkflow_django_webhook_concepts](docs/pics/bkflow_django_webhook_concepts.png)
+
+上图描述了从事件触发到最终请求的过程，涉及以下几个概念：
+1. 请求配置 (Webhook) : 记录发送请求所需要的 endpoint 信息，根据该配置发送 HTTP POST 请求完成对外部服务的调用。
+2. 事件 (Event) : 系统触发请求的类型，需要提前定义。
+3. 领域 (Scope) : `事件`的触发往往是因为资源的变更，而资源会有`领域`的划分，不同`领域`的资源往往需要发送不同的请求。（上图的 template 是资源，template 属于不同的业务，业务就是 Scope，不同业务下的资源事件可能会触发不同的 webhook 请求。比如 biz_1 业务下的 template 变更时，会通过 webhook 1 请求 service 1；而 biz_2 业务下的 template 变更时，会通过 webhook 2 请求 service 2。）
+4. 订阅 (Subscription) : 记录不同`事件`、`领域`和`请求配置`订阅关系的配置，用于在`事件`触发时筛选出对应的`请求配置`进行请求调用。
+
+在 bkflow-django-webhook 的设计中，资源 (图中 template) 的变更触发了事件 (Event)，根据事件、资源所属领域 (Scope, 图中 biz) 和订阅 (Subscription) 的记录，筛选出命中的请求配置 (Webhook)，最终对对应的服务 (service) 发送请求。
+
+
+## 快速上手
+
+下面以上图为例，说明如何快速上手。
+
+#### 安装
+
+```shell
+pip install bkflow-django-webhook
+```
+
+#### 添加到 Django 项目中
+
+将 `webhook` 添加到 Django 项目中
+
+```python
+INSTALLED_APPS = [
+    ...
+    'webhook',
+]
+```
+
+建表
+
+```shell
+python manage.py migrate webhook
+```
+
+#### 事件定义
+
+创建定义资源文件，如 `webhook_events.yaml`
+
+```yaml
+version: 1
+events:
+  - code: template_update
+    name: 模板更新
+  - code: template_create
+    name: 模板创建
+```
+
+目前支持对多个事件进行定义，其中 `code` 定义事件唯一键，`name` 定义事件名称。
+
+#### 事件同步
+
+通过 `sync_webhook_events` 命令进行事件同步（可以在每次应用启动时调用进行同步）
+
+```shell
+python manage.py sync_webhook_events . webhook_events.yaml
+```
+
+`sync_webhook_events` 命令包含两个位置参数：
+- base_path: 资源文件所在的目录地址
+- filename: 资源文件名
+
+#### 资源注册
+
+通过 bkflow-django-webhook 的 api 注册 请求配置 和 订阅关系。
+
+```python
+from webhook.api import apply_scope_subscriptions, apply_scope_webhooks
+
+webhook_configs = [
+    {"code": "webhook1", "name": "webhook1", "endpoint": "https://xxx.com"},  # endpoint 是接收请求的服务地址
+    {"code": "webhook2", "name": "webhook2", "endpoint": "https://xxx.com"}
+]
+
+subscription_configs = {"webhook1": ["*"], "webhook2": ["template_update"]}  # "*" 表示订阅所有事件
+
+
+apply_scope_webhooks(scope_type="biz", scope_code="biz1", webhooks=webhook_configs)
+apply_scope_subscriptions(scope_type="biz", scope_code="biz1", subscription_configs=subscription_configs)
+
+```
+
+#### 发起请求
+
+```python
+from webhook.signals import event_broadcast_signal
+
+# 在对应的业务逻辑中触发调用
+event_broadcast_signal.send(
+    sender="template_update",
+    scopes=[("biz", "biz1")],
+    extra_info={"template_id": "template1"},
+)
+```
+
+根据触发的事件(sender)、领域(scopes，可支持多个)过滤出对应的请求配置，并同步发送请求(extra_info将作为请求参数)。
+
+请求完成后，可在项目的 django admin 页面 Webhook/History 中查看请求历史。
+
+
+
+## 资料
+- [Release](release.md)
+
+## 相关项目
+- [bkflow-dmn](https://github.com/TencentBlueKing/bkflow-dmn)
+- [bkflow-feel](https://github.com/TencentBlueKing/bkflow-feel)
