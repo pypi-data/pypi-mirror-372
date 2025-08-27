@@ -1,0 +1,140 @@
+Metadata-Version: 2.3
+Name: cryptocom_agent_plugin_discord
+Version: 1.0.0
+Summary: Discord plugin for Crypto.com Agent Client
+Author: Ric Arcifa
+Author-email: ricardo.arcifa@crypto.com
+Requires-Python: >=3.12,<4.0
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Dist: cryptocom-agent-client (==1.2.1)
+Requires-Dist: discord.py (==2.5.2)
+Description-Content-Type: text/markdown
+
+# Crypto.com Agent Plugin – Discord
+
+The **Crypto.com Agent Plugin – Discord** adds support for Discord bots to the [Crypto.com Agent Client](https://pypi.org/project/cryptocom-agent-client/) ecosystem. This plugin enables conversational agents to operate directly within Discord servers or DMs using the standard Agent SDK lifecycle and plugin architecture.
+
+## Features
+
+### Discord Integration
+
+- Respond to Discord messages in real-time via bot commands or free-form chat.
+- Automatically splits long messages (>2000 characters).
+- Uses Discord’s WebSocket gateway and event loop via `discord.py`.
+
+### Plugin Architecture
+
+- Packaged as a standalone Python plugin.
+- Uses Python entry points and PEP 621 standards (`pyproject.toml`).
+- Implements the `AgentPlugin` interface with `setup()` and `run()` lifecycle hooks.
+- Declares its role as a `primary` plugin — only one such plugin can control the main event loop.
+
+### Easy to Install and Extend
+
+- Fully decoupled from the core agent client.
+- Compatible with other plugins (e.g., storage, LangFuse, CLI).
+- Automatically discovered and initialized by the SDK.
+
+## Installation
+
+Install the plugin into your environment:
+
+```bash
+pip install cryptocom-agent-plugin-discord
+```
+
+## Usage
+
+### Importing the Plugin
+
+```python
+from cryptocom_agent_plugin_discord import DiscordPlugin
+```
+
+### Using with the Agent SDK
+
+```python
+from cryptocom_agent_client import Agent
+from cryptocom_agent_plugin_discord import DiscordPlugin
+
+discord_plugin = DiscordPlugin(bot_token="YOUR_DISCORD_BOT_TOKEN")
+
+agent = Agent.init(
+    llm_config={...},
+    blockchain_config={...},
+    plugins={...},
+    plugin_instances=[discord_plugin],
+)
+
+agent.start()
+```
+
+## Plugin Lifecycle
+
+This plugin defines:
+
+- `mode = "primary"` — only one primary plugin is started via `agent.start()`.
+- `setup(handler)` — prepares Discord commands and message hooks.
+- `run()` — starts the asynchronous event loop and Discord bot gateway.
+- Optional `on_ready(handler)` (if needed in future).
+
+## Example
+
+```python
+from cryptocom_agent_client import Agent
+from cryptocom_agent_plugin_discord import DiscordPlugin
+
+discord = DiscordPlugin(bot_token="MTAx...")
+
+agent = Agent.init(
+    llm_config={
+        "provider": "OpenAI",
+        "model": "gpt-4",
+        "provider-api-key": "sk-...",
+    },
+    blockchain_config={
+        "api-key": "YOUR_SDK_API_KEY",
+    },
+    plugins={
+        "personality": {
+            "tone": "professional",
+            "language": "English",
+            "verbosity": "medium",
+        },
+        "instructions": "Answer clearly and briefly.",
+    },
+    plugin_instances=[discord],
+)
+
+agent.start()
+```
+
+## Entry Point Declaration
+
+This plugin is auto-discoverable via `pyproject.toml`:
+
+```toml
+[tool.poetry.plugins."crypto_com_agent.plugins"]
+discord = "cryptocom_agent_plugin_discord:DiscordPlugin"
+```
+
+This allows the Agent SDK to dynamically discover and initialize your plugin.
+
+## File Structure
+
+```
+crypto_com_agent_plugin_discord/
+├── __init__.py
+└── discord.py  # Main plugin implementation
+```
+
+## Contributing
+
+We welcome contributions! Please ensure your plugin adheres to the `AgentPlugin` interface and includes proper `setup()` and `run()` hooks.
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
+
