@@ -1,0 +1,51 @@
+{% load i18n djblets_extensions %}
+
+{% if state != 'valid' and show_banner %}
+<div id="powerpack-license-banner" class="powerpack-license-banner-{{state}}"
+     style="display: none;">
+ <h2 class="banner-header">
+  <a href="#" id="powerpack-license-banner-close"
+     title="{% trans "Dismiss" %}">
+   <img src="{% ext_static extension 'images/close-icon.svg' %}"/>
+  </a>
+  {{title}}
+ </h2>
+ <p>
+{%  if state == 'trial-expired' or state == 'paid-expired' %}
+  {% trans "Features like PDF review and GitHub Enterprise are no longer available." %}
+{%  endif %}
+
+{%  if is_staff %}
+{%   if state == 'trial-expired' or state == 'trial-expiring' or state == 'paid-expired' or state == 'paid-expiring' %}
+  <a href="https://reviewboard.org/licenses/">{% trans "Renew your license now" %}</a>.
+{%   endif %}
+{%  endif %}
+
+{%  if state == 'no-license' %}
+{%   blocktrans %}
+  Power Pack gives you powerful reports, document review, and more for your whole
+  team.
+{%   endblocktrans %}
+  <a href="{{trial_url}}">{% trans "Try it for free" %}</a>.
+{%  endif %}
+ </p>
+</div>
+
+<script>
+    $(document).ready(function() {
+        var $banner = $('#powerpack-license-banner'),
+            cookieName = 'powerpack-license-banner-{{state}}',
+            cookieValue = 'closed';
+
+        $('#powerpack-license-banner-close').click(function() {
+            $.cookie(cookieName, cookieValue, {
+                path: SITE_ROOT
+            });
+            $banner.remove();
+            return false;
+        });
+
+        $banner.toggle($.cookie(cookieName) !== cookieValue);
+    });
+</script>
+{% endif %}

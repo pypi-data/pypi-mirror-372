@@ -1,0 +1,62 @@
+{% load compressed static %}
+
+<script language="javascript">
+(function() {
+
+function renderThumbnail(apiPrefix, reviewRequestId) {
+    var pdfRenderer = new PowerPack.PDF.PDF({
+        pdfURL: '{{pdf.file.url}}'
+    });
+    pdfRenderer.getPage(1).then(function(page) {
+        var viewport = page.getViewport({ scale: 1.0 }),
+            $canvas = $('<canvas/>')
+            .attr({
+                width: viewport.width,
+                height: viewport.height
+            });
+
+        page.render({
+            canvasContext: $canvas[0].getContext('2d'),
+            viewport: viewport
+        }).promise.then(function() {
+            RB.apiCall({
+                type: "PUT",
+                prefix: apiPrefix,
+                path: "/review-requests/" + reviewRequestId + "/file-attachments/{{pdf.pk}}/",
+                data: {
+                    thumbnail: $canvas[0].toDataURL()
+                },
+                success: function(data) {
+                    var $placeholder = $("#thumbnail-placeholder-{{pdf.pk}}"),
+                        $parent = $placeholder.parent();
+
+                    $placeholder.remove();
+                    $parent.append(data.file_attachment.thumbnail);
+                },
+                error: function() {
+                    $('#thumbnail-placeholder-{{pdf.pk}}')
+                        .replaceWith('<div class="rb-icon rb-icon-warning">');
+                }
+            });
+        });
+    });
+}
+
+function renderThumbnailWrapper() {
+    RB.PageManager.ready(function(page) {
+        renderThumbnail(page.reviewRequest.get('localSitePrefix'),
+                        page.reviewRequest.get('id'));
+    });
+}
+
+$(document).ready(function() {
+    console.assert(pdfjsLib.GlobalWorkerOptions.workerSrc !== undefined,
+                   'Unable to find the pdf.js workerSrc attribute.');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '{{pdf_worker_url|escapejs}}';
+    renderThumbnailWrapper();
+});
+
+}());
+
+</script>
+<img src="{% static "rb/images/spinner.gif" %}" id="thumbnail-placeholder-{{pdf.pk}}" />

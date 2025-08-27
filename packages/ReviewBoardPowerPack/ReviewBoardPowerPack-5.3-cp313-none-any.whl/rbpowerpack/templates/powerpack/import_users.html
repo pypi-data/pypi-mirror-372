@@ -1,0 +1,164 @@
+{% extends "powerpack/admin_base.html" %}
+{% load djblets_extensions i18n %}
+
+
+{# Page title #}
+{% block page_title %}
+{%  trans "Import Power Pack Users" %}
+{% endblock page_title %}
+
+
+{# Form title #}
+{% block form_title %}
+{%  trans "Import Power Pack Users" %}
+{% endblock form_title %}
+
+
+{# Page content #}
+{% block content %}
+<ul id="powerpack_config_users_nav">
+ <li>
+  <a href="{% url 'powerpack-configure-extension' %}">
+  {% trans "&lt; Configure Power Pack" %}</a>
+ </li>
+ <li>
+  <a href="{% url 'powerpack-manage-users' %}">
+  {% trans "Manage users" %}</a>
+ </li>
+ <li class="current">
+  {% trans "Import users" %}
+ </li>
+ <li>
+  <a href="{% url 'powerpack-auto-add-users' %}">
+  {% trans "Automatic user licensing" %}</a>
+ </li>
+</ul>
+
+{{block.super}}
+{% endblock content %}
+
+
+{# Config form content #}
+{% block form_content %}
+<fieldset class="module aligned rb-c-form-fieldset"
+          id="powerpack_import_licensed_users">
+{%  if can_add_user %}
+ <div class="rb-c-form-fieldset__description description">
+{%   if not license.has_user_cap %}
+  <p>
+{%    blocktrans %}
+   Your license allows for an unlimited number of users. You do not need
+   to import users into your license.
+{%    endblocktrans %}
+  </p>
+{%   else %}
+{%    if not can_import_all %}
+{%     url 'powerpack-manage-users' as manage_users_url %}
+  <div class="rb-c-alert -is-warning powerpack-note">
+   <div class="rb-c-alert__content">
+{%     blocktrans with support_url="http://support.beanbaginc.com/" %}
+   There are too many users to import them all for this license. You can
+   import by group, <a href="{{manage_users_url}}">manually add users</a> to
+   your license, or <a href="{{support_url}}">upgrade your license</a>.
+ {%     endblocktrans %}
+   </div>
+  </div>
+{%    endif %}
+  <p>
+{%    blocktrans count users_remaining=licensed_users_remaining %}
+   You can import 1 more user.
+{%    plural %}
+   You can import {{users_remaining}} more users.
+{%    endblocktrans %}
+  </p>
+{%   endif %}
+ </div>
+{%   if license.has_user_cap %}
+ <div class="form-row form-row-source">
+  {{form.source.errors}}
+  {{form.source.label_tag}}
+  <ul id="id_source">
+   <li>
+    <label for="id_source_0">
+     <input id="id_source_0" name="source" type="radio"
+            value="{{form.SOURCE_ALL}}" {% if not can_import_all %}disabled="disabld"{% endif %} />
+     {% trans "All users" %}
+    </label>
+   </li>
+   <li>
+    {{form.group.errors}}
+    <label for="id_source_1">
+     <input id="id_source_1" name="source" type="radio"
+            value="{{form.SOURCE_GROUP}}" />
+     {% trans "From group" %}
+    </label>
+    {{form.group}}
+   </li>
+  </ul>
+ </div>
+{%   endif %}
+{%  else %}
+ <p>
+{%   blocktrans with url="http://support.beanbaginc.com/" %}
+  You have added the maximum number of users allowed by your license. To
+  upgrade your license, please contact
+  <a href="{{url}}">our support channel</a>.
+{%   endblocktrans %}
+ </p>
+{%  endif %}
+</fieldset>
+
+{%  if licensed_users %}
+<fieldset class="module aligned">
+ <h2>{% trans "Licensed Users" %}</h2>
+ <table id="powerpack_users">
+  <thead>
+   <tr>
+    <th>{% trans "Username" %}</th>
+    <th>{% trans "Name" %}</th>
+    <th>{% trans "Date added" %}</th>
+    <th>{% trans "Notes" %}</th>
+   </tr>
+  </thead>
+  <tbody>
+{%  for licensed_user in licensed_users %}
+{%   with user=licensed_user.user %}
+   <tr>
+    <td>
+     <input type="checkbox" name="delete_users" value="{{licensed_user.pk}}" />
+     {{user.username}}
+    </td>
+    <td>{{user.first_name}} {{user.last_name}}</td>
+    <td>{{licensed_user.added_time|date}}</td>
+    <td>{% if auto_added %}{% trans "Auto-added" %}{% endif %}</td>
+   </tr>
+{%   endwith %}
+{%  endfor %}
+  </tbody>
+ </table>
+</fieldset>
+{%  endif %}
+{% endblock %}
+
+
+{% block submit_row_buttons %}
+<button disabled="disabled" name="action" value="scan" type="submit"
+        class="btn primary" id="powerpack_import_users">
+ {% trans "Import Users" %}
+</button>
+{% endblock %}
+
+
+{# Post-page scripts #}
+{% block scripts-post %}
+{{block.super}}
+
+<script>
+$(document).ready(function() {
+    var view = new PowerPack.Admin.ImportLicensedUsersView({
+        el: $('#powerpack_admin_content')
+    });
+    view.render();
+});
+</script>
+{% endblock scripts-post %}

@@ -1,0 +1,66 @@
+{% extends "powerpack/admin_base.html" %}
+{% load beanbag_licensing djblets_extensions djblets_js i18n %}
+
+
+{# Form title #}
+{% block form_title %}
+{%  trans "Configure Power Pack" %}
+{% endblock form_title %}
+
+
+{# Config form content #}
+{% block form_content %}
+{{form.license_file.errors}}
+<fieldset class="module rb-c-form-fieldset">
+ <div class="form-row">
+  <div id="powerpack-license-info">
+   <span class="fa fa-spinner fa-spin"></span>
+   {% trans "Loading license information..." %}
+  </div>
+ </div>
+</fieldset>
+
+<fieldset class="module rb-c-form-fieldset"
+          id="powerpack-features-info-container"
+          style="display: none">
+ <h2 class="rb-c-form-fieldset__name">{% trans "Licensed Features" %}</h2>
+ <p>
+{%  blocktrans %}
+  Licensed users can use any of the features checked below. To enable or
+  disable any of Power Pack's features, toggle the checkboxes and click
+  <strong>Save Features</strong>.
+{%  endblocktrans %}
+ </p>
+ <div class="powerpack-c-features"></div>
+</fieldset>
+{% endblock form_content %}
+
+
+{# Save button #}
+{% block submit_row_buttons %}
+<input type="submit" value="{% trans "Save Features" %}" class="default"
+       id="powerpack-save-button"
+       style="display: none">
+{% endblock submit_row_buttons %}
+
+
+{# Post-page scripts #}
+{% block scripts-post %}
+{{block.super}}
+
+<script>
+$(document).ready(function() {
+    var view = new PowerPack.Admin.ConfigurePowerPackView({
+        csrfToken: '{{csrf_token|escapejs}}',
+        el: $('#powerpack_admin_content'),
+        features: {{extension.get_features_json|json_dumps}},
+        license: new PowerPack.Admin.License(
+            {{extension.get_license_model_data|json_dumps}},
+            {parse: true}),
+        purchaseLicenseURL: '{% filter escapejs %}{% licensing_purchase_url extension %}{% endfilter %}',
+        trialLicenseURL: '{% filter escapejs %}{% licensing_trial_url extension %}{% endfilter %}'
+    });
+    view.render();
+});
+</script>
+{% endblock scripts-post %}

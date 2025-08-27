@@ -1,0 +1,144 @@
+{% extends "powerpack/admin_base.html" %}
+{% load djblets_extensions i18n %}
+
+
+{# Page title #}
+{% block page_title %}
+{%  trans "Manage Power Pack Users" %}
+{% endblock page_title %}
+
+
+{# Form title #}
+{% block form_title %}
+{%  trans "Manage Power Pack Users" %}
+{% endblock form_title %}
+
+
+{# Page content #}
+{% block content %}
+<ul id="powerpack_config_users_nav">
+ <li>
+  <a href="{% url 'powerpack-configure-extension' %}">
+  {% trans "&lt; Configure Power Pack" %}</a>
+ </li>
+ <li class="current">
+  {% trans "Manage users" %}
+ </li>
+ <li>
+  <a href="{% url 'powerpack-import-users' %}">
+  {% trans "Import users" %}</a>
+ </li>
+ <li>
+  <a href="{% url 'powerpack-auto-add-users' %}">
+  {% trans "Automatic user licensing" %}</a>
+ </li>
+</ul>
+
+{{block.super}}
+{% endblock content %}
+
+
+{# Config form content #}
+{% block form_content %}
+<fieldset class="module aligned rb-c-form-fieldset"
+          id="powerpack_add_licensed_user">
+ <h2 class="rb-c-form-fieldset__name">{% trans "Add users to license" %}</h2>
+ <div class="description">
+  <p>
+{%  if not has_user_cap %}
+{%   blocktrans %}
+   Your license allows for an unlimited number of users. You do not need
+   to add users to your license.
+{%   endblocktrans %}
+{%  elif can_add_user %}
+{%   blocktrans count users_remaining=licensed_users_remaining %}
+   You can add 1 more user to your license.
+{%   plural %}
+   You can add {{users_remaining}} more users to your license.
+{%   endblocktrans %}
+{%  else %}
+{%   blocktrans with url="http://support.beanbaginc.com/" %}
+   You have added the maximum number of users allowed by your license. To
+   upgrade your license, please contact
+   <a href="{{url}}">our support channel</a>.
+{%   endblocktrans %}
+{%  endif %}
+  </p>
+ </div>
+{%  if has_user_cap %}
+ <div class="form-row form-row-user">
+  {{form.users.errors}}
+  {{form.users.label_tag}}
+  {{form.users}}
+  <input type="submit" value="{% trans 'Add Users' %}" class="default" />
+ </div>
+{%  endif %}
+</fieldset>
+
+{%  if licensed_users  and has_user_cap %}
+<fieldset class="module aligned rb-c-form-fieldset">
+ <h2 class="rb-c-form-fieldset__name">{% trans "Licensed Users" %}</h2>
+ <table id="powerpack_users">
+  <thead>
+   <tr>
+    <th>{% trans "Username" %}</th>
+    <th>{% trans "Name" %}</th>
+    <th>{% trans "Date added" %}</th>
+    <th>{% trans "Notes" %}</th>
+   </tr>
+  </thead>
+  <tbody>
+{%  for licensed_user in licensed_users %}
+{%   with user=licensed_user.user %}
+   <tr{% if forloop.counter > licensed_user_count %} class="user-exceeds-limit"{% endif %}>
+    <td>
+     <label for="licensed_user_{{licensed_user.user_id}}">
+      <input type="checkbox" name="delete_users"
+             id="licensed_user_{{licensed_user.user_id}}"
+             value="{{licensed_user.user_id}}" />
+{%    if user %}
+      {{user.username}}
+{%    else %}
+      {% trans "&lt;Deleted&gt;" %}
+{%    endif %}
+     </label>
+    </td>
+    <td>{% if user %}{{user.first_name}} {{user.last_name}}{% endif %}</td>
+    <td>{{licensed_user.added_time|date}}</td>
+    <td>
+     {% if auto_added %}<div>{% trans "Auto-added" %}</div>{% endif %}
+     {% if forloop.counter > licensed_user_count %}<div>{% trans "Not currently licensed" %}</div>{% endif %}
+    </td>
+   </tr>
+{%   endwith %}
+{%  endfor %}
+  </tbody>
+ </table>
+</fieldset>
+{%  endif %}
+{% endblock form_content %}
+
+
+{% block submit_row_buttons %}
+{%  if licensed_users and has_user_cap %}
+<button disabled="disabled" name="action" value="remove" type="submit"
+        class="btn danger" id="powerpack_remove_users">
+ {% trans "Remove" %}
+</button>
+{%  endif %}
+{% endblock %}
+
+
+{# Post-page scripts #}
+{% block scripts-post %}
+{{block.super}}
+
+<script>
+$(document).ready(function() {
+    var view = new PowerPack.Admin.ManageLicensedUsersView({
+        el: $('#powerpack_admin_content')
+    });
+    view.render();
+});
+</script>
+{% endblock scripts-post %}
