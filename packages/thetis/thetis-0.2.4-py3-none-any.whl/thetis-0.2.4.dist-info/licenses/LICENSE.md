@@ -1,0 +1,1 @@
+The terms of use of Thetis can be found at [https://app.thetis.de/static/terms](https://app.thetis.de/static/terms).
