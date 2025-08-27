@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <record id="mail_activity_view_tree" model="ir.ui.view">
+    <field name="name">mail.activity.boards.view.tree</field>
+    <field name="model">mail.activity</field>
+    <field name="inherit_id" ref="mail_activity_board.mail_activity_view_tree"/>
+    <field name="arch" type="xml">
+      <xpath expr="//tree" position="attributes">
+        <attribute name="default_order">date_deadline desc</attribute>
+        <attribute name="decoration-danger">(date_deadline &lt; current_date and date_done == False)</attribute>
+        <attribute name="decoration-warning">(date_deadline == current_date and date_done == False)</attribute>
+        <attribute name="decoration-success">(date_deadline &gt; current_date and date_done == False)</attribute>
+      </xpath>
+      <field name="res_name" position="before">
+        <field name="id" widget="open_tab"/>
+      </field>
+      <field name="date_deadline" position="before">
+        <field name="res_model_id_name"/>
+        <field name="location"/>
+        <field name="create_date"/>
+        <field name="activity_type_name" invisible="1"/>
+        <field name="create_uid"/>
+      </field>
+    </field>
+  </record>
+  <record id="act_res_partner_2_mail_activity_tree_view" model="ir.actions.act_window.view">
+    <field name="sequence">0</field>
+    <field name="view_mode">tree</field>
+    <field name="act_window_id" ref="act_res_partner_2_mail_activity"/>
+    <field name="view_id" ref="mail_activity_view_tree"/>
+  </record>
+  <record id="act_contract_contract_2_mail_activity_tree_view" model="ir.actions.act_window.view">
+    <field name="sequence">0</field>
+    <field name="view_mode">tree</field>
+    <field name="act_window_id" ref="act_contract_contract_2_mail_activity"/>
+    <field name="view_id" ref="mail_activity_view_tree"/>
+  </record>
+  <record id="mail_activity_view_form_board" model="ir.ui.view">
+    <field name="name">mail.activity.boards.view.form</field>
+    <field name="model">mail.activity</field>
+    <field name="inherit_id" ref="mail_activity_board.mail_activity_view_form_board"/>
+    <field name="arch" type="xml">
+      <field name="res_model_id_name" position="after">
+        <field name="reference" widget="reference" string="Record"/>
+        <field name="state"/>
+        <field name="partner_category_id" widget="many2many_tags" options="{'color_field': 'color', 'no_create_edit': True}" placeholder="Tags..."/>
+      </field>
+      <field name="note" position="after">
+        <field name="location"/>
+        <field name="create_date"/>
+      </field>
+      <field name="date_deadline" position="after">
+        <field name="date_done" readonly="0"/>
+        <field name="create_uid" readonly="1"/>
+      </field>
+      <field name="user_id" position="after">
+        <field name="level"/>
+      </field>
+      <xpath expr="//field[@name='note']/.." position="after">
+        <field name="done" invisible="1"/>
+        <div>
+          <button attrs="{'invisible': [('done', '!=', False)]}" string="Mark as Done" name="action_done" type="object" class="btn-secondary" context="{'mail_activity_quick_update': True}"/>
+          <button attrs="{'invisible': [('done', '!=', False)]}" string="Done &amp; Schedule Next" name="action_done_schedule_next" type="object" class="btn-secondary" context="{'mail_activity_quick_update': True}"/>
+          <button string="Done &amp; Launch Next" name="action_done_schedule_next" type="object" class="btn-secondary" context="{'mail_activity_quick_update': True}"/>
+          <button attrs="{'invisible': [('done', '=', False)]}" string="Reopen" name="action_reopen" type="object" class="btn-secondary" context="{'mail_activity_quick_update': True}"/>
+        </div>
+      </xpath>
+      <form position="attributes">
+        <attribute name="edit">true</attribute>
+      </form>
+    </field>
+  </record>
+  <record id="act_res_partner_2_mail_activity_form_view" model="ir.actions.act_window.view">
+    <field name="sequence">1</field>
+    <field name="view_mode">form</field>
+    <field name="act_window_id" ref="act_res_partner_2_mail_activity"/>
+    <field name="view_id" ref="mail_activity_view_form_board"/>
+  </record>
+  <record id="act_contract_contract_2_mail_activity_form_view" model="ir.actions.act_window.view">
+    <field name="sequence">1</field>
+    <field name="view_mode">form</field>
+    <field name="act_window_id" ref="act_contract_contract_2_mail_activity"/>
+    <field name="view_id" ref="mail_activity_view_form_board"/>
+  </record>
+  <record id="mail_activity_view_search" model="ir.ui.view">
+    <field name="name">mail.activity.boards.view.search</field>
+    <field name="model">mail.activity</field>
+    <field name="inherit_id" ref="mail_activity_board.mail_activity_view_search"/>
+    <field name="arch" type="xml">
+      <filter name="activities_upcoming_all" position="after">
+        <separator/>
+        <filter string="N1" name="N1" domain="[('level', '=', 'N1')]"/>
+        <filter string="N2" name="N2" domain="[('level', '=', 'N2')]"/>
+        <separator/>
+        <filter string="Returned first time" name="activities_return_1st" domain="[('activity_type_name', '=', 'Return 1st'), ('done', '=', False)]"/>
+        <filter string="Returned more than one time" name="activities_return_n" domain="[('activity_type_name', '=', 'Return n'), ('done', '=', False)]"/>
+      </filter>
+      <field name="user_id" position="after">
+        <field name="partner_id"/>
+        <field name="res_model"/>
+        <field name="res_id"/>
+        <field name="location"/>
+        <field name="level"/>
+      </field>
+    </field>
+  </record>
+  <record id="mail_activity_view_form_popup" model="ir.ui.view">
+    <field name="name">mail.activity.view.form.popup</field>
+    <field name="model">mail.activity</field>
+    <field name="inherit_id" ref="mail.mail_activity_view_form_popup"/>
+    <field name="arch" type="xml">
+      <field name="user_id" position="after">
+        <field name="location"/>
+        <field name="level"/>
+      </field>
+      <button name="action_close_dialog" position="attributes">
+        <attribute name="confirm">Are you sure?</attribute>
+      </button>
+      <button name="action_done" position="attributes">
+        <attribute name="confirm">Are you sure?</attribute>
+      </button>
+      <button name="action_done_schedule_next" position="attributes">
+        <attribute name="confirm">Are you sure?</attribute>
+      </button>
+    </field>
+  </record>
+  <record id="mail_activity_view_form_popup_activity_done" model="ir.ui.view">
+    <field name="name">mail.activity.view.form.popup.activity.done</field>
+    <field name="model">mail.activity</field>
+    <field name="inherit_id" ref="mail_activity_done.mail_activity_view_form_popup"/>
+    <field name="arch" type="xml">
+      <field name="date_done" position="before">
+        <field name="confirmation" invisible="1"/>
+      </field>
+      <field name="date_done" position="attributes">
+        <attribute name="invisible">0</attribute>
+      </field>
+      <button name="action_done" position="attributes">
+        <attribute name="attrs">{'invisible':['|',('state', '=', 'done'),('confirmation', '=', False)]}</attribute>
+        <attribute name="confirm">Are you sure?</attribute>
+      </button>
+      <button name="action_done" position="after">
+        <button attrs="{'invisible':['|',('state', '=', 'done'), ('confirmation', '=', True)]}" string="Mark as Done" name="action_done" type="object" class="btn-secondary" context="{'mail_activity_quick_update': True}"/>
+      </button>
+      <button name="action_close_dialog" position="attributes">
+        <attribute name="attrs">{'invisible': ['|',('activity_category', '=', 'meeting'),('confirmation', '=', False)]}</attribute>
+        <attribute name="confirm">Are you sure?</attribute>
+      </button>
+      <button name="action_close_dialog" position="after">
+        <button string="Schedule" name="action_close_dialog" type="object" class="btn-primary" attrs="{'invisible': ['|',('activity_category', '=', 'meeting'),('confirmation', '=', True)]}"/>
+      </button>
+    </field>
+  </record>
+  <record id="mail_activity_done_view_search" model="ir.ui.view">
+    <field name="name">mail.activity.done.view.search</field>
+    <field name="model">mail.activity</field>
+    <field name="inherit_id" ref="mail_activity_done.mail_activity_view_search"/>
+    <field name="arch" type="xml">
+      <filter name="activities_completed" position="before">
+        <filter string="Open Activities" name="activities_open"
+          domain="[('active', '=', True), ('done', '=', False)]" />
+      </filter>
+    </field>
+  </record>
+
+  <!-- UNCOMMENT: review the groups_id at field level
+  <record id="mail_activity_view_create_activity_type" model="ir.ui.view">
+    <field name="name">mail_activity_view_create_activity_type</field>
+    <field name="model">mail.activity</field>
+    <field name="inherit_id" ref="mail.mail_activity_view_form_popup" />
+    <field name="groups_id" eval="[(4, ref('group_somconnexio_create_activity_type'))]"/>
+    <field name="arch" type="xml">
+      <field name="activity_type_id" position="attributes">
+        <attribute name="options">{'no_create': False, 'no_open': True}</attribute>
+      </field>
+    </field>
+  </record>
+  -->
+  <record id="act_create_activity_type" model="ir.actions.act_window">
+    <field name="name">Create Activity Type</field>
+    <field name="res_model">mail.activity.type</field>
+    <field name="view_mode">tree,form</field>
+  </record>
+  <menuitem id="menu_create_activity_type" name="Activity types" parent="base.menu_board_root" sequence="1" groups="somconnexio.group_somconnexio_create_activity_type" action="act_create_activity_type"/>
+</odoo>

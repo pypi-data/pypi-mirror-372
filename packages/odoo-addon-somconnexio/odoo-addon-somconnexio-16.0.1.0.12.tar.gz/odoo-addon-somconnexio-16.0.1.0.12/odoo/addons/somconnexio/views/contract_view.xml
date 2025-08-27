@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <record id="contract.contract_contract_customer_form_view" model="ir.ui.view">
+    <field name="priority" eval="1"/>
+  </record>
+  <record id="contract_contract_form_view" model="ir.ui.view">
+    <field name="name">contract.contract.form.view</field>
+    <field name="model">contract.contract</field>
+    <field name="inherit_id" ref="contract.contract_contract_customer_form_view"/>
+    <field name="arch" type="xml">
+      <field name="terminate_reason_id" position="after">
+        &amp;
+        <strong><field name="terminate_user_reason_id" options="{'no_open':True}"/></strong>
+      </field>
+      <button name="action_cancel_contract_termination" position="attributes">
+        <attribute name="groups">somconnexio.group_somconnexio_admin</attribute>
+      </button>
+      <field name="partner_id" position="before">
+        <field name="category_id" widget="many2many_tags" options="{'color_field': 'color'}"/>
+        <field name="res_partner_user_id"/>
+      </field>
+      <field name="partner_id" position="attributes">
+        <attribute name="domain">[('is_customer','=', True)]</attribute>
+        <!--attribute name="domain">[('is_customer','=', True),('parent_id','=',False)]</attribute-->
+      </field>
+      <field name="partner_id" position="after">
+        <field name="partner_priority"/>
+      </field>
+      <field name="user_id" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </field>
+      <field name="contract_template_id" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </field>
+      <field name="fiscal_position_id" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </field>
+      <field name="tag_ids" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </field>
+      <field name="journal_id" position="after">
+        <field name="current_tariff_start_date"/>
+      </field>
+      <field name="pricelist_id" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </field>
+      <field name="recurring_next_date" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </field>
+      <field name="mandate_id" position="attributes">
+        <attribute name="attrs">{
+          'invisible': [('mandate_required', '=', False)],
+          'readonly': [('id','!=',False)]
+        }</attribute>
+      </field>
+      <field name="contract_template_id" position="after">
+        <field name="available_email_ids" invisible="True"/>
+        <field name="email_ids" widget="many2many_tags_contract_email" options="{'no_create_edit':True}" context="{'show_email': True}" domain="[('id', 'in', available_email_ids)]" attrs="{'readonly': [('id', '!=', False)]}"/>
+        <field name="code" position="move"/>
+        <field name="parent_pack_contract_id" attrs="{'invisible': [('is_broadband', '=', True)]}" domain="[('service_technology_id', '!=', '%(service_technology_mobile)d)'), ('partner_id', '=', partner_id), ('is_terminated', '=', False)]"/>
+      </field>
+      <group name="main" position="after">
+        <group name="contract_service">
+          <group>
+            <field name="is_broadband" invisible="1"/>
+            <field name="service_contract_type" invisible="1"/>
+            <field name="service_partner_id" attrs="{'invisible': [('is_broadband','=',False)]}"/>
+            <field name="mobile_contract_service_info_id" options="{'create': true}" attrs="{'invisible': ['!',('service_contract_type', '=', 'mobile')], 'required':[('service_contract_type', '=', 'mobile')]}"/>
+            <field name="adsl_service_contract_info_id" options="{'create': true}" attrs="{'invisible': ['!',('service_contract_type', '=', 'adsl')], 'required':[('service_contract_type', '=', 'adsl')]}"/>
+            <field name="vodafone_fiber_service_contract_info_id" options="{'create': true}" attrs="{'invisible': ['!',('service_contract_type', 'in', ['asociatel', 'vodafone'])], 'required':[('service_contract_type', 'in', ['asociatel','vodafone'])]}"/>
+            <field name="mm_fiber_service_contract_info_id" options="{'create': true}" attrs="{'invisible': ['!',('service_contract_type', '=', 'masmovil')], 'required':[('service_contract_type', '=', 'masmovil')]}"/>
+            <field name="xoln_fiber_service_contract_info_id" options="{'create': true}" attrs="{'invisible': ['!',('service_contract_type', '=', 'xoln')], 'required':[('service_contract_type', '=', 'xoln')]}"/>
+            <field name="orange_fiber_service_contract_info_id" options="{'create': true}" attrs="{'invisible': ['!',('service_contract_type', '=', 'orange')], 'required':[('service_contract_type', '=', 'orange')]}"/>
+            <field name="router_4G_service_contract_info_id" options="{'create': true}" attrs="{'invisible': ['!',('service_contract_type', '=', 'router4G')], 'required':[('service_contract_type', '=', 'router4G')]}"/>
+            <field name="icc" attrs="{'invisible': ['!',('service_contract_type', '=', 'mobile')]}"/>
+            <field name="ppp_user" attrs="{'invisible': ['!',('service_contract_type', '=', 'adsl')]}"/>
+            <field name="ppp_password" attrs="{'invisible': ['!',('service_contract_type', '=', 'adsl')]}"/>
+            <field name="endpoint_user" attrs="{'invisible': ['!',('service_contract_type', '=', 'adsl')]}"/>
+            <field name="endpoint_password" attrs="{'invisible': ['!',('service_contract_type', '=', 'adsl')]}"/>
+            <field name="vodafone_id" attrs="{'invisible': ['!',('service_contract_type', 'in', ('vodafone', 'router4G'))]}"/>
+            <field name="vodafone_id" string="Asociatel ID" attrs="{'invisible': ['!',('service_contract_type', '=', 'asociatel')]}"/>
+            <field name="vodafone_offer_code" attrs="{'invisible': ['!',('service_contract_type', '=', 'vodafone')]}"/>
+            <field name="mm_id" attrs="{'invisible': ['!',('service_contract_type', '=', 'masmovil')]}"/>
+            <field name="suma_id" attrs="{'invisible': ['!',('service_contract_type', '=', 'orange')]}"/>
+            <field name="external_id" attrs="{'invisible': ['!',('service_contract_type', '=', 'xoln')]}"/>
+            <field name="project_id" attrs="{'invisible': ['!',('service_contract_type', '=', 'xoln')]}"/>
+            <field name="id_order" attrs="{'invisible': ['!',('service_contract_type', '=', 'xoln')]}"/>
+          </group>
+          <group>
+            <field name="current_tariff_product"/>
+            <field name="service_technology_id" options="{'no_create': True, 'no_create_edit': True}"/>
+            <field name="service_supplier_id" options="{'no_create': True, 'no_create_edit': True}"/>
+            <field name="fiber_signal_type_id" options="{'no_create': True}" attrs="{'invisible': [('service_contract_type','not in', ['asociatel', 'masmovil', 'vodafone'])]}"/>
+            <field name="previous_id" attrs="{'invisible': [('is_broadband','=',False)]}"/>
+            <field name="administrative_number" attrs="{'invisible': ['!',('service_contract_type', '=', 'adsl')]}"/>
+            <field name="order_id" attrs="{'invisible': ['!',('service_contract_type', '=', 'adsl')]}"/>
+            <field name="router_product_id" attrs="{'invisible': [('service_contract_type', 'not in', ['adsl', 'xoln'])]}"/>
+            <!--field name="router_lot_id" attrs="{'invisible': [('service_contract_type', 'not in', ['adsl','xoln'])]}"/-->
+          </group>
+        </group>
+      </group>
+      <field name="date_end" position="after">
+        <field name="date_start"/>
+      </field>
+      <xpath expr="//field[@name='contract_line_ids']/tree/field[@name='name']" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </xpath>
+      <xpath expr="//field[@name='contract_line_ids']/tree/button[@name='cancel']" position="attributes">
+        <attribute name="groups">somconnexio.group_somconnexio_admin</attribute>
+      </xpath>
+      <xpath expr="//field[@name='contract_line_ids']/tree/button[@name='action_stop_plan_successor']" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </xpath>
+      <xpath expr="//field[@name='contract_line_ids']/tree/button[@name='action_stop']" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </xpath>
+      <xpath expr="//field[@name='contract_line_ids']/tree" position="attributes">
+        <attribute name="delete">false</attribute>
+      </xpath>
+      <!--xpath expr="//field[@name='contract_line_ids']/tree/field[@name='analytic_account_id']" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </xpath-->
+      <xpath expr="//field[@name='contract_line_ids']/tree/field[@name='uom_id']" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </xpath>
+      <xpath expr="//field[@name='contract_line_ids']/tree/field[@name='automatic_price']" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </xpath>
+      <xpath expr="//field[@name='contract_line_ids']/tree/field[@name='discount']" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </xpath>
+      <xpath expr="//field[@name='contract_line_ids']/tree/field[@name='price_subtotal']" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </xpath>
+      <xpath expr="//field[@name='contract_line_ids']/tree/field[@name='last_date_invoiced']" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </xpath>
+    </field>
+  </record>
+  <record id="contract_contract_customer_tree_view" model="ir.ui.view">
+    <field name="name">contract.customer.tree.view</field>
+    <field name="model">contract.contract</field>
+    <field name="arch" type="xml">
+      <tree>
+        <field name="code"/>
+        <field name="partner_id"/>
+        <field name="current_tariff_product"/>
+        <field name="phone_number"/>
+        <field name="service_partner_street"/>
+        <field name="service_partner_city"/>
+        <field name="service_technology_id"/>
+        <field name="service_supplier_id"/>
+        <field name="date_start"/>
+        <field name="date_end"/>
+        <field name="is_terminated"/>
+        <field name="payment_mode_id"/>
+      </tree>
+    </field>
+  </record>
+  <record id="contract.action_customer_contract_view_tree" model="ir.actions.act_window.view">
+    <field name="view_id" ref="contract_contract_customer_tree_view"/>
+  </record>
+  <record model="ir.ui.view" id="contract_terminate_reason_form_view">
+    <field name="model">contract.terminate.reason</field>
+    <field name="inherit_id" ref="contract.contract_terminate_reason_form_view"/>
+    <field name="arch" type="xml">
+      <field name="name" position="after">
+        <field name="active"/>
+        <field name="sequence"/>
+      </field>
+    </field>
+  </record>
+  <record id="act_contract_contract_2_mail_activity" model="ir.actions.act_window">
+    <field name="name">Activities</field>
+    <field name="res_model">mail.activity</field>
+    <field name="view_mode">tree,form</field>
+    <field name="context">{'search_default_res_id': active_id, 'search_default_res_model': 'contract.contract'}</field>
+  </record>
+  <!--MOBILE -->
+  <record id="mobile_contract_search_view" model="ir.ui.view">
+    <field name="name">contract.contract search view (in contract)</field>
+    <field name="model">contract.contract</field>
+    <field name="inherit_id" ref="contract.contract_contract_search_view"/>
+    <field name="arch" type="xml">
+      <filter name="finished" position="after">
+        <filter name="active" string="Active" domain="[('is_terminated', '=', False)]"/>
+      </filter>
+      <filter name="finished" position="attributes">
+        <attribute name="domain">[('is_terminated', '=', True)]</attribute>
+      </filter>
+      <filter name="not_finished" position="replace"/>
+      <field name="name" position="attributes">
+        <attribute name="filter_domain">['|','|','|','|',('name', 'ilike', self),('code', 'ilike', self),('phone_number', 'ilike', self),('partner_id', 'ilike', self),('partner_id.vat', 'ilike', self)]</attribute>
+      </field>
+      <search>
+        <group expand="0" string="Group By...">
+          <filter name="group_by_current_tariff" string="Current Tariff" domain="[]" context="{'group_by':'current_tariff_product'}"/>
+          <filter name="group_by_service_supplier_id" string="Service Supplier" domain="[]" context="{'group_by':'service_supplier_id'}"/>
+          <filter name="group_by_date_start" string="Date Start" domain="[]" context="{'group_by':'date_start'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+  <record id="contract_contract_tree_mobile_view" model="ir.ui.view">
+    <field name="name">contract.tree.mobile.view</field>
+    <field name="model">contract.contract</field>
+    <field name="arch" type="xml">
+      <tree>
+        <field name="id" widget="open_tab"/>
+        <field name="code"/>
+        <field name="partner_id"/>
+        <field name="lang"/>
+        <field name="active" invisible="1"/>
+        <field name="company_id" groups="base.group_multi_company"/>
+        <field name="phone_number"/>
+        <field name="icc"/>
+        <field name="is_terminated"/>
+        <field name="date_start"/>
+        <field name="date_end"/>
+        <field name="current_tariff_product"/>
+        <field name="is_pack"/>
+        <field name="category_id" optional="hide"/>
+        <field name="res_partner_user_id" optional="hide"/>
+        <field name="partner_priority" optional="hide"/>
+        <field name="payment_mode_id" optional="hide"/>
+        <field name="mandate_id" optional="hide"/>
+        <field name="email_ids" optional="hide"/>
+        <field name="parent_pack_contract_id" optional="hide"/>
+        <field name="current_tariff_product" optional="hide"/>
+        <field name="current_tariff_start_date" optional="hide"/>
+        <field name="service_supplier_id" optional="hide"/>
+        <field name="icc" optional="hide"/>
+      </tree>
+    </field>
+  </record>
+  <record id="action_contracts_mobile" model="ir.actions.act_window">
+    <field name="name">Mobile Contracts</field>
+    <field name="res_model">contract.contract</field>
+    <field name="view_mode">tree,form</field>
+    <field name="search_view_id" ref="somconnexio.mobile_contract_search_view"/>
+    <field name="domain">[('service_technology_id.name', '=', 'Mobile')]</field>
+  </record>
+  <record model="ir.actions.act_window.view" id="action_contracts_mobile_tree">
+    <field name="sequence">0</field>
+    <field name="view_mode">tree</field>
+    <field name="view_id" ref="contract_contract_tree_mobile_view"/>
+    <field name="act_window_id" ref="action_contracts_mobile"/>
+  </record>
+  <record model="ir.actions.act_window.view" id="action_contracts_mobile_form">
+    <field name="sequence">1</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="contract_contract_form_view"/>
+    <field name="act_window_id" ref="action_contracts_mobile"/>
+  </record>
+  <menuitem id="menu_contracts_mobile" name="Mobile Contracts" action="action_contracts_mobile" web_icon="somconnexio,static/description/mobile_contracts.png"/>
+  <!-- BROADBAND -->
+  <!-- Two search views inhering the same view conflict with each other-->
+  <record id="broadband_contract_search_view" model="ir.ui.view">
+    <field name="name">broadband search view</field>
+    <field name="model">contract.contract</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="name" filter_domain="['|','|','|','|','|','|','|','|','|','|','|',('name', 'ilike', self),('code', 'ilike', self),('phone_number', 'ilike', self),('partner_id', 'ilike', self),('partner_id.vat', 'ilike', self),('vodafone_id', 'ilike', self), ('mm_id', 'ilike', self), ('suma_id', 'ilike', self), ('external_id', 'ilike', self), ('project_id', 'ilike', self), ('id_order', 'ilike', self), ('icc', 'ilike', self)]"/>
+        <field name="journal_id"/>
+        <field name="pricelist_id"/>
+        <field string="Service street" name="service_partner_street"/>
+        <field string="Service zip code" name="service_partner_zip"/>
+        <field string="Service city" name="service_partner_city"/>
+        <field string="Service state" name="service_partner_state"/>
+        <separator/>
+        <separator/>
+        <filter name="finished" string="Finished" domain="[('is_terminated', '=', True)]"/>
+        <filter name="active" string="Active" domain="[('is_terminated', '=', False)]"/>
+        <separator/>
+        <filter string="MásMóvil" name="service_supplier_id" domain="[('service_supplier_id', '=', %(service_supplier_masmovil)d)]"/>
+        <filter string="Jazztel" name="service_supplier_id" domain="[('service_supplier_id', '=', %(service_supplier_jazztel)d)]"/>
+        <filter string="Vodafone" name="service_supplier_id" domain="[('service_supplier_id', '=', %(service_supplier_vodafone)d)]"/>
+        <filter string="Asociatel" name="service_supplier_id" domain="[('service_supplier_id', '=', %(service_supplier_asociatel_vdf)d)]"/>
+        <filter string="XOLN" name="service_supplier_id" domain="[('service_supplier_id', '=', %(service_supplier_xoln)d)]"/>
+        <filter string="Orange" name="service_supplier_id" domain="[('service_supplier_id', '=', %(service_supplier_orange)d)]"/>
+        <separator/>
+        <field name="partner_id"/>
+        <field name="commercial_partner_id"/>
+        <filter string="Archived" domain="[('active', '=', False)]" name="inactive"/>
+        <group expand="0" string="Group By...">
+          <filter name="service_supplier_id" string="Supplier" context="{'group_by':'service_supplier_id'}"/>
+          <filter string="Associated Partner" name="group_by_partner" domain="[]" context="{'group_by':'partner_id'}"/>
+          <filter name="commercial_partner_groupby" string="Commercial Entity" context="{'group_by': 'commercial_partner_id'}"/>
+          <filter name="group_by_next_invoice" string="Next Invoice" domain="[('recurring_next_date', '!=', False)]" context="{'group_by':'recurring_next_date'}"/>
+          <filter name="group_by_date_end" string="Date End" domain="[]" context="{'group_by':'date_end'}"/>
+          <filter name="group_by_current_tariff" string="Current Tariff" domain="[]" context="{'group_by':'current_tariff_product'}"/>
+          <filter name="group_by_service_tecnology_id" string="Service Technology" domain="[]" context="{'group_by':'service_technology_id'}"/>
+          <filter name="group_by_service_supplier_id" string="Service Supplier" domain="[]" context="{'group_by':'service_supplier_id'}"/>
+          <filter name="group_by_date_start" string="Date Start" domain="[]" context="{'group_by':'date_start'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+  <record id="contract_contract_tree_broadband_view" model="ir.ui.view">
+    <field name="name">contract.tree.broadband.view</field>
+    <field name="model">contract.contract</field>
+    <field name="arch" type="xml">
+      <tree>
+        <field name="id" widget="open_tab"/>
+        <field name="code"/>
+        <field name="partner_id"/>
+        <field name="service_partner_street"/>
+        <field name="service_partner_city"/>
+        <field name="active" invisible="1"/>
+        <field name="company_id" groups="base.group_multi_company"/>
+        <field name="phone_number"/>
+        <field name="service_supplier_id"/>
+        <field name="vodafone_id"/>
+        <field name="vodafone_offer_code"/>
+        <field name="mm_id"/>
+        <field name="external_id"/>
+        <field name="project_id"/>
+        <field name="id_order"/>
+        <field name="is_terminated"/>
+        <field name="date_start"/>
+        <field name="date_end"/>
+        <field name="current_tariff_product"/>
+        <field name="is_pack"/>
+        <field name="category_id" optional="hide"/>
+        <field name="res_partner_user_id" optional="hide"/>
+        <field name="partner_priority" optional="hide"/>
+        <field name="payment_mode_id" optional="hide"/>
+        <field name="mandate_id" optional="hide"/>
+        <field name="email_ids" optional="hide"/>
+        <field name="parent_pack_contract_id" optional="hide"/>
+        <field name="current_tariff_product" optional="hide"/>
+        <field name="current_tariff_start_date" optional="hide"/>
+        <field name="service_supplier_id" optional="hide"/>
+        <field name="service_technology_id" optional="hide"/>
+        <field name="service_partner_id" optional="hide"/>
+        <field name="ppp_password" optional="hide"/>
+        <field name="ppp_password" optional="hide"/>
+        <field name="endpoint_user" optional="hide"/>
+        <field name="endpoint_password" optional="hide"/>
+        <field name="administrative_number" optional="hide"/>
+        <field name="order_id" optional="hide"/>
+        <field name="router_product_id" optional="hide"/>
+        <field name="vodafone_id" optional="hide"/>
+        <field name="vodafone_offer_code" optional="hide"/>
+        <field name="fiber_signal_type_id" optional="hide"/>
+        <field name="previous_id" optional="hide"/>
+      </tree>
+    </field>
+  </record>
+  <record id="action_contracts_broadband" model="ir.actions.act_window">
+    <field name="name">Broadband Contracts</field>
+    <field name="res_model">contract.contract</field>
+    <field name="view_mode">tree,form</field>
+    <field name="search_view_id" ref="somconnexio.broadband_contract_search_view"/>
+    <field name="domain">[('service_technology_id.name', 'in', ['ADSL', 'Fiber', '4G'])]</field>
+  </record>
+  <record model="ir.actions.act_window.view" id="action_contracts_broadband_tree">
+    <field name="sequence">0</field>
+    <field name="view_mode">tree</field>
+    <field name="view_id" ref="contract_contract_tree_broadband_view"/>
+    <field name="act_window_id" ref="action_contracts_broadband"/>
+  </record>
+  <record model="ir.actions.act_window.view" id="action_contracts_broadband_form">
+    <field name="sequence">1</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="contract_contract_form_view"/>
+    <field name="act_window_id" ref="action_contracts_broadband"/>
+  </record>
+  <menuitem id="menu_contracts_broadband" name="Broadband Contracts" action="action_contracts_broadband" web_icon="somconnexio,static/description/broadband_contracts.png"/>
+  <!-- XOLN -->
+  <record id="xoln_project_action_view" model="ir.actions.act_window">
+    <field name="name">XOLN project name</field>
+    <field name="res_model">xoln.project</field>
+    <field name="view_mode">tree,form</field>
+  </record>
+  <menuitem id="menu_xoln_project" name="XOLN Project" action="xoln_project_action_view" parent="menu_contracts_broadband"/>
+  <!-- PACKS -->
+  <record id="contract_contract_pack_related_contracts_tree" model="ir.ui.view">
+    <field name="name">contract.contract tree view (in contract pack related contracts)</field>
+    <field name="model">contract.contract</field>
+    <field name="inherit_id" ref="contract.contract_contract_tree_view"/>
+    <field name="mode">primary</field>
+    <field name="arch" type="xml">
+      <field name="partner_id" position="after">
+        <field name="current_tariff_product"/>
+      </field>
+      <field name="journal_id" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </field>
+      <field name="payment_mode_id" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </field>
+    </field>
+  </record>
+  <record id="act_contract_contract_pack_related_contracts" model="ir.actions.act_window">
+    <field name="name">Pack contracts</field>
+    <field name="res_model">contract.contract</field>
+    <field name="view_mode">tree,form</field>
+    <field name="domain">[('contracts_in_pack', 'in', [active_id])]</field>
+  </record>
+  <record id="act_contract_contract_pack_related_contracts_view_tree" model="ir.actions.act_window.view">
+    <field name="sequence">0</field>
+    <field name="view_mode">tree</field>
+    <field name="view_id" ref="contract_contract_pack_related_contracts_tree"/>
+    <field name="act_window_id" ref="act_contract_contract_pack_related_contracts"/>
+  </record>
+  <record id="contract_contract_view_buttons" model="ir.ui.view">
+    <field name="name">contract.contract.view.buttons</field>
+    <field name="model">contract.contract</field>
+    <field name="inherit_id" ref="contract.contract_contract_form_view"/>
+    <field name="priority" eval="3"/>
+    <field name="arch" type="xml">
+      <button name="action_show_invoices" position="before">
+        <button class="oe_stat_button" type="action" name="%(somconnexio.act_contract_contract_2_mail_activity)d" icon="fa-clock-o">
+          <field name="mail_activity_count" widget="statinfo"/>
+        </button>
+        <button class="oe_stat_button" type="action" name="%(somconnexio.act_contract_contract_pack_related_contracts)d" icon="fa-clock-o" attrs="{'invisible': [('number_contracts_in_pack', '&lt;=', 1)]}">
+          <field name="number_contracts_in_pack" widget="statinfo"/>
+        </button>
+      </button>
+    </field>
+  </record>
+</odoo>

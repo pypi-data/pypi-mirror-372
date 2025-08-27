@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <data>
+    <record id="crm_case_form_view_oppor_inherit" model="ir.ui.view">
+      <field name="inherit_id" ref="sale_crm.crm_case_form_view_oppor"/>
+      <field name="model">crm.lead</field>
+      <field name="name">crm.lead.form.opportunity</field>
+      <field name="arch" type="xml">
+        <header position="replace"/>
+        <field name="partner_id" position="attributes">
+          <attribute name="domain">[('is_customer','=', True),('parent_id', '=', False)]</attribute>
+        </field>
+        <field name="email_from" position="attributes">
+          <attribute name="attrs">{'invisible': [('email_from', '==', False)]}</attribute>
+        </field>
+        <field name="phone" position="attributes">
+          <attribute name="attrs">{'invisible': [('phone', '==', False)]}</attribute>
+        </field>
+      </field>
+    </record>
+    <record id="crm_case_form_view_pack" model="ir.ui.view">
+      <field name="inherit_id" ref="crm_case_form_view_oppor_inherit"/>
+      <field name="model">crm.lead</field>
+      <field name="name">crm.lead.form.opportunity.pack</field>
+      <field name="mode">primary</field>
+      <field name="arch" type="xml">
+        <xpath expr="//sheet" position="before">
+          <field name="email_sent" invisible="1"/>
+          <header>
+            <button name="action_set_paused" string="Pause" type="object" class="oe_highlight" attrs="{                 'invisible': [                   '|',                     ('active','=',False),                     ('stage_id','!=', %(crm.stage_lead1)d),               ]}"/>
+            <button name="action_set_remesa" string="Remesa" type="object" class="oe_highlight" attrs="{'invisible': ['|', ('active','=',False),                                            ('stage_id','not in', [%(crm.stage_lead1)d])]}"/>
+            <button name="action_set_cancelled" string="Cancel" type="object" class="oe_highlight" confirm="Are you sure you want to cancel this crm lead?" attrs="{'invisible': ['|', ('active','=',False),                                            ('stage_id','!=',%(crm.stage_lead1)d)]}"/>
+            <button name="action_restore" string="Restore" type="object" class="oe_highlight" attrs="{'invisible': [('active','=',True)]}"/>
+            <button name="action_send_email" string="Send Email" type="object" class="oe_highlight" attrs="{'invisible': ['|','|',                 ('user_id','=',%(base.user_root)d),                 ('stage_id','!=',%(crm.stage_lead1)d),                 ('email_sent','=',True),               ]}"/>
+          </header>
+        </xpath>
+        <field name="tag_ids" position="replace">
+          <field name="partner_category_id" widget="many2many_tags" options="{'color_field': 'color', 'no_create_edit': True}"/>
+          <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color', 'no_create_edit': True}"/>
+        </field>
+        <label for="date_deadline" position="before">
+          <field name="stage_id" readonly="1"/>
+        </label>
+        <xpath expr="//sheet/notebook" position="before">
+          <group>
+            <field name="has_broadband_lead_lines" invisible="1"/>
+            <field name="has_mobile_lead_lines" invisible="1"/>
+            <field name="broadband_lead_line_ids" string="Broadband Lead Lines" attrs="{'readonly': False, 'invisible':[('has_broadband_lead_lines', '=', False)]}" context="{'tree_view_ref':'somconnexio.view_ba_tree_lead_line_isp_infos'}"/>
+            <field name="mobile_lead_line_ids" string="Mobile Lead Lines" attrs="{'readonly': False, 'invisible':[('has_mobile_lead_lines', '=', False)]}" context="{'tree_view_ref':'somconnexio.view_mbl_tree_lead_line_isp_infos'}"/>
+          </group>
+        </xpath>
+        <xpath expr="//sheet/notebook" position="attributes">
+          <attribute name="invisible">1</attribute>
+        </xpath>
+        <xpath expr="//group[@name='lead_partner']/field[@name='website']" position="before">
+          <field name="team_id" domain="[('use_leads','=',True)]"/>
+        </xpath>
+         <xpath expr="//group[@name='opportunity_partner']/field[@name='lost_reason_id']" position="before">
+          <field name="team_id" domain="[('use_leads','=',True)]"/>
+        </xpath>
+      </field>
+    </record>
+    <record id="crm_lead_pack_search_view" model="ir.ui.view">
+      <field name="name">crm.lead pack search view</field>
+      <field name="model">crm.lead</field>
+      <field name="inherit_id" ref="crm.view_crm_case_opportunities_filter"/>
+      <field name="arch" type="xml">
+        <xpath expr="/search" position="replace">
+          <search>
+            <field name="name" filter_domain="['|', '|',                                       ('partner_id', 'ilike', self),                                       ('partner_id.vat', 'ilike', self),                                       ('phones_from_lead', 'ilike', self),                                   ]"/>
+            <filter string="Only broadband lead lines" name="broadband_lead_lines" domain="[('has_broadband_lead_lines', '=', True),                     ('has_mobile_lead_lines', '=', False)]"/>
+            <filter string="Only mobile lead lines" name="mobile_lead_lines" domain="[('has_mobile_lead_lines', '=', True),                     ('has_broadband_lead_lines', '=', False)]"/>
+            <filter string="Only mixed lead lines" name="mixed_lead_lines" domain="[('has_mobile_lead_lines', '=', True),                     ('has_broadband_lead_lines', '=', True)]"/>
+            <filter string="New" name="new" domain="[('stage_id', '=', %(crm.stage_lead1)d)]"/>
+            <filter string="Remesa" name="remesa" domain="[('stage_id', '=', %(crm.stage_lead3)d)]"/>
+            <filter string="Paused" name="paused" domain="[('stage_id', '=', %(crm.stage_lead2)d)]"/>
+            <filter string="Cancelled" name="cancelled" domain="[('stage_id', '=', %(somconnexio.stage_lead5)d)]"/>
+            <filter string="Won" name="won" domain="[('stage_id', '=', %(crm.stage_lead4)d)]"/>
+            <separator/>
+            <filter string="Creation Date" name="creation_date" date="create_date"/>
+          </search>
+        </xpath>
+      </field>
+    </record>
+    <record id="act_crm_lead_pack" model="ir.actions.act_window">
+      <field name="name">Leads Packs</field>
+      <field name="res_model">crm.lead</field>
+      <field name="view_mode">tree,form</field>
+    </record>
+    <record id="view_tree_lead_pack" model="ir.ui.view">
+      <field name="name">crm.lead packs (in main menu)</field>
+      <field name="model">crm.lead</field>
+      <field name="arch" type="xml">
+        <tree string="Leads Packs">
+          <field name="id"/>
+          <field name="partner_id"/>
+          <field name="partner_category_id" widget="many2many_tags" options="{'color_field': 'color', 'no_create_edit': True}"/>
+          <field name="create_date"/>
+          <field name="stage_id"/>
+        </tree>
+      </field>
+    </record>
+    <record model="ir.actions.act_window.view" id="action_crm_lead_pack_tree">
+      <field name="sequence">0</field>
+      <field name="view_mode">tree</field>
+      <field name="view_id" ref="view_tree_lead_pack"/>
+      <field name="act_window_id" ref="act_crm_lead_pack"/>
+    </record>
+    <record model="ir.actions.act_window.view" id="action_crm_lead_pack_form">
+      <field name="sequence">1</field>
+      <field name="view_mode">form</field>
+      <field name="view_id" ref="crm_case_form_view_pack"/>
+      <field name="act_window_id" ref="act_crm_lead_pack"/>
+    </record>
+    <record model="ir.actions.act_window" id="crm.crm_lead_action_pipeline">
+      <field name="domain">[('type', '=', 'opportunity')]</field>
+    </record>
+    <!-- Disable crm actions to hide them -->
+    <record id="crm.action_crm_send_mass_convert" model="ir.actions.act_window">
+      <field name="binding_model_id" eval="False"/>
+    </record>
+    <record id="crm.action_merge_opportunities" model="ir.actions.act_window">
+      <field name="binding_model_id" eval="False"/>
+    </record>
+    <record id="crm.action_lead_mass_mail" model="ir.actions.act_window">
+      <field name="binding_model_id" eval="False"/>
+    </record>
+    <record id="crm.action_mark_as_lost" model="ir.actions.server">
+      <field name="binding_model_id" eval="False"/>
+    </record>
+  </data>
+  <!--
+    crm.tag views inheritance
+  -->
+  <record id="crm_tag_form_inherit" model="ir.ui.view">
+    <field name="inherit_id" ref="sales_team.sales_team_crm_tag_view_form"/>
+    <field name="name">crm.tag.form</field>
+    <field name="model">crm.tag</field>
+    <field name="arch" type="xml">
+      <field name="name" position="after">
+        <field name="code"/>
+      </field>
+    </field>
+  </record>
+  <record id="crm_lead_tag_tree_inherit" model="ir.ui.view">
+    <field name="inherit_id" ref="sales_team.sales_team_crm_tag_view_tree"/>
+    <field name="name">crm.lead.tag.tree</field>
+    <field name="model">crm.tag</field>
+    <field name="arch" type="xml">
+      <field name="name" position="after">
+        <field name="code"/>
+      </field>
+    </field>
+  </record>
+</odoo>

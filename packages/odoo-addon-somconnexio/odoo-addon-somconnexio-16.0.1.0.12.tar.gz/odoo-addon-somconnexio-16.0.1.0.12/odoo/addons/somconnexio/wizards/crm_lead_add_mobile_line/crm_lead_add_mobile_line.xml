@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <data>
+    <record id="view_form_crm_lead_add_mobile_line_wizard" model="ir.ui.view">
+      <field name="name">CRM Lead Add Mobile Line Wizard</field>
+      <field name="model">crm.lead.add.mobile.line.wizard</field>
+      <field name="arch" type="xml">
+        <form>
+          <group col="2">
+            <group name="basic info">
+              <field name="partner_id" invisible="1"/>
+              <field name="product_id" options="{'no_create_edit':True}"/>
+              <field name="bank_id" options="{'no_create_edit':True}" domain="[('partner_id', '=', partner_id)]"/>
+              <field name="icc"/>
+              <field name="type"/>
+              <separator/>
+            </group>
+            <group name="portability info">
+              <field name="previous_contract_type" attrs="{'required': [('type','=','portability')],                                            'invisible': [('type','!=','portability')]                                           }"/>
+              <field name="phone_number" attrs="{'required': [('type','=','portability')],                                            'invisible': [('type','!=','portability')]                                           }"/>
+              <field name="donor_icc" attrs="{'required': [('type','=','portability'),                                                         ('previous_contract_type', '=', 'prepaid')],                                            'invisible': [('type','!=','portability')]                                           }"/>
+              <field name="previous_mobile_provider" domain="[('mobile', '=', True)]" options="{'no_create_edit':True}" attrs="{'required': [('type','=','portability')],                                            'invisible': [('type','!=','portability')]                                           }"/>
+              <field name="previous_owner_vat_number" attrs="{'invisible':[('type','!=','portability')]}"/>
+              <field name="previous_owner_first_name" attrs="{'invisible':[('type','!=','portability')]}"/>
+              <field name="previous_owner_name" attrs="{'invisible':[('type','!=','portability')]}"/>
+            </group>
+          </group>
+          <group col="2">
+            <group string="Delivery address">
+              <field name="delivery_country_id" options="{'no_create_edit':True}" attrs="{'required': ['|', ('icc','=', False), ('icc','=','')]}"/>
+              <field name="delivery_state_id" domain="[('country_id', '=', delivery_country_id)]" options="{'no_create_edit':True}" attrs="{'required': ['|', ('icc','=',False), ('icc','=','')]}"/>
+              <field name="delivery_street" attrs="{'required': ['|', ('icc','=',False), ('icc','=','')]}"/>
+              <field name="delivery_zip_code" attrs="{'required': ['|', ('icc','=',False), ('icc','=','')]}"/>
+              <field name="delivery_city" attrs="{'required': ['|', ('icc','=',False), ('icc','=','')]}"/>
+            </group>
+          </group>
+          <footer>
+            <button type="object" name="button_create" string="Create"/>
+            <button special="cancel" string="Cancel" class="btn-secondary"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+    <record id="action_crm_lead_add_mobile_line_wizard" model="ir.actions.act_window">
+      <field name="name">Add mobile line to CRM Lead</field>
+      <field name="binding_model_id" ref="crm.model_crm_lead"/>
+      <field name="res_model">crm.lead.add.mobile.line.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+      <field name="binding_view_types">form</field>
+    </record>
+    <record id="view_lead_create_mobile_lines_wizard_button" model="ir.ui.view">
+      <field name="name">crm.lead.create.lines.wizard.button</field>
+      <field name="model">crm.lead</field>
+      <field name="inherit_id" ref="somconnexio.crm_case_form_view_pack"/>
+      <field name="arch" type="xml">
+        <xpath expr="//button" position="before">
+          <field name="is_broadband_isp_info_type_location_change" invisible="1"/>
+          <button name="%(action_crm_lead_add_mobile_line_wizard)d" string="Add mobile line to CRM Lead" type="action" context="{'default_active_id': active_id}" attrs="{                     'invisible': [                         '|',                         ('stage_id', '!=', %(crm.stage_lead1)d),                         ('is_broadband_isp_info_type_location_change', '=', True)                     ]                 }"/>
+        </xpath>
+      </field>
+    </record>
+  </data>
+</odoo>

@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<odoo>
+  <record id="action_lead_sending_sim_letter" model="ir.actions.report">
+    <field name="name">Sim Sending Letter</field>
+    <field name="model">crm.lead</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">somconnexio.sim_sending_letter_lead_template</field>
+    <field name="report_file">somconnexio.sim_sending_letter_lead_template</field>
+    <field name="binding_model_id" ref="crm.model_crm_lead"/>
+    <field name="binding_type">report</field>
+    <field name="paperformat_id" ref="base.paperformat_euro"/>
+  </record>
+  <record id="action_lead_line_sending_sim_letter" model="ir.actions.report">
+    <field name="name">Sim Sending Letter OLD</field>
+    <field name="model">crm.lead.line</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">somconnexio.sim_sending_letter_lead_line_template</field>
+    <field name="report_file">somconnexio.sim_sending_letter_lead_line_template</field>
+    <field name="binding_model_id" ref="crm_lead_product.model_crm_lead_line"/>
+    <field name="binding_type">report</field>
+    <field name="paperformat_id" ref="base.paperformat_euro"/>
+  </record>
+  <!-- Main CRM Lead template -->
+  <template id="sim_sending_letter_lead_template">
+    <t t-call="web.html_container">
+      <!-- for lead (CRM Lead) in report -->
+      <t t-foreach="docs" t-as="lead">
+        <t t-foreach="lead.lead_line_ids" t-as="lead_line">
+          <t t-if="lead_line.is_mobile">
+            <t t-call="somconnexio.sim_sending_letter_lang_template" t-lang="lead.partner_id.lang"/>
+          </t>
+        </t>
+      </t>
+    </t>
+  </template>
+  <!-- Main CRM Lead Line template -->
+  <template id="sim_sending_letter_lead_line_template">
+    <t t-call="web.html_container">
+      <!-- for lead_line (CRM Lead Line) in report -->
+      <t t-foreach="docs" t-as="lead_line">
+        <t t-if="lead_line.is_mobile">
+          <t t-call="somconnexio.sim_sending_letter_lang_template" t-lang="lead_line.lead_id.partner_id.lang"/>
+        </t>
+      </t>
+    </t>
+  </template>
+  <!-- Translatable template -->
+  <template id="sim_sending_letter_lang_template">
+    <!-- Re-browse of the record with the partner lang -->
+    <t t-set="lead_line" t-value="lead_line.with_context({'lang':lead_line.lead_id.partner_id.lang})"/>
+    <meta charset="UTF-8"/>
+    <div class="page">
+      <div class="oe_structure"/>
+      <div style="margin-left: 3em;"><p style="padding-bottom: 4em;"/><div class="recipient" style="padding: 3em; text-align: right;">
+                        <strong><t t-esc="lead_line.lead_id.partner_id.name"/></strong><br/>
+                        <t t-esc="lead_line.mobile_isp_info.delivery_full_street"/><br/>
+                        <t t-esc="lead_line.mobile_isp_info.delivery_zip_code"/>
+                        -
+                        <t t-esc="lead_line.mobile_isp_info.delivery_city"/><br/>
+                        <t t-esc="lead_line.mobile_isp_info.delivery_state_id.name"/><br/>
+                    </div>
+                    El Prat de Llobregat <t t-esc="datetime.date.today().strftime('%d/%m/%Y')"/><br/><br/>
+                    Hola <t t-esc="lead_line.lead_id.partner_id.firstname"/>,<br/>Com pots veure...<br/><br/>
+                    <div class="stand-out-message" style="background: #863158; color: white; text-align: center; padding: 1em; margin: 1em;"><strong>Ja tens la SIM de Som Connexió!</strong><t t-if="lead_line.mobile_isp_info.type == 'portability'"><br/><br/>del telèfon <t t-esc="lead_line.mobile_isp_info.phone_number"/></t><t t-else=""><br/><br/>El número de referència de línia és: <t t-esc="lead_line.id"/></t></div>
+                    <div class="body" style="margin-top: 2em;"><div t-if="lead_line.mobile_isp_info.type == 'new'">
+                            El teu número s'assignarà en el moment que activem la SIM. Quan activem la SIM, t'enviem un correu electrònic amb les instruccions que hauràs de seguir, i altra informació d'utilitat.
+                            <span class="important-advise" style="color: #863158">
+                                Recorda que el telèfon ha de ser lliure o estar alliberat
+                            </span>.<br/><br/>
+                            <strong>No cal que ens avisis que has rebut la SIM, estem en contacte amb Correus i ja ens ha arribat la notificació per part seva.</strong><br/><br/>
+                            Si necessites una activació exprés, fes-nos-ho saber a través de serveis@somconnexio.coop o del telèfon 93 131 1728.<br/><br/>
+                        </div><div t-elif="lead_line.mobile_isp_info.type == 'portability'">
+                            Per començar a utilitzar aquesta SIM hem de realitzar el procés de portabilitat, és a dir, portar el teu número de telèfon del teu operador actual a Som Connexió.<br/><br/>
+                            <strong>No cal que ens avisis que has rebut la SIM, estem en contacte amb Correus i ja ens ha arribat la notificació per part seva.</strong><br/><br/>
+                            <span class="important-advise" style="color: #863158">
+                                Recorda que el telèfon ha de ser lliure o estar alliberat
+                            </span>, i que el dia que ens demanis l'activació de la sim, t'enviarem un correu electrònic amb les instruccions que hauràs de seguir, i altra informació d'utilitat.<br/><br/>
+                            Aquest procés es fa efectiu en <strong>48h laborables</strong> (sense comptar caps de setmana o festius estatals), i el canvi es realitza a la nit, entre les 2h i les 6h. (Quan deixis de tenir servei amb la targeta SIM de la teva operadora actual, ja podràs posar la SIM de Som connexió i tindràs la línia activada)<br/><br/>
+                            La nostra <strong>facturació</strong> va per mesos naturals, és a dir, comença el dia 1 de cada mes. Però el primer mes només et cobrarem la part proporcional des del dia de l'alta a Som Connexió fins a l'últim dia del mes en curs.
+                            La teva operadora actual està obligada a fer el mateix, és a dir, a cobrar-te només la part proporcional del servei fins al dia que es doni de baixa.<br/><br/>
+                        </div>
+                        Altres coses a tenir en compte:<br/><br/>
+                        <ul><li>La SIM té activat el <strong>límit de consum a 36€ IVA Inclòs</strong> per sobre de la tarifa contractada, però ens pots demanar que el baixem o que el pugem. Aquesta limitació serveix per impedir que es faci un consum superior al límit establert per causes imprevistes.</li><li>El <strong>contestador automàtic</strong> surt per defecte. Per escoltar els missatges i configurar la bústia has de trucar al 242. Per desactivar-lo marca ##002# i truca.</li><li>El servei de <strong>roaming està activat per defecte</strong>. És recomanable que abans de viatjar consultis el nostre web per conèixer el funcionament del roaming a Som Connexió.</li><li>Pots <strong>canviar de tarifa</strong> d'un mes per l'altre. Ho pots sol·licitar a l'<strong>Oficina virtual</strong> de la nostra web abans que finalitzi el mes en curs. El canvi es farà efectiu el primer dia del mes vinent.</li></ul>
+                        Si tens qualsevol dubte, posa't en contacte amb l'equip de treball... ens fa molta il·lusió atendre't,<br/><br/>
+                        <strong>Telèfon</strong>:<br/><br/>
+                        93 131 17 28 (de dilluns a divendres de 10h a 14h)<br/>
+                        693 761 723 (només per urgències, de 9h a 21h, tots els dies de la setmana)<br/><br/>
+                        Si tens una urgència fora d'aquest horari, envia un correu electrònic amb la paraula URGENT a l'assumpte, a:<br/>
+                        <a href="mailto:serveis@somconnexio.coop">serveis@somconnexio.coop</a><br/><br/><br/>
+
+                        <p style="page-break-after:always">L'equip Som Connexió</p>
+                    </div>
+                </div>
+      <div class="oe_structure"/>
+    </div>
+  </template>
+</odoo>

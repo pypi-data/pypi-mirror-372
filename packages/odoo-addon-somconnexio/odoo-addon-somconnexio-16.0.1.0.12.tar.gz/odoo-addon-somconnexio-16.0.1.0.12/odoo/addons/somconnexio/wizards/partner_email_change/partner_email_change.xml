@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <record id="view_form_partner_email_change_wizard" model="ir.ui.view">
+    <field name="name">Partner Email Change Wizard</field>
+    <field name="model">partner.email.change.wizard</field>
+    <field name="arch" type="xml">
+      <form>
+        <field name="partner_id" invisible="1"/>
+        <field name="available_email_ids" invisible="1"/>
+        <field name="available_email_ids_for_partner" invisible="1"/>
+        <h3>Modify email from:</h3>
+        <separator/>
+        <group>
+          <field name="change_contact_email"/>
+          <separator/>
+          <field name="change_contracts_emails"/>
+        </group>
+        <group attrs="{'invisible': [('change_contact_email', '!=', 'yes')]}">
+          <field name="email_id" options="{'no_create_edit':True}" domain="[('id', 'in', available_email_ids_for_partner)]" attrs="{'required': [('change_contact_email', '=', 'yes')]}"/>
+        </group>
+        <group attrs="{'invisible': [('change_contracts_emails', '!=', 'yes')]}">
+          <field name="email_ids" widget="many2many_tags_contract_email" options="{'no_create_edit':True}" context="{'show_email': True}" domain="[('id', 'in', available_email_ids)]" attrs="{                      'required': [('change_contracts_emails', '=', 'yes'),('change_contact_email', '=', 'no')],'invisible': [('change_contact_email', '=', 'yes')],}"/>
+          <field name="contract_ids" domain="[('partner_id', '=', partner_id)]" attrs="{'required': [('change_contracts_emails', '=', 'yes')]}" context="{'search_default_active': 1}"/>
+        </group>
+        <group string="Activity" attrs="{'invisible': [('change_contracts_emails', '!=', 'yes')]}">
+          <field name="summary" attrs="{'required': [('change_contracts_emails', '=', 'yes')]}"/>
+          <field name="done"/>
+        </group>
+        <footer>
+          <button type="object" name="button_change" string="Change"/>
+          <button special="cancel" string="Cancel" class="btn-secondary"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+  <record id="action_partner_email_change_wizard" model="ir.actions.act_window">
+    <field name="name">Change Emails</field>
+    <field name="res_model">partner.email.change.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="target">new</field>
+    <field name="context">{}</field>
+    <field name="binding_type">action</field>
+  </record>
+  <record id="view_partner_form_email_wizard_button" model="ir.ui.view">
+    <field name="name">res.partner.form.email.wizard.button</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="view_partner_form_iban_wizard_button"/>
+    <field name="arch" type="xml">
+      <header position="inside">
+        <button name="%(action_partner_email_change_wizard)d" string="Change Emails" type="action" context="{'default_active_id': active_id}"/>
+      </header>
+    </field>
+  </record>
+</odoo>
