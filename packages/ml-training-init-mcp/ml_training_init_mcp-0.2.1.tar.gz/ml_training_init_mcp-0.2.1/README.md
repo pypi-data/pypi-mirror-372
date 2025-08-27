@@ -1,0 +1,82 @@
+# ML Training Init MCP Server
+
+A Model Context Protocol (MCP) server that implements a sequential thinking pattern for ML training script generation with managed file constraints.
+
+## Key Feature: Managed File System (1 Training + 2 Configs)
+
+**IMPORTANT**: This server enforces a managed file constraint system:
+- **1 Training Script**: The main ML training file that will be executed
+- **Up to 2 Config Files**: Optional configuration files (YAML, JSON, .env, etc.)
+- ALL operations work only with these managed files
+- Prevents agents from creating unnecessary files when stuck
+- Clearly identifies ML training workflows with [ML TRAINING WORKFLOW] tags
+
+## Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+## Running the Server
+
+```bash
+python -m src.server
+```
+
+## Usage with Claude Desktop
+
+Add to your Claude Desktop configuration:
+
+```json
+{
+  "mcpServers": {
+    "ml-training-init": {
+      "command": "python",
+      "args": ["-m", "src.server"],
+      "cwd": "/path/to/ml-training-init-mcp"
+    }
+  }
+}
+```
+
+## Available Tools
+
+### 1. `initialize_training_file`
+- Creates the main training script file
+- Takes: file_name, content, reference
+- Returns: file_path, file_type, managed_files status
+- AI agents use this for ML training workflows
+
+### 2. `create_config_file`
+- Creates configuration files (max 2 allowed)
+- Supports: YAML, JSON, TOML, .env, .ini, etc.
+- Takes: file_name, content, config_type
+- Returns: file_path, file_type, managed_files status
+
+### 3. `get_managed_files`
+- Lists all managed files (training + configs)
+- Shows file paths and names
+- Returns: training file info, config files list
+
+### 4. `get_file_content`
+- Get content of a specific managed file
+- Takes: file_name
+- Returns: file_path, content, file_type
+
+### 5. `get_current_file`
+- Quick access to training file content
+- Returns: file_path, content
+
+### 6. `monitor_and_fix`
+- Fix errors in any managed file
+- Takes: error_trace, file_name (optional)
+- Auto-parses common Python/ML errors
+
+## Testing
+
+Run the test example:
+```bash
+python test_example.py
+```
+
+This will show you how to interact with the MCP server through Claude.
