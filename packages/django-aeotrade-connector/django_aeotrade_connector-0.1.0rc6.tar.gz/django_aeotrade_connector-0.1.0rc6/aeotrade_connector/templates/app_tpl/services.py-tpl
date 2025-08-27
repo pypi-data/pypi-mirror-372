@@ -1,0 +1,30 @@
+from typing import Any, Type, Optional
+
+from aeotrade_connector.models import ConnectorTask as TaskORM
+from aeotrade_connector.models import ConnectorTaskLog as TaskLogORM
+from aeotrade_connector.schemas import RWModel
+from aeotrade_connector.services import ConnectorServices
+
+
+class {{ camel_case_app_name }}Service(ConnectorServices):
+
+    @classmethod
+    async def params_check(cls, task: TaskORM, dxp_message: dict) -> Type[RWModel]:
+        """
+        连接器参数校验, 校验的是TaskORM.event_action_params中的参数。如果校验失败，建议直接抛出`TaskParamsIllegalException`异常
+        返回的数据必须继承自`RWModel`， 它是业务执行过程中，所需的所有合法参数
+        """
+        ...
+
+    @classmethod
+    async def execute(cls, model_data: Type[RWModel]) -> Any:
+        """业务执行入口, 接收的`model_data`是 params_check 返回的数据。该函数返回的值可以是任意类型, 这个类型会传递给response_handler"""
+        ...
+
+    @classmethod
+    async def response_handler(cls, response: Any, task: TaskORM, task_log: TaskLogORM) -> Optional[str]:
+        """
+        业务结果处理， 一般情况下，这里处理业务过程抛出的各种异常, 可以通过调用`task_status_report`来上报任务执行状态
+        如果函数有返回值，会传递给MQManager, 并发送给消息队列
+        """
+        ...

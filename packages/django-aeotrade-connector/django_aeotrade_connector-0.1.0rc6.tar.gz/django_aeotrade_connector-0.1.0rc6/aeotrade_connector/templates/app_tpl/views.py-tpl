@@ -1,0 +1,92 @@
+from rest_framework.decorators import api_view
+
+from aeotrade_connector.db.choices import TaskStatus
+from aeotrade_connector.exceptions import (DataExistsException,
+                                           DataNotExistsException,
+                                           DataOperationFailedException)
+from aeotrade_connector.helpers import task_status_update
+from aeotrade_connector.models import ConnectorTask as TaskORM
+from aeotrade_connector.schemas.common import ConnectorRespStatus
+from aeotrade_connector.serializers import TaskCreateReq, TaskUpdateReq
+from aeotrade_connector.utils import APIResponse, check_request, logger
+
+
+@api_view(["POST"])
+def task_account_check(request):
+    """账号校验"""
+    return APIResponse()
+
+
+@api_view(["POST"])
+def task_create(request):
+    """新增任务"""
+
+    req_data = check_request(request, TaskCreateReq)
+    task_id = req_data.pop("task_id")
+    req_data["task_from"] = "{{ app_name }}"
+    ins, created = TaskORM.objects.get_or_create(
+        task_id=task_id,
+        is_deleted=False,
+        defaults=req_data
+    )
+    if not created:
+        raise DataExistsException("任务已存在")
+
+    return APIResponse().set_msg("创建成功").set_code(ConnectorRespStatus.Success)
+
+
+@api_view(["POST"])
+def task_update(request, task_id: str):
+    """更新任务"""
+
+    task: TaskORM = TaskORM.objects.filter(task_id=task_id, is_deleted=False).first()
+    if not task:
+        raise DataNotExistsException("任务不存在")
+
+    try:
+        req_data = check_request(request, TaskUpdateReq)
+        TaskORM.objects.filter(task_id=task_id, is_deleted=False).update(**req_data)
+    except Exception as e:
+        logger.exception(f"{{ camel_case_app_name }} task update error: {e}")
+        raise DataOperationFailedException("数据操作失败")
+    return APIResponse().set_msg("更新成功").set_code(ConnectorRespStatus.Success)
+
+
+@api_view(["DELETE"])
+def task_delete(request, task_id: str):
+    """删除任务"""
+
+    task: TaskORM = TaskORM.objects.filter(task_id=task_id, is_deleted=False).first()
+    if not task:
+        raise DataNotExistsException("任务不存在")
+
+    try:
+        task.is_deleted = True
+        task.save()
+    except Exception as e:
+        logger.exception(f"{{ camel_case_app_name }} task delete error: {e}")
+        raise DataOperationFailedException("数据操作失败")
+
+    return APIResponse().set_msg("删除成功").set_code(ConnectorRespStatus.Success)
+
+
+@api_view(["POST"])
+def task_start(request, task_id):
+    """启动任务"""
+    task_status_update(
+        task=task_id,
+        status=TaskStatus.Running,
+        code=0
+    )
+    return APIResponse().set_msg("操作成功").set_code(ConnectorRespStatus.Success)
+
+
+@api_view(["POST"])
+def task_stop(request, task_id):
+    """停止任务"""
+    task_status_update(
+        task=task_id,
+        status=TaskStatus.Stopped,
+        code=0
+    )
+    return APIResponse().set_msg("操作成功").set_code(ConnectorRespStatus.Success)
