@@ -1,0 +1,292 @@
+[build-system]
+requires = [
+  "setuptools",
+  "hatchling>=1.5.0",
+  "jupyterlab>=4.0.0,<5",
+  "hatch-nodejs-version>=0.3.2",
+  "hatch-jupyter-builder",
+  "schedule",
+  "pyzmq==26.2.0",
+  "jupyter-scheduler>=2.7.0,<3",
+  "jupyter-packaging==0.12.3"
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "sagemaker-studio-dataengineering-extensions"
+dynamic = ["version"]
+readme = "README.md"
+license = "Apache-2.0"
+description = 'A python Package to enhance experience of SageMaker Unified Studio'
+authors = [
+  { name = "Amazon Web Services" },
+]
+maintainers = [
+  { name = "sagemaker-unified-studio" },
+]
+
+keywords = [
+  "AWS", "Amazon", "SageMaker", "SageMaker Unified Studio", "Data Engineering"
+]
+dependencies = [
+  # Put your dependencies here!
+    "pytest",
+    "requests",
+    "schedule",
+    "boto3",
+    "jupyter_server>=1.6,<3",
+    "sagemaker_studio>=1.0.16",
+    "aws-embedded-metrics",
+    "async-timeout",
+    "async-lru",
+    "pydantic",
+    "aiobotocore>=2.9,<3",
+    "jupyter-scheduler>=2.7.0,<3",
+]
+requires-python = ">=3.11"
+classifiers = [
+    "Framework :: Jupyter",
+    "Framework :: Jupyter :: JupyterLab",
+    "Framework :: Jupyter :: JupyterLab :: 4",
+    "Framework :: Jupyter :: JupyterLab :: Extensions",
+    "Framework :: Jupyter :: JupyterLab :: Extensions :: Prebuilt",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[tool.hatch.version]
+path = "src/sagemaker_studio_dataengineering_extensions/__init__.py"
+
+[tool.hatch.envs.default]
+# This controls what version of Python you want to be the default
+# when running any scripts or tools to do things like debug test failures
+# or do general development.  It's lockfile is ./requirements.txt
+type = "pip-compile"
+python = "3.11"
+dependencies = [
+    "pytest",
+    "mypy",
+    "pytest-jupyter[server]>=0.6",
+    "pytest-env",
+    "pytest-asyncio",
+    "pyzmq==26.2.0",
+    "aws-embedded-metrics",
+    "jupyter-scheduler>=2.7.0,<3",
+]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--durations=5",
+    "--color=yes",
+]
+testpaths = [ "tests" ]
+
+[tool.coverage.run]
+source_pkgs = ["sagemaker_studio_dataengineering_extensions"]
+branch = true
+parallel = true
+# fail_under = 99
+
+[tool.coverage.paths]
+"sagemaker_studio_dataengineering_extensions" = ["src/sagemaker_studio_dataengineering_extensions", "**/site-packages/sagemaker_studio_dataengineering_extensions"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+show_missing = true
+
+[tool.coverage.xml]
+output = "private/brazil-documentation/coverage/coverage.xml"
+
+[tool.coverage.html]
+directory = "private/brazil-documentation/coverage/"
+
+[tool.ruff.lint]
+isort.known-first-party = ["sagemaker_studio_dataengineering_extensions"]
+exclude = [ "./build", ".hatch", "private" ]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.hatch.build]
+directory = "./external-distribution"
+
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
+include = ["src/sagemaker_studio_dataengineering_extensions"]
+
+[tool.hatch.build.targets.wheel]
+ignore-vcs = true
+packages = [
+  "src/sagemaker_studio_dataengineering_extensions/sagemaker_connection_magics_jlextension/sagemaker_connection_magics_jlextension",
+  "src/sagemaker_studio_dataengineering_extensions/sagemaker_data_explorer/sagemaker_data_explorer",
+  "src/sagemaker_studio_dataengineering_extensions/sagemaker_jupyter_server_extension/sagemaker_jupyter_server_extension",
+  "src/sagemaker_studio_dataengineering_extensions/sagemaker_spark_monitor_widget/sagemaker_sparkmonitor",
+  "src/sagemaker_studio_dataengineering_extensions/sagemaker_studio_theme/sagemaker_ui_theme",
+  "src/sagemaker_studio_dataengineering_extensions/sagemaker_ui_doc_manager_jl_plugin/sagemaker_ui_doc_manager_jl_plugin",
+  "src/sagemaker_studio_dataengineering_extensions/sagemaker_post_startup_notification_plugin/sagemaker_post_startup_notification_plugin",
+  "src/sagemaker_studio_dataengineering_extensions/sagemaker_studio_jupyter_scheduler/sagemaker_studio_jupyter_scheduler",
+]
+
+[tool.hatch.build.hooks.custom]
+path = "src/sagemaker_studio_dataengineering_extensions/scripts/build_hooks.py"
+
+[tool.hatch.build.targets.wheel.shared-data]
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_connection_magics_jlextension/sagemaker_connection_magics_jlextension/labextension" = "share/jupyter/labextensions/@amzn/sagemaker-connection-magics-jlextension"
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_connection_magics_jlextension/install.json" = "share/jupyter/labextensions/@amzn/sagemaker-connection-magics-jlextension/install.json"
+
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_data_explorer/sagemaker_data_explorer/labextension" = "share/jupyter/labextensions/@amzn/sagemaker-data-explorer-jl-plugin"
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_data_explorer/install.json" = "share/jupyter/labextensions/@amzn/sagemaker-data-explorer-jl-plugin/install.json"
+
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_jupyter_server_extension/jupyter-config" = "etc/jupyter"
+
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_spark_monitor_widget/sagemaker_sparkmonitor/labextension" = "share/jupyter/labextensions/sagemaker_sparkmonitor"
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_spark_monitor_widget/install.json" = "share/jupyter/labextensions/sagemaker_sparkmonitor/install.json"
+
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_studio_theme/sagemaker_ui_theme/labextension" = "share/jupyter/labextensions/@amzn/sagemaker-ui-theme-jlplugin"
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_studio_theme/install.json" = "share/jupyter/labextensions/@amzn/sagemaker-ui-theme-jlplugin/install.json"
+
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_ui_doc_manager_jl_plugin/sagemaker_ui_doc_manager_jl_plugin/labextension" = "share/jupyter/labextensions/@amzn/sagemaker-ui-doc-manager-jl-plugin"
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_ui_doc_manager_jl_plugin/install.json" = "share/jupyter/labextensions/@amzn/sagemaker-ui-doc-manager-jl-plugin/install.json"
+
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_post_startup_notification_plugin/sagemaker_post_startup_notification_plugin/labextension" = "share/jupyter/labextensions/@amzn/sagemaker_post_startup_notification_plugin"
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_post_startup_notification_plugin/install.json" = "share/jupyter/labextensions/@amzn/sagemaker_post_startup_notification_plugin/install.json"
+
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_studio_jupyter_scheduler/sagemaker_studio_jupyter_scheduler/labextension" = "share/jupyter/labextensions/@amzn/sagemaker-studio-jupyter-scheduler"
+"src/sagemaker_studio_dataengineering_extensions/sagemaker_studio_jupyter_scheduler/jupyter-config" = "etc/jupyter"
+
+[tool.hatch.env]
+requires = [ 
+  "hatch-pip-compile",
+  "pyzmq==26.2.0"
+]
+
+[tool.hatch.envs.default.scripts]
+# These are scripts you can run using `brazil-build run <script-name>`
+#typing = [
+#  "mkdir -p .mypy_cache",
+#  "mypy --install-types --non-interactive src/sagemaker_studio_dataengineering_extensions tests"
+#]
+
+# This command is for updating all your lock files across all environments 
+update = [ "hatch-pip-compile --upgrade --all" ]
+
+release = [
+    "pytest -vv src/sagemaker_studio_dataengineering_extensions",
+    "src/sagemaker_studio_dataengineering_extensions/scripts/update_version.sh"
+]
+
+update-version = [
+  "src/sagemaker_studio_dataengineering_extensions/scripts/update_version.sh"
+]
+
+force-update-version = [
+  "src/sagemaker_studio_dataengineering_extensions/scripts/update_version.sh --force"
+]
+
+pypi-publish = [
+  "src/sagemaker_studio_dataengineering_extensions/scripts/publish.sh patch"
+]
+
+pypi-publish-minor = [
+  "src/sagemaker_studio_dataengineering_extensions/scripts/publish.sh minor"
+]
+
+pypi-publish-major = [
+  "src/sagemaker_studio_dataengineering_extensions/scripts/publish.sh major"
+]
+
+[[tool.hatch.envs.hatch-test.matrix]]
+# This defines multiple variables you can generate combinations
+# to test underneath different environments.  A separate environment and 
+# lock file will be created for every combination located in `./requirements/`
+python = ["3.11", "3.12"]
+
+## This environment is used solely to generate a lock file on hatch,
+# and hatch-pip-compile that can be automatically updated
+[tool.hatch.envs.build-tools]
+# This version states what version your build tools build with.  To change it,
+# you will need to:
+# * Remove the `requirements/requirements-build-tools.txt` file
+# * Run `brazil-build run update` to generate a new lock file for the environment
+python = "3.11"
+detached = true
+skip-install = true
+dependencies = [
+  "hatch",
+  "hatch-pip-compile",
+  "pyzmq==26.2.0"
+]
+
+# PeruHatch repository and package locking plugin
+[tool.hatch.env.collectors.custom]
+path = ".hatch/hatch_plugin.py"
+
+# This is necessary to use 'uv' as the resolver if this is the top-level package
+# in a monorepo (which is usually the case).  Remove this if copying the
+# package into a monorepo
+[tool.uv.workspace]
+
+[tool.semantic_release]
+version_variables = ["src/sagemaker_studio_dataengineering_extensions/__init__.py:__version__"]
+assets = []
+build_command_env = []
+commit_message = "{version}\n\nAutomatically generated by python-semantic-release"
+logging_use_named_masks = false
+major_on_zero = true
+allow_zero_version = true
+repo_dir = "."
+no_git_verify = false
+tag_format = "{version}"
+commit_parser = "custom_commit_parser.py:CustomCommitParser"
+
+[tool.semantic_release.branches.main]
+match = "(mainline|master)"
+prerelease_token = "rc"
+prerelease = false
+
+[tool.semantic_release.changelog]
+changelog_file = ""
+exclude_commit_patterns = []
+mode = "init"
+insertion_flag = "<!-- version list -->"
+template_dir = "templates"
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+output_format = "md"
+mask_initial_release = false
+
+[tool.semantic_release.changelog.environment]
+block_start_string = "{%"
+block_end_string = "%}"
+variable_start_string = "{{"
+variable_end_string = "}}"
+comment_start_string = "{#"
+comment_end_string = "#}"
+trim_blocks = false
+lstrip_blocks = false
+newline_sequence = "\n"
+keep_trailing_newline = false
+extensions = []
+autoescape = false
+
+[tool.semantic_release.commit_author]
+env = "GIT_COMMIT_AUTHOR"
+default = "semantic-release <semantic-release>"
+
+[tool.semantic_release.commit_parser_options]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
+other_allowed_tags = ["build", "chore", "ci", "docs", "style", "refactor", "test"]
+allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "test"]
+default_bump_level = 0
+parse_squash_commits = false
+ignore_merge_commits = false

@@ -1,0 +1,39 @@
+import { JupyterFrontEnd, type JupyterFrontEndPlugin } from '@jupyterlab/application';
+import { IThemeManager } from '@jupyterlab/apputils';
+import { DocumentManager, IDocumentManager } from '@jupyterlab/docmanager';
+import { INotebookTracker, NotebookTracker } from '@jupyterlab/notebook';
+import { LabIcon } from '@jupyterlab/ui-components';
+import { Panel } from '@lumino/widgets';
+
+import { DataSourceExplorerWidget } from './widget';
+
+export const logoIcon = new LabIcon({
+  name: 'barpkg:foo',
+  svgstr:
+    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 9C16.4182 9 20 7.65674 20 6C20 4.34326 16.4182 3 12 3C7.58179 3 4 4.34326 4 6C4 7.65674 7.58179 9 12 9Z" fill="#FBFAFD"/> <path d="M4 8.5V12C4 13.6567 7.58179 15 12 15C16.4182 15 20 13.6567 20 12V8.5C20 10.1567 16.4182 11.5 12 11.5C7.58179 11.5 4 10.1567 4 8.5Z" fill="#FBFAFD" /><path d="M4 14.5V18C4 19.6567 7.58179 21 12 21C16.4182 21 20 19.6567 20 18V14.5C20 16.1567 16.4182 17.5 12 17.5C7.58179 17.5 4 16.1567 4 14.5Z" fill="#FBFAFD" /></svg>',
+});
+
+/**
+ * Initialization for the sagemaker-data-explorer extension.
+ */
+const plugin: JupyterFrontEndPlugin<void> = {
+  id: '@amzn/sagemaker-data-explorer-jl-plugin:plugin',
+  autoStart: true,
+  requires: [IDocumentManager, INotebookTracker],
+  optional: [IThemeManager],
+  activate: (
+    app: JupyterFrontEnd,
+    docManager: DocumentManager,
+    notebooks: NotebookTracker,
+    theme: IThemeManager
+  ) => {
+    console.log('sagemaker-data-explorer-jl-plugin is activated!');
+    const panel = new Panel();
+    panel.id = 'sagemaker-data-explorer';
+    panel.title.icon = logoIcon;
+    panel.addWidget(new DataSourceExplorerWidget({ app, docManager, notebooks, theme }));
+    app.shell.add(panel, 'left', { rank: 101 });
+  },
+};
+
+export default plugin;

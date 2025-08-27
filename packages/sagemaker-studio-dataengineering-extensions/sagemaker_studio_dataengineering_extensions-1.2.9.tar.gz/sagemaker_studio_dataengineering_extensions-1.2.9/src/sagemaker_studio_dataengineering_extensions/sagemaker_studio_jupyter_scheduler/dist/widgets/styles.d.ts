@@ -1,0 +1,25 @@
+export declare const WidgetContainer: string;
+export declare const Header: string;
+export declare const HeaderDescription: string;
+export declare const CategoryContainerDiv: string;
+export declare const CategoryTitleDiv: string;
+export declare const WidgetFieldsContainer: string;
+export declare const SecurityConfigContainer: string;
+export declare const EnvironmentVariablsContainer: string;
+export declare const MarginBottom: string;
+export declare const ConfigBtn: string;
+export declare const ActionBtnContainer: string;
+export declare const ActionBtn: string;
+export declare const ActionBtnWrapper: string;
+export declare const SelectWidth: string;
+export declare const SelectWidthInstanceType: string;
+export declare const SelectWidthKernel: string;
+export declare const CredentialsErrorDialogParagraph: string;
+export declare const TooltipCheckBoxContainer: string;
+export declare const TooltipTextContainer: string;
+export declare const TooltipLink: string;
+export declare const Checkbox: string;
+export declare const PopperInteractive: string;
+export declare const AdvancedOptionsSelectContainer: string;
+export declare const ErrorMessageBlock: string;
+//# sourceMappingURL=styles.d.ts.map

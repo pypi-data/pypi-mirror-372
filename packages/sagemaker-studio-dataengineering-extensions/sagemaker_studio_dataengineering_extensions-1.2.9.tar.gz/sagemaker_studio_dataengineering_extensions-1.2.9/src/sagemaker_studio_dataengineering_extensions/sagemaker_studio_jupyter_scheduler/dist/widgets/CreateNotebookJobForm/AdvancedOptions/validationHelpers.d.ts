@@ -1,0 +1,12 @@
+export declare const validateImage: (image: string) => string;
+export declare const validateKernel: (kernel: string) => string;
+export declare const validateRoleArn: (roleArn: string) => string;
+export declare const validateS3Url: (s3Path: string) => string;
+export declare const validateMaxRetryAttempts: (maxRetryAttemptsString: string) => string;
+export declare const validateMaxRunTimeInSeconds: (maxRuntTimeInSecondsString: string) => string;
+export declare const validateSubnetOptions: (subnetOptions: string[]) => string;
+export declare const validateInitialSubnets: (initialSubnetValues: string[]) => string;
+export declare const validateSecurityGroups: (securityGroups: string[], subnets: string[]) => (string | undefined)[];
+export declare const validateSubnets: (subnets: string[], securityGroups: string[]) => (string | undefined)[];
+export declare const validateKMS: (KMS: string) => string;
+//# sourceMappingURL=validationHelpers.d.ts.map

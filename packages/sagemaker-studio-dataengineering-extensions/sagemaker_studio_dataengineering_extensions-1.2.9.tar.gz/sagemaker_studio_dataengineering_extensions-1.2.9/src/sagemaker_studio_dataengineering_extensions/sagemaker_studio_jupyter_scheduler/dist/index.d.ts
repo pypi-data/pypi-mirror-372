@@ -1,0 +1,3 @@
+declare const _default: (import("@jupyterlab/application").JupyterFrontEndPlugin<import("@jupyterlab/scheduler").Scheduler.IAdvancedOptions, import("@jupyterlab/application").JupyterFrontEnd.IShell, "desktop" | "mobile"> | import("@jupyterlab/application").JupyterFrontEndPlugin<import("@jupyterlab/scheduler").Scheduler.TelemetryHandler, import("@jupyterlab/application").JupyterFrontEnd.IShell, "desktop" | "mobile">)[];
+export default _default;
+//# sourceMappingURL=index.d.ts.map
