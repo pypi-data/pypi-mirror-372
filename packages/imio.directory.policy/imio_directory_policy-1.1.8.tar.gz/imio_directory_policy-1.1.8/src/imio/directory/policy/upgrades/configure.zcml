@@ -1,0 +1,122 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    i18n_domain="imio.smartweb">
+
+  <genericsetup:registerProfile
+      name="upgrade_1000_to_1001"
+      title="Upgrade policy from 1000 to 1001"
+      directory="profiles/1000_to_1001"
+      description="Remove plone.patternslib deprecated bundles"
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      />
+
+  <genericsetup:registerProfile
+      name="upgrade_1002_to_1003"
+      title="Upgrade policy from 1002 to 1003"
+      directory="profiles/1002_to_1003"
+      description="Configure autopublishing settings"
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      />
+
+  <genericsetup:registerProfile
+    name="upgrade_1003_to_1004"
+    title="Upgrade policy from 1003 to 1004"
+    directory="profiles/1003_to_1004"
+    description="Hide cropping action on Image type"
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+  />
+
+  <genericsetup:registerProfile
+      name="upgrade_1004_to_1005"
+      title="Upgrade policy 1004 to 1005"
+      directory="profiles/1004_to_1005"
+      description="Set moderateCaching for imio.directory.core.rest"
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      />
+
+  <genericsetup:registerProfile
+      name="upgrade_1005_to_1006"
+      title="Upgrade policy 1005 to 1006"
+      directory="profiles/1005_to_1006"
+      description="Increase caching values"
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      />
+
+  <genericsetup:upgradeSteps
+      source="1000"
+      destination="1001"
+      profile="imio.directory.policy:default">
+    <genericsetup:upgradeDepends
+        title="Remove plone.patternslib deprecated bundles"
+        import_profile="imio.directory.policy.upgrades:upgrade_1000_to_1001"
+        />
+  </genericsetup:upgradeSteps>
+
+  <genericsetup:upgradeSteps
+      source="1001"
+      destination="1002"
+      profile="imio.directory.policy:default">
+    <genericsetup:upgradeDepends
+        title="Reload plone.formwidget.geolocation registry"
+        import_profile="plone.formwidget.geolocation:default"
+        import_steps="plone.app.registry"
+        />
+  </genericsetup:upgradeSteps>
+
+  <genericsetup:upgradeSteps
+      source="1002"
+      destination="1003"
+      profile="imio.directory.policy:default">
+    <genericsetup:upgradeDepends
+        title="Install collective.autopublishing"
+        import_profile="collective.autopublishing:default"
+        />
+    <genericsetup:upgradeDepends
+        title="Configure autopublishing settings"
+        import_profile="imio.directory.policy.upgrades:upgrade_1002_to_1003"
+        import_steps="plone.app.registry"
+        />
+  </genericsetup:upgradeSteps>
+
+  <genericsetup:upgradeSteps
+      source="1003"
+      destination="1004"
+      profile="imio.directory.policy:default">
+    <genericsetup:upgradeDepends
+        title="Hide cropping action on Image type"
+        import_profile="imio.directory.policy.upgrades:upgrade_1003_to_1004"
+        import_steps="actions"
+        />
+  </genericsetup:upgradeSteps>
+
+  <genericsetup:upgradeSteps
+      source="1004"
+      destination="1005"
+      profile="imio.directory.policy:default">
+    <genericsetup:upgradeDepends
+        title="Set moderateCaching for imio.directory.core.rest"
+        import_profile="imio.directory.policy.upgrades:upgrade_1004_to_1005"
+        />
+  </genericsetup:upgradeSteps>
+
+  <genericsetup:upgradeSteps
+      source="1005"
+      destination="1006"
+      profile="imio.directory.policy:default">
+    <genericsetup:upgradeDepends
+        title="Increase caching values"
+        import_profile="imio.directory.policy.upgrades:upgrade_1005_to_1006"
+        />
+  </genericsetup:upgradeSteps>
+
+  <genericsetup:upgradeStep
+    title="Install Kimug plugin"
+    description="Install pas.plugins.kimug and migrate sso to Keycloak"
+    source="1006"
+    destination="1007"
+    handler=".upgrades.install_kimug"
+    profile="imio.directory.policy:default"
+    />
+
+</configure>
