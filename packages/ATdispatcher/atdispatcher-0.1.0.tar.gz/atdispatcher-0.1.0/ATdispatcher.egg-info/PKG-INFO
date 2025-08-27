@@ -1,0 +1,138 @@
+Metadata-Version: 2.4
+Name: ATdispatcher
+Version: 0.1.0
+Summary: A flexible Python function dispatcher with rules for values, kwargs, and types.
+Author-email: Avi Twil <avitwil@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/avitwil/ATdispatcher
+Project-URL: Repository, https://github.com/avitwil/ATdispatcher
+Project-URL: Issues, https://github.com/avitwil/ATdispatcher/issues
+Keywords: dispatcher,function routing,dynamic dispatch,python
+Classifier: Development Status :: 4 - Beta
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
+
+# ATdispatcher
+
+**ATdispatcher** is a flexible Python dispatcher for functions and methods, enabling dynamic function selection based on argument values, types, or keyword presence.
+
+---
+
+## 📦 Installation
+
+Install via pip:
+
+```bash
+pip install ATdispatcher
+```
+
+Or install directly from GitHub:
+
+```bash
+pip install git+https://github.com/avitwil/ATdispatcher.git
+```
+
+---
+
+## 🧩 Overview
+
+ATdispatcher allows you to define custom rules to select which function to call dynamically based on:
+
+* **Argument values**
+* **Argument types**
+* **Presence of specific keyword arguments**
+
+The package works for both **standalone functions** and **class methods**.
+
+---
+
+## 🚀 Basic Usage
+
+```python
+from ATdispatcher import dispatcher
+
+@dispatcher
+def greet(*args, **kwargs):
+    raise NotImplementedError("No matching rule")
+
+# Dispatch based on argument values and types
+@greet.values(name="avi").types(str, int)
+def _(name: str, age: int):
+    return f"{name} is {age} years old"
+
+# Dispatch based on keyword arguments
+@greet.kwargs("name", "age")
+def _(name: str, age: int):
+    return f"{name} is {age} years old"
+
+print(greet("avi", 40))  # Output: avi is 40 years old
+```
+
+---
+
+## 🛠️ Usage with Methods
+
+```python
+class Person:
+    @dispatcher
+    def introduce(self, *args, **kwargs):
+        raise NotImplementedError("No matching rule")
+
+    @introduce.values(name="avi").types(str, int)
+    def _(self, name: str, age: int):
+        return f"{name} is {age} years old"
+
+    @introduce.kwargs("name", "age")
+    def _(self, name: str, age: int):
+        return f"{name} is {age} years old"
+
+p = Person()
+print(p.introduce("avi", 40))  # Output: avi is 40 years old
+```
+
+---
+
+## 🔍 Key Features
+
+* **Flexible dispatching**: Add custom rules using `add_rule`.
+* **Supports methods**: Works as a decorator for class methods.
+* **Rule builders**: Match rules by **values**, **types**, or **keyword presence**.
+* **Readable syntax**: Easy-to-understand, clean code style.
+* **Chaining support**: Define multiple rules for the same dispatcher in a readable way.
+
+---
+
+## 📚 Documentation & Resources
+
+* GitHub Repository: [https://github.com/avitwil/ATdispatcher](https://github.com/avitwil/ATdispatcher)
+* License: MIT License (see LICENSE file)
+
+---
+
+## ⚡ Example: Combined Rules
+
+```python
+@dispatcher
+def process(*args, **kwargs):
+    raise NotImplementedError("No matching rule")
+
+# Match a specific value
+@process.values(task="email").types(str)
+def _(task):
+    return f"Processing task: {task}"
+
+# Match based on keyword presence
+@process.kwargs("task", "priority")
+def _(task, priority):
+    return f"Processing {task} with priority {priority}"
+
+print(process("email"))               # Processing task: email
+print(process(task="backup", priority="high"))  # Processing backup with priority high
+```
