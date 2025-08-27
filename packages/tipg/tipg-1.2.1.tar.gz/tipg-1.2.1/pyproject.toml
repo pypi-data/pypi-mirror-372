@@ -1,0 +1,155 @@
+[project]
+name = "tipg"
+description = "Simple and Fast Geospatial OGC Features and Tiles API for PostGIS."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Vincent Sarago", email = "vincent@developmentseed.org"},
+    {name = "David Bitner", email = "david@developmentseed.org"},
+]
+keywords = ["FastAPI", "POSTGIS", "OGC Features", "OGC Tiles"]
+classifiers = [
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dynamic = ["version"]
+dependencies = [
+    "orjson",
+    "asyncpg>=0.23.0",
+    "buildpg>=0.3",
+    "fastapi>=0.100.0",
+    "jinja2>=2.11.2,<4.0.0",
+    "morecantile>=5.0,<7.0",
+    "pydantic>=2.4,<3.0",
+    "pydantic-settings~=2.0",
+    "geojson-pydantic>=1.0,<3.0",
+    "pygeofilter>=0.2.0,<0.3.0",
+    "ciso8601~=2.3",
+    "starlette-cramjam>=0.4,<0.6",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "pytest-benchmark",
+    "httpx",
+    "pytest-postgresql",
+    "mapbox-vector-tile>=2.1",
+    "numpy",
+]
+dev = [
+    "pre-commit",
+    "bump-my-version",
+]
+server = [
+    "uvicorn[standard]>=0.12.0,<0.19.0",
+]
+docs = [
+    "black>=23.10.1",
+    "mkdocs",
+    "mkdocs-material[imaging]>=9.5",
+    "griffe-inherited-docstrings>=1.0.0",
+    "mkdocstrings[python]>=0.25.1",
+]
+
+[project.urls]
+Homepage = "https://developmentseed.org/tipg"
+Source = "https://github.com/developmentseed/tipg"
+Documentation = "https://developmentseed.org/tipg/"
+
+[tool.hatch.version]
+path = "tipg/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/tests",
+  "/dockerfiles",
+  "/docs",
+  "/data",
+  "docker-compose.yml",
+  "CONTRIBUTING.md",
+  "CHANGES.md",
+  ".pytest_cache",
+  ".github",
+  ".bumpversion.cfg",
+  ".env.example",
+  ".flake8",
+  ".gitignore",
+  ".pre-commit-config.yaml",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.coverage.run]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.isort]
+profile = "black"
+known_first_party = ["tipg"]
+known_third_party = ["geojson_pydantic", "buildpg", "pydantic"]
+forced_separate = [
+    "fastapi",
+    "starlette",
+]
+default_section = "THIRDPARTY"
+
+[tool.mypy]
+no_strict_optional = "True"
+
+[tool.ruff.lint]
+select = [
+    "D1",  # pydocstyle errors
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # flake8
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "B905",  # ignore zip() without an explicit strict= parameter, only support with python >3.10
+]
+
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::morecantile.errors.PointOutsideTMSBounds",
+    "ignore:You will likely lose important projection*:UserWarning",
+    "ignore:Call to deprecated create function *:DeprecationWarning",
+]
+
+[tool.bumpversion]
+current_version = "1.2.1"
+
+search = "{current_version}"
+replace = "{new_version}"
+regex = false
+tag = true
+commit = true
+tag_name = "{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "tipg/__init__.py"
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
