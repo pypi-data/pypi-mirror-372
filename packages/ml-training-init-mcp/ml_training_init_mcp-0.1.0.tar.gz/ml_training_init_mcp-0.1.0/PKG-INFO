@@ -1,0 +1,77 @@
+Metadata-Version: 2.4
+Name: ml-training-init-mcp
+Version: 0.1.0
+Summary: MCP server for ML training script initialization with file locking
+Author: ML Training Init
+License: MIT
+Requires-Python: >=3.10
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: mcp>=1.0.0
+Description-Content-Type: text/markdown
+
+# ML Training Init MCP Server
+
+A Model Context Protocol (MCP) server that implements a sequential thinking pattern for ML training script generation with strict file locking constraints.
+
+## Key Feature: Single File Lock Constraint
+
+**IMPORTANT**: This server enforces a strict single-file constraint:
+- Once a training file is created, the server locks to ONLY that file
+- ALL subsequent operations must work with this single locked file
+- No new files can be created after initialization
+- This prevents agents from creating unnecessary files when stuck
+
+## Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+## Running the Server
+
+```bash
+python -m src.server
+```
+
+## Usage with Claude Desktop
+
+Add to your Claude Desktop configuration:
+
+```json
+{
+  "mcpServers": {
+    "ml-training-init": {
+      "command": "python",
+      "args": ["-m", "src.server"],
+      "cwd": "/path/to/ml-training-init-mcp"
+    }
+  }
+}
+```
+
+## Available Tools
+
+### 1. `initialize_training_file`
+- Creates ONE training file and permanently locks to it
+- Takes: file_name, use_case, libraries, reference_code
+- Returns: file_path, checkpoint_id, locked_file status
+
+### 2. `enhance_code`
+- Modifies ONLY the locked file
+- Cannot create new files
+- Takes: enhancement_type, instructions
+- Returns: status, checkpoint_id
+
+### 3. `get_current_file`
+- Returns content of the locked file
+- Use this instead of trying to create new files
+- Returns: file_path, content, checkpoint_id
+
+## Testing
+
+Run the test example:
+```bash
+python test_example.py
+```
+
+This will show you how to interact with the MCP server through Claude.
