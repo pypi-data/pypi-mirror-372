@@ -1,0 +1,57 @@
+#!/bin/sh
+
+# PROVIDE: mathmakerd
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=mathmakerd
+rcvar=mathmakerd_enable
+
+pidfile="/var/run/${name}.pid"
+venv_path="/usr/local/venv/mm-py%%PYVER_NODOT%%"
+command="${venv_path}/bin/${name}"
+
+load_rc_config $name
+: ${mathmakerd_enable:=no}
+: ${mathmakerd_interpreter_prefix:=""}  # Default value
+
+command_interpreter="${mathmakerd_interpreter_prefix}${venv_path}/bin/python"
+command_args=""
+required_files="${command}"
+
+start_precmd="mathmakerd_precmd"
+
+mathmakerd_precmd() {
+    if [ ! -d /var/run ]; then
+        mkdir -p /var/run
+    fi
+
+    if [ -f "$pidfile" ]; then
+        if ! kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+            echo "Removing stale pidfile $pidfile"
+            rm -f "$pidfile"
+        fi
+    fi
+}
+
+
+status_cmd="mathmakerd_status"
+
+mathmakerd_status() {
+    if [ -f "${pidfile}" ]; then
+        pid=$(cat "${pidfile}")
+        if kill -0 "${pid}" 2>/dev/null; then
+            echo "${name} is running as pid ${pid}"
+            return 0
+        else
+            return 1
+        fi
+    else
+        echo "no pidfile for ${name}; probably not running"
+        return 3
+    fi
+}
+
+run_rc_command "$1"
