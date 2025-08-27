@@ -1,0 +1,48 @@
+# 📊 AI Data Visualization Agent
+A Streamlit application that acts as your personal data visualization expert, powered by LLMs. Simply upload your dataset and ask questions in natural language - the AI agent will analyze your data, generate appropriate visualizations, and provide insights through a combination of charts, statistics, and explanations.
+
+## Features
+#### Natural Language Data Analysis
+- Ask questions about your data in plain English
+- Get instant visualizations and statistical analysis
+- Receive explanations of findings and insights
+- Interactive follow-up questioning
+
+#### Intelligent Visualization Selection
+- Automatic choice of appropriate chart types
+- Dynamic visualization generation
+- Statistical visualization support
+- Custom plot formatting and styling
+
+#### Multi-Model AI Support (Groq)
+
+ "llama-3.3-70b-versatile",
+ "llama-3.1-8b-instant"
+
+## How to Run
+
+Follow the steps below to set up and run the application:
+- Before anything else, Please get a free Groq AI API Key here: https://console.groq.com/keys
+- Get a free E2B API Key here: https://e2b.dev/ ; https://e2b.dev/docs/legacy/getting-started/api-key
+
+# 📦 Installation
+
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate   # Linux/Mac
+venv\Scripts\activate      # Windows
+
+pip install data-science-visualization-assistant
+
+```
+
+# run
+
+```bash
+python run.py
+
+or
+
+execute_app
+```
