@@ -1,0 +1,1 @@
+pyinstaller ./resources/pyinstaller_one_dir.spec
