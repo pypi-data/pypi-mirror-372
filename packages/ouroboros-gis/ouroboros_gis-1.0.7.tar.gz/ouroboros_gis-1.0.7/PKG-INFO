@@ -1,0 +1,117 @@
+Metadata-Version: 2.4
+Name: ouroboros-gis
+Version: 1.0.7
+Summary: Towards more pythonic use of GeoDatabases
+Author-email: Peter Von der Porten <dev@corbelspatial.com>
+License-Expression: MIT
+Project-URL: homepage, https://pypi.org/project/ouroboros-gis/
+Project-URL: documentation, https://ouroboros-gis.readthedocs.io/en/latest/
+Project-URL: repository, https://github.com/corbel-spatial/ouroboros
+Project-URL: issues, https://github.com/corbel-spatial/ouroboros/issues
+Project-URL: changelog, https://github.com/corbel-spatial/ouroboros/blob/main/CHANGELOG.md
+Classifier: Development Status :: 4 - Beta
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: Microsoft :: Windows :: Windows 10
+Classifier: Operating System :: Microsoft :: Windows :: Windows 11
+Classifier: Operating System :: OS Independent
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Intended Audience :: Information Technology
+Classifier: Topic :: Scientific/Engineering :: GIS
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: geojson
+Requires-Dist: geopandas
+Requires-Dist: matplotlib
+Requires-Dist: xmltodict
+Provides-Extra: raster
+Requires-Dist: gdal>=3.8; extra == "raster"
+Dynamic: license-file
+
+[![Conda - Version](https://img.shields.io/conda/vn/conda-forge/ouroboros-gis.svg)](https://anaconda.org/conda-forge/ouroboros-gis)
+[![PyPI - Version](https://img.shields.io/pypi/v/ouroboros-gis)](https://pypi.org/project/ouroboros-gis/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ouroboros-gis)](https://pypi.org/project/ouroboros-gis/)
+[![PyPI Downloads](https://static.pepy.tech/badge/ouroboros-gis/month)](https://pepy.tech/projects/ouroboros-gis)
+[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg?logo=)](https://github.com/corbel-spatial/ouroboros/blob/main/LICENSE)
+
+[![Actions Workflow Status: Test Python Prerelease](https://img.shields.io/github/actions/workflow/status/corbel-spatial/ouroboros/py-prerelease.yml?label=3.14-rc2
+)](https://github.com/corbel-spatial/ouroboros/actions/workflows/py-prerelease.yml)
+[![GitHub Actions Workflow Status: Linux](https://img.shields.io/github/actions/workflow/status/corbel-spatial/ouroboros/pytest-linux.yml?label=Linux&logo=linux&logoColor=white)](https://github.com/corbel-spatial/ouroboros/actions/workflows/pytest-linux.yml)
+[![GitHub Actions Workflow Status: Windows](https://img.shields.io/github/actions/workflow/status/corbel-spatial/ouroboros/pytest-windows.yml?label=Windows)](https://github.com/corbel-spatial/ouroboros/actions/workflows/pytest-windows.yml)
+[![GitHub Actions Workflow Status: macOS](https://img.shields.io/github/actions/workflow/status/corbel-spatial/ouroboros/pytest-macos.yml?label=macOS)](https://github.com/corbel-spatial/ouroboros/actions/workflows/pytest-macos.yml)
+[![GitHub Actions Workflow Status: Black](https://img.shields.io/github/actions/workflow/status/corbel-spatial/ouroboros/black.yml?label=Black)](https://github.com/corbel-spatial/ouroboros/actions/workflows/black.yml)
+[![GitHub Actions Workflow Status: Pylint](https://img.shields.io/github/actions/workflow/status/corbel-spatial/ouroboros/pylint.yml?label=Pylint)](https://github.com/corbel-spatial/ouroboros/actions/workflows/pylint.yml)
+[![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcorbel-spatial%2Fouroboros%2Frefs%2Fheads%2Fmain%2Fdocs%2Fpytest_coverage.json&query=%24.totals.percent_covered_display&suffix=%25&label=coverage&color=brightgreen)](https://raw.githubusercontent.com/corbel-spatial/ouroboros/refs/heads/main/docs/pytest_coverage.json)
+
+# ouroboros
+
+## Introduction
+
+`ouroboros` is a Python module that provides helpful functions and classes for manipulating spatial data stored in a [File GeoDatabase](https://en.wikipedia.org/wiki/Geodatabase_(Esri)). 
+
+The data (.gdb) are read from disk into memory as `FeatureClass` objects, using [`GeoPandas`](https://geopandas.org/en/stable/getting_started/introduction.html) 
+under the hood for efficient analysis and easy conversion to other spatial data formats.
+`FeatureClass` objects can exist on their own, or they can be grouped into `FeatureDataset` and `GeoDatabase` objects 
+which can be accessed like dictionaries. For example:
+
+```python
+>>> import ouroboros as ob
+
+# Explore an existing dataset
+
+>>> gdb_file = "spam_and_eggs.gdb"
+>>> ob.list_datasets(gdb_file)
+{'egg_dataset': ['eggs_fc', 'bad_eggs_fc'],
+{'spam_dataset': ['spam_fc'],
+ None: ['ham_fc']}
+
+# Load a feature class and convert to GeoPandas
+
+>>> fc = ob.FeatureClass("spam_and_eggs.gdb/egg_dataset/eggs_fc")
+>>> gdf = fc.to_geodataframe()
+>>> type(gdf)
+<class 'geopandas.geodataframe.GeoDataFrame'>
+
+# Assemble a new geodatabase in memory
+
+>>> gdb = ob.GeoDatabase()
+>>> gdb['good_egg_dataset'] = ob.FeatureDataset()
+>>> gdb['good_egg_dataset']['eggs_fc'] = ob.FeatureClass("spam_and_eggs.gdb/eggs_fc")
+
+# Save geodatabase to disk
+
+>>> gdb.save("good_eggs.gdb")
+>>> ob.list_datasets("good_eggs.gdb")
+{'good_egg_dataset': ['eggs_fc'], None: []}
+```
+
+## Getting Started
+
+- [Installation](https://ouroboros-gis.readthedocs.io/en/latest/installation.html)
+
+- [User Guide](https://ouroboros-gis.readthedocs.io/en/latest/user_guide.html)
+ 
+- [Comparison with ArcPy](https://ouroboros-gis.readthedocs.io/en/latest/notebooks/arcpy_comparison.html)
+
+## About
+
+`ouroboros` is released under a permissive open source license, it builds on mature open source GIS projects like 
+[GDAL](https://gdal.org/), and importantly it does **not** use Esri's `arcpy`.
+Therefore, `ouroboros` does not require any paid licenses and it runs on macOS and Linux as well as Windows.
+
+The main goal of this project is to allow traditional GIS users working primarily in the Esri/ArcGIS ecosystem to take
+advantage of the features and speed offered by modern data science tools. Second, it will provide a no-cost and
+user-friendly way to convert geodatabases to open data formats. And along the way, this project aims to develop a 
+suite of tools that align with [pythonic](https://peps.python.org/pep-0020/) design principles, and also bring a
+little more joy and beauty to the task of wrangling spatial data.
+
+## Notes
+
+- ⚠️ This project is under active development and things may change without notice. Feedback, suggestions, and questions are welcomed in the [Issues](https://github.com/corbel-spatial/ouroboros/issues) section.
+
+- Tested on Python 3.10, 3.11, 3.12, and 3.13 on the latest Windows, Linux, and macOS (version info [here](https://github.com/actions/runner-images)).
