@@ -1,0 +1,88 @@
+"""
+Business professional wants to book a dinner meeting for client entertainment.
+
+ROLES: user (business executive organizing client dinner), assistant (business services concierge specializing in corporate dining)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_business_dining_availability",
+    "description": "Check availability for business dining with meeting room options.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "party_size": { "type": "integer", "minimum": 2, "maximum": 20 }
+      },
+      "required": ["date", "time", "party_size"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_executive_dining",
+    "description": "Book executive dining experience with business amenities.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "party_size": { "type": "integer" },
+        "company_name": { "type": "string" },
+        "billing_preference": { "type": "string", "enum": ["corporate_account", "personal", "invoice"] }
+      },
+      "required": ["date", "time", "party_size", "company_name"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the business services concierge at Metropolitan Plaza Hotel (hotel_id: metro_plaza_chicago). Address: 789 State Street, Chicago, IL 60605.
+Timezone: America/Chicago. Hotel amenities include business center, executive lounge, conference rooms, and upscale restaurant "The Metropolitan" with private dining rooms.
+Business services: corporate billing, meeting packages, executive dining arrangements, expense account integration.
+Professional amenities: Wi-Fi, printing services, meeting spaces adjacent to dining areas.
+
+user:
+Good afternoon. I need to book a business dinner for 6 people this Wednesday at 7 PM. We're entertaining an important client and need a private setting. This is for TechCorp Solutions.
+
+assistant channel=analysis:
+This is a business dinner request requiring privacy and professional service. I should check availability and offer our executive dining options.
+
+assistant channel=final:
+Good afternoon! I'd be happy to arrange a business dinner for TechCorp Solutions. We have excellent private dining options at The Metropolitan restaurant. Let me check availability for Wednesday at 7 PM for 6 people.
+
+assistant channel=commentary to=tool.check_business_dining_availability:
+{"date":"2025-08-21","time":"19:00","party_size":6}
+
+tool.check_business_dining_availability channel=commentary to=assistant:
+{"available":true,"private_room":"executive_boardroom","amenities":["projector_screen","business_center_access","corporate_billing"]}
+
+assistant channel=analysis:
+Perfect availability in our executive boardroom. I should provide details about the business amenities and book the reservation.
+
+assistant channel=final:
+Excellent! We have the Executive Boardroom available, which offers privacy and professional amenities including a projector screen for presentations and direct access to our business center. This would be perfect for client entertainment. May I book this under TechCorp Solutions?
+
+user:
+Perfect! Please book it for TechCorp Solutions. We'll need the corporate billing option. By the way, do you have any recommendations for a good wine selection that would impress our client?
+
+assistant channel=analysis:
+Book the executive dining with corporate billing, then provide professional wine recommendations based on our knowledge.
+
+assistant channel=commentary to=tool.book_executive_dining:
+{"date":"2025-08-21","time":"19:00","party_size":6,"company_name":"TechCorp Solutions","billing_preference":"corporate_account"}
+
+tool.book_executive_dining channel=commentary to=assistant:
+{"status":"confirmed","reservation_id":"BUS-0821-06","room":"executive_boardroom","billing_setup":"corporate_account_approved"}
+
+assistant channel=analysis:
+Confirm the booking and offer professional wine recommendations to enhance the business dining experience.
+
+assistant channel=final:
+Your business dinner is confirmed for Wednesday at 7 PM - reservation BUS-0821-06 with corporate billing set up for TechCorp Solutions. For impressing your client, I recommend our reserve Napa Cabernet or the elegant French Bordeaux from our premium collection. Both pair beautifully with our steak selections and convey sophistication. Our sommelier can guide you through the options when you arrive. I hope the meeting goes exceptionally well!

@@ -1,0 +1,56 @@
+"""
+Guest requests a crib for their infant.
+
+ROLES: user (parent needing a crib), assistant (front desk arranging baby amenities)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "request_crib",
+    "description": "Arrange a crib delivery to a room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_number": { "type": "string" },
+        "needed_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "room_number", "needed_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a guest services agent at Sunset Beach Inn (hotel_id: sunset_beach_inn_mia). Address: 199 Ocean Drive, Miami Beach, FL 33139. Timezone: America/New_York. Check-in 4 PM, check-out 11 AM. The hotel features an oceanfront pool, complimentary Wi-Fi, and beach towel service. Cribs are available upon request and delivered by housekeeping.
+
+user:
+Hello! We just arrived in room 1203. Could we get a crib for our baby? The lobby looks amazing!
+
+assistant channel=analysis:
+Respond to compliment and schedule crib delivery for reservation RSV20002.
+
+assistant channel=commentary to=tool.request_crib:
+{"reservation_id":"RSV20002","room_number":"1203","needed_time":"2025-08-15T16:30:00"}
+
+tool.request_crib channel=commentary to=assistant:
+{"status":"scheduled","delivery_time":"2025-08-15T16:30:00"}
+
+assistant channel=analysis:
+Confirm crib delivery and acknowledge compliment.
+
+assistant channel=final:
+Thank you! The lobby gets a lot of love. A crib will arrive at room 1203 by 4:30 PM.
+
+user:
+Great, thanks for the quick help.
+
+assistant channel=analysis:
+Wrap up politely without additional actions.
+
+assistant channel=final:
+Happy to assist. Enjoy your stay at the beach!

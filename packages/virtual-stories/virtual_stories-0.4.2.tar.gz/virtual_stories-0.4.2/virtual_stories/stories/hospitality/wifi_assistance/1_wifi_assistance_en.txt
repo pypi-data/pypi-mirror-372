@@ -1,0 +1,84 @@
+"""
+Guest has trouble connecting to hotel Wi-Fi and requests help.
+ROLES: user (guest in room needing Wi-Fi), assistant (front desk agent providing credentials and troubleshooting)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "provide_wifi_credentials",
+    "description": "Give Wi-Fi network name and password for a room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" }
+      },
+      "required": ["room_number"]
+    },
+    "strict": true
+  },
+  {
+    "name": "troubleshoot_wifi",
+    "description": "Reset or troubleshoot Wi-Fi for a room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" }
+      },
+      "required": ["room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. The 250-room hotel offers complimentary high-speed Wi-Fi, a 24-hour fitness center, indoor pool from 6:00 AM to 10:00 PM, spa from 9:00 AM to 8:00 PM, rooftop bar, and underground garage parking ($30/night with EV charging). Breakfast buffet runs 6:30 AM–10:30 AM daily. Pets up to 50 lbs are welcome with a one-time $75 cleaning fee. Use tools to supply credentials or troubleshoot connectivity.
+
+user:
+Hi, I'm in room 803. What's the Wi-Fi password? Also, I tried connecting but it keeps dropping.
+
+assistant channel=analysis:
+Provide credentials first, then offer troubleshooting.
+
+assistant channel=commentary to=tool.provide_wifi_credentials:
+{"room_number":"803"}
+
+tool.provide_wifi_credentials channel=commentary to=assistant:
+{"network":"SkylineGuest","password":"City2025"}
+
+assistant channel=analysis:
+Share credentials and ask if they'd like a reset.
+
+assistant channel=final:
+The network is SkylineGuest and the password is City2025. Would you like me to reset the connection for your room?
+
+user:
+Yes please. And by the way, nice weather today, huh?
+
+assistant channel=analysis:
+Reset Wi-Fi and respond to chitchat.
+
+assistant channel=commentary to=tool.troubleshoot_wifi:
+{"room_number":"803"}
+
+tool.troubleshoot_wifi channel=commentary to=assistant:
+{"status":"reset","eta_minutes":2}
+
+assistant channel=analysis:
+Inform guest of reset and reply about weather.
+
+assistant channel=final:
+I've reset the connection—give it about two minutes. And yes, the sunshine is wonderful today! Let me know if the Wi-Fi works.
+
+user:
+Great, it's working now. Appreciate it.
+
+assistant channel=analysis:
+Close conversation warmly.
+
+assistant channel=final:
+Glad to hear it's resolved. Enjoy your stay!

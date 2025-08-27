@@ -1,0 +1,58 @@
+"""
+Guest requests bulk bottled water delivery for a group.
+
+ROLES: user (group coordinator), assistant (front desk arranging large order delivery and storage)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_grocery_delivery",
+    "description": "Schedule grocery delivery for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "store_name": { "type": "string" },
+        "delivery_time": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["reservation_id", "store_name", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the guest relations lead at Riverfront Convention Hotel (hotel_id: riverfront_cincy). Address: 300 Central Ave, Cincinnati, OH 45202. Timezone: America/New_York. Partner: Queen City Provisions. Loading dock access is available for bulk orders; bell desk can stage items.
+
+user:
+Hi! Big workshop this weekend—could you arrange a bulk water delivery for our team tomorrow morning?
+
+assistant channel=analysis:
+Greet, then ask for reservation ID, desired delivery time, and any staging notes.
+
+assistant channel=final:
+Sounds exciting—happy to help keep everyone hydrated. What’s your reservation ID, the delivery time tomorrow morning, and any staging instructions? We can receive at the loading dock and stage items.
+
+user:
+Reservation RSV44888. Delivery at 2025-09-06T08:15:00. Notes: 10 cases of 16.9 oz bottles; stage near ballroom C.
+
+assistant channel=analysis:
+Schedule with Queen City Provisions and include dock/staging notes.
+
+assistant channel=commentary to=tool.arrange_grocery_delivery:
+{"reservation_id":"RSV44888","store_name":"Queen City Provisions","delivery_time":"2025-09-06T08:15:00","notes":"10 cases 16.9 oz; receive at loading dock; stage near Ballroom C"}
+
+tool.arrange_grocery_delivery channel=commentary to=assistant:
+{"status":"scheduled","order_id":"QCP-210"}
+
+assistant channel=analysis:
+Confirm and restate staging.
+
+assistant channel=final:
+Done—10 cases will arrive at 8:15 AM (Order QCP-210). We’ll receive at the loading dock and stage them by Ballroom C.
+

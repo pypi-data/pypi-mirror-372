@@ -1,0 +1,71 @@
+"""
+Guest wants to book a dinner reservation at the hotel's restaurant.
+
+ROLES: user (guest planning a meal), assistant (restaurant concierge verifying availability and booking)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_table_availability",
+    "description": "Check if a table is available at a given time.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date", "description": "Reservation date." },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$", "description": "Reservation time in HH:MM." },
+        "party_size": { "type": "integer", "minimum": 1, "maximum": 12 }
+      },
+      "required": ["date", "time", "party_size"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_table",
+    "description": "Book a table once availability is confirmed.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "party_size": { "type": "integer" },
+        "name": { "type": "string" }
+      },
+      "required": ["date", "time", "party_size", "name"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the restaurant concierge at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001.
+Timezone: America/New_York. Hotel amenities include free Wi-Fi, gym, pool, and on-site restaurant "Skyline Grill".
+Provide warm service and confirm reservation details.
+
+user:
+Hello! Can you book a dinner for two at 7 p.m. tomorrow under the name Jordan Lee?
+
+assistant channel=analysis:
+Check table availability for requested time and party size, then book.
+
+assistant channel=commentary to=tool.check_table_availability:
+{"date":"2025-08-20","time":"19:00","party_size":2}
+
+tool.check_table_availability channel=commentary to=assistant:
+{"available":true}
+
+assistant channel=commentary to=tool.book_table:
+{"date":"2025-08-20","time":"19:00","party_size":2,"name":"Jordan Lee"}
+
+tool.book_table channel=commentary to=assistant:
+{"status":"confirmed","reservation_id":"DIN-5582"}
+
+assistant channel=analysis:
+Confirm booking with the guest.
+
+assistant channel=final:
+Your table for two at 7:00 PM tomorrow is confirmed under Jordan Lee. We look forward to serving you at Skyline Grill!

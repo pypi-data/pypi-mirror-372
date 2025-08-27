@@ -1,0 +1,78 @@
+"""
+Guest asks about nut allergies at concessions and swaps a seat closer to aisle.
+
+ROLES: user (guest with allergy concern), assistant (concessions & seating coordinator)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_concessions_allergen_info",
+    "description": "Report allergen handling and nut-free options for movie concessions.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["hotel_id", "date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "swap_seat_pre_reserved",
+    "description": "Swap guest seat to an aisle seat if available.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "reservation_id": { "type": "string" },
+        "preference": { "type": "string", "enum": ["aisle","front","back"] }
+      },
+      "required": ["hotel_id", "reservation_id", "preference"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the concessions and seating coordinator at Suncrest Marina Resort (hotel_id: suncrest_marina_tx). Address: 210 Boardwalk Ave, Austin, TX 78701. Timezone: America/Chicago. Check-in 4:00 PM, check-out 11:00 AM. Currency: USD.
+Amenities: lap pool and lagoon pool, Saturday cinema, dedicated allergen-prep station, labeled concessions, reserved aisles for quick exit.
+
+user:
+Hi! I’m allergic to tree nuts. Is your popcorn safe? Also, can I swap my seat to an aisle? My code is SUN-PO-77.
+
+assistant channel=analysis:
+Fetch allergen info, then attempt seat swap to aisle for reservation SUN-PO-77 on 2025-08-24.
+
+assistant channel=commentary to=tool.get_concessions_allergen_info:
+{"hotel_id":"suncrest_marina_tx","date":"2025-08-24"}
+
+tool.get_concessions_allergen_info channel=commentary to=assistant:
+{"popcorn":"nut_free","separate_prep":"yes","labels":"clearly_marked"}
+
+assistant channel=commentary to=tool.swap_seat_pre_reserved:
+{"hotel_id":"suncrest_marina_tx","reservation_id":"SUN-PO-77","preference":"aisle"}
+
+tool.swap_seat_pre_reserved channel=commentary to=assistant:
+{"status":"swapped","new_seat":"C-1"}
+
+assistant channel=analysis:
+Share allergen facts and new seat.
+
+assistant channel=final:
+Our popcorn is prepared in a nut-free station, with a separate allergen-prep area; all items are clearly labeled. I’ve moved your seat to an aisle—row C, seat 1—so you can exit easily if needed.
+
+user:
+Thanks! Austin nights by the water sound amazing.
+
+assistant channel=analysis:
+Offer small talk—no tool.
+
+assistant channel=final:
+They’re pretty special—the breeze off the marina makes the screen shimmer just a touch. Enjoy the show!
+

@@ -1,0 +1,73 @@
+"""
+Guest inquires about a smartwatch left behind in the gym.
+ROLES: user (guest searching for a lost smartwatch), assistant (lost-and-found agent checking records and arranging return)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "search_lost_and_found",
+    "description": "Search the lost-and-found log for an item description and stay details.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "item_description": { "type": "string" },
+        "check_out_date": { "type": "string", "format": "date" }
+      },
+      "required": ["item_description","check_out_date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "arrange_item_return",
+    "description": "Arrange shipping of a recovered item back to the guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "item_id": { "type": "string" },
+        "shipping_address": { "type": "string" },
+        "guest_name": { "type": "string" }
+      },
+      "required": ["item_id","shipping_address","guest_name"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a lost-and-found agent at Bayfront Suites Baltimore (hotel_id: bayfront_bwi). Address: 400 Harbor Pl, Baltimore, MD 21202. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: harbor-view rooms, fitness center, free Wi‑Fi. Currency: USD; taxes 15.5% + occupancy fee $4/night. Be clear and only use tools to search logs and arrange returns.
+
+user:
+Hello! Loved the harbor this morning. I think I left my black smartwatch in the gym yesterday when I checked out. Any chance it's there?
+
+assistant channel=analysis:
+Search lost-and-found for black smartwatch from yesterday, then arrange return if found.
+
+assistant channel=commentary to=tool.search_lost_and_found:
+{"item_description":"black smartwatch","check_out_date":"2025-06-21"}
+
+tool.search_lost_and_found channel=commentary to=assistant:
+{"found":true,"item_id":"LF-310","storage_location":"Front Desk Safe"}
+
+assistant channel=final:
+We do have a black smartwatch logged as item LF-310 in our front desk safe. Could you share your name and address so I can arrange shipment?
+
+user:
+Yes, it's under Jamie Lee. Please send it to 789 Park Ave, Richmond, VA 23220.
+
+assistant channel=analysis:
+Arrange return to provided address.
+
+assistant channel=commentary to=tool.arrange_item_return:
+{"item_id":"LF-310","shipping_address":"789 Park Ave, Richmond, VA 23220","guest_name":"Jamie Lee"}
+
+tool.arrange_item_return channel=commentary to=assistant:
+{"status":"shipped","tracking_number":"1Z999AA10123456785"}
+
+assistant channel=final:
+Your smartwatch is on its way to 789 Park Ave in Richmond (tracking 1Z999AA10123456785). Let us know if you need anything else.

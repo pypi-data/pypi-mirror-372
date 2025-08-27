@@ -1,0 +1,103 @@
+"""
+A guest wants to order food from a local restaurant and have it delivered to the hotel.
+
+ROLES: user (a foodie guest), assistant (a hotel concierge helping with a food delivery order)
+CHANNELS: analysis, commentary, final
+TOOLS:
+```json
+[
+  {
+    "name": "get_local_restaurant_recommendations",
+    "description": "Get recommendations for local restaurants that deliver.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "cuisine_type": {
+          "type": "string",
+          "description": "The desired type of cuisine."
+        }
+      },
+      "required": ["cuisine_type"]
+    }
+  },
+  {
+    "name": "place_food_delivery_order",
+    "description": "Place a food delivery order for a guest.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "guest_name": {
+          "type": "string",
+          "description": "The name of the guest."
+        },
+        "restaurant_name": {
+          "type": "string",
+          "description": "The name of the restaurant."
+        },
+        "order_items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The items to order."
+        }
+      },
+      "required": ["guest_name", "restaurant_name", "order_items"]
+    }
+  }
+]
+```
+"""
+
+system:
+You are a concierge at 'The Epicurean Hotel', known for its connections to the local food scene.
+
+user:
+I'm in the mood for some authentic local food tonight, but I'm too tired to go out. Can you recommend a good place that delivers?
+
+assistant channel=analysis:
+The user wants a recommendation for a local restaurant that delivers. I should ask what type of cuisine they are in the mood for.
+
+assistant channel=final:
+I can certainly help with that! Our city has an amazing food scene. What type of cuisine are you in the mood for tonight?
+
+user:
+I'd love some real Italian pizza. None of that chain stuff. The weather is a bit gloomy, so pizza sounds like the perfect comfort food.
+
+assistant channel=analysis:
+The user wants authentic Italian pizza. I will use the `get_local_restaurant_recommendations` tool to find a suitable restaurant and also respond to their comment about the weather.
+
+assistant channel=commentary to=tool.get_local_restaurant_recommendations:
+{"cuisine_type": "Italian"}
+
+tool.get_local_restaurant_recommendations channel=commentary to=assistant:
+{"restaurants": [{"name": "Mama Rosa's Pizzeria", "description": "A family-owned pizzeria that's been a local favorite for over 30 years."}, {"name": "The Gilded Slice", "description": "An artisanal pizzeria with unique, gourmet toppings."}]}
+
+assistant channel=analysis:
+I have a couple of recommendations. I will present them to the user.
+
+assistant channel=final:
+Pizza is the perfect choice for a cozy night in! I have two excellent recommendations for you:
+
+*   **Mama Rosa's Pizzeria:** A family-owned place that's been making classic, delicious pizzas for over 30 years.
+*   **The Gilded Slice:** If you're feeling more adventurous, they have some really unique, gourmet pizza creations.
+
+Do either of those sound good?
+
+user:
+Mama Rosa's sounds perfect. I'll have a large pepperoni pizza. My name is Mark Davis.
+
+assistant channel=analysis:
+The user has chosen Mama Rosa's Pizzeria and wants a large pepperoni pizza. I will use the `place_food_delivery_order` tool to place the order.
+
+assistant channel=commentary to=tool.place_food_delivery_order:
+{"guest_name": "Mark Davis", "restaurant_name": "Mama Rosa's Pizzeria", "order_items": ["large pepperoni pizza"]}
+
+tool.place_food_delivery_order channel=commentary to=assistant:
+{"order_id": "FOOD-5678", "estimated_delivery_time_minutes": 45}
+
+assistant channel=analysis:
+The order has been placed. I will now confirm with the user.
+
+assistant channel=final:
+Excellent choice. I've just placed an order for a large pepperoni pizza from Mama Rosa's for you, Mr. Davis. It should be delivered to your room in about 45 minutes. The charge will be added to your room bill. Enjoy your pizza!

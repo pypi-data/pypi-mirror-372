@@ -1,0 +1,31 @@
+"""
+Add same‑day waxing service during storage.
+ROLES: user (guest asking for waxing), assistant (attendant logging service request and storage)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"add_waxing_service","description":"Add basic waxing service to a reservation.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"pairs":{"type":"integer","minimum":1,"maximum":4}},"required":["reservation_id","pairs"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Glacier View Lodge
+Service: Same‑day basic waxing available if requested before 3 PM
+
+user:
+Can you wax two pairs while they’re stored? Res GV551.
+
+assistant channel=analysis:
+Add waxing for two pairs; confirm timing policy.
+
+assistant channel=commentary to=tool.add_waxing_service:
+{"reservation_id":"GV551","pairs":2}
+
+tool.add_waxing_service channel=commentary to=assistant:
+{"status":"queued","ready_by":"2025-12-20T15:00:00"}
+
+assistant channel=final:
+Waxing for two pairs is queued and will be ready by 3:00 PM today if requested before 3 PM, which you did. We’ll attach a note on your locker.

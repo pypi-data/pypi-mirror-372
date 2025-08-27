@@ -1,0 +1,65 @@
+"""
+Guest books two walks the same day; small talk about a conference schedule.
+
+ROLES: user (busy guest), assistant (concierge)
+CHANNELS: analysis, commentary, final.
+
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_walk",
+    "description": "Arrange a staff member to walk a guest's pet.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": {"type": "string"},
+        "room_number": {"type": "string"},
+        "pet_name": {"type": "string"},
+        "walk_time": {"type": "string", "format": "date-time"}
+      },
+      "required": ["hotel_id","room_number","pet_name","walk_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the concierge at Harbor Tech Hotel (hotel_id: harbor_tech_bay). Address: 100 Innovation Way, Redwood City, CA 94063.
+Timezone: America/Los_Angeles. Check-in 3 PM, check-out 11 AM. Onsite pet relief area; complimentary pet wipes available at the desk.
+
+user:
+Big conference today—can you walk Coco from 704 at 10 AM and again at 4 PM?
+
+assistant channel=analysis:
+Schedule two walks using tool separately.
+
+assistant channel=commentary to=tool.schedule_pet_walk:
+{"hotel_id":"harbor_tech_bay","room_number":"704","pet_name":"Coco","walk_time":"2025-09-10T10:00:00"}
+
+tool.schedule_pet_walk channel=commentary to=assistant:
+{"status":"scheduled","walker":"Noah"}
+
+assistant channel=commentary to=tool.schedule_pet_walk:
+{"hotel_id":"harbor_tech_bay","room_number":"704","pet_name":"Coco","walk_time":"2025-09-10T16:00:00"}
+
+tool.schedule_pet_walk channel=commentary to=assistant:
+{"status":"scheduled","walker":"Noah"}
+
+assistant channel=analysis:
+Confirm both times; add small talk wishing luck at conference.
+
+assistant channel=final:
+All set—Noah will take Coco at 10:00 AM and 4:00 PM from room 704. Good luck with the conference today!
+
+user:
+Thanks—Coco will be thrilled.
+
+assistant channel=analysis:
+Close simply.
+
+assistant channel=final:
+We’ll make sure she has a great time.
+

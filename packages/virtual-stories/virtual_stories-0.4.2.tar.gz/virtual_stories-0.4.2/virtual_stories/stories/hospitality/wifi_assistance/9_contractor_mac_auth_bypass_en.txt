@@ -1,0 +1,51 @@
+"""
+Contractor device needs temporary MAC auth bypass.
+ROLES: user (contractor needing network for presentation), assistant (IT granting time‑boxed bypass)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "create_mac_bypass",
+    "description": "Create MAC authentication bypass for a device.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "device_mac": {"type": "string", "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"},
+        "duration_minutes": {"type": "integer", "minimum": 30, "maximum": 720}
+      },
+      "required": ["device_mac", "duration_minutes"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+Property: Harborview Meetings Annex
+Network: "Harborview_Guest"; MAC‑auth can be bypassed for visiting presenters upon approval
+Contact: IT desk at extension 77
+
+user:
+I’m a visiting speaker and my demo device can’t get past the login page.
+
+assistant channel=analysis:
+Offer MAC bypass; confirm MAC and timing.
+
+assistant channel=final:
+I can set up a temporary bypass. What’s the device MAC, and how long is your session?
+
+user:
+MAC 02:1A:C3:77:4B:90, session is 2 hours.
+
+assistant channel=commentary to=tool.create_mac_bypass:
+{"device_mac":"02:1A:C3:77:4B:90","duration_minutes":120}
+
+tool.create_mac_bypass channel=commentary to=assistant:
+{"status":"ok","expires_at":"2025-08-25T16:45:00Z"}
+
+assistant channel=final:
+Bypass active for 2 hours. If you need an extension, call extension 77 and we’ll help right away.

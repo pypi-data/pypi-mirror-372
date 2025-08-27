@@ -1,0 +1,56 @@
+"""
+Guest inquires about scheduling the airport shuttle.
+
+ROLES: user (guest needing transportation to airport), assistant (front desk agent arranging shuttle)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_airport_shuttle",
+    "description": "Reserve a seat on the airport shuttle.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string", "description": "Hotel reservation identifier." },
+        "pickup_time": { "type": "string", "format": "date-time", "description": "ISO 8601 local pickup time." },
+        "passengers": { "type": "integer", "minimum": 1, "maximum": 6 }
+      },
+      "required": ["reservation_id", "pickup_time", "passengers"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Mountain View Lodge (hotel_id: mountain_view_lodge_den). Address: 88 Peak Rd, Denver, CO 80202. Timezone: America/Denver. The hotel provides complimentary hourly shuttles to the nearest airport. Always confirm reservation details before scheduling.
+
+user:
+Hi there! Hope your day is going well. I'd like to book the airport shuttle for Friday at 04:00 PM. My reservation ID is RSV53330.
+
+assistant channel=analysis:
+The guest greeted and wants to book shuttle. Need passenger count before booking.
+
+assistant channel=final:
+Hello! Doing great, thanks for asking. I'd be happy to arrange that. How many passengers will be riding?
+
+user:
+It will just be 3 passengers.
+
+assistant channel=analysis:
+Now have passenger count; proceed to schedule shuttle.
+
+assistant channel=commentary to=tool.schedule_airport_shuttle:
+{"reservation_id": "RSV53330", "pickup_time": "2025-09-05T16:00:00", "passengers": 3}
+
+tool.schedule_airport_shuttle channel=commentary to=assistant:
+{"status": "booked", "shuttle_id": "SHUT-24"}
+
+assistant channel=analysis:
+Confirm booking with details.
+
+assistant channel=final:
+Your shuttle for Friday at 04:00 PM is confirmed. Please meet in the lobby ten minutes beforehand. Safe travels!

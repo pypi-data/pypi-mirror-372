@@ -1,0 +1,56 @@
+"""
+Guest requests to rent a bicycle for a few hours.
+
+ROLES: user (guest eager to explore the city by bike), assistant (concierge arranging bicycle rental)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_bicycle",
+    "description": "Reserve a rental bicycle for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string", "description": "Guest reservation identifier." },
+        "hours": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "helmet": { "type": "boolean", "description": "Whether a helmet is requested." }
+      },
+      "required": ["reservation_id", "hours", "helmet"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Riverside Cycle Hotel (hotel_id: riverside_cycle_hotel). Address: 22 River Rd, Portland, OR 97201. The hotel rents hybrid bikes for $15 per hour from 07:00 to 19:00 and provides helmets on request. Verify the guest's reservation before booking a bicycle.
+
+user:
+Hi there, how's your afternoon? I'm thinking of renting a bike to ride along the river.
+
+assistant channel=analysis:
+Greet the guest, engage in small talk, then ask for reservation ID, rental duration, and helmet preference.
+
+assistant channel=final:
+I'm doing great, thanks for asking! I'd be happy to set you up with a bike. Could you share your reservation ID, how many hours you'll need it, and whether you'd like a helmet?
+
+user:
+Glad to hear! My reservation ID is RSV67890, and I'd like it for 3 hours with a helmet, please.
+
+assistant channel=analysis:
+Proceed to reserve the bicycle for 3 hours with helmet.
+
+assistant channel=commentary to=tool.reserve_bicycle:
+{"reservation_id":"RSV67890","hours":3,"helmet":true}
+
+tool.reserve_bicycle channel=commentary to=assistant:
+{"status":"reserved","bike_id":"BIKE-15"}
+
+assistant channel=analysis:
+Confirm reservation details back to guest.
+
+assistant channel=final:
+Your bike is all set! We've reserved one for three hours with a helmet, under reservation RSV67890. Just stop by the lobby at your chosen time and we'll hand you the keys. Have a wonderful ride along the river!

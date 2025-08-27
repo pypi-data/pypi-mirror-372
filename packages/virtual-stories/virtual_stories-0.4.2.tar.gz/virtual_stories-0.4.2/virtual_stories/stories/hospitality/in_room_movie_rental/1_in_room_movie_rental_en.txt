@@ -1,0 +1,67 @@
+"""
+Guest rents an on-demand movie to watch in their room.
+
+ROLES: user (guest wanting to rent a movie), assistant (front desk agent processing movie rentals)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "rent_movie",
+    "description": "Add an on-demand movie charge to the guest's room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "movie_title": {"type": "string"}
+      },
+      "required": ["reservation_id", "movie_title"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the front desk agent at Mountain View Lodge (hotel_id: mountain_view_den). Address: 400 Alpine Rd, Denver, CO 80202.
+Timezone: America/Denver. Check-in 3 PM, check-out 11 AM. Amenities include a fireplace lounge,
+indoor pool 7 AM–10 PM, on-demand movies for $5 each, free parking, and 24-hour front desk service.
+Use tools to process movie rentals.
+
+user:
+Hello, I'd like to rent the movie "Star Adventurers" for tonight. My reservation number is RSV555.
+
+assistant channel=analysis:
+Use rent_movie with RSV555 and "Star Adventurers".
+
+assistant channel=commentary to=tool.rent_movie:
+{"reservation_id":"RSV555","movie_title":"Star Adventurers"}
+
+tool.rent_movie channel=commentary to=assistant:
+{"status":"rented","charge":5}
+
+assistant channel=analysis:
+Confirm rental and charge.
+
+assistant channel=final:
+"Star Adventurers" has been added to your room. A $5 charge will appear on your bill. Enjoy the movie!
+
+user:
+Thanks! The mountain air smells so fresh.
+
+assistant channel=analysis:
+Respond warmly.
+
+assistant channel=final:
+That's one of the best parts of being up here. Have a relaxing night.
+
+user:
+Will do, appreciate it.
+
+assistant channel=analysis:
+Close conversation.
+
+assistant channel=final:
+Anytime. Let us know if you need anything else.

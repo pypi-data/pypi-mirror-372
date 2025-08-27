@@ -1,0 +1,59 @@
+"""
+Guest needs storage for trumpet due to late checkout and afternoon meetings.
+
+ROLES: user (business traveler who plays trumpet), assistant (front desk coordinating storage overlapping late checkout)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_secure_storage",
+    "description": "Reserve storage linked to late checkout note.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "item_description": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["reservation_id", "item_description", "note"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are at Meridian Executive Hotel (hotel_id: meridian_exec_dal). Address: 2100 Commerce St, Dallas, TX 75201. Timezone: America/Chicago.
+Hotel offers complimentary instrument storage; late checkout up to 1 PM subject to availability; lobby café 6 AM–2 PM.
+
+user:
+Morning! I have a 1 PM checkout but meetings until 4. Could you store my trumpet after I check out? Reservation RSV55512.
+
+assistant channel=analysis:
+Reserve storage with note for post-checkout retrieval.
+
+assistant channel=commentary to=tool.reserve_secure_storage:
+{"reservation_id":"RSV55512","item_description":"trumpet","note":"Store from 13:00 to ~16:00 post-checkout; verify ID at retrieval."}
+
+tool.reserve_secure_storage channel=commentary to=assistant:
+{"status":"reserved","locker_id":"TRP-02","claim_ticket":"CT-4512"}
+
+assistant channel=analysis:
+Confirm plan and offer café detail.
+
+assistant channel=final:
+Absolutely—your trumpet is set in locker TRP-02 with claim ticket CT-4512. You can retrieve it any time after your meetings; please show your ID. If you need a quick bite, our lobby café is open until 2 PM.
+
+user:
+Great, thanks. I’ll grab a latte later.
+
+assistant channel=analysis:
+Friendly close.
+
+assistant channel=final:
+Perfect—just mention trumpet storage if you need help later. Good luck with your meetings!
+
+

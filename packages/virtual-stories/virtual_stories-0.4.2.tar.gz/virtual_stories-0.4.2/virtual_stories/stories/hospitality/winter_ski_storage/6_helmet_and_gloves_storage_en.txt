@@ -1,0 +1,31 @@
+"""
+Store helmets and gloves with skis.
+ROLES: user (guest asking to store small items together), assistant (attendant logging accessories)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"store_accessories","description":"Log helmets and gloves with reservation locker.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"helmets":{"type":"integer","minimum":0,"maximum":4},"glove_pairs":{"type":"integer","minimum":0,"maximum":4}},"required":["reservation_id","helmets","glove_pairs"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: White Pine Inn
+Policy: Accessories can be stored inside the same locker at no charge
+
+user:
+Can you store one helmet and two pairs of gloves with my gear? Res WP200.
+
+assistant channel=analysis:
+Store accessories; confirm policy.
+
+assistant channel=commentary to=tool.store_accessories:
+{"reservation_id":"WP200","helmets":1,"glove_pairs":2}
+
+tool.store_accessories channel=commentary to=assistant:
+{"status":"stored"}
+
+assistant channel=final:
+Done—we’ve stored 1 helmet and 2 glove pairs with your locker at no charge.

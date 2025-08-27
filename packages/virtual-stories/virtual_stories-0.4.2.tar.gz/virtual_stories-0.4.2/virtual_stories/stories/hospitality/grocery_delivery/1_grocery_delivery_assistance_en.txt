@@ -1,0 +1,57 @@
+"""
+Guest seeks help arranging a grocery delivery to their room.
+
+ROLES: user (guest needing groceries), assistant (front desk coordinating delivery with partner store)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_grocery_delivery",
+    "description": "Schedule grocery delivery for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "store_name": { "type": "string" },
+        "delivery_time": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["reservation_id", "store_name", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the front desk clerk at Urban Stay Suites (hotel_id: urban_stay_suites_sf). Address: 18 Market St, San Francisco, CA 94105. The suites partner with FreshCart for grocery deliveries directly to guest rooms. Ensure delivery time is clearly stated.
+
+user:
+Hey! Hope your day is going well. Could you help me set up a grocery delivery from FreshCart this afternoon?
+
+assistant channel=analysis:
+Reply with small talk, then request reservation ID, preferred delivery time, and any notes.
+
+assistant channel=final:
+It's going great, thanks! I'd be happy to assist. May I have your reservation ID, the time you'd like the groceries delivered, and any special notes for the order?
+
+user:
+Sure—my reservation ID is RSV99887. Let's have it arrive at 2025-09-14T15:00:00, and please add oat milk to the list.
+
+assistant channel=analysis:
+Schedule delivery with details provided.
+
+assistant channel=commentary to=tool.arrange_grocery_delivery:
+{"reservation_id":"RSV99887","store_name":"FreshCart","delivery_time":"2025-09-14T15:00:00","notes":"include oat milk"}
+
+tool.arrange_grocery_delivery channel=commentary to=assistant:
+{"status":"scheduled","order_id":"FC-2042"}
+
+assistant channel=analysis:
+Confirm delivery time and notes back to guest.
+
+assistant channel=final:
+Your FreshCart delivery is scheduled for 3:00 PM with oat milk added. We'll have it sent up to your room when it arrives. Let me know if you need anything else!

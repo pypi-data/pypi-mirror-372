@@ -1,0 +1,56 @@
+"""
+Guest reports a missing smartphone with friendly follow-up.
+
+ROLES: user (concerned guest), assistant (front desk agent handling lost items)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "log_lost_item",
+    "description": "Record details of a lost item for follow-up.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "item_description": { "type": "string" },
+        "last_seen": { "type": "string", "format": "date-time" }
+      },
+      "required": ["room_number", "item_description"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Phone: (212) 555-0100. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities include free Wi-Fi, gym, pool, spa, business center, rooftop restaurant, 24-hour room service, and secure on-site parking.
+
+user:
+Hi, I'm in 1702 and I think I left my black smartphone in the lobby about an hour ago. Any chance it's been turned in?
+
+assistant channel=analysis:
+Reassure guest, log lost item with approximate time using tool.
+
+assistant channel=commentary to=tool.log_lost_item:
+{"room_number":"1702","item_description":"black smartphone","last_seen":"2025-08-14T20:00:00-04:00"}
+
+tool.log_lost_item channel=commentary to=assistant:
+{"report_id":"LF-552","status":"logged"}
+
+assistant channel=analysis:
+Inform guest report is logged, mention follow-up process, and keep conversation friendly.
+
+assistant channel=final:
+Thanks for letting us know. I've logged your phone as lost (report LF-552) and we'll contact you if it turns up. Anything else you remember about it?
+
+user:
+It has a cracked corner. Appreciate your help—hope your shift isn't too crazy.
+
+assistant channel=analysis:
+Add detail verbally, respond with small talk.
+
+assistant channel=final:
+A cracked corner—got it. We’ll keep an eye out. And thank you, it’s a calm night so far. We’ll reach out if we find it.

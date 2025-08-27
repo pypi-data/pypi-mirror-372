@@ -1,0 +1,31 @@
+"""
+Drying rack availability for wet gear.
+ROLES: user (guest asking to dry wet clothing), assistant (attendant reserving drying rack time)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"reserve_drying_rack","description":"Reserve a drying rack timeslot.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"start":{"type":"string","format":"date-time"},"duration_minutes":{"type":"integer","minimum":30,"maximum":240}},"required":["reservation_id","start","duration_minutes"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: North Peak Hotel
+Facility: Drying racks bookable in 60‑minute blocks between 14:00–21:00
+
+user:
+Can I book a drying rack today from 5 to 6 PM? Res NP88.
+
+assistant channel=analysis:
+Reserve 60 minutes starting at 17:00; confirm clearly.
+
+assistant channel=commentary to=tool.reserve_drying_rack:
+{"reservation_id":"NP88","start":"2025-12-19T17:00:00","duration_minutes":60}
+
+tool.reserve_drying_rack channel=commentary to=assistant:
+{"status":"reserved","rack":"R-3"}
+
+assistant channel=final:
+Your drying rack slot is reserved from 5:00–6:00 PM on rack R‑3.

@@ -1,0 +1,48 @@
+"""
+Guest reports that the air conditioner is not cooling properly.
+
+ROLES: user (guest experiencing in-room maintenance issue), assistant (front desk agent logging maintenance request)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "log_maintenance_issue",
+    "description": "Create a ticket for the maintenance team.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "issue": { "type": "string" }
+      },
+      "required": ["room_number", "issue"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc), 350 7th Ave, New York, NY 10001.
+Timezone: America/New_York. The maintenance team is on call 24/7.
+Be empathetic and log the issue promptly.
+
+user:
+Hi, the AC in room 710 isn’t cooling. Could someone take a look?
+
+assistant channel=analysis:
+Log maintenance ticket for room 710 with AC issue.
+
+assistant channel=commentary to=tool.log_maintenance_issue:
+{"room_number":"710","issue":"air conditioner not cooling"}
+
+tool.log_maintenance_issue channel=commentary to=assistant:
+{"ticket_id":"MT-2031","eta_minutes":30}
+
+assistant channel=analysis:
+Inform guest maintenance will arrive soon.
+
+assistant channel=final:
+Thanks for letting us know. I've alerted maintenance, and they’ll be at your room within about 30 minutes.

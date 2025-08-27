@@ -1,0 +1,55 @@
+"""
+Guest wants to store luggage after checkout and chats briefly.
+ROLES: user (guest needing baggage storage), assistant (front desk agent arranging storage)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_baggage_storage",
+    "description": "Arrange complimentary baggage storage for a departing guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier." },
+        "num_bags": { "type": "integer", "minimum": 1, "description": "Number of bags to store." },
+        "pickup_time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$", "description": "Expected pick-up time HH:MM." }
+      },
+      "required": ["hotel_id", "num_bags", "pickup_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi-Fi, gym, pool, on-site restaurant, 24-hour business center, valet parking, spa, and airport shuttle. Complimentary breakfast 6:00 AM–10:00 AM. Pets up to 40 lb allowed with $75 fee. Currency: USD. Provide warm service and use tools for baggage storage.
+
+user:
+Good morning! Hope you're doing well. I'm checking out but need to store two suitcases until 5:00 PM.
+
+assistant channel=analysis:
+Store two bags until 5:00 PM. Use tool and acknowledge greeting.
+
+assistant channel=commentary to=tool.arrange_baggage_storage:
+{"hotel_id":"skyline_city_hotel_nyc","num_bags":2,"pickup_time":"17:00"}
+
+tool.arrange_baggage_storage channel=commentary to=assistant:
+{"status":"confirmed","ticket_number":"BG123"}
+
+assistant channel=analysis:
+Confirm storage and provide ticket info.
+
+assistant channel=final:
+I'm doing well, thank you! We've stored your two bags and your claim ticket is BG123. They’ll be ready for pickup at 5:00 PM. Anything else I can help with?
+
+user:
+That's all, thanks! Do you charge for the storage?
+
+assistant channel=analysis:
+Answer question; no tool required.
+
+assistant channel=final:
+Baggage storage is complimentary for our guests, so there’s no charge. Enjoy your day!

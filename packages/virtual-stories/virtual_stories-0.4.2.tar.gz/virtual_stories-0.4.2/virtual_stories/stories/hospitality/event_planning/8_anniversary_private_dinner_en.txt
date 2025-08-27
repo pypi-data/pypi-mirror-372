@@ -1,0 +1,96 @@
+"""
+Guest plans an anniversary dinner and asks about reserving a private dining space.
+ROLES: user (guest arranging romantic dinner), assistant (events coordinator checking availability, quoting, and holding space)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "search_event_space_availability",
+    "description": "Check availability of event spaces for a given date and attendance size.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500 }
+      },
+      "required": ["event_date","attendees"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_event_quote",
+    "description": "Get a pricing quote for a specific event space and duration.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500 },
+        "hours": { "type": "integer", "minimum": 1, "maximum": 12 }
+      },
+      "required": ["room_name","event_date","attendees","hours"]
+    },
+    "strict": true
+  },
+  {
+    "name": "hold_event_space",
+    "description": "Place a temporary hold on an event space.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer" },
+        "organizer_name": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["room_name","event_date","attendees","organizer_name","email"]
+    },
+    "strict": true
+  },
+  {
+    "name": "confirm_event_booking",
+    "description": "Confirm a held event space reservation with payment.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hold_id": { "type": "string" },
+        "payment_token": { "type": "string", "minLength": 8 }
+      },
+      "required": ["hold_id","payment_token"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are an events coordinator at Seaside Pavilion Miami (hotel_id: seaside_pavilion_mia). Address: 210 Ocean Dr, Miami Beach, FL 33139. Timezone: America/New_York. Check-in 4:00 PM, check-out 11:00 AM. Amenities: oceanfront ballroom, rooftop bar, free Wi‑Fi. Currency: USD; taxes 14% + service charge 22%. Be clear and only use tools to check availability, quote pricing, hold space, and confirm bookings.
+
+user:
+Hey! Loved the art deco lobby. I'm planning an anniversary dinner for 12 guests on February 14. Can we get a private oceanview room for the evening?
+
+assistant channel=analysis:
+Check availability for 12 guests on Feb 14; quote 4-hour private room, hold if guest agrees.
+
+assistant channel=commentary to=tool.search_event_space_availability:
+{"event_date":"2026-02-14","attendees":12}
+
+tool.search_event_space_availability channel=commentary to=assistant:
+{"available_spaces":[{"room_name":"Oceanview Private Room","capacity":20}]}
+
+assistant channel=commentary to=tool.get_event_quote:
+{"room_name":"Oceanview Private Room","event_date":"2026-02-14","attendees":12,"hours":4}
+
+tool.get_event_quote channel=commentary to=assistant:
+{"room_name":"Oceanview Private Room","base_rate":1000.00,"service_charge":220.00,"total":1220.00}
+
+assistant channel=final:
+The Oceanview Private Room is available on February 14. A four-hour evening reservation for 12 guests totals $1,220 including service charge. Would you like me to place it on hold under your name?

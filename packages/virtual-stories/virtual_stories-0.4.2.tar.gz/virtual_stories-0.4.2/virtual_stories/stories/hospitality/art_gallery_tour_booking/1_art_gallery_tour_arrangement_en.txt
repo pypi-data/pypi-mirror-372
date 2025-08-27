@@ -1,0 +1,62 @@
+"""
+Guest asks to arrange an art gallery tour with tickets.
+
+ROLES: user (guest appreciating hotel's art displays and seeking gallery tour), assistant (concierge arranging art gallery tour)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "book_art_gallery_tour",
+    "description": "Book tickets for a local art gallery tour.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string", "description": "Guest reservation identifier."},
+        "tour_time": {"type": "string", "format": "date-time", "description": "Start time for the gallery tour."},
+        "tickets": {"type": "integer", "minimum": 1, "maximum": 10}
+      },
+      "required": ["reservation_id", "tour_time", "tickets"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Riverside Art Hotel (hotel_id: riverside_art_hotel_sf).
+Address: 100 Riverside St, San Francisco, CA 94105. Phone: (415) 555-0100.
+The hotel features 150 rooms, an on-site modern art gallery open 9 AM - 8 PM,
+a rooftop lounge on the 12th floor, and complimentary breakfast served 7 AM - 10 AM.
+Timezone: America/Los_Angeles. Confirm reservation details before booking external tours.
+
+user:
+Good morning! The lobby's art pieces are stunning. Could you help me arrange a tour of a local art gallery tomorrow afternoon?
+
+assistant channel=analysis:
+The guest complimented the art. Respond with thanks and ask for reservation ID and number of tickets.
+
+assistant channel=final:
+Thank you for the kind words about our lobby! I'd be happy to set that up.
+May I have your reservation ID and how many tickets you'd like for the tour?
+
+user:
+Sure thing—my reservation ID is RSV11111 and I'd like two tickets for tomorrow at 2:00 PM.
+
+assistant channel=analysis:
+Proceed to book the gallery tour for 2025-08-20 at 14:00 with 2 tickets.
+
+assistant channel=commentary to=tool.book_art_gallery_tour:
+{"reservation_id":"RSV11111","tour_time":"2025-08-20T14:00:00","tickets":2}
+
+tool.book_art_gallery_tour channel=commentary to=assistant:
+{"status":"confirmed","confirmation_code":"ART-88"}
+
+assistant channel=analysis:
+Confirm the booking and provide the confirmation code.
+
+assistant channel=final:
+Your art gallery tour for tomorrow at 2:00 PM is booked for two guests.
+Your confirmation code is ART-88. Enjoy the masterpieces!

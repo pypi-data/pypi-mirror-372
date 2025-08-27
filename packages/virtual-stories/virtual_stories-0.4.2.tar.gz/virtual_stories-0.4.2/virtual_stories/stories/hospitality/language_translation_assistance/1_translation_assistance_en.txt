@@ -1,0 +1,55 @@
+"""
+Guest requests help with document translation.
+ROLES: user (guest needing translation service), assistant (front desk agent arranging translation)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "request_translation_service",
+    "description": "Arrange translation assistance for a guest in a specified language.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "language": { "type": "string" }
+      },
+      "required": ["room_number", "language"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a front desk agent at Global Gateway Hotel (hotel_id: global_gateway_london). Address: 88 International Way, London W1D 3QF, UK.
+Timezone: Europe/London. The 500-room hotel features multilingual staff, an international newsstand, afternoon tea lounge, and conference centre.
+Check-in 3:00 PM, check-out 12:00 PM. Use tools to arrange translation assistance and follow up politely.
+
+user:
+Hello, good afternoon! Do you have someone who can help translate a document into Spanish? I'm in room 1108.
+
+assistant channel=analysis:
+Request translation service for room 1108 in Spanish.
+
+assistant channel=commentary to=tool.request_translation_service:
+{"room_number":"1108","language":"Spanish"}
+
+tool.request_translation_service channel=commentary to=assistant:
+{"staff_member":"Maria","eta_minutes":15}
+
+assistant channel=analysis:
+Inform guest of who will help and arrival time; offer anything else.
+
+assistant channel=final:
+Maria from our multilingual team will come to room 1108 in about 15 minutes to assist with Spanish translation. Anything else I can arrange?
+
+user:
+Muchas gracias! The lobby decor is lovely.
+
+assistant channel=analysis:
+Respond to gratitude and compliment.
+
+assistant channel=final:
+De nada—happy to help! We're glad you enjoy the decor. Let us know if you need anything else during your stay.

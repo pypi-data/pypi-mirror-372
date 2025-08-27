@@ -1,0 +1,80 @@
+"""
+Family guest asks about kids policy and books family loungers for movie night.
+
+ROLES: user (parent with two kids), assistant (family programs host handling lounge assignments)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_kids_movie_policy",
+    "description": "Get age guidelines and stroller/float rules for poolside movie night.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["hotel_id", "date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "assign_family_loungers",
+    "description": "Assign family lounger section seats (fits up to 4).",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "guest_name": { "type": "string" },
+        "movie_date": { "type": "string", "format": "date" },
+        "party_size": { "type": "integer", "minimum": 1, "maximum": 4 }
+      },
+      "required": ["hotel_id", "guest_name", "movie_date", "party_size"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the family programs host at Pinecrest Lodge (hotel_id: pinecrest_lake_tahoe). Address: 88 Lakeview Rd, South Lake Tahoe, CA 96150. Timezone: America/Los_Angeles. Check-in 4:00 PM, check-out 11:00 AM. Currency: USD.
+Amenities: lakeside pool, s'mores firepits, family loungers (fits 4), kids club, complimentary blankets.
+Kids policy: ages 12 and under welcome; flotation devices allowed only in shallow zone; strollers parked by lifeguard stand; quiet hours start 10 PM.
+
+user:
+Hi there! Is the movie kid-friendly, and can we get a family lounger for two adults and two kids (the Parkers) tonight?
+
+assistant channel=analysis:
+Confirm kids policy, then assign family lounger for 4 on 2025-08-24 under Parkers.
+
+assistant channel=commentary to=tool.get_kids_movie_policy:
+{"hotel_id":"pinecrest_lake_tahoe","date":"2025-08-24"}
+
+tool.get_kids_movie_policy channel=commentary to=assistant:
+{"ages":"12_and_under_welcome","float_zone":"shallow_only","stroller":"park_by_lifeguard","quiet_hours":"22:00"}
+
+assistant channel=commentary to=tool.assign_family_loungers:
+{"hotel_id":"pinecrest_lake_tahoe","guest_name":"The Parkers","movie_date":"2025-08-24","party_size":4}
+
+tool.assign_family_loungers channel=commentary to=assistant:
+{"status":"assigned","section":"family_a","lounger_id":"PC-FAM-14"}
+
+assistant channel=analysis:
+Summarize policy and assignment details.
+
+assistant channel=final:
+Yes—tonight’s screening is family-friendly. Ages 12 and under are welcome; floaties stay in the shallow area, and strollers are parked by the lifeguard stand. I’ve assigned you a family lounger in section A—ID PC-FAM-14—for two adults and two kids under The Parkers.
+
+user:
+Perfect! Do you still do s’mores at intermission?
+
+assistant channel=analysis:
+Answer from amenities.
+
+assistant channel=final:
+We do—s’mores kits are complimentary at the firepits during intermission. Our staff will have skewers ready.
+

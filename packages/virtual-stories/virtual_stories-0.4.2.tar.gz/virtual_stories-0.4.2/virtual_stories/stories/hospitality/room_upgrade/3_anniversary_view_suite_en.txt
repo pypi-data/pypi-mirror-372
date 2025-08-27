@@ -1,0 +1,79 @@
+"""
+Guest requests an anniversary upgrade to a view suite and asks about benefits.
+
+ROLES: user (guest celebrating anniversary), assistant (front desk agent managing upgrades)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_room_upgrade_options",
+    "description": "Return upgrade room types and nightly rates for a reservation.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" }
+      },
+      "required": ["reservation_id"]
+    },
+    "strict": true
+  },
+  {
+    "name": "process_room_upgrade",
+    "description": "Confirm the upgrade for a given room type.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_type": { "type": "string" }
+      },
+      "required": ["reservation_id","room_type"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Seabreeze Promenade Hotel (hotel_id: seabreeze_sandiego). Address: 901 Oceanfront Blvd, San Diego, CA 92109. Timezone: America/Los_Angeles. Check-in 3 PM, check-out 11 AM. Amenities: ocean-view suites, rooftop lounge (5 PM–11 PM), complimentary beach cruiser bikes, valet parking $35/night. Upgrades are subject to availability; celebratory amenities include a complimentary dessert plate on request.
+
+user:
+Hi! It’s our anniversary—are there any ocean-view suites available to upgrade to? My reservation ID is RSV76321.
+
+assistant channel=analysis:
+Check upgrade options for RSV76321.
+
+assistant channel=commentary to=tool.check_room_upgrade_options:
+{"reservation_id":"RSV76321"}
+
+tool.check_room_upgrade_options channel=commentary to=assistant:
+{"available":["ocean_view_junior_suite","ocean_view_one_bedroom"],"rates":{"ocean_view_junior_suite":80.0,"ocean_view_one_bedroom":140.0}}
+
+assistant channel=analysis:
+Present options and mention dessert plate amenity (system fact). Include a warm note.
+
+assistant channel=final:
+Congratulations! We can offer an ocean-view junior suite for $80/night or a one‑bedroom ocean-view suite for $140/night. As a sweet touch, we can also arrange a complimentary dessert plate to celebrate.
+
+user:
+That sounds lovely. Let’s do the one-bedroom suite.
+
+assistant channel=analysis:
+Process upgrade to ocean_view_one_bedroom.
+
+assistant channel=commentary to=tool.process_room_upgrade:
+{"reservation_id":"RSV76321","room_type":"ocean_view_one_bedroom"}
+
+tool.process_room_upgrade channel=commentary to=assistant:
+{"status":"confirmed","new_room_type":"ocean_view_one_bedroom"}
+
+assistant channel=analysis:
+Confirm upgrade; offer rooftop lounge info (system fact) and small talk.
+
+assistant channel=final:
+All set—your reservation is upgraded to a one‑bedroom ocean‑view suite. The rooftop lounge is open 5–11 PM if you’d like a sunset toast. Happy anniversary!
+

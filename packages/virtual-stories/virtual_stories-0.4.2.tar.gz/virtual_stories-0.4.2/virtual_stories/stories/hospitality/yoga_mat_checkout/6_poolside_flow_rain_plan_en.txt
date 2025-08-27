@@ -1,0 +1,52 @@
+"""
+Guest borrows mats for poolside flow; small talk about weather backup.
+
+ROLES: user (guest planning poolside yoga), assistant (concierge coordinating mats)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "checkout_yoga_mat",
+    "description": "Check out mats with a scheduled return date.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "quantity": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "return_date": { "type": "string", "format": "date" }
+      },
+      "required": ["reservation_id", "quantity", "return_date"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are at Lagoon Bay Resort (hotel_id: lagoon_bay_sd). Address: 500 Shoreline Dr, San Diego, CA 92109, USA. Timezone: America/Los_Angeles. Amenities: lagoon-view pool deck, cabanas, and yoga if dry; rain plan is the studio by the spa. Mats loaned for 24 hours.
+
+user:
+We’re RSV6022—can we borrow three mats for a poolside flow tomorrow? If it rains, do we move inside?
+
+assistant channel=analysis:
+Confirm rain plan per system; loan 3 mats due 2025-09-17.
+
+assistant channel=commentary to=tool.checkout_yoga_mat:
+{"reservation_id":"RSV6022","quantity":3,"return_date":"2025-09-17"}
+
+tool.checkout_yoga_mat channel=commentary to=assistant:
+{"status":"checked_out"}
+
+assistant channel=final:
+Yes—if it sprinkles, the studio by the spa is the backup. Three mats are checked out and due 2025-09-17.
+
+user:
+Perfect.
+
+assistant channel=final:
+Enjoy the deck views.
+
+

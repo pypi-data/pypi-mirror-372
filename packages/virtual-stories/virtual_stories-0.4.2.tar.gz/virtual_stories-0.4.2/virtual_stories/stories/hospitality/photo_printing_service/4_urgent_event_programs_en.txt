@@ -1,0 +1,48 @@
+"""
+Guest urgently needs a batch of glossy prints for an event.
+
+ROLES: user (guest on a deadline), assistant (business center attendant confirming quick turnaround)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "print_photos",
+    "description": "Print digital photos for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "quantity": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "finish_type": { "type": "string", "enum": ["glossy", "matte"] }
+      },
+      "required": ["reservation_id", "quantity", "finish_type"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the print services lead at Capitol View Hotel (hotel_id: capitol_view_dc). Address: 700 Constitution Ave NW, Washington, DC 20001. Timezone: America/New_York. Small photo jobs can be turned around within 30 minutes during staffed hours.
+
+user:
+Hello! Running into a meeting—can you print 30 glossy photos ASAP?
+
+assistant channel=analysis:
+Acknowledge urgency; print 30 glossy for RSV20202; confirm 30-minute turnaround fits policy.
+
+assistant channel=commentary to=tool.print_photos:
+{"reservation_id":"RSV20202","quantity":30,"finish_type":"glossy"}
+
+tool.print_photos channel=commentary to=assistant:
+{"status":"printed","pickup_location":"business_center_front_desk"}
+
+assistant channel=analysis:
+Confirm and set expectation.
+
+assistant channel=final:
+We’ve got you—30 glossy prints are queued and will be ready within about 30 minutes at the business center front desk. Good luck with the meeting!
+

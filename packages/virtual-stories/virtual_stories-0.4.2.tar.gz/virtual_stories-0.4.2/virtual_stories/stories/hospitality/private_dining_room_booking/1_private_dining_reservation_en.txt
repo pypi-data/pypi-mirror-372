@@ -1,0 +1,62 @@
+"""
+Guest wants to reserve a private dining room for a special occasion.
+
+ROLES: user (guest planning an intimate dinner), assistant (restaurant coordinator handling private dining reservations)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reserve_private_dining_room",
+    "description": "Reserve a private dining room at the hotel restaurant.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "date_time": {"type": "string", "format": "date-time"},
+        "guests": {"type": "integer", "minimum": 2, "maximum": 20},
+        "occasion": {"type": "string"}
+      },
+      "required": ["reservation_id", "date_time", "guests"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the restaurant coordinator at Gourmet View Hotel (hotel_id: gourmet_view_lv).
+Address: 505 Skyline Blvd, Las Vegas, NV 89109. Phone: (702) 555-0188.
+The property offers 300 luxury rooms, a panoramic rooftop restaurant, three private dining rooms,
+a 24-hour casino lounge, and valet parking.
+Check-in 3 PM, check-out 11 AM. Timezone: America/Los_Angeles.
+
+user:
+Hello! The rooftop view is incredible. I'd like to book a private dining room for a small celebration.
+
+assistant channel=analysis:
+Respond warmly, ask for reservation ID, date/time, number of guests, and occasion.
+
+assistant channel=final:
+We're delighted you enjoy the view! To reserve a private room, could you share your reservation ID, the date and time, number of guests, and what you're celebrating?
+
+user:
+Sure thing—reservation RSV77777. We're celebrating our engagement with six guests on August 22 at 7 PM.
+
+assistant channel=analysis:
+Reserve private dining room for 2025-08-22 at 19:00 for 6 guests noting engagement.
+
+assistant channel=commentary to=tool.reserve_private_dining_room:
+{"reservation_id":"RSV77777","date_time":"2025-08-22T19:00:00","guests":6,"occasion":"engagement"}
+
+tool.reserve_private_dining_room channel=commentary to=assistant:
+{"status":"reserved","room_id":"DINING-3"}
+
+assistant channel=analysis:
+Confirm reservation and provide room ID.
+
+assistant channel=final:
+Your private dining room is reserved for August 22 at 7 PM for six guests.
+Room ID DINING-3 is ready for your engagement celebration. Congratulations!

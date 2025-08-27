@@ -1,0 +1,60 @@
+"""
+A guest needs laundry detergent for the self-service laundry room.
+
+ROLES: user (a guest who needs to do laundry), assistant (a hotel staff member arranging for detergent to be delivered)
+CHANNELS: analysis, commentary, final
+TOOLS:
+```json
+[
+  {
+    "name": "request_laundry_detergent",
+    "description": "Request laundry detergent for a guest.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "room_number": {
+          "type": "string",
+          "description": "The guest's room number."
+        },
+        "detergent_type": {
+          "type": "string",
+          "enum": ["powder", "liquid"],
+          "description": "The type of laundry detergent."
+        }
+      },
+      "required": ["room_number", "detergent_type"]
+    }
+  }
+]
+```
+"""
+
+system:
+You are a staff member at the 'Clean & Cozy Inn', which has a self-service laundry room for guests. The hotel provides single-use packets of laundry detergent upon request.
+
+user:
+I'm in the laundry room, and I realized I don't have any detergent. Can I get some from the front desk?
+
+assistant channel=analysis:
+The user needs laundry detergent. I should ask for their room number and if they have a preference for powder or liquid detergent.
+
+assistant channel=final:
+Of course. We can have some sent down to the laundry room for you. Do you have a preference for powder or liquid detergent? And could you please tell me your room number?
+
+user:
+Liquid, please. My room number is 210. I appreciate the help! It's so nice to be able to do laundry while traveling.
+
+assistant channel=analysis:
+The user in room 210 has requested liquid laundry detergent. I will use the `request_laundry_detergent` tool to fulfill their request and also respond to their comment.
+
+assistant channel=commentary to=tool.request_laundry_detergent:
+{"room_number": "210", "detergent_type": "liquid"}
+
+tool.request_laundry_detergent channel=commentary to=assistant:
+{"confirmation_message": "A packet of liquid laundry detergent has been dispatched to the laundry room for the guest in room 210."}
+
+assistant channel=analysis:
+The detergent has been requested. I will now inform the user.
+
+assistant channel=final:
+We agree, it makes a big difference! I've just sent a request for a packet of liquid laundry detergent to be brought down to you in the laundry room. It should be there in just a few minutes.

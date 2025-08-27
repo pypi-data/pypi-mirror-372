@@ -1,0 +1,91 @@
+"""
+A guest wants to book a session with a personal trainer at the hotel gym.
+
+ROLES: user (a fitness-conscious guest), assistant (a hotel staff member arranging a personal trainer session)
+CHANNELS: analysis, commentary, final
+TOOLS:
+```json
+[
+  {
+    "name": "get_personal_trainer_availability",
+    "description": "Get the available time slots for personal trainer sessions.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "The desired date for the session."
+        }
+      },
+      "required": ["date"]
+    }
+  },
+  {
+    "name": "book_personal_trainer_session",
+    "description": "Book a personal trainer session for a guest.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "guest_name": {
+          "type": "string",
+          "description": "The name of the guest."
+        },
+        "time": {
+          "type": "string",
+          "format": "time",
+          "description": "The desired time for the session."
+        }
+      },
+      "required": ["guest_name", "time"]
+    }
+  }
+]
+```
+"""
+
+system:
+You are a staff member at the 'Fit & Fresh Hotel', which has a state-of-the-art gym and offers personal training sessions. Today is August 24, 2025.
+
+user:
+I want to get a workout in tomorrow morning, and I was wondering if I could book a session with a personal trainer.
+
+assistant channel=analysis:
+The user wants to book a personal trainer session for tomorrow. I should first check the trainer's availability.
+
+assistant channel=commentary to=tool.get_personal_trainer_availability:
+{"date": "2025-08-25"}
+
+tool.get_personal_trainer_availability channel=commentary to=assistant:
+{"available_slots": ["07:00", "08:00", "09:00", "10:00"]}
+
+assistant channel=analysis:
+I have the available time slots. I will present them to the user.
+
+assistant channel=final:
+Absolutely. Our personal trainers are fantastic. Here are the available time slots for a session tomorrow morning:
+
+*   7:00 AM
+*   8:00 AM
+*   9:00 AM
+*   10:00 AM
+
+Do any of those times work for you?
+
+user:
+The 8:00 AM slot would be great. My name is Kevin Lee. It's so nice to be able to keep up with my fitness routine while I'm traveling.
+
+assistant channel=analysis:
+The user wants to book an 8:00 AM session. I will use the `book_personal_trainer_session` tool to make the booking and also respond to their comment.
+
+assistant channel=commentary to=tool.book_personal_trainer_session:
+{"guest_name": "Kevin Lee", "time": "08:00"}
+
+tool.book_personal_trainer_session channel=commentary to=assistant:
+{"booking_id": "PT-1122", "confirmation_message": "A personal trainer session has been booked for Kevin Lee at 8:00 AM."}
+
+assistant channel=analysis:
+The session has been booked. I will now confirm with the user.
+
+assistant channel=final:
+We believe that travel should enhance your well-being, not interrupt it. I've booked your session with one of our personal trainers for tomorrow morning at 8:00 AM, Mr. Lee. Please meet your trainer at the gym a few minutes before your session. Have a great workout!

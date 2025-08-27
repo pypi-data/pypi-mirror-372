@@ -1,0 +1,39 @@
+"""
+Small corporate group booking for wine tasting.
+ROLES: user (corporate guest booking a group of 8), assistant (concierge coordinating registration and brief intro)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"register_group","description":"Register a corporate group for tasting.","parameters":{"type":"object","additionalProperties":false,"properties":{"company":{"type":"string"},"date":{"type":"string","format":"date"},"num_guests":{"type":"integer","minimum":2,"maximum":12}},"required":["company","date","num_guests"]},"strict":true},
+  {"name":"arrange_sommelier_intro","description":"Schedule a 10‑minute welcome by the sommelier.","parameters":{"type":"object","additionalProperties":false,"properties":{"date":{"type":"string","format":"date"},"time":{"type":"string","pattern":"^\\d{2}:\\d{2}$"}},"required":["date","time"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Summit Center Hotel
+Address: 900 High Street, Denver, CO 80202
+Event: Friday tasting 6 PM; sommelier available for group intros at 5:50 PM when scheduled
+
+user:
+We’re 8 colleagues from Apex Labs looking to attend next Friday.
+
+assistant channel=analysis:
+Register group; arrange sommelier intro for 5:50 PM; include cordial note.
+
+assistant channel=commentary to=tool.register_group:
+{"company":"Apex Labs","date":"2025-09-19","num_guests":8}
+
+tool.register_group channel=commentary to=assistant:
+{"status":"registered"}
+
+assistant channel=commentary to=tool.arrange_sommelier_intro:
+{"date":"2025-09-19","time":"17:50"}
+
+tool.arrange_sommelier_intro channel=commentary to=assistant:
+{"status":"scheduled"}
+
+assistant channel=final:
+You’re confirmed for 8 guests on 2025‑09‑19 with a 5:50 PM welcome from our sommelier. We’re happy to host your team.

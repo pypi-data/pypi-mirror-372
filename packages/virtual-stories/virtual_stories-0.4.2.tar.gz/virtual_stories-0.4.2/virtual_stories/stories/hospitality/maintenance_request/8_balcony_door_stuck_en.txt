@@ -1,0 +1,54 @@
+"""
+Balcony door is stuck.
+
+ROLES: user (guest unable to open balcony door), assistant (front desk arranging engineering visit)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "request_carpentry_assist",
+    "description": "Request a carpenter/engineer to adjust balcony door track and latch.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_number": { "type": "string" },
+        "access_window_minutes": { "type": "integer", "minimum": 15, "maximum": 180 }
+      },
+      "required": ["reservation_id", "room_number", "access_window_minutes"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are at Seabreeze Boardwalk Hotel (hotel_id: seabreeze_sand). Address: 150 Ocean Ave, Santa Cruz, CA 95060. Timezone: America/Los_Angeles.
+Amenities: boardwalk passes, surfboard storage, outdoor fire pits. Engineering can adjust door tracks and latches; sea air may cause swelling.
+
+user:
+Hello—balcony door in 518 won’t budge. The fire pits looked cozy tonight.
+
+assistant channel=analysis:
+Acknowledge fire pits; request carpentry assist with a 45‑minute access window. Reservation RSV518.
+
+assistant channel=commentary to=tool.request_carpentry_assist:
+{"reservation_id":"RSV518","room_number":"518","access_window_minutes":45}
+
+tool.request_carpentry_assist channel=commentary to=assistant:
+{"status":"accepted","tech_id":"SCZ-CARP-4","eta_minutes":35}
+
+assistant channel=analysis:
+Confirm timing and safety note.
+
+assistant channel=final:
+They’re best with a sea breeze. I’ve arranged SCZ-CARP-4 to service 518 within ~35 minutes. Please keep the interior latch unlocked so we can adjust the track safely.
+
+user:
+Understood—thanks.
+
+assistant channel=final:
+Anytime. We’ll circle back after the fix to ensure smooth sliding.

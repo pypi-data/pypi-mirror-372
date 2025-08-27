@@ -1,0 +1,64 @@
+"""
+Wi‑Fi roaming drops between APs; adjust minimum RSSI and sticky client settings.
+ROLES: user (guest walking between spaces experiencing drops), assistant (IT tuning roaming parameters)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_floor_ap_stats",
+    "description": "Get floor AP association and sticky client metrics.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "floor": {"type": "string"}
+      },
+      "required": ["floor"]
+    },
+    "strict": true
+  },
+  {
+    "name": "tune_roaming",
+    "description": "Tune minimum RSSI and sticky client threshold for a floor.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "floor": {"type": "string"},
+        "min_rssi_dbm": {"type": "integer"},
+        "sticky_client_threshold": {"type": "integer"}
+      },
+      "required": ["floor", "min_rssi_dbm", "sticky_client_threshold"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+Property: Lakeside Tower
+Wi‑Fi SSID: "Lakeside_Guest"; APs per floor with fast‑roaming enabled
+
+user:
+My calls drop when I walk from the elevator lobby back to my room on 15.
+
+assistant channel=analysis:
+Check sticky clients; tune thresholds; confirm with user; add brief small talk that’s factual.
+
+assistant channel=commentary to=tool.get_floor_ap_stats:
+{"floor":"15"}
+
+tool.get_floor_ap_stats channel=commentary to=assistant:
+{"sticky_clients":9,"avg_rssi_dbm":-70}
+
+assistant channel=commentary to=tool.tune_roaming:
+{"floor":"15","min_rssi_dbm":-68,"sticky_client_threshold":12}
+
+tool.tune_roaming channel=commentary to=assistant:
+{"status":"ok"}
+
+assistant channel=final:
+I tuned roaming on floor 15 to encourage quicker handoffs. Please try another walk from the elevator lobby—calls should stay connected. If anything still drops, let us know and we’ll review again.

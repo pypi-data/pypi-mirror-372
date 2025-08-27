@@ -1,0 +1,59 @@
+"""
+Guest books photographer for graduation portraits in a family suite.
+
+ROLES: user (guest celebrating graduation), assistant (events coordinator confirming booking and timing)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "book_photographer",
+    "description": "Reserve the hotel photographer for an event.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "hours": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "location": { "type": "string" }
+      },
+      "required": ["reservation_id", "event_date", "hours", "location"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are events at Grand Marquise Hotel (hotel_id: grand_marquise_no). Natural light best in the Royal Family Suite between 10:00–12:00.
+
+user:
+Could we get your photographer for 1 hour on 2025-12-18 in our Royal Family Suite? Reservation RSV86868.
+
+assistant channel=analysis:
+Book 1 hour as requested.
+
+assistant channel=commentary to=tool.book_photographer:
+{"reservation_id":"RSV86868","event_date":"2025-12-18","hours":1,"location":"Royal Family Suite"}
+
+tool.book_photographer channel=commentary to=assistant:
+{"status":"booked","photographer_id":"PHOTO-14"}
+
+assistant channel=analysis:
+Confirm and suggest light timing.
+
+assistant channel=final:
+Booked for Dec 18 in the Royal Family Suite for 1 hour (ID PHOTO-14). For best natural light, consider between 10 AM and noon—shall we aim for that window?
+
+user:
+Yes, 10:30 sounds perfect. And the suite’s chandelier is stunning.
+
+assistant channel=analysis:
+Small talk.
+
+assistant channel=final:
+It adds sparkle to the moment—congratulations on the milestone!
+
+

@@ -1,0 +1,77 @@
+"""
+A guest with an electric vehicle inquires about the hotel's EV charging stations.
+
+ROLES: user (an EV owner), assistant (a hotel staff member providing information about EV charging)
+CHANNELS: analysis, commentary, final
+TOOLS:
+```json
+[
+  {
+    "name": "get_ev_charging_station_status",
+    "description": "Get the current status of the hotel's EV charging stations.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "reserve_ev_charging_station",
+    "description": "Reserve an EV charging station for a guest.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "guest_name": {
+          "type": "string",
+          "description": "The name of the guest."
+        },
+        "duration_hours": {
+          "type": "integer",
+          "description": "The requested duration of the charging session in hours."
+        }
+      },
+      "required": ["guest_name", "duration_hours"]
+    }
+  }
+]
+```
+"""
+
+system:
+You are a staff member at the 'Volt-Age Hotel', which provides EV charging stations for guests.
+
+user:
+I have an electric car. Do you have charging stations available?
+
+assistant channel=analysis:
+The user is asking about our EV charging stations. I should first check the status of the stations.
+
+assistant channel=commentary to=tool.get_ev_charging_station_status:
+{}
+
+tool.get_ev_charging_station_status channel=commentary to=assistant:
+{"stations": [{"id": "station_1", "status": "available"}, {"id": "station_2", "status": "in_use"}, {"id": "station_3", "status": "available"}]}
+
+assistant channel=analysis:
+I have the status of the charging stations. I will inform the user of the availability.
+
+assistant channel=final:
+Yes, we do! We have three EV charging stations for our guests. It looks like two of them are currently available.
+
+user:
+Great! Can I reserve one? My name is Jane Doe, and I'll probably need it for about 3 hours. It's so convenient that you offer this service!
+
+assistant channel=analysis:
+The user wants to reserve a charging station for 3 hours. I will use the `reserve_ev_charging_station` tool to make the reservation and also respond to their comment.
+
+assistant channel=commentary to=tool.reserve_ev_charging_station:
+{"guest_name": "Jane Doe", "duration_hours": 3}
+
+tool.reserve_ev_charging_station channel=commentary to=assistant:
+{"reservation_id": "EV-RES-5678", "station_id": "station_1", "confirmation_message": "Charging station 1 has been reserved for Jane Doe for 3 hours."}
+
+assistant channel=analysis:
+The reservation has been made. I will now inform the user.
+
+assistant channel=final:
+We're happy to offer it! I've just reserved charging station 1 for you for the next 3 hours, Ms. Doe. You can find the charging stations in our underground parking garage on level P1. Please let us know if you need any assistance.

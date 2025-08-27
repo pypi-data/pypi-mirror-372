@@ -1,0 +1,74 @@
+"""
+Family secures Historic District Loop; chat about porch swings.
+
+ROLES: user (guest booking family loop), assistant (concierge issuing passes)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "prepare_day_pass",
+    "description": "Prepare day passes for a bus loop before charging.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "loop": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "adults": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "children": { "type": "integer", "minimum": 0, "maximum": 10 }
+      },
+      "required": ["hotel_id", "loop", "date", "adults", "children"]
+    },
+    "strict": true
+  },
+  {
+    "name": "finalize_day_pass",
+    "description": "Finalize and charge prepared day passes.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "prep_id": { "type": "string" },
+        "charge_to_room": { "type": "boolean" }
+      },
+      "required": ["prep_id", "charge_to_room"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the concierge at Magnolia Row Inn (hotel_id: magnolia_row_sav). Address: 101 Oglethorpe Ave, Savannah, GA 31401, USA. Timezone: America/New_York. Amenities: porch swings on the veranda, iced sweet tea at check-in, and courtyard magnolias. Historic District Loop boards at Oglethorpe Square on the hour.
+
+user:
+We’d like two adult and one child passes for the Historic District Loop tomorrow. Those porch swings are dangerously relaxing.
+
+assistant channel=analysis:
+Engage about swings; prepare passes for 2 adults, 1 child on 2025-09-16; then finalize charge to room.
+
+assistant channel=commentary to=tool.prepare_day_pass:
+{"hotel_id":"magnolia_row_sav","loop":"Historic District Loop","date":"2025-09-16","adults":2,"children":1}
+
+tool.prepare_day_pass channel=commentary to=assistant:
+{"status":"prepared","prep_id":"PREP-HDL-120"}
+
+assistant channel=commentary to=tool.finalize_day_pass:
+{"prep_id":"PREP-HDL-120","charge_to_room":true}
+
+tool.finalize_day_pass channel=commentary to=assistant:
+{"status":"finalized","confirmation":"HDL-SAV-330"}
+
+assistant channel=final:
+They do slow time down. Your passes are confirmed for tomorrow—confirmation HDL-SAV-330. Board at Oglethorpe Square on the hour.
+
+user:
+Wonderful, thanks.
+
+assistant channel=final:
+Enjoy the live oaks and squares.
+
+

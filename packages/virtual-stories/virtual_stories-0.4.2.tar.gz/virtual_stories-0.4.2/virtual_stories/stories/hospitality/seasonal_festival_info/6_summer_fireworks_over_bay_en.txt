@@ -1,0 +1,49 @@
+"""
+Summer fireworks by the bay with marina viewpoints and picnic rules.
+Assistance with timing, seating, and transport.
+
+ROLES: user (guest planning fireworks viewing), assistant (concierge giving logistics and booking)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"get_event_schedule","description":"Get fireworks show time and pier access.","parameters":{"type":"object","additionalProperties":false,"properties":{"event_name":{"type":"string"},"date":{"type":"string","format":"date"}},"required":["event_name","date"]},"strict":true},
+  {"name":"book_shuttle","description":"Book hotel shuttle to marina.","parameters":{"type":"object","additionalProperties":false,"properties":{"pickup_location":{"type":"string"},"dropoff_location":{"type":"string"},"pickup_time":{"type":"string"},"guest_name":{"type":"string"}},"required":["pickup_location","dropoff_location","pickup_time","guest_name"]},"strict":true}
+]
+```
+"""
+
+system:
+Hotel: Baylight Resort, 2 Marina Crescent. Private lawn access for guests 18:30–22:00 on fireworks day; no glass bottles. Public viewing at Pier 3 and Tidepoint Park. Hotel picnic blankets available at concierge (first‑come). Shuttle every 15 minutes 18:00–21:30 between lobby and Pier 3.
+
+user:
+When do the fireworks start tonight, and where should we watch?
+
+assistant channel=analysis:
+Confirm start time and recommend hotel lawn vs Pier 3. Add small talk.
+
+assistant channel=commentary to=tool.get_event_schedule:
+{"event_name":"Bay Fireworks","date":"2025-07-04"}
+
+tool.get_event_schedule channel=commentary to=assistant:
+{"show_time":"21:00","best_spots":["Pier 3","Tidepoint Park","Baylight Private Lawn"],"rules":"No glass on lawn"}
+
+assistant channel=final:
+They start at 21:00. For the easiest exit, our Baylight private lawn opens to guests from 18:30; otherwise Pier 3 has the widest bay angle. Blankets are available at the concierge while supplies last.
+
+Before I suggest a shuttle time, are you arriving early to picnic or closer to showtime?
+
+user:
+Closer to showtime. Can you put us on a shuttle at 20:30 to Pier 3 under Alex?
+
+assistant channel=commentary to=tool.book_shuttle:
+{"pickup_location":"Baylight Lobby","dropoff_location":"Pier 3","pickup_time":"20:30","guest_name":"Alex"}
+
+tool.book_shuttle channel=commentary to=assistant:
+{"status":"confirmed","reservation_id":"BLR-PIER3-2030-ALEX"}
+
+assistant channel=final:
+All set for 20:30 to Pier 3 (ID BLR-PIER3-2030-ALEX). If winds pick up, Tidepoint Park can be less smoky—just a tip.
+
+
