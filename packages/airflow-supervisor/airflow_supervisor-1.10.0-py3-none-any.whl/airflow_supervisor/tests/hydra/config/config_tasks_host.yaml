@@ -1,0 +1,33 @@
+# @package _global_
+_target_: airflow_config.Configuration
+
+defaults:
+  - balancer@extensions.balancer
+
+dags:
+  example_dag:
+    schedule: "0 3 * * *"
+    start_date: 2023-01-01
+    tasks:
+      run:
+        _target_: airflow_supervisor.SupervisorSSHTask
+        cfg:
+          _target_: airflow_supervisor.SupervisorSSHAirflowConfiguration
+          working_dir: /data
+          program:
+            echo:
+              _target_: airflow_supervisor.ProgramConfiguration
+              command: echo "hello"
+        host:
+          _target_: airflow_pydantic.Host
+          name: my-remote-host
+          os: rhel
+          password:
+            _target_: airflow_pydantic.Variable
+            key: blerg
+            deserialize_json: true
+        port:
+          _target_: airflow_pydantic.Port
+          name: my-remote-port
+          host: ${..host}
+          port: 8080
