@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    
+    - name: Lint with ruff
+      run: ruff check src tests
+    
+    - name: Format check with ruff
+      run: ruff format --check src tests
+    
+    - name: Type check with mypy (if available)
+      run: |
+        if command -v mypy >/dev/null 2>&1; then
+          mypy src/legacy_import_migrator --ignore-missing-imports
+        else
+          echo "Skipping mypy (not installed)"
+        fi
+      continue-on-error: true
+    
+    - name: Test with pytest
+      run: pytest --cov=legacy_import_migrator --cov-report=xml --cov-report=term
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+
+  cli-smoke-test:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install package
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+    
+    - name: Test CLI installation
+      run: |
+        lim --help
+        lim scan --help
+        lim check --help
+        lim baseline --help
+    
+    - name: CLI smoke test - scan self
+      run: |
+        # Test scanning the package itself for demo patterns
+        lim scan --legacy-patterns "old_module,legacy_import" \
+                 --roots "src,tests" \
+                 --json-out .cache/smoke-test.json \
+                 --verbose
+    
+    - name: CLI smoke test - baseline operations
+      run: |
+        # Test baseline creation and reading
+        lim baseline --write --legacy-patterns "demo_legacy" --roots "src"
+        lim baseline --legacy-patterns "demo_legacy" --roots "src"
+    
+    - name: CLI smoke test - check mode
+      run: |
+        # Test check mode (should pass with no legacy patterns found)
+        lim check --legacy-patterns "nonexistent_legacy_module" --mode all --roots "src"
+
+  package-build:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install build tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check package
+      run: twine check dist/*
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/

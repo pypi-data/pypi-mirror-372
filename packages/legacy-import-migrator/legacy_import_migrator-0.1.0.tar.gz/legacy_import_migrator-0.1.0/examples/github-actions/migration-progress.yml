@@ -1,0 +1,150 @@
+# Example GitHub Actions workflow for Legacy Import Migration tracking
+# Place this in .github/workflows/migration-progress.yml
+
+name: Legacy Import Migration Progress
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at 2 AM UTC to track progress
+    - cron: '0 2 * * *'
+
+jobs:
+  check-legacy-imports:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Required for changed file detection
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install Legacy Import Migrator
+      run: pip install legacy-import-migrator
+    
+    - name: Check for legacy imports (PR only)
+      if: github.event_name == 'pull_request'
+      run: |
+        # Fail CI if new legacy imports are introduced
+        lim check --legacy-patterns "old_module,legacy_namespace" \
+                  --allow "tests/legacy/**" \
+                  --allow "docs/examples/**" \
+                  --verbose
+    
+    - name: Generate migration progress report
+      run: |
+        # Generate comprehensive migration report
+        lim scan --legacy-patterns "old_module,legacy_namespace" \
+                 --scope all \
+                 --json-out migration-report.json \
+                 --print-files \
+                 --verbose
+    
+    - name: Upload migration report as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: migration-report-${{ github.run_number }}
+        path: migration-report.json
+        retention-days: 90
+    
+    - name: Comment PR with progress (PR only)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          try {
+            const report = JSON.parse(fs.readFileSync('migration-report.json', 'utf8'));
+            const blocking = report.imports.blocking;
+            const progress = report.imports.progress_percent;
+            const total = report.imports.total;
+            
+            const body = `## 📊 Legacy Import Migration Progress
+            
+            - **Blocking imports**: ${blocking}
+            - **Total legacy imports**: ${total}  
+            - **Migration progress**: ${progress.toFixed(1)}%
+            - **Files scanned**: ${report.files_scanned}
+            
+            ${blocking === 0 ? '✅ No blocking legacy imports found!' : '⚠️ Legacy imports still present'}
+            
+            <details>
+            <summary>View detailed report</summary>
+            
+            \`\`\`json
+            ${JSON.stringify(report, null, 2)}
+            \`\`\`
+            </details>`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+          } catch (error) {
+            console.log('Could not parse migration report:', error);
+          }
+
+  # Optional: Track progress trends over time
+  track-progress-trends:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Install tools
+      run: pip install legacy-import-migrator
+      
+    - name: Generate timestamped report
+      run: |
+        timestamp=$(date +"%Y%m%d-%H%M")
+        lim scan --legacy-patterns "old_module,legacy_namespace" \
+                 --json-out "migration-trend-${timestamp}.json"
+        
+        # Extract key metrics for trending
+        python3 << 'EOF'
+        import json
+        import os
+        from datetime import datetime
+        
+        with open(f'migration-trend-{os.environ.get("timestamp", "unknown")}.json') as f:
+            data = json.load(f)
+        
+        # Create trend summary
+        trend = {
+            "timestamp": datetime.now().isoformat(),
+            "commit": "${{ github.sha }}",
+            "blocking_imports": data["imports"]["blocking"],
+            "progress_percent": data["imports"]["progress_percent"],
+            "files_scanned": data["files_scanned"]
+        }
+        
+        with open("trend-summary.json", "w") as f:
+            json.dump(trend, f, indent=2)
+        EOF
+        
+    - name: Upload trend data
+      uses: actions/upload-artifact@v3
+      with:
+        name: migration-trend-${{ github.run_number }}
+        path: |
+          migration-trend-*.json
+          trend-summary.json
+        retention-days: 365  # Keep trend data longer
