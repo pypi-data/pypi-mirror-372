@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Folder Vision - AI-Powered Multimodal Search</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2920/2920277.png" type="image/png">
+    
+    <!-- External CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/styles.css" rel="stylesheet" type="text/css" />
+    
+    <!-- External JS -->
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.32.0/plotly.min.js"></script>
+    <script src="https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        .grid-auto-fit {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .image-card {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            background: var(--color-bg-primary);
+            border: 1px solid var(--color-border);
+        }
+        
+        .image-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--color-primary);
+        }
+        
+        .image-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            z-index: 1000;
+        }
+        
+        .image-viewer-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .image-viewer img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 100;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-online { background-color: var(--color-success); }
+        .status-offline { background-color: var(--color-error); }
+        .status-processing { background-color: var(--color-warning); animation: pulse 2s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-base-200">
+    
+    
+
+    <!-- Main Content -->
+    <main class="container max-w-7xl mx-auto p-6 space-y-8">
+        
+        <!-- Quick Stats Dashboard -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="metric-card rounded-xl p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-2xl font-bold" id="totalImages">0</div>
+                        <div class="text-sm opacity-70">Total Images</div>
+                    </div>
+                    <i class="fas fa-images text-2xl text-green-500"></i>
+                </div>
+            </div>
+            <div class="metric-card rounded-xl p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-2xl font-bold" id="embeddingDim">512</div>
+                        <div class="text-sm opacity-70">Embedding Dim</div>
+                    </div>
+                    <i class="fas fa-vector-square text-2xl text-blue-500"></i>
+                </div>
+            </div>
+            <div class="metric-card rounded-xl p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-2xl font-bold" id="deviceInfo">GPU</div>
+                        <div class="text-sm opacity-70">Compute Device</div>
+                    </div>
+                    <i class="fas fa-microchip text-2xl text-purple-500"></i>
+                </div>
+            </div>
+            <div class="metric-card rounded-xl p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-2xl font-bold" id="clustersCount">0</div>
+                        <div class="text-sm opacity-70">Clusters</div>
+                    </div>
+                    <i class="fas fa-project-diagram text-2xl text-orange-500"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="grid lg:grid-cols-4 gap-8">
+            
+            <!-- Left Sidebar - Controls -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Folder Indexing -->
+                <div class="feature-card rounded-xl p-6">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fas fa-folder-open text-lg text-primary"></i>
+                        <h3 class="text-lg font-semibold">Index Folder</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="relative">
+                            <input id="folderPath" type="text" placeholder="Enter folder path..." 
+                                   class="search-input input input-bordered w-full pl-10" />
+                            <i class="fas fa-folder absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-primary btn-sm flex-1" onclick="indexFolder()">
+                                <i class="fas fa-play mr-2"></i>Index
+                            </button>
+                            <div class="dropdown dropdown-top">
+                                <div tabindex="0" role="button" class="btn btn-outline btn-sm">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </div>
+                                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40">
+                                    <li><a onclick="loadCache()"><i class="fas fa-download mr-2"></i>Load Cache</a></li>
+                                    <li><a onclick="clearIndex()"><i class="fas fa-trash mr-2"></i>Clear</a></li>
+                                    <li><a onclick="selectFolder()"><i class="fas fa-folder mr-2"></i>Browse</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div id="indexProgress" class="hidden">
+                            <progress class="progress progress-primary w-full"></progress>
+                        </div>
+                        <div id="indexStatus" class="text-sm min-h-[20px]"></div>
+                    </div>
+                </div>
+                
+                <!-- Text Search -->
+                <div class="feature-card rounded-xl p-6">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fas fa-search text-lg text-secondary"></i>
+                        <h3 class="text-lg font-semibold">Text Search</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="relative">
+                            <input id="textQuery" type="text" placeholder="Describe what you're looking for..." 
+                                   class="search-input input input-bordered w-full pl-10" 
+                                   onkeypress="if(event.key==='Enter') searchByText()" />
+                            <i class="fas fa-comment-dots absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="textTopK" class="select select-bordered select-sm flex-1" title="Number of results">
+                                <option value="10">Top 10</option>
+                                <option value="25">Top 25</option>
+                                <option value="50">Top 50</option>
+                                <option value="100">Top 100</option>
+                            </select>
+                            <button class="btn btn-secondary btn-sm" onclick="searchByText()" title="Search by text">
+                                <i class="fas fa-search mr-2"></i>Search
+                            </button>
+                        </div>
+                        <div class="flex gap-1">
+
+                            <button class="btn btn-ghost btn-xs" onclick="setTextQuery('a cat')">Cat</button>
+                            <button class="btn btn-ghost btn-xs" onclick="setTextQuery('a dog')">Dog</button>
+                            <button class="btn btn-ghost btn-xs" onclick="setTextQuery('sunset')">Sunset</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Image Search -->
+                <div class="feature-card rounded-xl p-6">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fas fa-image text-lg text-accent"></i>
+                        <h3 class="text-lg font-semibold">Image Search</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="relative">
+                            <input id="queryImage" type="file" accept="image/*" 
+                                   class="file-input file-input-bordered w-full" 
+                                   onchange="previewQueryImage(this)" />
+                        </div>
+                        <div id="queryImagePreview" class="hidden">
+                            <img class="w-full h-32 object-cover rounded-lg border" />
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="imageTopK" class="select select-bordered select-sm flex-1" title="Number of results">
+                                <option value="10">Top 10</option>
+                                <option value="25">Top 25</option>
+                                <option value="50">Top 50</option>
+                                <option value="100">Top 100</option>
+                            </select>
+                            <button class="btn btn-accent btn-sm" onclick="searchByImage()" title="Search by image">
+                                <i class="fas fa-search mr-2"></i>Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Clustering -->
+                <div class="feature-card rounded-xl p-6">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fas fa-project-diagram text-lg text-warning"></i>
+                        <h3 class="text-lg font-semibold">Clustering</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex gap-2">
+                            <select id="clusterMethod" class="select select-bordered select-sm flex-1" title="Clustering method">
+                                <option value="auto">Auto</option>
+                                <option value="kmeans">K-Means</option>
+                                <option value="dbscan">DBSCAN</option>
+                            </select>
+                            <input id="numClusters" type="number" min="2" max="50" placeholder="k" 
+                                   class="input input-bordered input-sm w-16" title="Number of clusters" />
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-warning btn-sm flex-1" onclick="performClustering()">
+                                <i class="fas fa-play mr-2"></i>Cluster
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="getClusterSuggestions()" title="Get cluster suggestions">
+                                <i class="fas fa-lightbulb"></i>
+                            </button>
+                        </div>
+                        <div id="clusterResult" class="text-sm min-h-[20px]"></div>
+                        <div id="clusterList" class="max-h-32 overflow-auto text-xs space-y-1"></div>
+                    </div>
+                </div>
+                
+                <!-- Visualization -->
+                <div class="feature-card rounded-xl p-6">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fas fa-chart-scatter text-lg text-info"></i>
+                        <h3 class="text-lg font-semibold">Visualization</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex gap-2">
+                            <select id="projMethod" class="select select-bordered select-sm flex-1" title="Projection method">
+                                <option value="tsne" selected>t-SNE</option>
+                                <option value="pca">PCA</option>
+                            </select>
+                            <select id="projDim" class="select select-bordered select-sm" title="Dimensions">
+                                <option value="3" selected>3D</option>
+                                <option value="2">2D</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-info btn-sm w-full" onclick="loadProjection()">
+                            <i class="fas fa-eye mr-2"></i>Visualize
+                        </button>
+                        <div class="text-xs opacity-70">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Automatically samples large datasets
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content Area -->
+            <div class="lg:col-span-3 space-y-6">
+                
+                <!-- Search Results -->
+                <div class="feature-card rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-th-large text-lg text-primary"></i>
+                            <h3 class="text-lg font-semibold">Search Results</h3>
+                            <div class="badge badge-primary" id="resultCount">0</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-ghost btn-sm" onclick="toggleViewMode()" title="Toggle view mode">
+                                <i class="fas fa-th" id="viewModeIcon"></i>
+                            </button>
+                            <button class="btn btn-ghost btn-sm" onclick="downloadResults()" title="Download results">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="results" class="grid-auto-fit min-h-[300px]">
+                        <div class="flex items-center justify-center h-64 text-gray-500">
+                            <div class="text-center">
+                                <i class="fas fa-search text-4xl mb-4 opacity-30"></i>
+                                <p>Start by indexing a folder and searching...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Embedding Visualization -->
+                <div class="feature-card rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-chart-scatter text-lg text-info"></i>
+                            <h3 class="text-lg font-semibold">Embedding Space</h3>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-ghost btn-sm" onclick="resetProjectionView()">
+                                <i class="fas fa-home"></i>
+                            </button>
+                            <button class="btn btn-ghost btn-sm" onclick="exportProjection()">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="projection" class="cluster-visualization w-full h-96 bg-base-200 rounded-lg">
+                        <div class="flex items-center justify-center h-full text-gray-500">
+                            <div class="text-center">
+                                <i class="fas fa-chart-scatter text-4xl mb-4 opacity-30"></i>
+                                <p>Click "Visualize" to see embedding projection</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Image Viewer Modal -->
+    <div id="imageViewer" class="image-viewer">
+        <div class="absolute top-4 right-4 z-10">
+            <button class="btn btn-circle btn-ghost text-white" onclick="closeImageViewer()">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="absolute top-4 left-4 z-10">
+            <div class="text-white text-sm bg-black/50 px-3 py-1 rounded">
+                <span id="imageViewerInfo"></span>
+            </div>
+        </div>
+        <div class="image-viewer-content">
+            <img id="imageViewerImg" alt="Full size image">
+            <div class="text-center mt-4">
+                <div class="flex justify-center gap-2">
+                    <button class="btn btn-sm" onclick="downloadCurrentImage()">
+                        <i class="fas fa-download mr-2"></i>Download
+                    </button>
+                    <button class="btn btn-sm" onclick="shareCurrentImage()">
+                        <i class="fas fa-share mr-2"></i>Share
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <div class="floating-action">
+        <div class="dropdown dropdown-top dropdown-end">
+            <div tabindex="0" role="button" class="btn btn-circle btn-primary shadow-lg">
+                <i class="fas fa-plus"></i>
+            </div>
+            <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 mb-2">
+                <li><a onclick="quickIndex()"><i class="fas fa-bolt mr-2"></i>Quick Index</a></li>
+                <li><a onclick="batchProcess()"><i class="fas fa-tasks mr-2"></i>Batch Process</a></li>
+                <li><a onclick="exportResults()"><i class="fas fa-file-export mr-2"></i>Export Results</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg">Settings</h3>
+            <div class="py-4 space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Default search results</span>
+                    </label>
+                    <select class="select select-bordered w-full">
+                        <option value="25">25 results</option>
+                        <option value="50">50 results</option>
+                        <option value="100">100 results</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Auto-cluster after indexing</span>
+                        <input type="checkbox" class="toggle toggle-primary" />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Show file paths</span>
+                        <input type="checkbox" class="toggle toggle-primary" checked />
+                    </label>
+                </div>
+            </div>
+            <div class="modal-action">
+                <form method="dialog">
+                    <button class="btn">Close</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-box max-w-2xl">
+            <h3 class="font-bold text-lg">Help & Tips</h3>
+            <div class="py-4 space-y-4">
+                <div class="collapse collapse-arrow bg-base-200">
+                    <input type="radio" name="help-accordion" checked="checked" />
+                    <div class="collapse-title text-lg font-medium">Getting Started</div>
+                    <div class="collapse-content">
+                        <p>1. Index a folder containing images<br>
+                        2. Use text search to find images by description<br>
+                        3. Use image search to find similar images<br>
+                        4. Explore clusters and visualizations</p>
+                    </div>
+                </div>
+                <div class="collapse collapse-arrow bg-base-200">
+                    <input type="radio" name="help-accordion" />
+                    <div class="collapse-title text-lg font-medium">Search Tips</div>
+                    <div class="collapse-content">
+                        <p>• Use descriptive phrases: "red car in sunset"<br>
+                        • Try different perspectives: "aerial view of city"<br>
+                        • Use emotions: "happy people", "peaceful landscape"</p>
+                    </div>
+                </div>
+                <div class="collapse collapse-arrow bg-base-200">
+                    <input type="radio" name="help-accordion" />
+                    <div class="collapse-title text-lg font-medium">Clustering</div>
+                    <div class="collapse-content">
+                        <p>• Auto mode finds optimal clusters automatically<br>
+                        • K-means requires you to specify number of clusters<br>
+                        • DBSCAN finds clusters of varying density</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-action">
+                <form method="dialog">
+                    <button class="btn">Close</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed bottom-4 left-4 z-50 space-y-2"></div>
+
+    <!-- Load JavaScript -->
+    <script src="/static/js/app.js"></script>
+    
+</body>
+</html>

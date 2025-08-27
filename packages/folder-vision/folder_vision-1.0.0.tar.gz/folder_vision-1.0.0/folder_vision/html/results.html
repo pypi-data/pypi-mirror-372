@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search - Folder Vision</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Global list style reset */
+        * {
+            list-style: none;
+        }
+        ul, ol, li {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .search-input-container {
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            height: 44px;
+            box-shadow: none;
+            transition: box-shadow 0.3s ease-in-out;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+        }
+        .search-input-container:hover {
+            box-shadow: 0 1px 6px rgba(32,33,36,.28);
+            border-color: rgba(223,225,229,0);
+        }
+        .search-input-container:focus-within {
+            box-shadow: 0 1px 6px rgba(32,33,36,.28);
+            border-color: rgba(223,225,229,0);
+        }
+        .search-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            flex: 1;
+            padding: 0 16px;
+            font-size: 16px;
+            color: #202124;
+        }
+        .search-icon {
+            padding: 0 14px;
+            color: #9aa0a6;
+        }
+        .top-k-dropdown {
+            background-color: #f8f9fa;
+            border: 1px solid #dfe1e5;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 14px;
+            color: #202124;
+            cursor: pointer;
+            outline: none;
+        }
+        .top-k-dropdown:hover {
+            border-color: #dadce0;
+            box-shadow: 0 1px 3px rgba(32,33,36,.1);
+        }
+        .image-result-card {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            background: white;
+            border: 1px solid #e5e7eb;
+        }
+        .image-result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-color: #3b82f6;
+        }
+        .image-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-viewer img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 45%;
+            background: white;
+            box-shadow: -2xl;
+            z-index: 50;
+            border-left: 1px solid #e5e7eb;
+            overflow-y: auto;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+        .sidebar-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        /* Main content adjustment when drawer is open */
+        .main-content-with-drawer {
+            transition: margin-right 0.3s ease-in-out;
+        }
+        .main-content-with-drawer.drawer-open {
+            margin-right: 45%;
+        }
+        .similar-images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .similar-image-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .similar-image-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+        }
+        .similar-image-card img {
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
+            background: white;
+        }
+        .similar-image-info {
+            padding: 0.5rem;
+        }
+        .similar-image-name {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .similar-image-score {
+            font-size: 0.7rem;
+            color: #6b7280;
+        }
+        .hidden-score {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Search Header -->
+    <div class="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-screen-xl mx-auto px-4">
+            <div class="flex items-center py-4">
+                <!-- Logo -->
+                <a href="/" class="flex-shrink-0 mr-6">
+                    <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_92x30dp.png" alt="Google" class="h-8">
+                </a>
+                
+                <!-- Navigation -->
+                <nav class="flex space-x-4 mr-6">
+                    <a href="/" class="text-gray-600 hover:text-blue-600 transition-colors">Home</a>
+                    <a href="/search" class="text-blue-600 font-medium">Search</a>
+                    <a href="/gallery" class="text-gray-600 hover:text-blue-600 transition-colors">Gallery</a>
+                    <a href="/cluster" class="text-gray-600 hover:text-blue-600 transition-colors">Clustering</a>
+                </nav>
+                
+                <!-- Search Box -->
+                <div class="flex-grow max-w-xl">
+                    <div class="search-input-container">
+                        <div class="search-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search images..." autofocus>
+                        <button id="searchBtn" class="ml-2 p-2 rounded-full hover:bg-gray-100" onclick="performSearch()" title="Search">
+                            <i class="fas fa-arrow-right text-gray-600"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Search Options -->
+                <div class="ml-4 flex items-center space-x-4">
+                    <select id="topK" class="top-k-dropdown" title="Number of results">
+                        <option value="10">10 results</option>
+                        <option value="20" selected>20 results</option>
+                        <option value="30">30 results</option>
+                        <option value="50">50 results</option>
+                        <option value="100">100 results</option>
+                    </select>
+                    
+                    <!-- Image Upload -->
+                    <label for="imageUpload" class="cursor-pointer p-2 rounded-full hover:bg-gray-100" title="Search by image">
+                        <i class="fas fa-camera text-gray-600"></i>
+                        <input type="file" id="imageUpload" accept="image/*" class="hidden" onchange="searchByImage()" title="Upload image to search">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-screen-xl mx-auto px-4 py-6 main-content-with-drawer" id="mainContent">
+        <!-- Search Status -->
+        <div id="searchStatus" class="mb-6">
+            <div class="text-gray-600">
+                <i class="fas fa-info-circle mr-2"></i>
+                Enter a search query to find images
+            </div>
+        </div>
+
+        <!-- Search Results -->
+        <div id="searchResults" class="hidden">
+            <!-- Results Info -->
+            <div id="resultsInfo" class="text-gray-600 text-sm mb-6">
+                <!-- Results count will be displayed here -->
+            </div>
+            
+            <!-- Results Grid -->
+            <div class="relative flex">
+                <div id="imageResults" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 flex-1">
+                    <!-- Results will be displayed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden flex items-center justify-center py-20">
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+                <p class="text-gray-600">Searching images...</p>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden flex items-center justify-center py-20">
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                <p class="text-gray-600" id="errorMessage">Search failed</p>
+                <button onclick="performSearch()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Try Again
+                </button>
+            </div>
+        </div>
+
+        <!-- No Results State -->
+        <div id="noResultsState" class="hidden flex items-center justify-center py-20">
+            <div class="text-center">
+                <i class="fas fa-search text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600">No images found</p>
+                <p class="text-gray-500 text-sm">Try different search terms or check if images are indexed</p>
+                <a href="/gallery" class="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    View Gallery
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Viewer Modal -->
+    <div id="imageViewer" class="image-viewer">
+        <div class="absolute top-4 right-4">
+            <button onclick="closeImageViewer()" class="bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="absolute top-4 left-4">
+            <div class="bg-black bg-opacity-50 text-white px-3 py-1 rounded text-sm" id="imageViewerInfo">
+                <!-- Image info will be displayed here -->
+            </div>
+        </div>
+        <img id="imageViewerImg" alt="Full size image">
+        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+            <div class="flex space-x-2">
+                <button onclick="downloadCurrentImage()" class="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg hover:bg-opacity-70 transition-colors">
+                    <i class="fas fa-download mr-2"></i>Download
+                </button>
+                <button onclick="shareCurrentImage()" class="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg hover:bg-opacity-70 transition-colors">
+                    <i class="fas fa-share mr-2"></i>Share
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSideDrawer()"></div>
+
+    <!-- Similar Images Sidebar -->
+    <div id="imageSidebar" class="sidebar">
+        <div class="p-6">
+            <!-- Drawer Header -->
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Image Details</h2>
+                    <p class="text-sm text-gray-500" id="drawerImageName">Loading...</p>
+                </div>
+                <button onclick="closeSideDrawer()" class="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Close drawer">
+                    <i class="fas fa-times text-gray-600"></i>
+                </button>
+            </div>
+
+            <!-- Selected Image -->
+            <div class="mb-6">
+                <img id="drawerMainImage" class="w-full h-64 object-contain bg-gray-50 rounded-lg border" alt="Selected image">
+                <div class="mt-3 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">File:</span>
+                        <span class="text-gray-900 font-medium" id="drawerFileName">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Path:</span>
+                        <span class="text-gray-900 text-xs break-all" id="drawerImagePath">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm hidden-score" id="drawerScoreContainer">
+                        <span class="text-gray-500">Similarity:</span>
+                        <span class="text-gray-900" id="drawerImageScore">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-2 mb-6">
+                <button onclick="downloadSelectedImage()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-download mr-2"></i>Download
+                </button>
+                <button onclick="shareSelectedImage()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-share mr-2"></i>Share
+                </button>
+            </div>
+
+            <!-- Similar Images Section -->
+            <div>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Similar Images</h3>
+                <div id="similarImagesContainer" class="space-y-3">
+                    <div class="flex items-center justify-center py-8">
+                        <i class="fas fa-spinner fa-spin text-gray-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentResults = [];
+        let currentViewerImage = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupSearch();
+            checkURLParams();
+        });
+
+        // Setup search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            
+            // Handle enter key
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+        }
+
+        // Check URL parameters for initial search
+        function checkURLParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('q');
+            
+            if (query) {
+                document.getElementById('searchInput').value = query;
+                performSearch();
+            }
+        }
+
+        // Perform text search
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            
+            if (!query) {
+                showSearchStatus('Enter a search query to find images');
+                return;
+            }
+            
+            const topK = document.getElementById('topK').value;
+            
+            showLoadingState();
+            updateURL(query);
+            
+            try {
+                const response = await fetch(`/search/text?query=${encodeURIComponent(query)}&top_k=${topK}`);
+                const results = await response.json();
+                
+                if (response.ok) {
+                    currentResults = results;
+                    
+                    if (results.length === 0) {
+                        showNoResultsState();
+                    } else {
+                        displaySearchResults(results, query);
+                    }
+                } else {
+                    showErrorState(results.detail || 'Search failed');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showErrorState('Network error occurred');
+            }
+        }
+
+        // Search by image
+        async function searchByImage() {
+            const fileInput = document.getElementById('imageUpload');
+            
+            if (!fileInput.files[0]) {
+                return;
+            }
+            
+            const topK = document.getElementById('topK').value;
+            
+            showLoadingState();
+            
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            formData.append('top_k', topK);
+            
+            try {
+                const response = await fetch('/search/image', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const results = await response.json();
+                
+                if (response.ok) {
+                    currentResults = results;
+                    
+                    if (results.length === 0) {
+                        showNoResultsState();
+                    } else {
+                        displaySearchResults(results, 'Image Search Results');
+                    }
+                } else {
+                    showErrorState(results.detail || 'Image search failed');
+                }
+            } catch (error) {
+                console.error('Image search error:', error);
+                showErrorState('Network error occurred');
+            }
+            
+            // Clear file input
+            fileInput.value = '';
+        }
+
+        // Display search results
+        function displaySearchResults(results, query) {
+            const resultsContainer = document.getElementById('imageResults');
+            const resultsInfo = document.getElementById('resultsInfo');
+            
+            resultsInfo.textContent = `About ${results.length} results for "${query}"`;
+            
+            resultsContainer.innerHTML = results.map((result, index) => `
+                <div class="image-result-card cursor-pointer" onclick="openSideDrawer('${result.path}', '${result.filename}', ${result.score || 0})">
+                    <div class="aspect-square overflow-hidden">
+                        <img src="/image/${encodeURIComponent(result.path)}" 
+                             alt="${result.filename}"
+                             class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                             loading="lazy" />
+                    </div>
+                    <div class="p-3">
+                        <div class="font-medium text-sm truncate" title="${result.filename}">
+                            ${result.filename}
+                        </div>
+                        ${result.score ? `
+                            <div class="flex items-center justify-between mt-2">
+                                <span class="text-xs text-gray-500">Similarity</span>
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">${(result.score * 100).toFixed(1)}%</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            showSearchResults();
+        }
+
+        // Open side drawer with image details and similar images
+        let selectedImageForDrawer = null;
+
+        async function openSideDrawer(imagePath, filename, score = 0) {
+            console.log('Opening side drawer for:', imagePath, filename, score); // Debug log
+            
+            // Find the image index by searching for it in the image paths
+            let imageIndex = null;
+            try {
+                console.log('Fetching gallery images to find index...'); // Debug log
+                const response = await fetch('/gallery/images');
+                console.log('Gallery images response status:', response.status); // Debug log
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Gallery data received, total images:', data.images ? data.images.length : 'undefined'); // Debug log
+                    
+                    if (data.images) {
+                        const imageData = data.images.find(img => img.path === imagePath);
+                        imageIndex = imageData ? imageData.index : null;
+                        console.log('Found image index:', imageIndex); // Debug log
+                    }
+                } else {
+                    console.error('Failed to fetch gallery images:', response.status); // Debug log
+                }
+            } catch (error) {
+                console.error('Error finding image index:', error);
+            }
+
+            selectedImageForDrawer = { path: imagePath, filename: filename, score: score, index: imageIndex };
+            
+            // Update drawer content
+            document.getElementById('drawerImageName').textContent = filename;
+            document.getElementById('drawerMainImage').src = `/image/${encodeURIComponent(imagePath)}`;
+            document.getElementById('drawerFileName').textContent = filename;
+            document.getElementById('drawerImagePath').textContent = imagePath;
+            
+            // Show or hide score based on availability
+            const scoreContainer = document.getElementById('drawerScoreContainer');
+            const scoreElement = document.getElementById('drawerImageScore');
+            if (score && score > 0) {
+                scoreElement.textContent = `${(score * 100).toFixed(1)}%`;
+                scoreContainer.classList.remove('hidden-score');
+            } else {
+                scoreContainer.classList.add('hidden-score');
+            }
+            
+            // Show drawer and adjust main content
+            document.getElementById('sidebarOverlay').classList.add('open');
+            document.getElementById('imageSidebar').classList.add('open');
+            document.getElementById('mainContent').classList.add('drawer-open');
+            document.body.style.overflow = 'hidden';
+            
+            // Load similar images if we have an index, otherwise try search by image
+            if (imageIndex !== null) {
+                await loadSimilarImagesForDrawer(imageIndex);
+            } else {
+                console.log('No image index found, trying search by image approach'); // Debug log
+                await loadSimilarImagesByImageSearch(imagePath);
+            }
+        }
+
+        // Close side drawer
+        function closeSideDrawer() {
+            document.getElementById('sidebarOverlay').classList.remove('open');
+            document.getElementById('imageSidebar').classList.remove('open');
+            document.getElementById('mainContent').classList.remove('drawer-open');
+            document.body.style.overflow = 'auto';
+            selectedImageForDrawer = null;
+        }
+
+        // Load similar images for the drawer
+        async function loadSimilarImagesForDrawer(imageIndex) {
+            const container = document.getElementById('similarImagesContainer');
+            
+            console.log('Loading similar images for index:', imageIndex); // Debug log
+            
+            // Show loading state
+            container.innerHTML = `
+                <div class="flex items-center justify-center py-8">
+                    <i class="fas fa-spinner fa-spin text-gray-400 text-xl"></i>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`/gallery/images/similar/${imageIndex}?top_k=8`);
+                console.log('Similar images response status:', response.status); // Debug log
+                const data = await response.json();
+                console.log('Similar images data:', data); // Debug log
+                
+                if (response.ok && data.similar_images && data.similar_images.length > 0) {
+                    container.innerHTML = data.similar_images.map(image => `
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                             onclick="openSideDrawer('${image.path}', '${image.filename}')">
+                            <img src="/image/${encodeURIComponent(image.path)}" 
+                                 alt="${image.filename}"
+                                 class="w-20 h-20 object-contain bg-white rounded-lg mr-3 border flex-shrink-0">
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-sm text-gray-900 truncate">${image.filename}</div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    Similarity: ${(image.score * 100).toFixed(1)}%
+                                </div>
+                            </div>
+                            <i class="fas fa-search text-gray-400 flex-shrink-0"></i>
+                        </div>
+                    `).join('');
+                } else {
+                    console.log('No similar images found or empty response'); // Debug log
+                    showSimilarImagesUnavailable();
+                }
+            } catch (error) {
+                console.error('Error loading similar images:', error);
+                container.innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p>Failed to load similar images</p>
+                        <p class="text-xs mt-1">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Alternative: Load similar images using search by image API
+        async function loadSimilarImagesByImageSearch(imagePath) {
+            const container = document.getElementById('similarImagesContainer');
+            
+            console.log('Loading similar images using search by image for:', imagePath); // Debug log
+            
+            // Show loading state
+            container.innerHTML = `
+                <div class="flex items-center justify-center py-8">
+                    <i class="fas fa-spinner fa-spin text-gray-400 text-xl"></i>
+                </div>
+            `;
+            
+            try {
+                // Create a FormData to simulate image upload
+                const formData = new FormData();
+                
+                // First, fetch the image as a blob
+                const imageResponse = await fetch(`/image/${encodeURIComponent(imagePath)}`);
+                if (!imageResponse.ok) {
+                    throw new Error('Failed to fetch image');
+                }
+                
+                const imageBlob = await imageResponse.blob();
+                formData.append('image', imageBlob, 'search_image.jpg');
+                formData.append('top_k', '9'); // Get 9 to exclude the original
+                
+                console.log('Sending search by image request...'); // Debug log
+                
+                const response = await fetch('/search/image', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('Search by image response status:', response.status); // Debug log
+                const data = await response.json();
+                console.log('Search by image data:', data); // Debug log
+                
+                if (response.ok && data && data.length > 0) {
+                    // Filter out the original image and take top 8
+                    const similarImages = data.filter(img => img.path !== imagePath).slice(0, 8);
+                    
+                    if (similarImages.length > 0) {
+                        container.innerHTML = similarImages.map(image => `
+                            <div class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                                 onclick="openSideDrawer('${image.path}', '${image.filename}', ${image.score || 0})">
+                                <img src="/image/${encodeURIComponent(image.path)}" 
+                                     alt="${image.filename}"
+                                     class="w-20 h-20 object-contain bg-white rounded-lg mr-3 border flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-medium text-sm text-gray-900 truncate">${image.filename}</div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        Similarity: ${image.score ? (image.score * 100).toFixed(1) + '%' : 'N/A'}
+                                    </div>
+                                </div>
+                                <i class="fas fa-search text-gray-400 flex-shrink-0"></i>
+                            </div>
+                        `).join('');
+                    } else {
+                        showSimilarImagesUnavailable();
+                    }
+                } else {
+                    console.log('No similar images found via search by image'); // Debug log
+                    showSimilarImagesUnavailable();
+                }
+            } catch (error) {
+                console.error('Error loading similar images via search by image:', error);
+                container.innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p>Failed to load similar images</p>
+                        <p class="text-xs mt-1">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Show similar images unavailable message
+        function showSimilarImagesUnavailable() {
+            const container = document.getElementById('similarImagesContainer');
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-info-circle text-2xl mb-2"></i>
+                    <p>Similar images not available</p>
+                    <p class="text-sm mt-1">Image not found in gallery index</p>
+                    <p class="text-xs mt-2 text-gray-400">Try refreshing the gallery or reindexing images</p>
+                </div>
+            `;
+        }
+
+        // Download selected image
+        function downloadSelectedImage() {
+            if (selectedImageForDrawer) {
+                const a = document.createElement('a');
+                a.href = `/image/${encodeURIComponent(selectedImageForDrawer.path)}`;
+                a.download = selectedImageForDrawer.filename;
+                a.click();
+            }
+        }
+
+        // Share selected image
+        function shareSelectedImage() {
+            if (selectedImageForDrawer) {
+                const url = window.location.origin + `/image/${encodeURIComponent(selectedImageForDrawer.path)}`;
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('Image URL copied to clipboard!');
+                }).catch(() => {
+                    alert('Failed to copy URL to clipboard');
+                });
+            }
+        }
+
+        // Open image viewer
+        function openImageViewer(imagePath, filename, score = 0) {
+            // Use side drawer instead of modal for better experience
+            openSideDrawer(imagePath, filename, score);
+            return;
+            
+            // Legacy modal viewer code below (kept for fallback)
+            currentViewerImage = { path: imagePath, filename: filename, score: score };
+            
+            const viewer = document.getElementById('imageViewer');
+            const img = document.getElementById('imageViewerImg');
+            const info = document.getElementById('imageViewerInfo');
+            
+            img.src = `/image/${encodeURIComponent(imagePath)}`;
+            img.alt = filename;
+            
+            let infoText = filename;
+            if (score) infoText += ` • ${(score * 100).toFixed(1)}% similarity`;
+            info.textContent = infoText;
+            
+            viewer.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Load similar images in sidebar
+            loadSimilarImages(imagePath);
+        }
+
+        // Close image viewer
+        function closeImageViewer() {
+            const viewer = document.getElementById('imageViewer');
+            viewer.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            currentViewerImage = null;
+            closeImageSidebar();
+        }
+
+        // Legacy load similar images function - now redirects to side drawer
+        async function loadSimilarImages(imagePath) {
+            // This is now handled by the openSideDrawer function
+            // Keep for backward compatibility
+        }
+
+        // Close image sidebar - alias for closeSideDrawer
+        function closeImageSidebar() {
+            closeSideDrawer();
+        }
+
+        // Download current image
+        function downloadCurrentImage() {
+            if (currentViewerImage) {
+                const a = document.createElement('a');
+                a.href = `/image/${encodeURIComponent(currentViewerImage.path)}`;
+                a.download = currentViewerImage.filename;
+                a.click();
+            }
+        }
+
+        // Share current image
+        function shareCurrentImage() {
+            if (currentViewerImage) {
+                const url = window.location.origin + `/image/${encodeURIComponent(currentViewerImage.path)}`;
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('Image URL copied to clipboard!');
+                }).catch(() => {
+                    alert('Failed to copy URL to clipboard');
+                });
+            }
+        }
+
+        // Update URL with search query
+        function updateURL(query) {
+            const url = new URL(window.location);
+            url.searchParams.set('q', query);
+            window.history.pushState({}, '', url);
+        }
+
+        // State management functions
+        function showSearchStatus(message) {
+            document.getElementById('searchStatus').innerHTML = `
+                <div class="text-gray-600">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    ${message}
+                </div>
+            `;
+            document.getElementById('searchStatus').classList.remove('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('noResultsState').classList.add('hidden');
+        }
+
+        function showLoadingState() {
+            document.getElementById('searchStatus').classList.add('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('noResultsState').classList.add('hidden');
+        }
+
+        function showSearchResults() {
+            document.getElementById('searchStatus').classList.add('hidden');
+            document.getElementById('searchResults').classList.remove('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('noResultsState').classList.add('hidden');
+        }
+
+        function showErrorState(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('searchStatus').classList.add('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+            document.getElementById('noResultsState').classList.add('hidden');
+        }
+
+        function showNoResultsState() {
+            document.getElementById('searchStatus').classList.add('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('noResultsState').classList.remove('hidden');
+        }
+
+        // Close viewer/drawer on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeImageViewer();
+                closeSideDrawer();
+            }
+        });
+
+        // Handle sidebar overlay clicks
+        document.getElementById('sidebarOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSideDrawer();
+            }
+        });
+    </script>
+</body>
+</html>
