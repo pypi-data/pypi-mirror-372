@@ -1,0 +1,2 @@
+class BeadFinderError(Exception):
+    pass
