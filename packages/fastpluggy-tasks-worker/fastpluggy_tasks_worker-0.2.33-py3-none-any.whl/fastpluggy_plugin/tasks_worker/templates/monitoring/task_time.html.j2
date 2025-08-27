@@ -1,0 +1,557 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin: 20px 0;
+    }
+
+    .filter-card {
+        margin-bottom: 20px;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="page">
+    <div class="page-wrapper">
+        <div class="page-header d-print-none">
+            <div class="container-xl">
+                <div class="row g-2 align-items-center">
+                    <div class="col">
+                        <h2 class="page-title">Task Duration Analytics</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-body">
+            <div class="container-xl">
+                <!-- Filter Controls -->
+                <div class="card filter-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Filters</h3>
+                        <div class="card-actions">
+                            <button id="clearFiltersBtn" class="btn btn-outline-secondary btn-sm">Clear Filters</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Task Name</label>
+                                <input type="text" id="taskName" class="form-control"
+                                       placeholder="Filter by function name...">
+                                <div class="form-hint">Partial match supported</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Start Time</label>
+                                <input type="text" id="startTime" class="form-control"
+                                       placeholder="e.g., 7d, 1h, or 2025-06-01T10:00">
+                                <div class="form-hint">Relative (7d, 1h) or ISO format</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">End Time</label>
+                                <input type="text" id="endTime" class="form-control"
+                                       placeholder="e.g., now, 1d, or 2025-06-10T18:00">
+                                <div class="form-hint">Relative (now, 1d) or ISO format</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Max Reports per Task</label>
+                                <input type="number" id="maxReports" class="form-control" value="25" min="1" max="200">
+                                <div class="form-hint">Limit: 1-200</div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12 d-flex gap-2">
+                                <button id="refreshBtn" class="btn btn-primary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-refresh"
+                                         width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+                                         stroke="currentColor" fill="none" stroke-linecap="round"
+                                         stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4"></path>
+                                        <path d="M4 13A8.1 8.1 0 0 0 19.5 15M20 19v-4h-4"></path>
+                                    </svg>
+                                    Apply Filters
+                                </button>
+                                <button id="exportBtn" class="btn btn-outline-secondary">
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                         class="icon icon-tabler icon-tabler-download" width="24" height="24"
+                                         viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"></path>
+                                        <path d="M7 11l5 5l5 -5"></path>
+                                        <path d="M12 4l0 12"></path>
+                                    </svg>
+                                    Export
+                                </button>
+                                <button id="quickFilter24h" class="btn btn-outline-primary">Last 24 Hours</button>
+                                <button id="quickFilter1h" class="btn btn-outline-primary">Last Hour</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="stats-grid">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="subheader">Total Tasks</div>
+                            </div>
+                            <div class="h1 mb-3" id="totalTasks">-</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="subheader">Unique Functions</div>
+                            </div>
+                            <div class="h1 mb-3" id="uniqueFunctions">-</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="subheader">Avg Duration</div>
+                            </div>
+                            <div class="h1 mb-3" id="avgDuration">-</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="subheader">Success Rate</div>
+                            </div>
+                            <div class="h1 mb-3" id="successRate">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Average Duration by Function</h3>
+                        <div class="card-actions">
+                            <select id="chartType" class="form-select" style="width: auto;">
+                                <option value="bar">Bar Chart</option>
+                                <option value="line">Line Chart</option>
+                                <option value="doughnut">Doughnut Chart</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="durationChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Function Details</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-vcenter">
+                                <thead>
+                                <tr>
+                                    <th>Function</th>
+                                    <th>Total Executions</th>
+                                    <th>Avg Duration (s)</th>
+                                    <th>Min Duration (s)</th>
+                                    <th>Max Duration (s)</th>
+                                    <th>Success Rate</th>
+                                </tr>
+                                </thead>
+                                <tbody id="functionTable">
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">No data available</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    class TaskAnalytics {
+        constructor() {
+            this.chart = null;
+            this.data = [];
+            this.apiEndpoint = '{{ widget.api_task_reports_url }}'; // API endpoint for task reports
+
+            this.initializeElements();
+            this.setupEventListeners();
+            this.setDefaultDates();
+            this.loadData();
+        }
+
+        initializeElements() {
+            this.taskNameInput = document.getElementById('taskName');
+            this.startTimeInput = document.getElementById('startTime');
+            this.endTimeInput = document.getElementById('endTime');
+            this.maxReportsInput = document.getElementById('maxReports');
+            this.refreshBtn = document.getElementById('refreshBtn');
+            this.exportBtn = document.getElementById('exportBtn');
+            this.clearFiltersBtn = document.getElementById('clearFiltersBtn');
+            this.chartType = document.getElementById('chartType');
+            this.chartCanvas = document.getElementById('durationChart');
+            this.functionTable = document.getElementById('functionTable');
+
+            // Quick filter buttons
+            this.quickFilter24h = document.getElementById('quickFilter24h');
+            this.quickFilter1h = document.getElementById('quickFilter1h');
+
+            // Stats elements
+            this.totalTasksEl = document.getElementById('totalTasks');
+            this.uniqueFunctionsEl = document.getElementById('uniqueFunctions');
+            this.avgDurationEl = document.getElementById('avgDuration');
+            this.successRateEl = document.getElementById('successRate');
+        }
+
+        setupEventListeners() {
+            this.refreshBtn.addEventListener('click', () => this.loadData());
+            this.exportBtn.addEventListener('click', () => this.exportData());
+            this.clearFiltersBtn.addEventListener('click', () => this.clearFilters());
+            this.chartType.addEventListener('change', () => this.updateChart());
+
+            // Quick filter buttons
+            this.quickFilter24h.addEventListener('click', () => this.setQuickFilter('24h'));
+            this.quickFilter1h.addEventListener('click', () => this.setQuickFilter('1h'));
+
+            // Auto-refresh on input change (with debounce)
+            let debounceTimer;
+            const inputs = [this.taskNameInput, this.startTimeInput, this.endTimeInput, this.maxReportsInput];
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => this.loadData(), 500);
+                });
+            });
+        }
+
+        setDefaultDates() {
+            // Set default to last hour using relative format
+            this.startTimeInput.value = '1h';
+            this.endTimeInput.value = 'now';
+        }
+
+        setQuickFilter(period) {
+            this.startTimeInput.value = period;
+            this.endTimeInput.value = 'now';
+            this.loadData();
+        }
+
+        clearFilters() {
+            this.taskNameInput.value = '';
+            this.startTimeInput.value = '';
+            this.endTimeInput.value = '';
+            this.maxReportsInput.value = '25';
+            this.loadData();
+        }
+
+        buildFilterCriteria() {
+            const criteria = {};
+
+            // Only include non-empty values
+            if (this.taskNameInput.value.trim()) {
+                criteria.task_name = this.taskNameInput.value.trim();
+            }
+
+            if (this.startTimeInput.value.trim()) {
+                criteria.start_time = this.startTimeInput.value.trim();
+            }
+
+            if (this.endTimeInput.value.trim()) {
+                criteria.end_time = this.endTimeInput.value.trim();
+            }
+
+            // Always include max_reports_per_task as it has a default
+            const maxReports = parseInt(this.maxReportsInput.value) || 25;
+            criteria.max_reports_per_task = Math.min(Math.max(maxReports, 1), 200);
+
+            return criteria;
+        }
+
+        async loadData() {
+            try {
+                this.showLoading();
+
+                // Use real API data
+                const response = await this.fetchTaskData();
+                this.data = response;
+
+                this.processData();
+                this.updateStats();
+                this.updateChart();
+                this.updateTable();
+                this.hideLoading();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                this.showError(`Failed to load data: ${error.message}`);
+            }
+        }
+
+        async fetchTaskData() {
+            const filterCriteria = this.buildFilterCriteria();
+
+            // Build query string for GET request
+            const queryParams = new URLSearchParams();
+            Object.entries(filterCriteria).forEach(([key, value]) => {
+                queryParams.append(key, value);
+            });
+
+            const response = await fetch(`${this.apiEndpoint}?${queryParams.toString()}`, {
+                method: 'POST',  // The API endpoint uses POST method
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(filterCriteria)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `API request failed: ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        // Mock data generation removed - using real API data
+
+        processData() {
+            this.functionStats = {};
+
+            this.data.forEach(task => {
+                const func = task.function;
+                if (!this.functionStats[func]) {
+                    this.functionStats[func] = {
+                        name: func,
+                        executions: 0,
+                        totalDuration: 0,
+                        minDuration: Infinity,
+                        maxDuration: 0,
+                        successCount: 0
+                    };
+                }
+
+                const stats = this.functionStats[func];
+                stats.executions++;
+                stats.totalDuration += task.duration;
+                stats.minDuration = Math.min(stats.minDuration, task.duration);
+                stats.maxDuration = Math.max(stats.maxDuration, task.duration);
+
+                if (task.status === 'success') {
+                    stats.successCount++;
+                }
+            });
+
+            // Calculate averages
+            Object.values(this.functionStats).forEach(stats => {
+                stats.avgDuration = stats.totalDuration / stats.executions;
+                stats.successRate = (stats.successCount / stats.executions) * 100;
+            });
+        }
+
+        updateStats() {
+            const totalTasks = this.data.length;
+            const uniqueFunctions = Object.keys(this.functionStats).length;
+            const avgDuration = this.data.reduce((sum, task) => sum + task.duration, 0) / totalTasks;
+            const successRate = (this.data.filter(task => task.status === 'success').length / totalTasks) * 100;
+
+            this.totalTasksEl.textContent = totalTasks.toLocaleString();
+            this.uniqueFunctionsEl.textContent = uniqueFunctions;
+            this.avgDurationEl.textContent = `${avgDuration.toFixed(2)}s`;
+            this.successRateEl.textContent = `${successRate.toFixed(1)}%`;
+        }
+
+        updateChart() {
+            const ctx = this.chartCanvas.getContext('2d');
+
+            if (this.chart) {
+                this.chart.destroy();
+            }
+
+            const sortedFunctions = Object.values(this.functionStats)
+                .sort((a, b) => b.avgDuration - a.avgDuration);
+
+            const labels = sortedFunctions.map(f => f.name);
+            const durations = sortedFunctions.map(f => f.avgDuration);
+
+            const colors = this.generateColors(labels.length);
+
+            const chartConfig = {
+                type: this.chartType.value,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Average Duration (seconds)',
+                        data: durations,
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Average Task Duration by Function'
+                        },
+                        legend: {
+                            display: this.chartType.value === 'doughnut'
+                        }
+                    },
+                    scales: this.chartType.value !== 'doughnut' ? {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Duration (seconds)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Function'
+                            }
+                        }
+                    } : {}
+                }
+            };
+
+            this.chart = new Chart(ctx, chartConfig);
+        }
+
+        updateTable() {
+            const sortedFunctions = Object.values(this.functionStats)
+                .sort((a, b) => b.avgDuration - a.avgDuration);
+
+            const tableHTML = sortedFunctions.map(func => `
+                    <tr>
+                        <td><strong>${func.name}</strong></td>
+                        <td>${func.executions}</td>
+                        <td>${func.avgDuration.toFixed(3)}</td>
+                        <td>${func.minDuration.toFixed(3)}</td>
+                        <td>${func.maxDuration.toFixed(3)}</td>
+                        <td>
+                            <span class="badge ${func.successRate >= 90 ? 'bg-green' : func.successRate >= 70 ? 'bg-yellow' : 'bg-red'}">
+                                ${func.successRate.toFixed(1)}%
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+
+            this.functionTable.innerHTML = tableHTML;
+        }
+
+        generateColors(count) {
+            const colors = [
+                '#206bc4', '#79a6dc', '#bcd3ee', '#79a6dc', '#4299e1',
+                '#63b3ed', '#90cdf4', '#bee3f8', '#e6f3ff', '#3182ce'
+            ];
+
+            const background = [];
+            const border = [];
+
+            for (let i = 0; i < count; i++) {
+                const color = colors[i % colors.length];
+                background.push(color + '80'); // Add transparency
+                border.push(color);
+            }
+
+            return {background, border};
+        }
+
+        exportData() {
+            const csvData = this.convertToCSV();
+            const blob = new Blob([csvData], {type: 'text/csv'});
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `task_duration_report_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        convertToCSV() {
+            const headers = ['Function', 'Total Executions', 'Avg Duration (s)', 'Min Duration (s)', 'Max Duration (s)', 'Success Rate (%)'];
+            const rows = Object.values(this.functionStats).map(func => [
+                func.name,
+                func.executions,
+                func.avgDuration.toFixed(3),
+                func.minDuration.toFixed(3),
+                func.maxDuration.toFixed(3),
+                func.successRate.toFixed(1)
+            ]);
+
+            return [headers, ...rows].map(row => row.join(',')).join('\n');
+        }
+
+        showLoading() {
+            this.refreshBtn.innerHTML = `
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    Loading...
+                `;
+            this.refreshBtn.disabled = true;
+        }
+
+        hideLoading() {
+            this.refreshBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-refresh" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4"></path>
+                        <path d="M4 13A8.1 8.1 0 0 0 19.5 15M20 19v-4h-4"></path>
+                    </svg>
+                    Apply Filters
+                `;
+            this.refreshBtn.disabled = false;
+        }
+
+        showError(message) {
+            this.hideLoading();
+
+            // Show error message with better UX
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+            errorDiv.innerHTML = `
+                    <strong>Error:</strong> ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+
+            // Insert error at the top of the page body
+            const container = document.querySelector('.container-xl');
+            container.insertBefore(errorDiv, container.firstChild);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (errorDiv.parentNode) {
+                    errorDiv.remove();
+                }
+            }, 5000);
+        }
+    }
+
+    // Initialize the dashboard when the page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        new TaskAnalytics();
+    });
+</script>
