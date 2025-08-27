@@ -1,0 +1,325 @@
+# Noctis - AI Agents for Developers
+
+Noctis is a powerful AI agent framework that provides specialized agents for common developer tasks. Each agent is optimized with domain-specific knowledge and system prompts to deliver expert-level assistance in their respective areas.
+
+## 🚀 Features
+
+- **10 Specialized Agents** for different development domains
+- **Memory Persistence** using SQLite for context-aware conversations
+- **Multiple AI Models** support (OpenAI, Ollama)
+- **Easy-to-use CLI** for quick access to agents
+- **Python API** for integration into your projects
+- **Production Ready** with proper error handling and validation
+
+## 🤖 Available Agents
+
+| Agent | Purpose | Best For |
+|-------|---------|----------|
+| **Code Reviewer** | Review code for quality, bugs, and best practices | Code quality assurance, team code reviews |
+| **Debugger** | Help debug code issues and problems | Troubleshooting, error analysis |
+| **Documentation Writer** | Write and improve technical documentation | API docs, READMEs, user guides |
+| **Security Auditor** | Audit code for security vulnerabilities | Security reviews, vulnerability assessment |
+| **Performance Optimizer** | Analyze and optimize code performance | Performance tuning, bottleneck identification |
+| **Testing Specialist** | Create testing strategies and tests | Test planning, test case creation |
+| **Architect** | Design software architecture and systems | System design, architecture planning |
+| **DevOps Engineer** | Help with DevOps practices and CI/CD | Pipeline design, infrastructure setup |
+| **Code Generator** | Generate code from specifications | Boilerplate code, implementation |
+| **Refactoring Specialist** | Refactor and improve existing code | Code improvement, technical debt reduction |
+
+## 🛠️ Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/noctis.git
+cd noctis
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install the package in development mode
+pip install -e .
+```
+
+## 📖 Quick Start
+
+### Using the CLI
+
+```bash
+# List all available agents
+noctis --list
+
+# Start a code review agent interactively
+noctis code_reviewer
+
+# Ask a single question to the debugger agent
+noctis debugger -q "Help me fix this Python error"
+
+# Use a specific model
+noctis security_auditor -m gpt-4
+
+# Force interactive mode
+noctis performance_optimizer -i
+```
+
+### Using the Python API
+
+```python
+from noctis.predefined_agents import CodeReviewAgent, create_agent
+
+# Method 1: Direct instantiation
+code_reviewer = CodeReviewAgent()
+response = code_reviewer.ask("Review this code for security issues")
+
+# Method 2: Factory function
+debugger = create_agent("debugger")
+response = debugger.ask("Help me debug this error")
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+```bash
+# OpenAI API (default)
+export OPENAI_API_KEY="your-api-key-here"
+
+# Ollama (for local models)
+export OLLAMA_BASE_URL="http://localhost:11434"
+```
+
+### Model Selection
+
+```python
+from noctis.models.openai_adapter import OpenAIAdapter
+from noctis.models.ollama_adapter import OllamaAdapter
+
+# Use OpenAI models
+agent = CodeReviewAgent("gpt-4")
+agent = CodeReviewAgent("gpt-4o-mini")
+
+# Use Ollama models
+agent = CodeReviewAgent(OllamaAdapter(model="llama2"))
+agent = CodeReviewAgent(OllamaAdapter(model="codellama"))
+```
+
+## 📚 Usage Examples
+
+### Code Review Agent
+
+```python
+from noctis.predefined_agents import CodeReviewAgent
+
+agent = CodeReviewAgent()
+
+code_to_review = """
+def process_user_data(user_input):
+    query = "SELECT * FROM users WHERE id = " + user_input
+    result = execute_query(query)
+    return result
+"""
+
+response = agent.ask(f"""
+Please review this code and identify:
+1. Security vulnerabilities
+2. Performance issues
+3. Code quality improvements
+
+Code:
+{code_to_review}
+""")
+
+print(response)
+```
+
+### Security Auditor Agent
+
+```python
+from noctis.predefined_agents import SecurityAgent
+
+agent = SecurityAgent()
+
+flask_code = """
+@app.route('/profile/<user_id>')
+def profile(user_id):
+    user = db.execute(f"SELECT * FROM users WHERE id = {user_id}").fetchone()
+    return render_template('profile.html', user=user)
+"""
+
+response = agent.ask(f"""
+Conduct a security audit of this Flask code:
+{flask_code}
+
+Focus on:
+1. SQL injection vulnerabilities
+2. Authentication/authorization issues
+3. Specific remediation steps
+""")
+
+print(response)
+```
+
+### Performance Optimizer Agent
+
+```python
+from noctis.predefined_agents import PerformanceAgent
+
+agent = PerformanceAgent()
+
+slow_code = """
+def find_duplicates(items):
+    duplicates = []
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            if items[i] == items[j]:
+                duplicates.append(items[i])
+    return duplicates
+"""
+
+response = agent.ask(f"""
+Analyze this code for performance issues:
+{slow_code}
+
+Suggest:
+1. Algorithmic improvements
+2. Data structure optimizations
+3. Optimized versions
+""")
+
+print(response)
+```
+
+## 🎯 Advanced Usage
+
+### Custom Agent Creation
+
+```python
+from noctis.predefined_agents import PredefinedAgent
+from noctis.agent import Noctis
+from noctis.memory.sqlite import SQLiteMemory
+
+class CustomAgent(PredefinedAgent):
+    def _setup_agent(self):
+        system_prompt = """You are a specialized agent for [your domain]..."""
+        
+        self.agent = Noctis(
+            model=self.model,
+            memory=SQLiteMemory("custom_agent_memory.db")
+        )
+        
+        # Override system prompt
+        self.agent._messages = lambda text: [
+            {"role": "system", "content": system_prompt},
+            *self.agent.memory.get_recent(10),
+            {"role": "user", "content": text}
+        ]
+
+# Use your custom agent
+custom_agent = CustomAgent()
+response = custom_agent.ask("Your question here")
+```
+
+### Memory Management
+
+```python
+from noctis.memory.sqlite import SQLiteMemory
+
+# Create agent with custom memory
+memory = SQLiteMemory("my_project_memory.db")
+agent = CodeReviewAgent()
+agent.agent.memory = memory
+
+# Memory persists between sessions
+response1 = agent.ask("What are the key principles of good code review?")
+response2 = agent.ask("Can you elaborate on the second principle you mentioned?")
+```
+
+### Tool Integration
+
+```python
+from noctis.tools import get_registry, run_tool
+
+# Check available tools
+tools = get_registry()
+print(f"Available tools: {list(tools.keys())}")
+
+# Use web search tool
+search_results = run_tool("web.search", {
+    "query": "Python best practices 2024",
+    "num_results": 5
+})
+
+# Use web fetch tool
+content = run_tool("web.fetch", {
+    "url": "https://example.com",
+    "snippet_chars": 500
+})
+```
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+python -m pytest tests/
+
+# Run specific test file
+python -m pytest tests/test_predefined_agents.py
+
+# Run with coverage
+python -m pytest --cov=noctis tests/
+```
+
+## 📁 Project Structure
+
+```
+noctis/
+├── noctis/
+│   ├── __init__.py
+│   ├── agent.py              # Core agent functionality
+│   ├── predefined_agents.py  # Specialized agents
+│   ├── cli.py               # Command line interface
+│   ├── tools.py             # Built-in tools
+│   ├── models/              # AI model adapters
+│   └── memory/              # Memory implementations
+├── examples/                 # Usage examples
+├── tests/                   # Test suite
+├── requirements.txt         # Dependencies
+└── pyproject.toml          # Project configuration
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Adding New Agents
+
+To add a new specialized agent:
+
+1. Create a new class inheriting from `PredefinedAgent`
+2. Implement the `_setup_agent()` method with a domain-specific system prompt
+3. Add the agent to the `get_available_agents()` function
+4. Write tests for the new agent
+5. Update documentation
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Built on top of OpenAI's GPT models and Ollama
+- Inspired by the need for specialized AI assistance in development workflows
+- Community contributions and feedback
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/noctis/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/noctis/discussions)
+- **Documentation**: [Wiki](https://github.com/yourusername/noctis/wiki)
+
+---
+
+**Happy coding with Noctis! 🚀**
