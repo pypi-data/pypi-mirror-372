@@ -1,0 +1,103 @@
+======
+README
+======
+
+
+Note
+----
+
+This test requires a working memcached server running on a standard port.
+The test is only running at level 2 with a test runner command like:
+
+  bin/test -pv1 test load-testing.txt --all
+
+
+Full Load
+---------
+
+Test if the connection pool works with real load:
+
+  >>> from p01.memcache.uclient import UltraMemcacheClient
+  >>> from six.moves import range
+  >>> client = UltraMemcacheClient()
+  >>> client = UltraMemcacheClient(pickleProtocol=0)
+  >>> client.servers
+  ['127.0.0.1:11211']
+
+Let's test a simple set/query roundtrip:
+
+  >>> k = client.set('cache_key', 'a value')
+  >>> client.query('cache_key')
+  'a value'
+
+Now start loading values:
+
+  >>> keys = []
+  >>> for i in range(5000):
+  ...     ignored = client.set('key_%s' % i,'value %s' % i)
+
+Let's test a key:
+
+  >>> client.query('key_1')
+  'value 1'
+  
+  >>> client.query('key_1999')
+  'value 1999'
+
+Ok, that's fine but not all. The above test was running in a sequence like all
+test. What happens if we spawn threads and run more then our pool size? Let's
+spawn more threads then we provide in our pool:
+
+  >>> import time
+  >>> import threading
+
+  >>> client.timeout
+  3
+
+  >>> client.retries
+  3
+
+  >>> client.delay
+  3
+
+  >>> client.pooltime
+  60
+
+  >>> client.blacktime
+  60
+
+  >>> client.maxPoolSize
+  50
+
+  >>> class Hammer(threading.Thread):
+  ...     def __init__(self, client, ref):
+  ...         self.client = client
+  ...         self.ref = ref
+  ...         threading.Thread.__init__(self)
+  ...     def run(self):
+  ...         for i in range(2000):
+  ...             key = 'key_%s_%s' % (self.ref, i)
+  ...             value = 'value %s %s' % (self.ref, i)
+  ...             ignored = self.client.set(key, value)
+
+  >>> threads = []
+  >>> for x in range(100):
+  ...     hammer = Hammer(client, x)
+  ...     hammer.start()
+  ...     threads.append(hammer)
+
+  >>> while 1:
+  ...     for t in threads:
+  ...         if not t.is_alive():
+  ...             threads.remove(t)
+  ...     if not len(threads):
+  ...          break
+
+  >>> client.query('key_1_1')
+  'value 1 1'
+  
+  >>> client.query('key_19_1999')
+  'value 19 1999'
+
+Ok it seems fine. Our implementation can handle a larger amount of concurent
+connection then the max pool size defined in our client.

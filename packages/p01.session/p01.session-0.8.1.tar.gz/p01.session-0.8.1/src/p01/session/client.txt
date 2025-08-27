@@ -1,0 +1,310 @@
+==================
+Client ID Adapters
+==================
+
+A client id manager in zope manages client ids for browsers via cookies. We
+offer a different concept. Thre are two client id adapter factories which can 
+generate IClientId objects by adapting the request. Our adapter concept doesn't
+use the client id manager utility lookup dance because its just obsolate.
+
+The memcache client id factory adapter will manage client ids and the tird
+party client id factory will only read cookies given from a webserver e.g.
+Apache or Nginx.
+
+Note we allways try to strip down the libraries and offer a faster
+implementation by checking less things where we never will use in our
+applications. This is the reason why we implemented this stripped down
+libraries.
+
+  >>> from future import standard_library
+  >>> standard_library.install_aliases()
+  >>> from builtins import str
+  >>> import calendar
+  >>> try:
+  ...    from email.utils import parsedate_tz, mktime_tz
+  ... except ImportError:
+  ...    from rfc822 import parsedate
+  >>> import time
+  >>> from io import StringIO
+  >>> from zope.publisher.http import HTTPRequest
+  >>> from p01.session import client
+
+
+MemcacheClientIdFactory
+-----------------------
+
+The memcache client id fatory uses cookies for identif browsers. The client
+id factory manages this cookies and approves them with a secret. Let's setup
+such a client id adapter factory:
+
+  >>> namespace = 'zope3_cs_123'
+  >>> secret = u'very secure'
+  >>> request = HTTPRequest(StringIO(''), {})
+  >>> mcim = client.MemcacheClientIdFactory(namespace, secret)
+  >>> id = mcim.getClientId(request)
+  >>> id == mcim.getClientId(request)
+  True
+
+As you can see above the client id factory will work as instance. AS an adapter,
+we also nee to adapt the adapter by a request. Let's check what we get if 
+we adapt such a request:
+
+  >>> cid = mcim(request)
+  >>> cid == id
+  True
+
+The id is retained accross requests:
+
+  >>> request2 = HTTPRequest(StringIO(''), {})
+  >>> request2._cookies = dict(
+  ...   [(name, cookie['value'])
+  ...    for (name, cookie) in list(request.response._cookies.items())
+  ...   ])
+  >>> id == mcim.getClientId(request2)
+  True
+
+  >>> bool(id)
+  True
+
+Note that the return value of this function is a string, not
+an IClientId. This is because this method is used to implement
+the IClientId Adapter.
+
+  >>> type(id) == type('')
+  True
+
+We don't set the client id unless we need to, so, for example,
+the second response doesn't have cookies set:
+
+  >>> request2.response._cookies
+  {}
+
+An exception to this is if the cookie lifetime is set to a
+non-zero integer value, in which case we do set it on every
+request, regardless of when it was last set:
+
+  >>> mcim.lifetime = 3600 # one hour
+  >>> id == mcim.getClientId(request2)
+  True
+
+  >>> bool(request2.response._cookies)
+  True
+
+If the postOnly attribute is set to a true value, then cookies
+will only be set on POST requests.
+
+  >>> mcim.postOnly = True
+  >>> request = HTTPRequest(StringIO(''), {})
+  >>> from zope.session.http import MissingClientIdException
+  >>> try:
+  ...     mcim.getClientId(request)
+  ... except MissingClientIdException:
+  ...     print("MissingClientIdException")
+  MissingClientIdException
+
+
+  >>> print(request.response.getCookie(mcim.namespace))
+  None
+
+  >>> request = HTTPRequest(StringIO(''), {'REQUEST_METHOD': 'POST'})
+  >>> id = mcim.getClientId(request)
+  >>> id == mcim.getClientId(request)
+  True
+  
+  >>> request.response.getCookie(mcim.namespace) is not None
+  True
+
+  >>> mcim.postOnly = False
+
+A client id factory should allways generate a unique id:
+
+  >>> id1 = mcim.generateUniqueId()
+  >>> id2 = mcim.generateUniqueId()
+  >>> id1 != id2
+  True
+
+Return the browser id encoded in request as a string. Return None if an id is
+not set. For example:
+
+  >>> from zope.publisher.http import HTTPRequest
+  >>> request = HTTPRequest(StringIO(''), {}, None)
+
+Because no cookie has been set, we get no id:
+
+  >>> mcim.getRequestId(request) is None
+  True
+
+We can set an id:
+
+  >>> id1 = mcim.generateUniqueId()
+  >>> mcim.setRequestId(request, id1)
+
+And get it back:
+
+  >>> mcim.getRequestId(request) == id1
+  True
+
+When we set the request id, we also set a response cookie.  We
+can simulate getting this cookie back in a subsequent request:
+
+  >>> request2 = HTTPRequest(StringIO(''), {}, None)
+  >>> request2._cookies = dict(
+  ...   [(name, cookie['value'])
+  ...    for (name, cookie) in list(request.response._cookies.items())
+  ...   ])
+
+And we get the same id back from the new request:
+
+  >>> mcim.getRequestId(request) == mcim.getRequestId(request2)
+  True
+
+Test a corner case where Python 2.6 hmac module does not allow
+unicode as input:
+
+  >>> id_uni = str(mcim.generateUniqueId())
+  >>> mcim.setRequestId(request, id_uni)
+  >>> mcim.getRequestId(request) == id_uni
+  True
+
+If another server is managing the ClientId cookies (Apache, Nginx)
+we do not return anything. If you have such a use case use the
+ThirdPartyClientIdFactory implementation if you only use thirdparty cookies.
+Or if yo use both thirdparty cookies and zope cookies, then use the more
+generic CookieClientidFactory defined in zope.session.http. Note we allways
+try to strip down the libraries and offer a faster implementation by checking
+less things where we never willl use in our applications:
+
+  >>> from six import ensure_str
+  >>> mcim.namespace = ensure_str('uid')
+  >>> request3 = HTTPRequest(StringIO(''), {}, None)
+  >>> request3._cookies = {'uid': 'AQAAf0Y4gjgAAAQ3AwMEAg=='}
+  >>> mcim.getRequestId(request3)
+
+Set cookie with id on request. This sets the response cookie. See the examples
+in getRequestId. Note that the id is checked for validity. Setting an invalid
+value is silently ignored. We need a new client id factory for this test:
+
+  >>> from zope.publisher.http import HTTPRequest
+  >>> request = HTTPRequest(StringIO(''), {}, None)
+  >>> mcim = client.MemcacheClientIdFactory(namespace, secret)
+  >>> mcim.getRequestId(request)
+  >>> mcim.setRequestId(request, 'invalid id')
+  >>> mcim.getRequestId(request)
+
+For now, the cookie path is the application URL:
+
+  >>> cookie = request.response.getCookie(mcim.namespace)
+  >>> cookie['path'] == request.getApplicationURL(path_only=True)
+  True
+
+By default, session cookies don't expire:
+
+  >>> 'expires' in cookie
+  False
+
+Expiry time of 0 means never (well - close enough)
+
+  >>> mcim.lifetime = 0
+  >>> request = HTTPRequest(StringIO(''), {}, None)
+  >>> bid = mcim.getClientId(request)
+  >>> cookie = request.response.getCookie(mcim.namespace)
+  >>> print(cookie['expires'])
+  Tue, 19 Jan 2038 00:00:00 GMT
+
+A non-zero value means to expire after than number of seconds:
+
+  >>> mcim.lifetime = 3600
+  >>> request = HTTPRequest(StringIO(''), {}, None)
+  >>> bid = mcim.getClientId(request)
+  >>> cookie = request.response.getCookie(mcim.namespace)
+
+  >>> expires = mktime_tz(parsedate_tz(cookie['expires']))
+
+  Use calendar.timegm (not mktime), it will not apply any local time adjustments.
+  >>> current_time = calendar.timegm(time.gmtime())
+
+  Add 54 minutes to current time for comparison
+  >>> comparison_time = current_time + 54 * 60
+  >>> expires > comparison_time
+  True
+
+If the secure attribute is set to a true value, then the
+secure cookie option is included.
+
+  >>> mcim.thirdparty = False
+  >>> mcim.lifetime = None
+  >>> request = HTTPRequest(StringIO(''), {}, None)
+  >>> mcim.secure = True
+  >>> mcim.setRequestId(request, '1234')
+  >>> values = request.response.getCookie(mcim.namespace)
+  >>> for k in sorted(values):
+  ...     print("%s = %s" % (k, values[k]))
+  path = /
+  secure = True
+  value = 1234
+
+If the domain is specified, it will be set as a cookie attribute.
+
+  >>> mcim.domain = u'.example.org'
+  >>> mcim.setRequestId(request, '1234')
+  >>> values = request.response.getCookie(mcim.namespace)
+  >>> for k in sorted(values):
+  ...     print("%s = %s" % (k, values[k]))
+  domain = .example.org
+  path = /
+  secure = True
+  value = 1234
+
+When the cookie is set, cache headers are added to the
+response to try to prevent the cookie header from being cached:
+
+  >>> request.response.getHeader('Cache-Control')
+  'no-cache="Set-Cookie,Set-Cookie2"'
+  >>> request.response.getHeader('Pragma')
+  'no-cache'
+  >>> request.response.getHeader('Expires')
+  'Mon, 26 Jul 1997 05:00:00 GMT'
+
+
+ThirdPartyClientIdFactory
+-------------------------
+
+Our third party client id manager can only work if a webserver will set a 
+cookie. The client id manager will raise an MissingClientIdException
+error if we try to get a client id and there is no cookie:
+
+  >>> request = HTTPRequest(StringIO(''), {})
+  >>> namespace = u'thirdparty'
+  >>> tcim = client.ThirdPartyClientIdFactory(namespace)
+  >>> from zope.session.http import MissingClientIdException
+  >>> try:
+  ...     id = tcim.getClientId(request)
+  ... except MissingClientIdException:
+  ...     print("MissingClientIdException")
+  MissingClientIdException
+
+
+Let's simulate that a web server set a cookie:
+
+  >>> request = HTTPRequest(StringIO(''), {}, None)
+  >>> request._cookies = {namespace: 'AQAAf0Y4gjgAAAQ3AwMEAg=='}
+  >>> id = tcim.getRequestId(request)
+  >>> print(id)
+  AQAAf0Y4gjgAAAQ3AwMEAg==
+
+As you can see above the client id factory will work as instance. AS an adapter,
+we also nee to adapt the adapter by a request. Let's check what we get if 
+we adapt such a request:
+
+  >>> cid = tcim(request)
+  >>> cid == id
+  True
+
+Note, another server in front of Zope (Apache, Nginx) is managing the
+cookies! We won't set any ClientId cookies in our zope application using
+a ThirdPartyClientIdFactory. If we try to set a request id, nothing happens:
+
+  >>> request = HTTPRequest(StringIO(''), {}, None)
+  >>> tcim.setRequestId(request, '1234')
+  >>> cookie = request.response.getCookie(tcim.namespace)
+  >>> cookie

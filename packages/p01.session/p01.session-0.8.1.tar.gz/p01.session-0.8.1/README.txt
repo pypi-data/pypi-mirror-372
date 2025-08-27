@@ -1,0 +1,1 @@
+This package provides a session implementation based on p01.memcache for Zope3.
