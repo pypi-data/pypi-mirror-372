@@ -1,0 +1,334 @@
+[tool.poetry]
+name = "infrahub-sdk"
+version = "1.14.0"
+description = "Python Client to interact with Infrahub"
+authors = ["OpsMill <info@opsmill.com>"]
+readme = "README.md"
+license = "Apache-2.0"
+homepage = "https://opsmill.com"
+repository = "https://github.com/opsmill/infrahub-sdk-python"
+documentation = "https://docs.infrahub.app/python-sdk/introduction"
+packages = [{ include = "infrahub_sdk" }]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[tool.poetry.dependencies]
+python = "^3.9, <3.14"
+pydantic = ">=2.0.0,!=2.0.1,!=2.1.0,<3.0.0"
+pydantic-settings = ">=2.0"
+graphql-core = ">=3.1,<3.3"
+httpx = [
+    { version = ">=0.20", python = ">=3.9,<3.11" },
+    { version = ">=0.23", python = ">=3.11" },
+]
+ujson = "^5"
+Jinja2 = { version = "^3", optional = true }
+numpy = [
+    { version = "^1.24.2", optional = true, python = ">=3.9,<3.12" },
+    { version = "^1.26.2", optional = true, python = ">=3.12" },
+]
+pyarrow = { version = ">=14", optional = true }
+rich = { version = ">=12, <14", optional = true }
+toml = { version = "^0.10", optional = true }
+typer = { version = "^0.12.3", optional = true }
+pytest = { version = "*", optional = true }
+pyyaml = { version = "^6", optional = true }
+eval-type-backport = { version = "^0.2.2", python = "~3.9" }
+dulwich = "^0.21.4"
+whenever = ">=0.7.2,<0.8.0"
+netutils = "^1.0.0"
+click = { version = "8.1.*", optional = true }
+copier = { version = "^9.8.0", optional = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-asyncio = "<0.23"
+pytest-clarity = "^1.0.1"
+pytest-cov = "^4.0.0"
+pytest-httpx = ">=0.30"
+yamllint = "*"
+mypy = "*"
+ipython = "*"
+requests = "*"
+pre-commit = "^2.20.0"
+types-toml = "*"
+types-ujson = "*"
+types-pyyaml = "*"
+ruff = "0.11.0"
+pytest-xdist = "^3.3.1"
+types-python-slugify = "^8.0.0.3"
+invoke = "^2.2.0"
+towncrier = "^24.8.0"
+infrahub-testcontainers = { version = "^1.2.5", python = ">=3.10" }
+astroid = "~3.1"
+
+[tool.poetry.extras]
+ctl = ["Jinja2", "numpy", "pyarrow", "pyyaml", "rich", "toml", "typer", "click", "copier"]
+tests = ["Jinja2", "pytest", "pyyaml", "rich"]
+all = [
+    "Jinja2",
+    "numpy",
+    "pyarrow",
+    "pytest",
+    "pyyaml",
+    "rich",
+    "toml",
+    "typer",
+    "click",
+    "copier",
+]
+
+[tool.poetry.scripts]
+infrahubctl = "infrahub_sdk.ctl.cli:app"
+
+[tool.poetry.plugins."pytest11"]
+"pytest-infrahub" = "infrahub_sdk.pytest_plugin.plugin"
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = ["if TYPE_CHECKING:", "raise NotImplementedError()"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:Module already imported so cannot be rewritten",
+    "ignore:Deprecated call to",
+]
+addopts = "-vs --cov-report term-missing --cov-report xml --dist loadscope"
+
+[tool.mypy]
+pretty = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "infrahub_sdk.ctl.check"
+disable_error_code = ["call-overload"]
+
+[[tool.mypy.overrides]]
+module = "infrahub_sdk.utils"
+disable_error_code = ["arg-type", "attr-defined", "return-value", "union-attr"]
+
+[tool.ruff]
+line-length = 120
+
+exclude = [
+    ".git",
+    ".tox",
+    ".venv",
+    "env",
+    "_build",
+    "build",
+    "dist",
+    "examples",
+]
+
+
+[tool.ruff.lint]
+preview = true
+
+task-tags = ["FIXME", "TODO", "XXX"]
+
+select = ["ALL"]
+
+ignore = [
+    "D",      # pydocstyle
+    "DOC",    # pydoclint
+    "CPY",    # flake8-copyright
+    "T201",   # use of `print`
+    "ISC",    # flake8-implicit-str-concat
+    "COM812", # missing-trailing-comma
+
+    ##################################################################################################
+    # Rules below needs to be Investigated                                                           #
+    ##################################################################################################
+    "PT",     # flake8-pytest-style
+    "PGH",    # pygrep-hooks
+    "ERA",    # eradicate commented-out code
+    "SLF001", # flake8-self
+    "EM",     # flake8-errmsg
+    "TRY",    # tryceratops
+    "TD",     # flake8-todos
+    "FIX",    # flake8-fixme
+    "TID",    # flake8-tidy-imports
+    "FBT",    # flake8-boolean-trap
+    "G",      # flake8-logging-format
+    "RSE",    # flake8-raise
+    "BLE",    # flake8-blind-except (BLE)
+    "A",      # flake8-builtins
+
+    ##################################################################################################
+    # The ignored rules below should be removed once the code has been updated, they are included    #
+    # like this so that we can reactivate them one by one. Alternatively ignored after further       #
+    # investigation if they are deemed to not make sense.                                            #
+    ##################################################################################################
+    "B008",    # Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+    "B904",    # Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+    "FURB110", # Replace ternary `if` expression with `or` operator
+    "FURB113", # Use `lines.extend((" " * self.indentation + "}", "}"))` instead of repeatedly calling `lines.append()`
+    "FURB177", # Prefer `Path.cwd()` over `Path().resolve()` for current-directory lookups
+    "INP001",  # File declares a package, but is nested under an implicit namespace package.
+    "N802",    # Function name should be lowercase
+    "N806",    # Variable in function should be lowercase
+    "PERF203", # `try`-`except` within a loop incurs performance overhead
+    "PERF401", # Use a list comprehension to create a transformed list
+    "PLC0206", # Extracting value from dictionary without calling `.items()`
+    "PLR0912", # Too many branches
+    "PLR0913", # Too many arguments in function definition
+    "PLR0917", # Too many positional arguments
+    "PLR2004", # Magic value used in comparison
+    "PLR6201", # Use a `set` literal when testing for membership
+    "PLR6301", # Method could be a function, class method, or static method
+    "PLW0603", # Using the global statement to update `SETTINGS` is discouraged
+    "PLW1641", # Object does not implement `__hash__` method
+    "PTH100",  # `os.path.abspath()` should be replaced by `Path.resolve()`
+    "PTH109",  # `os.getcwd()` should be replaced by `Path.cwd()`
+    "RET504",  # Unnecessary assignment to `data` before `return` statement
+    "RUF005",  # Consider `[*path, str(key)]` instead of concatenation
+    "RUF015",  # Prefer `next(iter(input_data["variables"].keys()))` over single element slice
+    "RUF029",  # Function is declared `async`, but doesn't `await` or use `async` features.
+    "S108",    # Probable insecure usage of temporary file or directory
+    "S311",    # Standard pseudo-random generators are not suitable for cryptographic purposes
+    "S701",    # By default, jinja2 sets `autoescape` to `False`. Consider using `autoescape=True`
+    "SIM102",  # Use a single `if` statement instead of nested `if` statements
+    "SIM105",  # Use `contextlib.suppress(KeyError)` instead of `try`-`except`-`pass`
+    "SIM108",  # Use ternary operator `key_str = f"{value[ALIAS_KEY]}: {key}" if ALIAS_KEY in value and value[ALIAS_KEY] else key` instead of `if`-`else`-block
+    "SIM110",  # Use `return any(getattr(item, resource_field) == resource_id for item in getattr(self, RESOURCE_MAP[resource_type]))` instead of `for` loop
+    "SIM114",  # Combine `if` branches using logical `or` operator
+    "SIM117",  # Use a single `with` statement with multiple contexts instead of nested `with` statements
+    "SIM118",  # Use `key in dict` instead of `key in dict.keys)
+    "TC003",   # Move standard library import `collections.abc.Iterable` into a type-checking block
+    "UP031",   # Use format specifiers instead of percent format
+    "UP045",   # Use `X | None` for type annotations
+]
+
+
+#https://docs.astral.sh/ruff/formatter/black/
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["infrahub_sdk", "infrahub_ctl"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 150
+
+[tool.ruff.lint.mccabe]
+# Target max-complexity=10
+max-complexity = 17
+
+[tool.ruff.lint.per-file-ignores]
+
+"infrahub_sdk/**/*.py" = [
+    ##################################################################################################
+    # Review and change the below later                                                              #
+    ##################################################################################################
+    "ANN201", # ANN201 Missing return type annotation for public function
+    "ANN202", # Missing return type annotation for private function
+    "ANN204", # Missing return type annotation for special method
+    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
+]
+
+"infrahub_sdk/ctl/**/*.py" = [
+    "UP007",  # Use `X | Y` for type annotations | Required for Typer until we can drop the support for Python 3.9
+]
+
+"infrahub_sdk/client.py" = [
+    ##################################################################################################
+    # Review and change the below later                                                              #
+    ##################################################################################################
+    "PLR0904", # Too many public methods
+]
+
+"infrahub_sdk/pytest_plugin/models.py" = [
+    "S105", # 'PASS' is not a password but a state
+]
+
+
+"tests/**/*.py" = [
+    "PLR2004", # Magic value used in comparison
+    "S101",    # Use of assert detected
+    "S105",    # Possible hardcoded password assigned to variable
+    "S106",    # Possible hardcoded password assigned to argument
+    "ARG001",  # Unused function argument
+    "ARG002",  # Unused method argument
+
+    ##################################################################################################
+    # Review and change the below later                                                              #
+    ##################################################################################################
+    "ANN001", # Missing type annotation for function argument
+    "ANN201", # ANN201 Missing return type annotation for public function
+    "ANN202", # Missing return type annotation for private function
+    "ANN204", # Missing return type annotation for special method
+]
+
+"tests/unit/sdk/test_client.py" = [
+    "W293", # Blank line contains whitespace (used within output check)
+]
+"tasks.py" = [
+    "PLC0415", # `import` should be at the top-level of a file
+]
+
+[tool.towncrier]
+
+package = "infrahub_sdk"
+directory = "changelog"
+filename = "CHANGELOG.md"
+start_string = "<!-- towncrier release notes start -->\n"
+underlines = ["", "", ""]
+title_format = "## [{version}](https://github.com/opsmill/infrahub-sdk-python/tree/v{version}) - {project_date}"
+issue_format = "[#{issue}](https://github.com/opsmill/infrahub-sdk-python/issues/{issue})"
+orphan_prefix = "+"
+template = "changelog/towncrier.md.template"
+
+[[tool.towncrier.type]]
+directory = "security"
+name = "Security"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "removed"
+name = "Removed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecated"
+name = "Deprecated"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "added"
+name = "Added"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "changed"
+name = "Changed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "fixed"
+name = "Fixed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "housekeeping"
+name = "Housekeeping"
+showcontent = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
