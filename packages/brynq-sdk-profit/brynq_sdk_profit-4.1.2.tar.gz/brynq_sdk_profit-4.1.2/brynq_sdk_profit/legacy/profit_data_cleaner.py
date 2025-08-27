@@ -1,0 +1,155 @@
+import pandas as pd
+from brynq_sdk_functions import Functions
+
+__all__ = ['ProfitDataCleaner', 'mapping']
+
+mapping = {
+        "AFG": "AF",
+        "USA": "US",
+        "USA2": "US",
+        "AND": "AD",
+        "IN": "AO",
+        "RA": "AR",
+        "AUS": "AU",
+        "A": "AT",
+        "BRN": "BH",
+        "BDS": "BB",
+        "B": "BE",
+        "BH": "BZ",
+        "DY": "BJ",
+        "BOL": "BO",
+        "RB": "BW",
+        "GB3": "GB",
+        "GB4": "GB",
+        "IOT": "GB",
+        "GB2": "GB",
+        "BRU": "BN",
+        "BU": "BF",
+        "RU": "BI",
+        "K": "KH",
+        "TC": "CM",
+        "CDN": "CA",
+        "RCA": "CF",
+        "RCH": "CL",
+        "RCB": "CD",
+        "C": "CU",
+        "DJI": "DJ",
+        "WD": "DM",
+        "DOM": "DO",
+        "ET": "EG",
+        "EQ": "GQ",
+        "ERI": "ER",
+        "ETH": "ET",
+        "FJI": "FJ",
+        "FIN": "FI",
+        "F": "FR",
+        "WAG": "GM",
+        "D": "DE",
+        "WG": "GR",
+        "GCA": "GT",
+        "GUY": "GY",
+        "RH": "HT",
+        "HON": "HN",
+        "H": "HU",
+        "IND": "IN",
+        "RI": "ID",
+        "IRQ": "IQ",
+        "IRL": "IE",
+        "I": "IT",
+        "JA": "JM",
+        "J": "JP",
+        "HKJ": "JO",
+        "EAK": "KE",
+        "KIR": "KI",
+        "KWT": "KW",
+        "KYR": "KG",
+        "LAO": "LA",
+        "RL": "LB",
+        "LB": "LR",
+        "LAR": "LY",
+        "FL": "LI",
+        "L": "LU",
+        "MAL": "MY",
+        "RMM": "ML",
+        "M": "MT",
+        "MAR": "MH",
+        "RIM": "MR",
+        "MS": "MU",
+        "MEX": "MX",
+        "MIC": "FM",
+        "MON": "MN",
+        "MNE": "ME",
+        "MOC": "MZ",
+        "BUR": "BU",
+        "SWA": "NA",
+        "NPL": "NP",
+        "NIC": "NI",
+        "RN": "NE",
+        "WAN": "NG",
+        "N": "NO",
+        "OMA": "OM",
+        "PAL": "PW",
+        "PSE": "PS",
+        "PNG": "PG",
+        "RP": "PH",
+        "P": "PT",
+        "KG": "QA",
+        "GRF": "GR",
+        "RUS": "RU",
+        "RWA": "RW",
+        "WS": "AS",
+        "RSM": "RS",
+        "AS": "SA",
+        "SRB": "CS",
+        "WAL": "SL",
+        "SGP": "SG",
+        "SLO": "SI",
+        "SP": "SB",
+        "ROK": "KO",
+        "ZSUD": "SD",
+        "E": "ES",
+        "CL": "LK",
+        "499": "ZZ",
+        "SUD": "SD",
+        "SME": "SM",
+        "S": "SE",
+        "CH": "SH",
+        "SYR": "SY",
+        "TAD": "TA",
+        "EAT": "EA",
+        "T": "TH",
+        "ZRE": "CD",
+        "TLS": "TL",
+        "TMN": "TM",
+        "EAU": "EA",
+        "000": "ZZ",
+        "ROU": "RO",
+        "OEZ": "OE",
+        "YV": "VE",
+        "WSM": "SM",
+        "YMN": "YM",
+        "Z": "ZB",
+        "RM": "MG"
+    }
+
+
+class ProfitDataCleaner:
+    @staticmethod
+    def map_nationality_codes_to_iso2(data: pd.Series, default=None):
+        """
+        This function is meant to map AFAS nationality codes to the ISO2 equivalent code, this is the internationally accepted standard.
+        :param data: input with AFAS nationality codes
+        :param default: optional default value in case a key does not exist in the mapping. If left to None, will return original value
+        :return: mapped values
+        """
+        return Functions.applymap(key=data, mapping=mapping, default=default)
+
+    @staticmethod
+    def map_iso2_codes_to_nationality_codes(data: pd.Series, default=None):
+        """
+        This function is meant to map AFAS nationality codes to the ISO2 equivalent code, this is the internationally accepted standard.
+        :param data: input with AFAS nationality codes
+        :param default: optional default value in case a key does not exist in the mapping. If left to None, will return original value
+        :return: mapped values
+        """
+        return Functions.applymap(key=data, mapping={v: k for k, v in mapping.items()}, default=default)
