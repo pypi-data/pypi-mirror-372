@@ -1,0 +1,73 @@
+# PACKAGE INFORMATION
+# --------------------
+# import libs
+from pathlib import Path
+from pydantic import Field
+from pydantic_settings import BaseSettings
+
+__version__ = "0.1.0"
+__description__ = "PyThermoAI - A Python package for thermodynamic calculations and AI integration."
+__author__ = "Sina Gilassi"
+__author_email__ = "sina.gilassi@gmail.com"
+
+
+class Settings(BaseSettings):
+    """Application settings for PyThermoAI."""
+
+    # Package metadata
+    version: str = __version__
+    description: str = __description__
+    author: str = __author__
+
+    # Directory where the application is running
+    base_dir: Path = Field(
+        default_factory=lambda: Path(__file__).parent.parent)
+
+    # Directory for storing data files
+    data_dir: Path = Field(
+        default_factory=lambda: Path(__file__).parent / "data")
+
+    # Directory for configuration files
+    config_dir: Path = Field(
+        default_factory=lambda: Path(__file__).parent / "config")
+
+    # symbols for the application
+    symbols_folder: str = Field(
+        default="references",
+        description="Folder name for storing symbols."
+    )
+
+    symbols_source: str = Field(
+        default="symbols.yml",
+        description="Source file name for symbols."
+    )
+
+    class Config:
+        """Pydantic configuration."""
+        env_prefix = "pythermoai_"
+        case_sensitive = True
+
+
+def get_config() -> Settings:
+    """
+    Get the application settings.
+
+    Returns
+    -------
+    Settings
+        The application settings.
+    """
+    return Settings()
+
+
+# Initialize settings
+app_settings = get_config()
+
+# log
+# res_ = app_settings.model_dump()
+# print(res_)
+# print(type(res_))
+
+# res_ = app_settings.data_dir
+# print(f"Data directory: {res_}")
+# print(type(res_))
