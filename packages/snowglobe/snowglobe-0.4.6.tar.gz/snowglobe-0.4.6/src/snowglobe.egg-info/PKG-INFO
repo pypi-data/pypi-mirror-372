@@ -1,0 +1,121 @@
+Metadata-Version: 2.4
+Name: snowglobe
+Version: 0.4.6
+Summary: client server for usage with snowglobe experiments
+Author-email: Guardrails AI <contact@guardrailsai.com>
+License: MIT License
+        
+        Copyright (c) 2024 Guardrails AI
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: typer>=0.9.0
+Requires-Dist: fastapi>=0.115.6
+Requires-Dist: uvicorn[standard]>=0.23.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: pydantic>=2.11.5
+Requires-Dist: APScheduler==4.0.0a6
+Requires-Dist: httpx==0.28.1
+Requires-Dist: rich>=13.0.0
+Provides-Extra: dev
+Requires-Dist: ruff<0.2.0,>=0.1.0; extra == "dev"
+Requires-Dist: mypy<2.0.0,>=1.5.0; extra == "dev"
+Requires-Dist: pre-commit>=4.1.0; extra == "dev"
+Requires-Dist: coverage>=7.6.12; extra == "dev"
+Dynamic: license-file
+
+# Snowlgobe Connect SDK
+
+The Snowglobe Connect SDK helps you connect your AI agents to Snowglobe. It sends simulated user messages to your LLM-based application during experiments. Your application should process these messages and return a response, enabling simulated conversations and custom code based risk assessment.
+
+## Installation
+
+```
+# Install client
+pip install snowglobe
+```
+
+If using uv, set the `--prerelease=allow` flag
+```
+uv pip install --prerelease=allow snowglobe
+```
+
+
+## `snowglobe-connect` commands
+
+```bash
+snowglobe-connect auth  # Sets up your API key
+snowglobe-connect init  # Initializes a new agent connection and creates an agent wrapper file
+snowglobe-connect test  # Tests your agent connection
+snowglobe-connect start  # Starts the process of processing simulated user messages
+snowglobe-connect --help
+```
+
+When using one of our specific preview environments in .snowgloberc one can override our server's URL with:
+
+```bash
+CONTROL_PLANE_URL=
+```
+
+## Sample custom llm usage in agent wrapper file
+
+Each agent wrapper file resides in the root directory of your project, and is named after the agent (e.g. `My Agent Name` becomes `my_agent_name.py`).
+
+```python
+from snowglobe.client import CompletionRequest, CompletionFunctionOutputs
+from openai import OpenAI
+import os
+
+client = OpenAI(api_key=os.getenv("SNOWGLOBE_API_KEY"))
+
+def process_scenario(request: CompletionRequest) -> CompletionFunctionOutputs:
+    """
+    Process a scenario request from Snowglobe.
+    
+    This function is called by the Snowglobe client to process requests. It should return a
+    CompletionFunctionOutputs object with the response content.
+
+    Example CompletionRequest:
+    CompletionRequest(
+        messages=[
+            SnowglobeMessage(role="user", content="Hello, how are you?", snowglobe_data=None),
+        ]
+    )
+
+    Example CompletionFunctionOutputs:
+    CompletionFunctionOutputs(response="This is a string response from your application")
+    
+    Args:
+        request (CompletionRequest): The request object containing the messages.
+
+    Returns:
+        CompletionFunctionOutputs: The response object with the generated content.
+    """
+
+    # Process the request using the messages. Example:
+    messages = request.to_openai_messages()
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages
+    )
+    return CompletionFunctionOutputs(response=response.choices[0].message.content)
+```
