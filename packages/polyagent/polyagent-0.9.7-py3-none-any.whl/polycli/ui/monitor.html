@@ -1,0 +1,824 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pattern Monitor</title>
+  <style>
+    /* Light theme with blue accent */
+    :root {
+      --bg: #f8fafc; --card:#fff; --ink:#000000; --muted:#64748b; --border:#e2e8f0;
+      --accent:#1e6bb8; --accent-weak:#dbeafe; --danger:#dc2626; --danger-weak:#fee2e2;
+      --safe:#16a34a; --safe-weak:#dcfce7; --running:#fef9c3; --running-border:#fde68a;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header - removed to maximize content space */
+
+    /* Main Layout */
+    .main-layout {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* Agent Panel */
+    .agent-panel {
+      width: 40%;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      min-height: 0; /* Important for flex children */
+    }
+
+    .agent-selector {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-shrink: 0; /* Don't shrink */
+    }
+    .agent-selector select {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    .filter-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+    }
+
+    .message-history {
+      flex: 1 1 auto; /* Grow and shrink */
+      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      min-height: 0; /* Critical for flexbox overflow */
+      overflow: hidden;
+      position: relative; /* Create positioning context */
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .message-history-inner {
+      position: absolute; /* Take it out of flow */
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow-y: auto;
+      overflow-x: hidden; /* Prevent horizontal scroll */
+      padding: 12px;
+    }
+
+    .message-item {
+      margin-bottom: 12px;
+      padding: 10px;
+      background: var(--card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .message-item:hover {
+      transform: translateX(2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .message-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--accent), #8b5cf6);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .message-item:hover::before {
+      opacity: 1;
+    }
+    .message-role {
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: inline-block;
+      padding: 2px 6px;
+      background: linear-gradient(135deg, #e0e7ff, #ddd6fe);
+      border-radius: 4px;
+    }
+    .message-content {
+      font-size: 0.85rem;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      color: #000000;
+      padding-left: 4px;
+      word-spacing: 0px;
+      letter-spacing: 0px;
+      word-break: break-word;
+      text-align: left;
+      /*font-family: Optima-Regular, Optima, PingFangSC-light, PingFangTC-light, 'PingFang SC', Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;*/
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.9; }
+    }
+    .pending-header {
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--accent);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pending-header::before {
+      content: '⏳';
+      font-size: 14px;
+      animation: rotate 2s linear infinite;
+    }
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .pending-item {
+      font-size: 12px;
+      padding: 6px 8px;
+      margin: 4px 0;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 6px;
+      border-left: 3px solid var(--accent);
+      transition: transform 0.2s;
+    }
+    .pending-item:hover {
+      transform: translateX(4px);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .injection-controls {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0; /* Don't shrink */
+    }
+    .injection-input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .injection-input:disabled {
+      background: #f3f4f6;
+      cursor: not-allowed;
+    }
+
+    /* Pattern Timeline */
+    .pattern-timeline {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 100vh; /* Full viewport height */
+      position: relative;
+    }
+
+    .timeline-content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 60px; /* Leave space for pagination */
+      overflow-y: auto;
+      overflow-x: hidden; /* Prevent horizontal scroll */
+      padding: 16px;
+    }
+
+    .pattern-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+    }
+    .pattern-card:hover {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .pattern-card.running {
+      background: linear-gradient(to right, var(--running) 0%, var(--card) 100%);
+      border-color: var(--running-border);
+      position: relative;
+      overflow: hidden;
+    }
+    .pattern-card.running::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(251, 191, 36, 0.15),
+        transparent
+      );
+      animation: shimmer 2s infinite;
+      pointer-events: none;
+    }
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* Remove margin between adjacent pattern cards */
+    .pattern-card + .pattern-card {
+      margin-top: 0;
+    }
+
+    .pattern-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .pattern-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .pattern-agents {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .pattern-details {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .pagination {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+      height: 60px; /* Fixed height */
+    }
+    .pagination button {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+    .pagination button.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    /* Buttons */
+    button { cursor: pointer; }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 14px;
+      background: var(--card);
+    }
+    .btn-pause {
+      background: var(--danger-weak);
+      border-color: #fecaca;
+      color: var(--danger);
+    }
+    .btn-resume {
+      background: var(--safe-weak);
+      border-color: #bbf7d0;
+      color: var(--safe);
+    }
+    .btn-inject {
+      background: var(--accent-weak);
+      border-color: #bfdbfe;
+      color: var(--accent);
+    }
+
+    /* Status badge */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+    }
+    .badge.running {
+      background: var(--running);
+      border-color: var(--running-border);
+      color: #92400e;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .badge.done {
+      background: #e0e7ff;
+      border-color: #c7d2fe;
+      color: #3730a3;
+    }
+
+    /* Batch cards */
+    .batch-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .batch-card:hover {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .batch-card.running {
+      background: linear-gradient(to right, var(--running) 0%, var(--card) 100%);
+      border-color: var(--running-border);
+      position: relative;
+      overflow: hidden;
+    }
+    .batch-card.running::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(251, 191, 36, 0.15),
+        transparent
+      );
+      animation: shimmer 2s infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Remove margin between adjacent batch cards */
+    .batch-card + .batch-card {
+      margin-top: 0;
+    }
+
+    .batch-header {
+      padding: 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .batch-title {
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .batch-tabs {
+      display: flex;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: #f1f5f9;
+      overflow-x: auto;
+    }
+
+    .batch-tabs .tab {
+      padding: 8px 16px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+      transition: all 0.2s;
+      position: relative;
+      border-right: 1px solid var(--border);
+    }
+
+    .batch-tabs .tab:hover {
+      background: var(--card);
+      color: var(--ink);
+    }
+
+    .batch-tabs .tab.active {
+      background: var(--card);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .batch-tabs .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .tab-status {
+      margin-left: 4px;
+      font-size: 11px;
+    }
+
+    .tab-content {
+      padding: 12px;
+    }
+
+    /* Prevent horizontal scrolling for pre tags */
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+    }
+
+    /* Markdown styles for message content */
+    .message-content h1,
+    .message-content h2,
+    .message-content h3,
+    .message-content h4,
+    .message-content h5,
+    .message-content h6 {
+      margin: 0;
+      padding: 0;
+      font-weight: bold;
+      color: #000000;
+    }
+
+    .message-content h1 {
+      font-size: 1.5rem;
+      border-bottom: 2px solid var(--accent);
+    }
+    .message-content h2 {
+      font-size: 1.3rem;
+      border-bottom: 2px solid var(--accent);
+    }
+    .message-content h2 span {
+      display: inline-block;
+      font-weight: bold;
+      background: var(--accent);
+      color: #ffffff;
+      padding: 3px 10px 1px;
+      border-top-right-radius: 3px;
+      border-top-left-radius: 3px;
+      margin-right: 3px;
+    }
+    .message-content h2:after {
+      display: inline-block;
+      content: "";
+      vertical-align: bottom;
+      border-bottom: 1.25rem solid #efebe9;
+      border-right: 1.25rem solid transparent;
+    }
+    .message-content h3 { font-size: 1.3rem; }
+    .message-content h4 { font-size: 1.2rem; }
+    .message-content h5 { font-size: 1.1rem; }
+    .message-content h6 { font-size: 1rem; }
+
+    .message-content p {
+      font-size: 0.85rem;
+      margin: 0;
+      line-height: 1.3rem;
+      color: #000000;
+    }
+
+    .message-content ul,
+    .message-content ol {
+      margin: 0;
+      padding-left: 25px;
+      color: #000000;
+    }
+
+    /* IMPROVED: Comprehensive margin collapsing rules for titles and lists */
+
+    /* Remove top margin when lists follow headings */
+    .message-content h1 + ul,
+    .message-content h2 + ul,
+    .message-content h3 + ul,
+    .message-content h4 + ul,
+    .message-content h5 + ul,
+    .message-content h6 + ul,
+    .message-content h1 + ol,
+    .message-content h2 + ol,
+    .message-content h3 + ol,
+    .message-content h4 + ol,
+    .message-content h5 + ol,
+    .message-content h6 + ol {
+      margin-top: 0;
+    }
+
+    /* Remove top margin when lists follow other lists */
+    .message-content ul + ul,
+    .message-content ol + ol,
+    .message-content ul + ol,
+    .message-content ol + ul {
+      margin-top: 0;
+    }
+
+    /* Remove bottom margin when lists are followed by other lists */
+    .message-content ul:has(+ ul),
+    .message-content ul:has(+ ol),
+    .message-content ol:has(+ ul),
+    .message-content ol:has(+ ol) {
+      margin-bottom: 0;
+    }
+
+    /* Reduce spacing between headings */
+    .message-content h1 + h1,
+    .message-content h1 + h2,
+    .message-content h1 + h3,
+    .message-content h1 + h4,
+    .message-content h1 + h5,
+    .message-content h1 + h6,
+    .message-content h2 + h1,
+    .message-content h2 + h2,
+    .message-content h2 + h3,
+    .message-content h2 + h4,
+    .message-content h2 + h5,
+    .message-content h2 + h6,
+    .message-content h3 + h1,
+    .message-content h3 + h2,
+    .message-content h3 + h3,
+    .message-content h3 + h4,
+    .message-content h3 + h5,
+    .message-content h3 + h6,
+    .message-content h4 + h1,
+    .message-content h4 + h2,
+    .message-content h4 + h3,
+    .message-content h4 + h4,
+    .message-content h4 + h5,
+    .message-content h4 + h6,
+    .message-content h5 + h1,
+    .message-content h5 + h2,
+    .message-content h5 + h3,
+    .message-content h5 + h4,
+    .message-content h5 + h5,
+    .message-content h5 + h6,
+    .message-content h6 + h1,
+    .message-content h6 + h2,
+    .message-content h6 + h3,
+    .message-content h6 + h4,
+    .message-content h6 + h5,
+    .message-content h6 + h6 {
+      margin-top: 0.4em; /* Reduced from default 1.2em */
+    }
+
+    /* Remove bottom margin when headings follow lists, but keep minimal spacing */
+    .message-content ul + h1,
+    .message-content ul + h2,
+    .message-content ul + h3,
+    .message-content ul + h4,
+    .message-content ul + h5,
+    .message-content ul + h6,
+    .message-content ol + h1,
+    .message-content ol + h2,
+    .message-content ol + h3,
+    .message-content ol + h4,
+    .message-content ol + h5,
+    .message-content ol + h6 {
+      margin-top: 0.5em; /* Reduced from default 1.2em */
+    }
+
+    /* Override bottom margins when elements are followed by lists or headings */
+    .message-content h1:has(+ ul),
+    .message-content h2:has(+ ul),
+    .message-content h3:has(+ ul),
+    .message-content h4:has(+ ul),
+    .message-content h5:has(+ ul),
+    .message-content h6:has(+ ul),
+    .message-content h1:has(+ ol),
+    .message-content h2:has(+ ol),
+    .message-content h3:has(+ ol),
+    .message-content h4:has(+ ol),
+    .message-content h5:has(+ ol),
+    .message-content h6:has(+ ol) {
+      margin-bottom: 0.3em; /* Reduced from default 1em */
+    }
+
+    /* Reduce bottom margins when headings are followed by other headings */
+    .message-content h1:has(+ h1),
+    .message-content h1:has(+ h2),
+    .message-content h1:has(+ h3),
+    .message-content h1:has(+ h4),
+    .message-content h1:has(+ h5),
+    .message-content h1:has(+ h6),
+    .message-content h2:has(+ h1),
+    .message-content h2:has(+ h2),
+    .message-content h2:has(+ h3),
+    .message-content h2:has(+ h4),
+    .message-content h2:has(+ h5),
+    .message-content h2:has(+ h6),
+    .message-content h3:has(+ h1),
+    .message-content h3:has(+ h2),
+    .message-content h3:has(+ h3),
+    .message-content h3:has(+ h4),
+    .message-content h3:has(+ h5),
+    .message-content h3:has(+ h6),
+    .message-content h4:has(+ h1),
+    .message-content h4:has(+ h2),
+    .message-content h4:has(+ h3),
+    .message-content h4:has(+ h4),
+    .message-content h4:has(+ h5),
+    .message-content h4:has(+ h6),
+    .message-content h5:has(+ h1),
+    .message-content h5:has(+ h2),
+    .message-content h5:has(+ h3),
+    .message-content h5:has(+ h4),
+    .message-content h5:has(+ h5),
+    .message-content h5:has(+ h6),
+    .message-content h6:has(+ h1),
+    .message-content h6:has(+ h2),
+    .message-content h6:has(+ h3),
+    .message-content h6:has(+ h4),
+    .message-content h6:has(+ h5),
+    .message-content h6:has(+ h6) {
+      margin-bottom: 0.2em; /* Reduced from default 1em */
+    }
+
+    /* Fallback for browsers that don't support :has() */
+    @supports not (selector(:has(*))) {
+      .message-content ul,
+      .message-content ol {
+        margin-bottom: 1px; /* Minimal bottom margin for adjacent lists */
+      }
+
+      .message-content h1,
+      .message-content h2,
+      .message-content h3,
+      .message-content h4,
+      .message-content h5,
+      .message-content h6 {
+        margin-bottom: 0.3em; /* Reduced bottom margin */
+      }
+    }
+
+    .message-content li {
+      margin: 0;
+      line-height: 1.7rem;
+      text-align: left;
+      color: #000000;
+      font-weight: 500;
+    }
+
+    .message-content blockquote {
+      display: block;
+      font-size: .9em;
+      overflow: auto;
+      border-left: 3px solid var(--accent);
+      color: #6a737d;
+      padding: 10px 10px 10px 20px;
+      margin: 0;
+      /*background: #6a737d;*/
+    }
+
+    .message-content code {
+      background: rgba(27, 31, 35, 0.05);
+      padding: 2px 4px;
+      border-radius: 4px;
+      margin: 0 2px;
+      font-family: 'Operator Mono', 'Consolas', 'Monaco', 'Menlo', monospace;
+      font-size: .9rem;
+      color: var(--accent);
+      word-wrap: break-word;
+      word-break: break-all;
+    }
+
+    .message-content pre {
+      background: #292d3e;
+      padding: 6px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      margin: 0;
+      overflow-x: auto;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.3;
+      color: #a6accd;
+    }
+
+    .message-content pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      border-radius: 0;
+    }
+
+    .message-content strong {
+      font-weight: bold;
+      color: var(--ink);
+    }
+
+    .message-content em {
+      font-style: italic;
+    }
+
+    .message-content a {
+      text-decoration: none;
+      word-wrap: break-word;
+      font-weight: bold;
+      border-bottom: 1px solid var(--accent);
+      color: var(--accent);
+    }
+
+    .message-content a:hover {
+      text-decoration: underline;
+    }
+
+    .message-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+      font-size: 13px;
+    }
+
+    .message-content th,
+    .message-content td {
+      border: 1px solid #ccc;
+      padding: 3px 6px;
+      text-align: left;
+    }
+
+    .message-content th {
+      background: #f0f0f0;
+      font-weight: bold;
+    }
+
+    .message-content tr:nth-child(even) {
+      background: #F8F8F8;
+    }
+
+    .message-content hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    /* Mermaid diagram styles */
+    .message-content .mermaid {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 0;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .message-content .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+
+  <!-- Import map: map bare specifiers to CDN ESM modules -->
+  <script type="importmap">
+  {
+    "imports": {
+      "preact": "https://unpkg.com/preact@10.22.1/dist/preact.module.js",
+      "preact/hooks": "https://unpkg.com/preact@10.22.1/hooks/dist/hooks.module.js",
+      "htm": "https://unpkg.com/htm@3.1.1/dist/htm.module.js",
+      "marked": "https://unpkg.com/marked@12.0.2/lib/marked.esm.js",
+      "mermaid": "https://unpkg.com/mermaid@10.9.1/dist/mermaid.esm.min.mjs"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/static/monitor.js"></script>
+</body>
+</html>
