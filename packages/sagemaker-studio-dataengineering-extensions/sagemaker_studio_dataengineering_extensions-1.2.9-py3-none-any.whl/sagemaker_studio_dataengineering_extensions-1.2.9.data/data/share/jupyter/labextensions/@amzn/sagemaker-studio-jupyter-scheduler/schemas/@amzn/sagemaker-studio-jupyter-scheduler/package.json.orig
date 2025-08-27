@@ -1,0 +1,132 @@
+{
+  "name": "@amzn/sagemaker-studio-jupyter-scheduler",
+  "description": "Amazon SageMaker Unified Studio Jupyter Scheduler based on the https://pypi.org/project/jupyter-scheduler/",
+  "version": "3.1.13",
+  "author": "Amazon",
+  "homepage": "https://aws.amazon.com/sagemaker/",
+  "license": "Apache 2.0",
+  "licenses": [
+    {
+      "type": "Amazon Software License",
+      "url": "http://aws.amazon.com/asl"
+    }
+  ],
+  "directories": {
+    "test": "__tests__"
+  },
+  "files": [
+    "dist/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
+    "style/**/*.{css,js,eot,gif,html,jpg,json,png,svg,woff2,ttf}",
+    "schema/*.json"
+  ],
+  "config": {
+    "vars": {
+      "builddir": "./build/dist/@amzn/sagemaker-studio-jupyter-scheduler",
+      "prebuiltPackageName": "sagemaker_studio_jupyter_scheduler",
+      "jupyterCorePath": "../../build-tools/jupyter-staging"
+    }
+  },
+  "scripts": {
+    "clean": "rm -rf node_modules build",
+    "build": "tsc",
+    "build:labextension": "cd $npm_package_config_vars_prebuiltPackageName && rm -rf labextension && mkdir -p labextension && cd labextension && build-labextension --core-path $npm_package_config_vars_jupyterCorePath ../..",
+    "build:labextension:dev": "jupyter labextension build --development True .",
+    "lint": "npm run lint:check",
+    "lint:check": "eslint . --ext .js,.ts,.tsx",
+    "lint:fix": "eslint --fix . --ext .js,.ts,.tsx",
+    "copy-prebuilt-extension": "rsync -a -v --filter='merge scripts/rsync-copy-prebuilt-extension-filter.txt' . $npm_package_config_vars_builddir",
+    "copy-npm-artifacts": "rsync package.json $npm_package_config_vars_builddir && rsync -a --exclude={‘*.spec.d.ts’,’*.spec.js’} dist $npm_package_config_vars_builddir",
+    "copy-artifacts": "mkdir -p $npm_package_config_vars_builddir && npm run copy-npm-artifacts && npm run copy-prebuilt-extension",
+    "pack-prebuilt-extension": "python setup.py sdist --dist-dir ./build/dist && rsync -a $npm_package_config_vars_prebuiltPackageName/labextension $npm_package_config_vars_builddir/$npm_package_config_vars_prebuiltPackageName",
+    "test:server-extension": ":",
+    "test": "jest",
+    "test:debug": "node --inspect node_modules/.bin/jest --watch --runInBand",
+    "release": "run-s build build:labextension test test:server-extension",
+    "sg-release": "run-s build test generate:host-mapping copy-artifacts pack-prebuilt-extension test:server-extension generate:version",
+    "dev": "run-s -n dev:docker:build dev:docker:reset dev:docker:run",
+    "dev:docker:build": "cd devSetup && docker build --platform=linux/amd64 . --tag al2_jl_image",
+    "dev:docker:reset": "docker stop al2_jl_container || true && docker rm al2_jl_container || true",
+    "dev:docker:run": "docker run --platform=linux/amd64 --name al2_jl_container --publish 8888:8888 -it al2_jl_image /bin/bash",
+    "watch": "run-p watch:src watch:labextension",
+    "watch:src": "tsc -w",
+    "watch:labextension": "jupyter labextension watch .",
+    "generate:version": "npm pkg get version --workspaces=false > ./build/dist/latest_version",
+    "test:watch": "jest --watch",
+    "generate:host-mapping": "python host_region_mapping.py"
+  },
+  "main": "dist/index.js",
+  "dependencies": {
+    "@emotion/css": "^11.10.5",
+    "@emotion/styled": "^11.11.0",
+    "@jupyterlab/application": "^4.0.5",
+    "@jupyterlab/apputils": "^4.0.5",
+    "@jupyterlab/coreutils": "^6.0.5",
+    "@jupyterlab/scheduler": ">=2.6.0 <2.7.2",
+    "@jupyterlab/services": "^7.0.0",
+    "@jupyterlab/settingregistry": "^4.0.6",
+    "@jupyterlab/statusbar": "^4.0.5",
+    "@jupyterlab/translation": "^4.0.5",
+    "@jupyterlab/ui-components": "^4.0.6",
+    "@lumino/algorithm": "^2.0.0",
+    "@lumino/commands": "^2.0.0",
+    "@lumino/coreutils": "^2.1.2",
+    "@mui/icons-material": "5.14",
+    "@mui/material": "^5.14.4",
+    "@mui/system": "^5.14.12",
+    "@testing-library/react": "^13.0.0",
+    "es-abstract": "1.20.0",
+    "isomorphic-fetch": "^3.0.0",
+    "lodash": "^4.17.21",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^5.3.4"
+  },
+  "jupyterlab": {
+    "extension": true,
+    "schemaDir": "schema",
+    "disabledExtensions": [
+      "@jupyterlab/scheduler:IAdvancedOptions",
+      "@jupyterlab/scheduler:TelemetryHandler"
+    ],
+    "sharedPackages": {
+      "@jupyterlab/scheduler": {
+        "bundled": false,
+        "singleton": true
+      },
+      "@mui/icons-material": {
+        "bundled": false,
+        "singleton": true
+      },
+      "@mui/material": {
+        "bundled": false,
+        "singleton": true
+      },
+      "@mui/system": {
+        "bundled": false,
+        "singleton": true
+      }
+    },
+    "outputDir": "sagemaker_studio_jupyter_scheduler/labextension"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.22.7",
+    "@babel/preset-react": "^7.22.5",
+    "@jupyterlab/builder": "4.0.5",
+    "@jupyterlab/testutils": "^4.0.2",
+    "@testing-library/jest-dom": "^5.16.4",
+    "@types/jest": "29.5.5",
+    "@types/lodash": "^4.14.191",
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7",
+    "@types/react-router-dom": "^5.3.3",
+    "@types/yargs": "^16.0.6",
+    "babel-jest": "29.7.0",
+    "core-js-compat": "3.33.0",
+    "electron-to-chromium": "~1.4.556",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "npm-run-all": "^4.1.5",
+    "ts-jest": "29.1.1",
+    "typescript": "^4.9.5"
+  }
+}
