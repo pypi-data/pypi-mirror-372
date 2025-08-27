@@ -1,0 +1,280 @@
+# -----------------------------------------------------------------------------
+##  Build System Configurations
+#   https://setuptools.pypa.io/en/latest/setuptools.html#building-and-distributing-packages-with-setuptools
+# -----------------------------------------------------------------------------
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+# -----------------------------------------------------------------------------
+[project]
+name = "aibs-informatics-core"
+authors = [{ name = "AIBS Informatics Group"}]
+maintainers = [{ name = "AIBS Informatics Group"}]
+description = "Core package for informatics projects at the Allen Institute for Brain Science"
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+dynamic = ["version"]
+requires-python = ">=3.9"
+dependencies = [
+    "marshmallow~=3.22.0",
+    "dataclasses-json~=0.6.7",
+    "pathlib-abc",
+    "python-dateutil",
+    "pytz",
+    "pyyaml~=6.0",
+    "requests",
+    "typing_inspect",
+    "typing-extensions ~= 4.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+pydantic = [
+    "pydantic >= 2.0.3, < 3",
+]
+dev = [
+    "aibs-informatics-core[pydantic]",
+    "aibs-informatics-test-resources~=0.1",
+    # Cannot use 1.16.*/1.17.0 due to bug introduced (https://github.com/python/mypy/issues/19483). 
+    # Must wait for 1.17.1 or later.
+    "mypy~=1.15.0",
+]
+
+[dependency-groups]
+
+dev = [
+    "aibs-informatics-test-resources~=0.1",
+    { include-group = 'linting' },
+    { include-group = 'typing' },
+]
+
+release = [
+    { include-group = 'bump' },
+    { include-group = 'build' }    
+]
+
+linting = [
+    "ruff~=0.9",
+]
+
+typing = [
+    "mypy~=1.13",
+]   
+
+bump = [
+    "bump-my-version",
+]
+
+build = [
+    "build",
+    "wheel",
+]
+
+[project.scripts]
+run_cli_executor = "aibs_informatics_core.executors:run_cli_executor"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ['py.typed']
+
+[tool.setuptools.dynamic]
+version = {attr = "aibs_informatics_core._version.__version__"}
+
+[project.urls]
+Documentation = "https://.github.io/aibs-informatics-core/"
+Homepage = "https://github.com/AllenInstitute/aibs-informatics-core/"
+Issues = "https://github.com/AllenInstitute/aibs-informatics-core/issues"
+Repository = "https://github.com/AllenInstitute/aibs-informatics-core/"
+
+# -----------------------------------------------------------------------------
+##  astral-uv Configurations
+#   https://docs.astral.sh/uv/getting-started/
+# -----------------------------------------------------------------------------
+
+[tool.uv]
+
+
+# -----------------------------------------------------------------------------
+##  Pyright Configurations
+#   https://github.com/microsoft/pyright/blob/main/docs/configuration.md
+# -----------------------------------------------------------------------------
+
+[tool.pyright]
+reportGeneralTypeIssues = false
+typeCheckingMode = "basic"
+
+# -----------------------------------------------------------------------------
+##  Coverage Configurations 
+#   https://coverage.readthedocs.io/en/7.0.4/config.html#
+# -----------------------------------------------------------------------------
+
+[tool.coverage]
+# Note: we use pytest-cov to generate coverage reports
+#       when running tests. but these coverage configs
+#       are read when doing so.  
+[tool.coverage.run]
+branch = true
+command_line = "coverage -m pytest"
+data_file = "build/.coverage"
+source = [
+    "src/"
+]
+
+[tool.coverage.report]
+omit = [
+    "test/*"
+]
+skip_empty = true
+exclude_lines = [
+    'pragma: no cover',
+    'raise NotImplementedError',
+    'if TYPE_CHECKING:',
+    'if typing.TYPE_CHECKING:',
+    '@overload',
+    '@typing.overload',
+    '\(Protocol\):$',
+    'typing.assert_never',
+    'assert_never',
+]
+
+[tool.coverage.html]
+directory = "build/documentation/coverage"
+
+[tool.coverage.xml]
+output = "build/documentation/coverage.xml"
+
+# -----------------------------------------------------------------------------
+##  pytest Configurations
+#   https://docs.pytest.org/en/7.2.x/reference/customize.html
+# -----------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+    "-ra", 
+    "--verbose",
+    "--ignore=build/private",
+    # Coverage options should be managed in the .coveragerc file.
+    # The below configurations simply enable coverage and reporting.  
+    "--cov", 
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=0",
+    "--color=yes",
+] 
+testpaths = [
+    "test",
+]
+cache_dir = "build/.pytest_cache"
+  
+# -----------------------------------------------------------------------------
+##  MyPy Configurations
+#   https://mypy.readthedocs.io/en/stable/config_file.html#example-pyproject-toml
+# -----------------------------------------------------------------------------
+
+[tool.mypy]
+exclude = '''(?x)(
+    assets/
+    | build/
+    | build_tools
+    | setup.py$
+    | test/
+)'''
+
+cache_dir = "build/.mypy_cache"
+
+# Using no incremental to avoid known issue with mypy and some packages:
+# https://github.com/python/mypy/issues/9852
+incremental = false
+
+# Import Discovery
+# https://mypy.readthedocs.io/en/stable/config_file.html#import-discovery
+ignore_missing_imports = true
+follow_imports = "silent"
+no_site_packages = false
+
+# Untyped definitions and calls
+# https://mypy.readthedocs.io/en/stable/config_file.html#untyped-definitions-and-calls
+check_untyped_defs = true
+
+# Miscellaneous strictness flags
+# https://mypy.readthedocs.io/en/latest/config_file.html#miscellaneous-strictness-flags
+allow_redefinition = true
+
+
+# Configuring Error Messages
+# https://mypy.readthedocs.io/en/stable/config_file.html#configuring-error-messages
+show_error_codes = true
+color_output = true
+pretty = true
+show_absolute_path = false
+
+# Reporting Generation
+# https://mypy.readthedocs.io/en/stable/config_file.html#report-generation
+# [DEBUG] UNCOMMENT FOR DEBUG PURPOSES ONLY! Type coverage impacts test 
+# html_report = build/documentation/mypy/
+# xml_report = build/documentation/mypy/
+# cobertura_xml_report = build/documentation/mypy/
+
+# None and Optional handling
+# https://mypy.readthedocs.io/en/latest/config_file.html#none-and-optional-handling
+strict_optional = true
+
+# Miscellaneous
+# https://mypy.readthedocs.io/en/latest/config_file.html#miscellaneous
+# [DEBUG] If you need to better understand type error, increase verbosity
+verbosity = 0
+
+[[tool.mypy.overrides]]
+module = [
+    "src.*",
+    "test.*"
+]
+ignore_errors = false
+
+
+# -----------------------------------------------------------------------------
+##  ruff Configurations
+#   https://beta.ruff.rs/docs/configuration/
+# -----------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 99
+src = ["src", "test"]
+cache-dir = "build/.ruff_cache"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "C90"]
+# ignore = ["E501"]
+
+# -----------------------------------------------------------------------------
+##  bumpversion Configurations
+#   https://callowayproject.github.io/bump-my-version/
+# -----------------------------------------------------------------------------
+
+[tool.bumpversion]
+allow_dirty = false
+commit = true
+commit_args = ""
+current_version = "0.2.1"
+ignore_missing_version = false
+message = "Bump version: {current_version} → {new_version}"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+regex = false
+replace = "{new_version}"
+search = "{current_version}"
+serialize = ["{major}.{minor}.{patch}"]
+sign_tags = false
+tag = true
+tag_message = "Bump version: {current_version} → {new_version}"
+tag_name = "v{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "src/aibs_informatics_core/_version.py"
+search = "__version__ = \"{current_version}\""
+replace = "__version__ = \"{new_version}\""
