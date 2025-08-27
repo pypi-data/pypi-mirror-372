@@ -1,0 +1,1 @@
+[![CICD](https://github.com/esbenscriver/arithmetic-esben-andersen/actions/workflows/ci_cd.yml/badge.svg)](https://github.com/esbenscriver/arithmetic-esben-andersen/actions/workflows/ci_cd.yml/ci_cd.yml)
