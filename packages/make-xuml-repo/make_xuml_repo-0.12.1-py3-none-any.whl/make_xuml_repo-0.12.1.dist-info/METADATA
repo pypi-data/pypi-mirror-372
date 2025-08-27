@@ -1,0 +1,91 @@
+Metadata-Version: 2.4
+Name: make-xuml-repo
+Version: 0.12.1
+Summary: Generates a database from a set of *.xcm (executable class model) files
+Author-email: Leon Starr <leon_starr@modelint.com>
+License: MIT License
+        
+        Copyright (c) 2019-2023 Leon Starr
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: repository, https://github.com/modelint/make-xuml-repo
+Project-URL: documentation, https://github.com/modelint/make-xuml-repo/wiki
+Keywords: action language,executable uml,mbse,xuml,xtuml,platform independent,sysml
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: PyYAML
+Requires-Dist: xcm-parser
+Requires-Dist: mi-pyral
+Requires-Dist: tomli; python_version < "3.11"
+Provides-Extra: build
+Requires-Dist: build; extra == "build"
+Requires-Dist: twine; extra == "build"
+Provides-Extra: dev
+Requires-Dist: bump2version; extra == "dev"
+Requires-Dist: pytest; extra == "dev"
+Dynamic: license-file
+
+# Make an Executable UML Repository
+
+Creates a model repository database from a Shlaer-Mellor Executable UML metamodel.
+
+The latest [Shlaer-Mellor metamodel](https://github.com/modelint/shlaer-mellor-metamodel/wiki) is specified inside this package as a folder of .xcm (executable class model) files and a types.yaml file.
+
+Each subsystem of the metamodel (class-attribute, state, etc) is defined in a single .xcm file all within a single foler. That folder also contains one types.yaml file specifying the db type (data type) to use for each metamodel attribute type. The db type 'string', for example, is associated with the `State Name` metamodel type.
+
+We target the little known, but exceptionally useful TclRAL database. It's lean and mean and supports a true relational algebra as defined by [C.J. Date and Hugh Darwen](https://github.com/modelint/shlaer-mellor-metamodel/wiki/Resources#ttm-databases-types-and-the-relational-model-the-third-manifesto-cj-date-hugh-darwen----links-to-the-actual-book-as-a-downloadable-pdf). So we can use nested relational algrebra without any of that SQL mess. It is implemented in C and Tcl, but we provide a python front end called PyRAL to keep everything pythonic.
+
+### Why you need this
+
+You probably don't. What you want instead is the metamodel populator which does use this package.
+It's not up on PyPI yet. Give me a couple of weeks and it should be here. I'll post a link when it's ready.
+
+Though if you did want to fiddle with the metamodel, generate your own variation of it and such, this package
+might come in handy.
+
+### Installation
+
+Create or use a python 3.11+ environment (early python versions may or may not work).
+
+% pip install make-xuml-repo
+
+At this point you can invoke the repository generator via the command line.
+
+#### From the command line
+
+With the default usage just type:
+
+    % makexumlrepo
+
+Two files will be created in this directory as a result. An mmdb.ral file and a mmclass_ntuples.py file.
+
+The mmdb.ral file is actually a text file that can be opened by TclRAL (via PyRAL) and it will establish an empty relvar per
+metamodel class. You can use the previously mentioned populator, or your own, to load it up with
+instances of your modeled domains.
+
+The mmclass_ntuples.py file is a handy set of python named tuples. Each named tuple corresponds to a
+metamodel class and provides a field for each attribute of that class. PyRal then uses this to insert one or
+more tuples into the corresponding relvar.
+
+In my case, I generate the two files and then copy them into my metamodel populator package.
