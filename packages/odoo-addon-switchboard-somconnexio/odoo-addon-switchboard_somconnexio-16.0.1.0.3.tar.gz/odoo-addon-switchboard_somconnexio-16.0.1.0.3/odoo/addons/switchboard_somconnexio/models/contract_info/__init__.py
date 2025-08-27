@@ -1,0 +1,1 @@
+from . import switchboard_service_contract_info

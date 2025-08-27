@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <!-- Two search views inhering the same view conflict with each other-->
+  <record id="switchboard_contract_search_view" model="ir.ui.view">
+    <field name="name">switchboard search view</field>
+    <field name="model">contract.contract</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="name" filter_domain="['|','|','|','|',('name', 'ilike', self),('code', 'ilike', self),('partner_id', 'ilike', self),('partner_id.vat', 'ilike', self),('switchboard_mobile', 'ilike', self)]"/>
+        <separator/>
+        <filter name="finished" string="Finished" domain="[('is_terminated', '=', True)]"/>
+        <filter name="active" string="Active" domain="[('is_terminated', '=', False)]"/>
+        <separator/>
+        <field name="partner_id"/>
+        <field name="commercial_partner_id"/>
+        <filter string="Archived" domain="[('active', '=', False)]" name="inactive"/>
+        <group expand="0" string="Group By...">
+          <filter string="Associated Partner" name="group_by_partner" domain="[]" context="{'group_by':'partner_id'}"/>
+          <filter name="commercial_partner_groupby" string="Commercial Entity" context="{'group_by': 'commercial_partner_id'}"/>
+          <filter name="group_by_next_invoice" string="Next Invoice" domain="[('recurring_next_date', '!=', False)]" context="{'group_by':'recurring_next_date'}"/>
+          <filter name="group_by_date_end" string="Date End" domain="[]" context="{'group_by':'date_end'}"/>
+          <filter name="group_by_current_tariff" string="Current Tariff" domain="[]" context="{'group_by':'current_tariff_product'}"/>
+          <filter name="group_by_service_tecnology_id" string="Service Technology" domain="[]" context="{'group_by':'service_technology_id'}"/>
+          <filter name="group_by_service_supplier_id" string="Service Supplier" domain="[]" context="{'group_by':'service_supplier_id'}"/>
+          <filter name="group_by_date_start" string="Date Start" domain="[]" context="{'group_by':'date_start'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+  <record id="contract_contract_form_view" model="ir.ui.view">
+    <field name="name">contract.contract.form.view</field>
+    <field name="model">contract.contract</field>
+    <field name="inherit_id" ref="somconnexio.contract_contract_form_view"/>
+    <field name="arch" type="xml">
+      <field name="service_partner_id" position="attributes">
+        <attribute name="attrs">{
+                    'invisible': [('is_broadband','=',False),('service_contract_type', '!=', 'switchboard')],
+                }</attribute>
+      </field>
+      <field name="icc" position="before">
+        <field name="switchboard_service_contract_info_id" options="{'create': true}" attrs="{'invisible': ['!',('service_contract_type', '=', 'switchboard')], 'required':[('service_contract_type', '=', 'switchboard')]}"/>
+      </field>
+    </field>
+  </record>
+  <record id="contract_contract_tree_switchboard_view" model="ir.ui.view">
+    <field name="name">contract.tree.switchboard.view</field>
+    <field name="model">contract.contract</field>
+    <field name="arch" type="xml">
+      <tree>
+        <field name="id" widget="open_tab"/>
+        <field name="code"/>
+        <field name="partner_id"/>
+        <field name="phone_number"/>
+        <field name="switchboard_mobile"/>
+        <field name="current_tariff_product"/>
+        <field name="is_terminated"/>
+        <field name="date_start"/>
+        <field name="date_end"/>
+        <field name="category_id" optional="hide"/>
+        <field name="res_partner_user_id" optional="hide"/>
+        <field name="partner_priority" optional="hide"/>
+        <field name="payment_mode_id" optional="hide"/>
+        <field name="mandate_id" optional="hide"/>
+        <field name="email_ids" optional="hide"/>
+        <field name="parent_pack_contract_id" optional="hide"/>
+        <field name="current_tariff_product" optional="hide"/>
+        <field name="current_tariff_start_date" optional="hide"/>
+        <field name="service_supplier_id" optional="hide"/>
+        <field name="service_technology_id" optional="hide"/>
+        <field name="service_partner_id" optional="hide"/>
+      </tree>
+    </field>
+  </record>
+  <record id="action_contracts_switchboard" model="ir.actions.act_window">
+    <field name="name">Switchboard Contracts</field>
+    <field name="res_model">contract.contract</field>
+    <field name="view_mode">tree,form</field>
+    <field name="search_view_id" ref="switchboard_somconnexio.switchboard_contract_search_view"/>
+    <field name="domain">[('service_technology_id.name', '=', 'Switchboard')]</field>
+  </record>
+  <record model="ir.actions.act_window.view" id="action_contracts_switchboard_tree">
+    <field name="sequence">0</field>
+    <field name="view_mode">tree</field>
+    <field name="view_id" ref="contract_contract_tree_switchboard_view"/>
+    <field name="act_window_id" ref="action_contracts_switchboard"/>
+  </record>
+  <record model="ir.actions.act_window.view" id="action_contracts_switchboard_form">
+    <field name="sequence">1</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="contract_contract_form_view"/>
+    <field name="act_window_id" ref="action_contracts_switchboard"/>
+  </record>
+  <menuitem id="menu_contracts_switchboard" name="Switchboard Contracts" action="action_contracts_switchboard" web_icon="switchboard_somconnexio,static/description/switchboard_contracts.png" sequence="4"/>
+</odoo>

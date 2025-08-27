@@ -1,0 +1,41 @@
+{
+    "name": "Odoo Som Connexió Switchboard technology",
+    "version": "16.0.1.0.3",
+    "depends": [
+        "somconnexio",
+    ],
+    "author": "Coopdevs Treball SCCL, Som Connexió SCCL",
+    "website": "https://coopdevs.org",
+    "category": "Cooperative management",
+    "license": "AGPL-3",
+    "data": [
+        "data/product_category.xml",
+        "data/service_supplier.xml",
+        "data/service_technology.xml",
+        "data/service_technology_service_supplier.xml",
+        "data/product_category_technology_supplier_data.xml",
+        "data/product_attribute.xml",
+        "data/product_attribute_value.xml",
+        "data/product_template_data.xml",
+        "data/product_template_attribute_line_data.xml",
+        "data/products/switchboard.xml",
+        "views/contract.xml",
+        "views/crm_lead.xml",
+        "views/crm_lead_line.xml",
+        "views/switchboard_isp_info.xml",
+        "views/switchboard_service_contract_info.xml",
+        "security/ir.model.access.csv",
+        "wizards/contract_tariff_change/contract_tariff_change.xml",
+        "wizards/create_lead_from_partner/create_lead_from_partner.xml",
+    ],
+    "demo": [
+        "demo/contract.xml",
+    ],
+    "external_dependencies": {
+        "python": [
+            "faker",
+        ],
+    },
+    "application": False,
+    "installable": True,
+}
