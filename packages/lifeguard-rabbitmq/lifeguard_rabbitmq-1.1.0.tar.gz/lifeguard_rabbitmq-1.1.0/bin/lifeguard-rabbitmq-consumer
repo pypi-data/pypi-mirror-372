@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+from time import sleep
+from tabulate import tabulate
+
+sys.path.append(".")
+
+from lifeguard import setup
+from lifeguard.context import LIFEGUARD_CONTEXT
+from lifeguard.settings import (
+    SETTINGS_MANAGER,
+    SettingsManager,
+)
+
+from lifeguard_rabbitmq.consumer import RabbitMQConsumer
+
+
+def display_settings():
+    data = {"Name": [], "Description": [], "Value": []}
+
+    settings_manager = SettingsManager(SETTINGS_MANAGER.settings)
+
+    for entry in settings_manager.settings:
+        data["Name"].append(entry)
+        data["Description"].append(settings_manager.settings[entry]["description"])
+        data["Value"].append(settings_manager.read_value(entry))
+
+    print(tabulate(data, headers="keys"))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-d", "--settings", help="display all plugins settings", action="store_true"
+    )
+
+    args = parser.parse_args()
+
+    LIFEGUARD_CONTEXT.only_settings = args.settings
+
+    setup(LIFEGUARD_CONTEXT)
+
+    if args.settings:
+        display_settings()
+        sys.exit(0)
+
+    consumer = RabbitMQConsumer()
+    consumer.start()
+
+    while True:
+        try:
+            if consumer.finished:
+                raise RuntimeError("consumer finished")
+        except KeyboardInterrupt:
+            break
+        except Exception as exception:
+            print(f"error on main loop: {exception}")
+            break
+        sleep(5)
