@@ -1,0 +1,176 @@
+{% macro render_menu(menu) %}
+<ul class="navbar-nav pt-lg-3">
+  {% for item in menu %}
+    {% if item.divider_before %}
+      <li><hr class="dropdown-divider"></li>
+    {% endif %}
+
+    {% if item.section_title %}
+      <li class="nav-item">
+        <div class="nav-link disabled text-uppercase small text-muted mt-2">
+          {{ item.section_title }}
+        </div>
+      </li>
+    {% endif %}
+
+    {% if item.children and item.children|length > 0 %}
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle {% if item.active %}active{% endif %}"
+           href="#"
+           data-bs-toggle="dropdown"
+           data-bs-auto-close="false"
+           role="button"
+           aria-expanded="false">
+          {% if item.icon %}
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="{{ item.icon }}"></i>
+            </span>
+          {% endif %}
+          <span class="nav-link-title">{{ item.label }}</span>
+        </a>
+        <div class="dropdown-menu">
+          <div class="dropdown-menu-columns">
+            {% set chunk = (item.children|length // 2) + (item.children|length % 2) %}
+            {% for column in item.children|batch(chunk, fill_with=[]) %}
+              <div class="dropdown-menu-column">
+                {% for child in column %}
+                  {% if not child %}
+                    {# skip padding #}
+                  {% elif child.children and child.children|length > 0 %}
+                    <div class="dropend">
+                      <a class="dropdown-item dropdown-toggle"
+                         href="#"
+                         data-bs-toggle="dropdown"
+                         data-bs-auto-close="false"
+                         role="button"
+                         aria-expanded="false">
+                        {% if child.icon %}
+                          <span class="nav-link-icon d-md-none d-lg-inline-block">
+                            <i class="{{ child.icon }}"></i>
+                          </span>
+                        {% endif %}
+                        {{ child.label }}
+                      </a>
+                      <div class="dropdown-menu">
+                        {% for grand in child.children %}
+                          <a class="dropdown-item {% if grand.active %}active{% endif %}"
+                             href="{{ grand.url }}">
+                            {% if grand.icon %}
+                              <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                <i class="{{ grand.icon }}"></i>
+                              </span>
+                            {% endif %}
+                            {{ grand.label }}
+                          </a>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  {% else %}
+                    <a class="dropdown-item {% if child.active %}active{% endif %}"
+                       href="{{ child.url }}">
+                      {% if child.icon %}
+                        <span class="nav-link-icon d-md-none d-lg-inline-block">
+                          <i class="{{ child.icon }}"></i>
+                        </span>
+                      {% endif %}
+                      {{ child.label }}
+                    </a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </li>
+    {% else %}
+      <li class="nav-item">
+        <a class="nav-link {% if item.active %}active{% endif %}"
+           href="{{ item.url }}">
+          {% if item.icon %}
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <i class="{{ item.icon }}"></i>
+            </span>
+          {% endif %}
+          <span class="nav-link-title">{{ item.label }}</span>
+        </a>
+      </li>
+    {% endif %}
+
+    {% if item.divider_after %}
+      <li><hr class="dropdown-divider"></li>
+    {% endif %}
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+
+{% macro render_admin_dropdown(admin_menu) %}
+  {% if admin_menu and admin_menu|length > 0 %}
+    <li class="nav-item dropdown">
+      <a class="nav-link dropdown-toggle"
+         href="#"
+         id="dropdownAdmin"
+         role="button"
+         data-bs-toggle="dropdown"
+         data-bs-auto-close="false"
+         aria-expanded="false">
+        <span class="nav-link-icon d-md-none d-lg-inline-block">
+          <i class="fas fa-user-shield"></i>
+        </span>
+        <span class="nav-link-title">Admin</span>
+      </a>
+      <div class="dropdown-menu">
+        <div class="dropdown-menu-columns">
+          {% set chunk = (admin_menu|length // 2) + (admin_menu|length % 2) %}
+          {% for column in admin_menu|batch(chunk, fill_with=[]) %}
+            <div class="dropdown-menu-column">
+              {% for item in column %}
+                {% if not item %}
+                {% elif item.children and item.children|length > 0 %}
+                  <div class="dropend">
+                    <a class="dropdown-item dropdown-toggle"
+                       href="#"
+                       data-bs-toggle="dropdown"
+                       data-bs-auto-close="false"
+                       role="button"
+                       aria-expanded="false">
+                      {% if item.icon %}
+                        <span class="nav-link-icon d-md-none d-lg-inline-block">
+                          <i class="{{ item.icon }}"></i>
+                        </span>
+                      {% endif %}
+                      {{ item.label }}
+                    </a>
+                    <div class="dropdown-menu">
+                      {% for child in item.children %}
+                        <a class="dropdown-item {% if child.active %}active{% endif %}"
+                           href="{{ child.url }}">
+                          {% if child.icon %}
+                            <span class="nav-link-icon d-md-none d-lg-inline-block">
+                              <i class="{{ child.icon }}"></i>
+                            </span>
+                          {% endif %}
+                          {{ child.label }}
+                        </a>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% else %}
+                  <a class="dropdown-item {% if item.active %}active{% endif %}"
+                     href="{{ item.url }}">
+                    {% if item.icon %}
+                      <span class="nav-link-icon d-md-none d-lg-inline-block">
+                        <i class="{{ item.icon }}"></i>
+                      </span>
+                    {% endif %}
+                    {{ item.label }}
+                  </a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </li>
+  {% endif %}
+{% endmacro %}

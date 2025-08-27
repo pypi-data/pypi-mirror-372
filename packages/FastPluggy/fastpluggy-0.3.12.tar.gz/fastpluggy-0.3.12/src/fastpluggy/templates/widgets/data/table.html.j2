@@ -1,0 +1,137 @@
+{# widgets/data/table.html.j2 #}
+{% from "widgets/widget_renderer.html.j2" import render_widget %}
+{% from "widgets/partials/card_header.html.j2" import render_card_header %}
+{% from "widgets/partials/pagination_macros.html.j2" import render_pagination %}
+
+{% macro render_table(widget, request) %}
+
+    <div class="card {{ widget.css_class }}" id="{{ widget.widget_id }}">
+        {# Card Header #}
+        {{ render_card_header(widget) }}
+
+        {# Card Body (collapsible) #}
+        <div
+                id="collapse-{{ widget.widget_id }}"
+                class="card-body card-full p-0 collapse{% if not widget.collapsed %} show{% endif %}"
+        >
+            {% if widget.error_message %}
+                {# Error State #}
+                <div class="alert alert-danger m-3">
+                    <i class="icon-alert-circle"></i>
+                    <strong>Error:</strong> {{ widget.error_message }}
+                </div>
+
+            {% else %}
+
+                <div class="table-responsive">
+                    <table class="table table-vcenter text-nowrap table-striped table-hover mb-0">
+                        <thead class="table-header">
+                        <tr>
+                            {% for header in widget.sortable_headers %}
+                                <th class="table-header-cell {% if header.sorted %}sorted sorted-{{ header.order }}{% endif %}">
+                                    {% if header.url and widget.sortable %}
+                                        <a href="{{ header.url }}"
+                                           class="sort-link justify-content-between align-items-center">
+                                            {{ header.label }}
+                                            <span class="sort-indicator">
+                                                {% if header.sorted %}
+                                                    {% if header.order == 'asc' %}
+                                                        ↑
+                                                    {% else %}
+                                                        ↓
+                                                    {% endif %}
+                                                {% else %}
+                                                    <i class="icon-chevrons-up-down"></i>
+                                                {% endif %}
+                                            </span>
+                                        </a>
+                                    {% else %}
+                                        {{ header.label }}
+                                    {% endif %}
+                                </th>
+                            {% endfor %}
+
+                            {# Actions column if there are links/buttons #}
+                            {% if widget.links %}
+                                <th class="table-header-cell actions-header text-center">Actions</th>
+                            {% endif %}
+                        </tr>
+                        </thead>
+
+                        <tbody class="table-body">
+                        {% if not widget.has_data %}
+                            {# Render one “empty” row spanning all columns #}
+                            <tr class="table-row">
+                                {% set colspan = widget.sortable_headers | length + (1 if widget.links else 0) %}
+                                <td class="table-cell text-center text-muted" colspan="{{ colspan }}">
+                                    {# Empty State #}
+                                    <div class="empty-state text-center p-4">
+                                        <div class="empty-state-icon mb-3">
+                                            <i class="icon-table"></i>
+                                        </div>
+                                        <h4 class="empty-state-title">No Data Available</h4>
+                                        <p class="empty-state-description">
+                                            There are no items to display in this table.
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            {# Render each data row normally #}
+                            {% for item in widget.processed_data %}
+                                <tr class="table-row" data-row-id="{{ item.get('id', loop.index) }}">
+                                    {% for field in widget.fields %}
+                                        <td class="table-cell table-cell-{{ field }}">
+                                            {% set value = item.get(field, '') %}
+                                            {{ value | string }}
+                                        </td>
+                                    {% endfor %}
+
+                                    {# Actions column #}
+                                    {% if item['_action_buttons'] %}
+                                        <td class="table-cell actions-cell">
+                                            <div class="action-buttons gap-1">
+                                                {% for button in item['_action_buttons'].buttons %}
+                                                    {{ render_widget(button, request, (current_depth|default(0) + 1)) }}
+                                                {% endfor %}
+                                            </div>
+                                        </td>
+                                    {% endif %}
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {# Table Footer with Row Count (# only when there is at least one row) #}
+                {% if widget.has_data %}
+                    <div class="table-footer bg-light p-2">
+                        <div class="table-info">
+                            {{ render_pagination(widget.pagination, request) }}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Handle table row selection (optional)
+            const tableRows = document.querySelectorAll('.table-row');
+
+            tableRows.forEach(row => {
+                row.addEventListener('click', function (e) {
+                    // Don't select row if clicking on action buttons
+                    if (e.target.closest('.action-buttons')) {
+                        return;
+                    }
+
+                    // Toggle selection
+                    this.classList.toggle('selected');
+                });
+            });
+        });
+    </script>
+{% endmacro %}
