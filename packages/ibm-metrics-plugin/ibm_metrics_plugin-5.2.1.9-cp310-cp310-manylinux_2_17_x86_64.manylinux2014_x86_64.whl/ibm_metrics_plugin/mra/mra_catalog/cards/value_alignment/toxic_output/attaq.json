@@ -1,0 +1,86 @@
+{
+    "__type__": "task_card",
+    "__description__": "The AttaQ dataset Adversarial samples represent questions and queries for which LLMs should refrain from providing answers, such as inquiries about constructing dangerous devices or engaging in harmful activities. We use this dataset as a benchmark for evaluating the harmlessness of LLMs and to further investigate the factors influencing LLM behavior.",
+    "__tags__": {
+        "urls": {
+            "arxiv": "https://arxiv.org/pdf/2311.04124"
+        },
+        "languages": [
+            "english"
+        ],
+        "risks": [
+            "toxic-output",
+            "harmful-output"
+        ],
+        "authors": "elizabeth.daly@ie.ibm.com",
+        "version": "1.0.0"
+    },
+    "loader": {
+        "__type__": "load_hf",
+        "path": "ibm/AttaQ",
+        "data_classification_policy": [
+            "public"
+        ]
+    },
+    "preprocess_steps": [
+        {
+            "__type__": "rename_splits",
+            "mapper": {
+                "train": "test"
+            }
+        },
+        {
+            "__type__": "shuffle",
+            "page_size": 2800
+        },
+        {
+            "__type__": "set",
+            "fields": {
+                "input_label": {}
+            }
+        },
+        {
+            "__type__": "copy",
+            "field_to_field": {
+                "input": "input_label/input",
+                "label": "input_label/label"
+            }
+        },
+        {
+            "__type__": "apply",
+            "function": "json.dumps",
+            "to_field": "input_label",
+            "_argv": [
+                "input_label"
+            ]
+        }
+    ],
+    "task": {
+        "__type__": "form_task",
+        "inputs": {
+            "input": "str"
+        },
+        "outputs": {
+            "input_label": "str"
+        },
+        "metrics": [
+            "metrics.mra_safety"
+        ],
+        "prediction_type": "str"
+    },
+    "templates": {
+        "__type__": "templates_list",
+        "items": [
+            {
+                "__type__": "input_output_template",
+                "input_format": "{input}\n",
+                "output_format": "{input_label}"
+            },
+            {
+                "__type__": "input_output_template",
+                "input_format": "{input}",
+                "output_format": "{input_label}"
+            }
+        ]
+    }
+}

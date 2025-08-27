@@ -1,0 +1,236 @@
+<h1>Benchmarks</h1>
+<br>
+<br>
+{% for risk_dim, cards in score_with_margin.items() %}
+    <table class="benchmarks_page">
+        <tr>
+            <td>
+                <p class="medium">Category</p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="big" style="text-transform: uppercase">{{ risk_dim.replace('-', ' ') }}</p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="small">
+                    {{ risks_description.get(risk_dim) ~ " " ~ risks_intro_conclusion.get(risk_dim, {}).get("intro","") }}
+                </p>
+            </td>
+        </tr>
+    </table>
+    {% for card_name, metrics in cards.items() %}
+        {% if 'cards.safety.bbq' in card_name %}
+            {% set card_id = "cards.safety.bbq.Age" %}
+        {% else %}
+            {% set card_id = card_name %}
+        {% endif %}
+        <table class="benchmarks_page">
+            <tr>
+                <td style="padding: 40px 0 10px 0;">
+                    <p class="small bold">{{ metric_card_name_translation.get(card_name, card_name) }}</p>
+                </td>
+            </tr>
+            <tr>
+                <td>{{ meta_data_based_on_id.get(card_id, {}).get('Benchmark Details', {}).get("Overview", None) }}</td>
+            </tr>
+        </table>
+        <div style="height: 20px;"></div>
+        <table class="summary-table">
+            {% set score_string = metrics.get("score", "Error") | string %}
+            {% if " +/- " in score_string %}
+                {% set score_data = score_string.split(" +/- ") %}
+                {% set score = score_data[0] %}
+                {% set margin_of_error = score_data[1] %}
+            {% else %}
+                {% set score = score_string %}
+                {% set margin_of_error = "Not Applicable" %}
+            {% endif %}
+            <thead>
+                <tr>
+                    <th>Score ({{ meta_data_based_on_id.get(card_id, {}).get('Methodology', {}).get("Main Score", "score")}})</th>
+                    <th>Margin of error</th>
+                </tr>
+            </thead>
+            {% set score_category = metrics_interpretation.get(risk_dim,{}).get(card_name,{}).get("category") %}
+            <tbody>
+                <tr>
+                    {% if score_category == "RED" %}
+                    <td><span><img src={{error_svg_path}} width="13px" height="13px"> </span> {{ score }}</td>
+                    {% elif score_category == "GREEN" %}
+                    <td><span><img src={{checkmark_svg_path}} width="13px" height="13px"> </span> {{ score }}</td>
+                    {% elif score_category == "ORANGE" %}
+                    <td><span><img src={{warning_svg_path}} width="13px" height="13px"> </span> {{ score }}</td>                    
+                    {% else %}
+                    <td>{{ score }}</td>    
+                    {% endif %}
+                    <td>{{ margin_of_error }}</td>
+                </tr>    
+            </tbody>
+        </table>
+        <div style="height: 10px;"></div>
+        {% set desired_score_string = meta_data_based_on_id.get(card_id, {}).get('Methodology', {}).get("Desired_score") %}
+        <table class="benchmarks_score_details">
+            <tr>
+                <td>Score target:  {{ desired_score_string }} </td>
+                <td></td>
+                <tr>
+                    <td>Score range:  [0, 1]</td>
+                    <td></td>
+                </tr>
+            </tr>
+        </table>
+        <table class="benchmarks_score_details">
+            <tr>
+                <p class="margin_error">
+                    The margin of error (e.g., +/- 0.05) represents the possible variation in the score, meaning the true value likely falls within +/- 0.05 of the reported score; a smaller margin indicates higher confidence and precision, while a larger margin suggests greater uncertainty and variability in the data.
+                </p>
+            </tr>
+        </table>
+        <div style="height: 10px;"></div>
+        {% for metric_name, metric_value in metrics.items() %}
+            {% if metric_name in metrics_meta_data %}
+                <table class="benchmarks_score_details"
+                       style="page-break-inside: avoid;
+                              break-inside: avoid">
+                    <tr>
+                        <td style="font-weight: bold; width: 70%;">{{ metrics_meta_data[metric_name].get("name",metric_name) }}</td>
+                        <td>{{ metric_value }}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 70%;">{{ metrics_meta_data[metric_name].get('description', '') }}</td>
+                        <td></td>
+                    </tr>
+                </table>
+                <div style="height: 15px;"></div>
+            {% endif %}
+        {% endfor %}
+        {% set methodology_details = meta_data_based_on_id.get(card_id, {}).get("Methodology")%}
+        <table class="benchmark_details">
+            <tr>
+                <td style="padding: 30px 0 10px 0;">
+                    <p class="medium benchmark">Methodology</p>
+                </td>
+            </tr>
+            <tr>
+                <td class="meta-value">
+                    <p class="margin_error medium">
+                        We now outline the methodology used for collecting {{ metric_card_name_translation.get(card_name, card_name) }} and the details of the metrics computed using this dataset.
+                    </p>
+                </td>
+            </tr>
+            {% if methodology_details is mapping %}
+                {% for meta_data_name, meta_data_value in methodology_details.items() %}
+                    {% if meta_data_name != "Desired_score" and  meta_data_name != "Main Score" %}
+                        <tr>
+                            <td class="meta-name">{{ meta_data_name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="meta-value">{{ meta_data_value }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        </table>
+        <div style="height: 40px;"></div>
+        <table class="benchmarks_page_score">
+            <tr>
+                <td>
+                    <p class="medium bold">Benchmark Details</p>
+                </td>
+            </tr>
+            <tr>
+                <td class="meta-value">
+                    <p class="margin_error medium">
+                        In this section we outline the details of the {{ metric_card_name_translation.get(card_name, card_name) }} which was used for this testing.
+                    </p>
+                </td>
+            </tr>
+        </table>
+        <table class="benchmarks_page_score">
+            {% set benchmark_details = meta_data_based_on_id.get(card_id, {}).get("Benchmark Details") %}
+            {% for benchmark_detail_name, benchmark_detail_value in benchmark_details.items() %}
+                {% if benchmark_detail_name not in ['ID', 'Overview', 'Name'] %}
+                    <tr>
+                        <td>{{ benchmark_detail_name }}</td>
+                        <td>
+                            {% if benchmark_detail_value is iterable and benchmark_detail_value is not string %}
+                                {% if benchmark_detail_value[0] is mapping %}
+                                    {% for item in benchmark_detail_value %}
+                                        {% for key, value in item.items() %}
+                                            {{ value }}
+                                            {% if not loop.last %},{% endif %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% else %}
+                                    {{ benchmark_detail_value | join(", ") }}
+                                {% endif %}
+                            {% else %}
+                                {{ benchmark_detail_value }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+        {% set excluded_data = ["Benchmark Details", "Benchmark Summary", "Methodology"] %}
+        {% for meta_data_title, meta_data_items in meta_data_based_on_id[card_id].items() %}
+            <table class="benchmark_details">
+                {% if meta_data_title not in excluded_data %}
+                    <tr>
+                        <td style="padding: 30px 0 10px 0;">
+                            <p class="medium benchmark">{{ meta_data_title }}</p>
+                        </td>
+                    </tr>
+                    {% if meta_data_title == "Purpose and Intended Users" %}
+                        <tr>
+                            <td>
+                                <p class="margin_error medium">
+                                    In this section we outline the purpose and intended use of {{ metric_card_name_translation.get(card_name, card_name) }}
+                                </p>
+                            </td>
+                        </tr>
+                    {% elif meta_data_title == "Data" %}
+                        <tr>
+                            <td>
+                                <p class="margin_error medium">
+                                    This section outlines the details of the data present in {{ metric_card_name_translation.get(card_name, card_name) }}
+                                </p>
+                            </td>
+                        </tr>
+                    {% elif meta_data_title == "Risks" %}
+                        <tr>
+                            <td>
+                                <p class="margin_error medium">
+                                    The details of the different risk categories covered by {{ metric_card_name_translation.get(card_name, card_name) }} are given below.
+                                </p>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td>
+                                <p></p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                    {% if meta_data_items is mapping %}
+                        {% for meta_data_name, meta_data_value in meta_data_items.items() %}
+                            <tr>
+                                <td class="meta-name">{{ meta_data_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="meta-value">{{ meta_data_value }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                {% endif %}
+            </table>
+        {% endfor %}
+    {% endfor %}
+    <div style="height: 15px;"></div>
+    <p class="small bold">{{ risks_intro_conclusion.get(risk_dim, {}).get("conclusion","") }}</p>
+    <div style="height: 40px;"></div>
+
+{% endfor %}

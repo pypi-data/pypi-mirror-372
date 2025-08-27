@@ -1,0 +1,104 @@
+<h1>Score Snapshot</h1>
+<article id="metric details">
+    <h3></h3>
+</article>
+<br />
+<p class="medium">Here is a summary of the key results of the testing.</p>
+<br>
+<p class="margin_error">
+    Note: The Score column shows the actual score achieved by the LLM, while the Percentile Rank indicates how the model compares to other leading models selected by IBM. For example, a rank of 75 means the model outperformed 75% of its peers. Thresholds below each bar define performance categories and may be default or user-defined. If lower scores indicate better performance, custom thresholds are automatically adjusted to maintain consistent evaluation logic.
+</p>
+<br>
+
+<table class="snapshot">
+    <tr>
+        <th style="width: 40%; font-size: 14px;">Benchmark</th>
+        <th style="width: 30%;font-size: 14px;text-align:center;">Score</th>
+        <th style="width: 30%;font-size: 14px;padding-left: 30px;">Percentile Rank</th>
+    </tr>
+    {% for risk_dim, cards in executive_summary_data.items() %}
+        <tr>
+            <td>
+                <p class="medium bold" style=" padding: 20px 0 5px 0; font-size: 10px;">{{ risk_dim }}</p>
+            </td>
+        </tr>
+        {% for card_name, metrics in cards.items() %}
+            {% set score_category = metrics_interpretation.get(risk_dim,{}).get(card_name,{}).get("category") %}
+            {% set percentile_value = metrics_interpretation.get(risk_dim,{}).get(card_name,{}).get("percentile") %}
+            {% set card_name_translation = metric_card_name_translation.get(card_name,card_name) %}
+
+            <tr style="page-break-inside: avoid;">
+                {% if score_category == "RED" %}
+                    <td style="vertical-align: text-top;
+                               padding-bottom: 15px;
+                               padding-top: 30px">
+                        <span>
+                            <img src={{error_svg_path}}
+                                 width="11px"
+                                 height="11px">
+                        </span> {{ card_name_translation }}
+                    </td>
+                {% elif score_category == "GREEN" %}
+                    <td style="vertical-align: text-top;
+                               padding-bottom: 15px;
+                               padding-top: 30px">
+                        <span>
+                            <img src={{checkmark_svg_path}}
+                                 width="11px"
+                                 height="11px">
+                        </span> {{ card_name_translation}} 
+                    </td>
+                {% elif score_category == "ORANGE" %}
+                    <td style="vertical-align: text-top;
+                               padding-bottom: 15px;
+                               padding-top: 30px">
+                        <span>
+                            <img src={{warning_svg_path}}
+                                 width="11px"
+                                 height="11px">
+                        </span> {{ card_name_translation }}
+                    </td>
+                {% else %}
+                    <td style=" padding-top: 30px;">{{ card_name_translation }}</td>
+                {% endif %}
+                <td style="vertical-align: text-top;
+                           padding-bottom: 15px;
+                           padding-top: 30px;
+                           text-align:center;">{{ metrics.get("score") }} <br> (Percentile score: {{percentile_value}})</td>
+                {% if percentile_value is not none %}
+                    {% set percentile_ranges_lower_upper = metrics_interpretation.get(risk_dim,{}).get(card_name,{}).get("percentile_ranges_lower_upper") %}
+                    {% set red_segment_width = percentile_ranges_lower_upper[0]  %}
+                    {% set yellow_segment_width = percentile_ranges_lower_upper[1] - percentile_ranges_lower_upper[0] %}
+                    {% set green_segment_width = 100 - percentile_ranges_lower_upper[1] %}
+                    <td style="padding-top: 30px; padding-left: 30px;">
+                        <div class="score-bar-container">
+                            <div class="score-indicator-container"
+                                 style="left: {{ percentile_value | default(0) }}%">
+                                <div class="score-value">{{ percentile_value }}</div>
+                                <div class="indicator-arrow"></div>
+                            </div>
+                            <div class="score-bar">
+                                <div class="segment red"style="width: {{ red_segment_width | default(25) }}%"></div>
+                                <div class="segment yellow"style="width: {{ yellow_segment_width | default(50) }}%"></div>
+                                <div class="segment green"style="width: {{ green_segment_width | default(25) }}%"></div>
+                            </div>
+                            <div class="range-labels">
+                                <div class="range-label" style="left: 0%;">0</div>
+                                <div class="range-label"style="left: {{ percentile_ranges_lower_upper[0]  | default(25) }}%">{{ percentile_ranges_lower_upper[0] | default(25) }}</div>
+                                <div class="range-label"style="left: {{ percentile_ranges_lower_upper[1] | default(75) }}%">{{ percentile_ranges_lower_upper[1] | default(75) }}
+                                </div>
+                                <div class="range-label" style="left: 100%;">100</div>
+                            </div>
+                        </div>
+                    </td>
+                {% else %}
+                    <td style="padding-top: 30px; padding-left: 30px;">Not Applicable</td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+    {% endfor %}
+</table>
+<p class="margin_error">
+    Note: If the percentile rank column shows "Not Applicable" for a risk or benchmark, it means there was no reference data available for comparison.
+</p>
+<br>
