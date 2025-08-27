@@ -1,0 +1,119 @@
+{#
+Macros for rendering table paginated with HTMX.
+#}
+{% macro search(form, target) %}
+    <form id="search" action="{{ url_for(request.url_rule.endpoint, **request.view_args) }}" method="POST" class="ui form">
+        {{ form.hidden_tag() if form.hidden_tag }}
+        <input type="hidden" name="page" value="{{ form.page.data }}">
+        <div class="ui fluid action input icon">
+            <input
+                type="search"
+                placeholder="{{ _("Search…") }}"
+                name="{{ form.query.name }}"
+                value="{{ form.query.data }}"
+                hx-post="{{ url_for(request.url_rule.endpoint, **request.view_args) }}"
+                hx-trigger="keyup changed delay:500ms, search"
+                hx-target="{{ target }}"
+                hx-swap="outerHTML"
+                hx-indicator=".search-button"
+            />
+            <button
+                type="submit"
+                class="ui icon button search-button"
+                title="{{ _("Search") }}"
+                hx-post="{{ url_for(request.url_rule.endpoint, **request.view_args) }}"
+                hx-target="{{ target }}"
+                hx-swap="outerHTML"
+                hx-indicator=".search-button"
+            >
+                <i class="search icon"></i>
+            </button>
+            {% if caller is defined %}
+                {{ caller() }}
+            {% endif %}
+        </div>
+    </form>
+{% endmacro %}
+
+{% macro button(form, id, page) %}
+    {% if page is none %}
+        <span class="icon disabled ui button no-radius">
+            {{ caller() }}
+        </span>
+    {% else %}
+        <button
+            type="submit"
+            class="icon ui button"
+            hx-post="{{ url_for(request.url_rule.endpoint, **request.view_args) }}"
+            hx-target="closest table"
+            hx-swap="outerHTML"
+            name="page"
+            value="{{ page }}"
+        >
+            {{ caller() }}
+        </button>
+    {% endif %}
+{% endmacro %}
+
+{% macro pagination(form) %}
+    <div class="ui right floated buttons pagination">
+        <form id="{{ form.__class__.__name__|lower }}" action="{{ url_for(request.url_rule.endpoint, **request.view_args) }}" method="POST">
+            {{ form.hidden_tag() if form.hidden_tag }}
+            <input type="hidden" name="query" value="{{ form.query.data }}">
+
+            <span class="icon disabled ui button no-radius">
+                {% trans %}Page{% endtrans %}
+            </span>
+            {% if form.page.data > 1 %}
+                {% call button(form, "previous", form.page.data - 1) %}
+                    <i class="left chevron icon"></i>
+                {% endcall %}
+            {% else %}
+                {% call button(form, "previous", none) %}
+                    <i class="left chevron icon"></i>
+                {% endcall %}
+            {% endif %}
+            {% if form.page.data > 1 %}
+                {% call button(form, "first", 1) %}
+                    {{ 1|numberformat }}
+                {% endcall %}
+            {% endif %}
+            {% if form.page.data > 2 %}
+                {% call button(form, "ellipsis-previous", none) %}
+                    …
+                {% endcall %}
+            {% endif %}
+            <span class="ui button active">
+                {{ form.page.data|numberformat }}
+            </span>
+            {% if form.page.data < form.page_max - 1 %}
+                {% call button(form, "ellipsis-next", none) %}
+                    …
+                {% endcall %}
+            {% endif %}
+            {% if form.page.data < form.page_max %}
+                {% call button(form, "last", form.page_max) %}
+                    {{ form.page_max|numberformat }}
+                {% endcall %}
+            {% endif %}
+            {% if form.page.data < form.page_max %}
+                {% call button(form, "next", form.page.data + 1) %}
+                    <i class="right chevron icon"></i>
+                {% endcall %}
+            {% else %}
+                {% call button(form, "next", none) %}
+                    <i class="right chevron icon"></i>
+                {% endcall %}
+            {% endif %}
+        </form>
+    </div>
+    <div class="ui left floated">
+        <span class="disabled ui button">
+            {% trans nb_items=form.nb_items, nb_items_formatted=form.nb_items|numberformat %}
+                {{ nb_items_formatted }} item
+                {% pluralize %}
+                {{ nb_items_formatted }} items
+            {% endtrans %}
+        </span>
+    </div>
+{% endmacro %}
