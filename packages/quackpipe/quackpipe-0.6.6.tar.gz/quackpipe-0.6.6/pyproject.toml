@@ -1,0 +1,81 @@
+[project]
+name = "quackpipe"
+version = "0.6.6"
+requires-python = ">=3.12"
+description = "A configuration-driven and programmatic ETL helper for DuckDB."
+license = {text = "MIT"}
+readme = "README.md"
+dependencies = [
+    "pyyaml",
+    "duckdb>=0.9.0",
+    "pandas",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "quackpipe[fixtures]",
+    "ipdb"
+]
+fixtures = [
+    "testcontainers[postgres,minio,mysql,azurite]==4.12.0",
+    "sqlalchemy",
+    "psycopg2-binary", # for some reason is not included on the testcontainers[postgres]
+    "httpx"
+]
+lint = [
+    "ruff"
+]
+logging = [
+    "structlog>=23.0.0",
+    "colorlog>=6.0.0",
+]
+postgres = ["psycopg"]
+mysql = ["mysql-connector-python"]
+s3 = ["pyarrow"]
+kafka = ["confluent-kafka"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+src = ["src"]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+]
+# Allow logging format strings
+ignore = [
+    "G201",
+    "G202",
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+]
+
+[tool.ruff.format]
+# Use double quotes
+quote-style = "double"
+
+# Indent with spaces
+indent-style = "space"
+
+[project.scripts]
+quackpipe = "quackpipe.cli:main"
+
