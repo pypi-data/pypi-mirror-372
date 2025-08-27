@@ -1,0 +1,206 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "asyncz"
+description = "The scheduler that nobody wants but every application needs."
+long_description = "The scheduler that nobody wants but every application needs."
+readme = "README.md"
+requires-python = ">=3.10"
+dynamic = ['version']
+authors = [{ name = "Tiago Silva", email = "tiago.arasilva@gmail.com" }]
+classifiers = [
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development",
+    "Typing :: Typed",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Framework :: AsyncIO",
+    "Framework :: AnyIO",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "cryptography",
+    "pydantic>=2.5.3,<3.0.0",
+]
+keywords = [
+    "asgi",
+    "asyncz",
+    "pydantic",
+    "starlette",
+    "fastapi",
+    "apscheduler",
+    "framework",
+    "scheduler",
+    "cron",
+]
+
+[project.urls]
+Homepage = "https://github.com/dymmond/asyncz"
+Documentation = "https://asyncz.dymmond.com/"
+Changelog = "https://asyncz.dymmond.com/release-notes/"
+Funding = "https://github.com/sponsors/tarsil"
+Source = "https://github.com/dymmond/asyncz"
+
+
+[tool.hatch.envs.default]
+dependencies = ["pre-commit>=3.0.0,<5.0.0", "ipdb", "types-tzlocal"]
+
+[project.optional-dependencies]
+localtime=["tzlocal"]
+loguru=["loguru>=0.7.0,<0.8.0"]
+testing = [
+    "asyncz[localtime,loguru]",
+    "pymongo>=4.3.3,<5.0.0",
+    "pytest>=7.1.3,<9.0.0",
+    "pytest-cov >=2.12.0,<7.0.0",
+    "pytest-asyncio >=1.0,<2.0.0",
+    "pytest-loguru>=0.2.0,<1",
+    "redis>=4.4.0,<7.0.0",
+    "mypy>=0.982,<2.0.0",
+    "esmerald>=3.7.5",
+    "starlette",
+    "lilya",
+    "sqlalchemy",
+    "httpx",
+    "pytz>=2022.6",
+    "freezegun"
+]
+
+[tool.hatch.envs.default.scripts]
+clean_pyc = "find . -type f -name \"*.pyc\" -delete"
+clean_pycache = "find . -type d -name \"*__pycache__*\" -delete"
+
+[tool.hatch.envs.test]
+features = ["testing"]
+
+[tool.hatch.envs.test.scripts]
+# needs docker services running
+check_types = "mypy -p asyncz"
+
+
+[tool.hatch.envs.hatch-test]
+features = ["testing"]
+[tool.hatch.envs.hatch-test.env-vars]
+ASYNCZ_STORE_ENCRYPTION_KEY = "{matrix:key:''}"
+
+
+[[tool.hatch.envs.hatch-test.matrix]]
+key = ["89389432893482832agasfsasdafjkdfasjkfdajkadsffdsiasiofsdifdlkalkdkfaskjfdfsakj"]
+
+[[tool.hatch.envs.hatch-test.matrix]]
+a = ["a"]
+
+
+[tool.hatch.envs.docs]
+dependencies = [
+    "mkautodoc >=0.2.0,<0.3.0",
+    "mkdocs >=1.1.2,<2.0.0",
+    "mkdocs-material >=9.0.13,<10.0.0",
+    "mdx-include >=1.4.2,<2.0.0",
+    "mkdocs-macros-plugin >=1.0.0,<2.0.0",
+    "mkdocstrings>=0.20.0,<0.30.0",
+    "pyyaml >=6.0,<7.0.0",
+]
+[tool.hatch.envs.docs.scripts]
+build = "mkdocs build"
+serve = "mkdocs serve --dev-addr localhost:8000"
+
+[tool.hatch.envs.hatch-static-analysis]
+# disables custom ruff rules, required to align with pre-commit
+config-path = "none"
+dependencies = ["ruff==0.12.5"]
+
+
+[tool.hatch.version]
+path = "asyncz/__init__.py"
+
+[tool.mypy]
+plugins = [
+  "pydantic.mypy"
+]
+warn_unused_configs = true
+warn_unreachable = true
+warn_return_any = true
+strict = true
+disallow_untyped_decorators = true
+disallow_any_generics = false
+implicit_reexport = false
+show_error_codes = true
+disallow_incomplete_defs = true
+disable_error_code = "attr-defined,no-untyped-call"
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[tool.ruff]
+line-length=99
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "C", "B", "I", "UP", "SIM", "FA"]
+ignore = ["E501", "B008", "C901", "B026", "UP006", "UP038", "UP045", "UP007"]
+
+exclude = ["docs_src/*", ".pdbrc"]
+
+[tool.ruff.lint.isort]
+known-third-party = ["esmerald", "pydantic", "starlette"]
+
+
+[tool.ruff.lint.pyupgrade]
+keep-runtime-typing = true
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 99
+max-doc-length = 120
+
+[[tool.mypy.overrides]]
+module = "asyncz.tests.*"
+ignore_missing_imports = true
+check_untyped_defs = true
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "docs_src.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+    "sqlalchemy.*",
+    "asyncpg",
+    "alembic",
+    "sqlalchemy_utils.*",
+    "slugify",
+    "pytz",
+    "backports.*"
+]
+ignore_missing_imports = true
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+
+[tool.pytest.ini_options]
+addopts = ["--strict-config", "--strict-markers"]
+xfail_strict = true
+junit_family = "xunit2"
+
+[tool.hatch.build.targets.sdist]
+include = ["/asyncz"]
