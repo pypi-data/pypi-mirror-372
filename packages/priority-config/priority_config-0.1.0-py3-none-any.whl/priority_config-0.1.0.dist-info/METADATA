@@ -1,0 +1,157 @@
+Metadata-Version: 2.4
+Name: priority-config
+Version: 0.1.0
+Summary: Universal config resolver with precedence: direct → config → env → default
+Author-email: Yusuke Watanabe <Yusuke.Watanabe@scitex.ai>
+Maintainer-email: Yusuke Watanabe <Yusuke.Watanabe@scitex.ai>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/ywatanabe1989/priority-config
+Project-URL: Repository, https://github.com/ywatanabe1989/priority-config
+Project-URL: Documentation, https://github.com/ywatanabe1989/priority-config
+Keywords: configuration,config,environment,precedence,settings
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Systems Administration
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: build>=0.10.0; extra == "dev"
+Requires-Dist: twine>=4.0.0; extra == "dev"
+Dynamic: license-file
+
+# Priority Config
+
+Universal configuration resolver with clean precedence hierarchy: **direct → config → env → default**
+
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![PyPI](https://img.shields.io/pypi/v/priority-config.svg)](https://pypi.org/project/priority-config/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Installation
+
+```bash
+pip install priority-config
+```
+
+## Quick Start
+
+```python
+from priority_config import PriorityConfig
+
+# Create config resolver
+config = PriorityConfig(
+    config_dict={"port": 3000, "debug": True},
+    env_prefix="MYAPP_"
+)
+
+# Resolve with precedence
+port = config.resolve("port", direct_value=None, default=8000, type=int)
+# Returns: 3000 (from config_dict)
+
+debug = config.resolve("debug", direct_value=False, default=True, type=bool)
+# Returns: False (direct_value takes precedence)
+
+# Environment variables (MYAPP_HOST) override config
+host = config.resolve("host", default="localhost")
+# Returns: value from MYAPP_HOST env var, or "localhost"
+```
+
+## Features
+
+- **Clean Precedence**: `direct → config → env → default`
+- **Automatic Type Conversion**: `str`, `int`, `float`, `bool`, `list`
+- **Sensitive Data Masking**: Auto-detects and masks passwords, keys, tokens
+- **Resolution Logging**: Track where each value came from
+- **Zero Dependencies**: Pure Python, works with 3.8+
+
+## Usage Examples
+
+### Django-style Configuration
+
+```python
+django_config = PriorityConfig({}, env_prefix="DJANGO_", auto_uppercase=True)
+debug = django_config.resolve("debug", default=False, type=bool)
+secret = django_config.resolve("secret_key", default="", mask=True)
+```
+
+### Custom Application
+
+```python
+import yaml
+
+with open("config.yaml") as f:
+    config_data = yaml.safe_load(f)
+
+app_config = PriorityConfig(config_data, env_prefix="MYAPP_")
+port = app_config.resolve("port", default=8000, type=int)
+workers = app_config.resolve("workers", default=4, type=int)
+```
+
+### Resolution Logging
+
+```python
+config = PriorityConfig({"api_url": "https://api.dev"}, "APP_")
+
+# Resolve multiple values
+api_url = config.resolve("api_url", default="https://api.prod")
+timeout = config.resolve("timeout", default=30, type=int)
+api_key = config.resolve("api_key", default="", mask=True)
+
+# See resolution log
+config.print_resolutions()
+```
+
+Output:
+```
+Configuration Resolution Log:
+--------------------------------------------------
+api_url              = https://api.dev      (config)
+timeout              = 30                  (default)
+api_key              = te**key             (env:APP_API_KEY)
+```
+
+## API Reference
+
+### `PriorityConfig(config_dict=None, env_prefix="", auto_uppercase=True)`
+
+- `config_dict`: Dictionary with configuration values
+- `env_prefix`: Prefix for environment variables (e.g., "MYAPP_")
+- `auto_uppercase`: Whether to uppercase keys for env lookup
+
+### `resolve(key, direct_val=None, default=None, type=str, mask=None)`
+
+- `key`: Configuration key to resolve
+- `direct_val`: Direct value (highest precedence)
+- `default`: Default value if not found elsewhere
+- `type`: Type conversion (`str`, `int`, `float`, `bool`, `list`)
+- `mask`: Override automatic masking of sensitive values
+
+### `print_resolutions()`
+
+Print resolution log showing where each value came from.
+
+### `clear_log()`
+
+Clear the resolution log.
+
+## License
+
+MIT
+
+## Contact
+Yusuke.Watanabe@scitex.ai
+
+<!-- EOF -->
