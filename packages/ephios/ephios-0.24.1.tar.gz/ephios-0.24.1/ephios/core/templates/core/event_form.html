@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load logentries %}
+{% load bootstrap %}
+{% load crispy_forms_filters %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}
+    {% if event.id %}
+        {% translate "Edit event" %}
+    {% else %}
+        {% translate "Create new event" %}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if inactive_events %}
+        {% for event in inactive_events %}
+            {% translate "You have an unsaved event" as unsaved_message %}
+            {% translate "View" as view_message %}
+            {% render_alert unsaved_message|add:" ("|add:event.title|add:"). <a class='btn btn-light' href='"|add:event.get_absolute_url|add:"'>"|add:view_message|add:"</a>"|safe %}
+        {% endfor %}
+    {% endif %}
+    <div class="page-header">
+        {% if event.id %}
+            <h1>{% translate "Edit event" %}</h1>
+        {% else %}
+            <h1>
+                {% blocktranslate trimmed with title=eventtype.title %}
+                    Create new {{ title }}
+                {% endblocktranslate %}
+            </h1>
+        {% endif %}
+    </div>
+    <form method="post" class="form">
+        {% csrf_token %}
+        {{ form.title|as_crispy_field }}
+        {% if form.type %}
+            {{ form.type|as_crispy_field }}
+        {% endif %}
+        {{ form.description|as_crispy_field }}
+        {{ form.location|as_crispy_field }}
+
+        <div class="card mb-3">
+            <div class="card-header" data-bs-toggle="collapse" data-bs-target="#advancedSettings">
+                <a href="#">{% translate "Permissions" %}</a>
+            </div>
+            <div id="advancedSettings" class="collapse">
+                <div class="card-body">
+                    {{ form.visible_for|as_crispy_field }}
+                    {{ form.responsible_groups|as_crispy_field }}
+                    {{ form.responsible_users|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+
+        {% for plugin_form in plugin_forms %}
+            {{ plugin_form }}
+        {% endfor %}
+
+        <div class="form-group">
+            {% if event.id %}
+                <a role="button" class="btn btn-secondary"
+                   href="{{ event.get_absolute_url }}">{% translate "Back" %}</a>
+                <button type="submit" class="btn btn-primary float-end">{% translate "Save" %}</button>
+            {% else %}
+                <a role="button" class="btn btn-secondary"
+                   href="{% url "core:event_list" %}">{% translate "Cancel" %}</a>
+                <button type="submit" class="btn btn-primary float-end">{% translate "Next" %}</button>
+            {% endif %}
+        </div>
+    </form>
+{% endblock %}

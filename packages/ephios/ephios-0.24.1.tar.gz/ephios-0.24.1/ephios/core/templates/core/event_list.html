@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load utils %}
+{% load ephios_crispy %}
+{% load crispy_forms_filters %}
+{% load cache %}
+{% load static %}
+{% load i18n %}
+{% load event_extras %}
+{% load humanize %}
+{% block title %}
+    {% translate "Events" %}
+{% endblock %}
+
+{% block content %}
+    <style nonce="{{ request.csp_nonce }}">
+        {% cache 900 eventtype_colors_css %}
+            {% eventtype_colors %}
+        {% endcache %}
+    </style>
+
+    <div class="page-header">
+        <h1>{% translate "Events" %}
+            <small class="float-end">
+                <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#filter-collapse" aria-expanded="false" aria-controls="filter-collapse">
+                    {% translate "Filter" %}
+                </button>
+                <div class="btn-group">
+                    <a class="btn btn-sm {% if mode == "list" %}btn-secondary disabled{% else %}btn-outline-secondary{% endif %}"
+                       {% if filter_form.was_submitted %}
+                           href="{% querystring mode="list" %}"
+                       {% else %}
+                                {# If going back to the list from an unfiltered calendar with non-now date, reset the date #}
+                           href="{% querystring mode="list" date=None %}"
+                       {% endif %}
+                    ><span class="fa fa-list"></span></a>
+
+                    <a class="btn btn-sm {% if mode == "calendar" %}btn-secondary disabled{% else %}btn-outline-secondary{% endif %}"
+                       href="{% querystring mode="calendar" %}"
+                    ><span class="fa fa-calendar-alt"></span></a>
+
+                    <a class="btn btn-sm {% if mode == "day" %}btn-secondary disabled{% else %}btn-outline-secondary{% endif %}"
+                       href="{% querystring mode="day" %}"
+                    ><span class="fa fa-calendar-day"></span></a>
+                </div>
+            </small>
+        </h1>
+        <div class="clearfix">{# clear the float-end above #}</div>
+        <form method="GET" id="filter-form">
+            {# show the filter if data has been submitted and it's not forced to hide, or if it has errors #}
+            <div id="filter-collapse"
+                 class="row collapse {% if filter_form.was_submitted and not request.GET.hide_filter or filter_form.errors %}show{% endif %}">
+                <div class="col-6 col-md-4 col-lg-3">
+                    {% crispy_field filter_form.state %}
+                    {% crispy_field filter_form.query show_labels=False %}
+                </div>
+                {% crispy_field filter_form.types wrapper_class="col-6 col-md-4 col-lg-3 d-flex flex-column" show_labels=True %}
+                {% if mode != "calendar" %}
+                    <div class="col-6 col-md-4 col-lg-3">
+                        {% crispy_field filter_form.direction show_labels=True %}
+                        {% crispy_field filter_form.date show_labels=False %}
+                    </div>
+                {% else %}
+                    <div class="col-6 col-md-4 col-lg-3 d-flex flex-column justify-content-end">
+                        <div class="d-none">
+                            <input name="direction" value="from"/>
+                        </div>
+                        {% crispy_field filter_form.date show_labels=True %}
+                    </div>
+                {% endif %}
+                <div class="mb-3 gap-3 col-6 col-md-12 col-lg-3 d-flex flex-column flex-md-row flex-lg-column justify-content-end justify-content-md-start justify-content-lg-end">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="fa fa-funnel"></span> {% translate "Apply" %}
+                    </button>
+                    {# preserve date on reset in calendar mode #}
+                    <a class="btn btn-secondary"
+                       href="?{% if mode == "calendar" %}date={{ request.GET|get:"date"|default:"" }}{% endif %}">{% translate "Reset" %}</a>
+                </div>
+            </div>
+        </form>
+        {% if mode == "calendar" or mode == "day" %}
+            {% if perms.core.add_event %}
+                {% include "core/fragments/event_list_add_event_button.html" %}
+            {% endif %}
+            <div class="d-flex justify-content-between mt-2">
+                <a class="btn btn-secondary"
+                   href="{% querystring date=previous_date|date:"Y-m-d" %}"
+                ><i class="fas fa-arrow-left"></i>
+                    {% if mode == "calendar" %}
+                        {{ previous_date|date:"F Y" }}
+                    {% elif mode == "day" %}
+                        {{ previous_date|date:"d. M" }}
+                    {% endif %}
+                </a>
+
+                <h3 class="mx-3">
+                    {% if mode == "calendar" %}
+                        {{ date|date:"F Y" }}
+                    {% elif mode == "day" %}
+                        {{ date|date:"l, j. F Y" }}
+                    {% endif %}
+                </h3>
+
+                <a class="btn btn-secondary"
+                   href="{% querystring date=next_date|date:"Y-m-d" %}"
+                >
+                    {% if mode == "calendar" %}
+                        {{ next_date|date:"F Y" }}
+                    {% elif mode == "day" %}
+                        {{ next_date|date:"d. M" }}
+                    {% endif %}
+                    <i class="fas fa-arrow-right"></i></a>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if mode == "list" %}
+        {% include "core/fragments/event_list_list_mode.html" %}
+    {% elif mode == "calendar" %}
+        {{ calendar }}
+    {% elif mode == "day" %}
+        {% include "core/fragments/event_list_day_mode.html" %}
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,192 @@
+{% load signal_extras %}
+{% load settings_extras %}
+{% load statici18n %}
+{% load i18n %}
+{% load static %}
+{% load compress %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="created" content="{% now "c" %}">
+        <title>{% block title %}{{ platform_name }}{% endblock %} - {{ platform_name }}</title>
+        <link rel="shortcut icon" type="image/x-icon" href="{% static "appicon-svg-prod.svg"|as_brand_static_path %}">
+        <link rel="manifest" href="/manifest.json">
+
+    <!-- Add to homescreen for Chrome on Android -->
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="application-name" content="{{ platform_name }}">
+
+    <!-- Chrome for Android theme color -->
+        <meta name="theme-color" content="{{ brand_color }}">
+
+    <!-- Add to homescreen for Safari on iOS -->
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="{{ platform_name }}">
+        <meta name="apple-mobile-web-app-status-bar-style" content="#fff">
+
+        {% for icon in PWA_APP_ICONS %}
+            <link rel="apple-touch-icon" href="{{ icon.src }}" sizes="{{ icon.sizes }}">
+        {% endfor %}
+
+        {% for splash in PWA_APP_SPLASH_SCREEN %}
+            <link href="{{ splash.src }}" media="{{ splash.media }}" rel="apple-touch-startup-image"/>
+        {% endfor %}
+
+    <!-- Tile for Win8 -->
+        <meta name="msapplication-TileColor" content="#fff">
+        {% with PWA_APP_ICONS|last as icon %}
+            <meta name="msapplication-TileImage" content="{{ icon.src }}">
+            <link rel="icon" sizes="{{ icon.sizes }}" href="{{ icon.src }}">
+        {% endwith %}
+
+    {# main.scss contains custom ephios styles, bootstrap and #}
+    {# select2-bootstrap theme (which it why it must come after select2) #}
+        {% compress css %}
+            <link type="text/css" rel="stylesheet" href="{% static "select2/css/select2.min.css" %}">
+            <link type="text/css" rel="stylesheet" href="{% static "fontawesome/css/all.css" %}">
+            <link type="text/x-scss" href="{% static 'ephios/scss/main.scss' %}" rel="stylesheet">
+            {% block css %}{% endblock %}
+        {% endcompress %}
+
+        {% compress js %}
+            {% if DEBUG %}
+                <script type="text/javascript" src="{% static "vuejs/vue.global.js" %}"></script>
+            {% else %}
+                <script type="text/javascript" src="{% static "vuejs/vue.global.prod.js" %}"></script>
+            {% endif %}
+            <script type="text/javascript" src="{% static "jquery/js/jquery-3.7.1.min.js" %}"></script>
+            <script type="text/javascript" src="{% static "bootstrap/js/bootstrap.bundle.min.js" %}"></script>
+            <script type="text/javascript" src="{% static "select2/js/select2.js" %}"></script>
+            <script type="text/javascript" src="{% static "django_select2/django_select2.js" %}"></script>
+            <script type="text/javascript" src="{% statici18n LANGUAGE_CODE %}"></script>
+            <script type="text/javascript" src="{% static "select2/js/i18n/"|add:LANGUAGE_CODE|add:".js" %}"></script>
+            <script type="text/javascript" src="{% static "ephios/js/formset/formset.js" %}"></script>
+            <script type="text/javascript" src="{% static "ephios/js/main.js" %}"></script>
+            {% block javascript %}{% endblock %}
+        {% endcompress %}
+        {% collect_insert_html_signal "head" %}
+        {% block html_head %}
+        {% endblock %}
+    </head>
+
+    <body data-pwa-network="online">
+        <header>
+            <nav class="navbar navbar-expand-lg navbar-light bg-light shadow">
+                <div class="container">
+                    <a class="navbar-brand" href="/">
+                        <img src="{% static "nav_logo.png"|as_brand_static_path %}"
+                             alt="{{ platform_name }}"
+                             class="d-inline-block" width="75">
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                            aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+            {# empty/replace the nav bar block for use in e.g. error page templates #}
+                    {% block main_nav %}
+                        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                            {% if user.is_authenticated %}
+                                <ul class="navbar-nav me-auto">
+                                    {% with url_name=request.resolver_match.url_name %}
+                                        <li class="nav-item {% if url_name == "index" %}active{% endif %}">
+                                            <a class="nav-link" href="{% url "core:home" %}">{% translate "Home" %}</a>
+                                        </li>
+                                        <li class="nav-item {% if url_name == "event_list" %}active{% endif %}">
+                                            <a class="nav-link"
+                                               href="{% url "core:event_list" %}">{% translate "Events" %}</a>
+                                        </li>
+                                        {% for item in nav %}
+                                            <li class="nav-item {% if item.active %}active{% endif %}"
+                                                {% include "core/fragments/attrs.html" with item=item %}>
+                                                <a class="nav-link" href="{{ item.url }}">{{ item.label }}</a>
+                                            </li>
+                                        {% endfor %}
+                                        {% for group, items in nav_groups.items %}
+                                            <li class="nav-item dropdown">
+                                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown-{{ group }}"
+                                                   role="button"
+                                                   data-bs-toggle="dropdown" aria-expanded="false">
+                                                    {{ group }}
+                                                </a>
+                                                <div class="dropdown-menu" aria-labelledby="navbarDropdownAccount">
+                                                    {% for item in items %}
+                                                        <a class="dropdown-item" href="{{ item.url }}"
+                                                           {% include "core/fragments/attrs.html" with item=item %}>
+                                                            {{ item.label }}
+                                                        </a>
+                                                    {% endfor %}
+                                                </div>
+                                            </li>
+                                        {% endfor %}
+                                    {% endwith %}
+                                </ul>
+                                <ul class="navbar-nav ms-auto">
+                                    {% collect_insert_html_signal "navbar" %}
+                                    <li class="nav-item dropdown">
+                                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAccount" role="button"
+                                           data-bs-toggle="dropdown" aria-expanded="false">
+                                            {{ user.get_full_name }}
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownAccount">
+                                            {% for item in nav_userprofile %}
+                                                <a class="dropdown-item" {% include "core/fragments/attrs.html" with item=item %}
+                                                   href="{{ item.url }}">{{ item.label }}</a>
+                                            {% endfor %}
+                                            <a class="dropdown-item"
+                                               href="{% url "core:workinghours_own" %}">{% translate "Working hours" %}</a>
+                                            <a class="dropdown-item"
+                                               href="{% url "core:notification_list" %}">{% translate "Notifications" %}</a>
+                                            <a class="dropdown-item"
+                                               href="{% url "core:settings_personal_data" %}">{% translate "Settings" %}</a>
+                                            <a class="dropdown-item" id="logout-link"
+                                               href="{% url "core:oidc_logout" %}">{% translate "Logout" %}</a>
+                                        </div>
+                                    </li>
+                                </ul>
+                            {% endif %}
+                        </div>
+                    {% endblock %}
+                </div>
+            </nav>
+            <div id="unloading-spinner" class="d-none">
+                <div class="spinner-grow" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </header>
+        <div class="container container-main pt-3">
+            <main class="row blur-on-unload">
+                <div class="col-12">
+                    <div id="messages">
+                        {% for message in messages %}
+                            <div class="alert {{ message.tags }} alert-dismissible" role="alert">
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                        {% block messages %}{% endblock %}
+                    </div>
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+            <footer class="row blur-on-unload mt-2">
+                <div class="col-md-12 text-center">
+                    <small>
+                        {% for label, url in footer.items %}
+                            <a href="{{ url }}">{{ label }}</a> ·
+                        {% endfor %}
+                        <span class="text-body-secondary">
+                            {% blocktranslate trimmed with brand='<a href="https://ephios.de/" rel="noreferrer" target="_blank">ephios</a>' %}
+                                powered by {{ brand }}
+                            {% endblocktranslate %}
+                            <samp>v{{ ephios_version|default_if_none:"" }}</samp>
+                        </span>
+                    </small>
+                </div>
+            </footer>
+        </div>
+    </body>
+</html>
