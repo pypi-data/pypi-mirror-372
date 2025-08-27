@@ -1,0 +1,148 @@
+# Stlin - Streamlit Data Lineage Component
+
+A Streamlit component for rendering interactive data lineage graphs from Cognite Data Fusion. Built with React, TypeScript, and React Flow.
+
+## Installation
+
+```bash
+pip install stlin
+```
+
+## Quick Start
+
+```python
+import streamlit as st
+from stlin import render_lineage
+
+# Your lineage data (list of data processes with sources and destinations)
+lineage_data = [
+    {
+        "externalId": "transformation_1",
+        "name": "Process Raw Assets",
+        "query": "SELECT * FROM raw_assets WHERE status = 'active'",
+        "destination": {"type": "raw", "database": "processed", "table": "assets"},
+        "sources": ["raw_assets", "_cdf.assets"],
+        "destinations": ["processed.assets"],
+        "lastFinishedJob": {
+            "status": "success",
+            "startedTime": 1692345600000,
+            "finishedTime": 1692345660000
+        }
+    }
+    # ... more transformations
+]
+
+# Render the component
+selected_data = render_lineage(
+    data=lineage_data,
+    focus_mode=True,
+    side_bar_width=300,
+    height=800
+)
+
+# Handle selection
+if selected_data:
+    st.write("Selected:", selected_data)
+    # Example of returned data structure:
+    # For transformation: [{"type": "Data Process", "subType": "Transformation", "address": "transformation_1", "sources": [...], "destinations": [...], "query": "SELECT ..."}]
+    # For data object: [{"type": "Data Object", "subType": "Staging", "address": "raw_assets", "producedBy": [...], "consumedBy": [...]}]
+```
+
+## API Reference
+
+### `render_lineage`
+
+The main component function for rendering data lineage.
+
+**Parameters:**
+
+- `data` *(list)*: List of transformation dictionaries containing lineage information
+- `focus_mode` *(bool, default=True)*: Whether to show only direct lineage path or full graph
+- `side_bar_width` *(int, default=300)*: Initial width of navigation sidebar in pixels
+- `height` *(int, default=800)*: Height of the component in pixels
+- `key` *(str, optional)*: Unique component key for Streamlit
+
+**Returns:**
+
+- For **data process nodes**: Returns a structured record with:
+  - `type`: "Data Process"
+  - `subType`: "Transformation"
+  - `address`: transformation external ID
+  - `sources`: list of source identifiers
+  - `destinations`: list of destination identifiers
+  - `query`: SQL query or transformation logic
+- For **data object nodes**: Returns a structured record with:
+  - `type`: "Data Object"
+  - `subType`: specific data object type (e.g., "Staging", "Assets", "Data Model View", etc.)
+  - `address`: data object identifier
+  - `producedBy`: list of transformation IDs that produce this data object
+  - `consumedBy`: list of transformation IDs that consume this data object
+- Returns **empty list** if nothing is selected
+
+## Data Format
+
+The component expects transformation data in the following format:
+
+```python
+{
+    "externalId": "unique_transformation_id",
+    "name": "Human Readable Name",
+    "query": "SELECT * FROM source_table",
+    "destination": {
+        "type": "raw",
+        "database": "target_db",
+        "table": "target_table"
+    },
+    "sources": ["source1", "source2"],           # List of source identifiers
+    "destinations": ["dest1", "dest2"],          # List of destination identifiers
+    "lastFinishedJob": {
+        "status": "success",
+        "startedTime": 1692345600000,
+        "finishedTime": 1692345660000
+    }
+}
+```
+
+### Supported Data Object Types
+
+The component automatically categorizes data objects based on their identifiers:
+
+- **Legacy CDF Resources**: `_cdf.assets`, `_cdf.events`, `_cdf.timeseries`, etc.
+- **Data Model Instances**: `cdf_data_models()`, `cdf_nodes()`, `cdf_edges()`
+- **Raw/Staging Tables**: `database.table` format
+- **Unknown**: Any unrecognized format
+
+## Development
+
+### Building from Source
+
+```bash
+git clone https://github.com/evertoncolling/stlin.git
+cd stlin
+
+# Install dependencies
+uv sync
+
+# Build frontend
+cd stlin/frontend
+npm install
+npm run build
+
+# Build Python package
+cd ../..
+python -m build
+```
+
+### Running the Example
+
+```bash
+# Install in development mode
+uv pip install -e .
+
+# Run the example app
+streamlit run example_app.py
+```
+
+## License
+
+MIT License - see LICENSE file for details.
