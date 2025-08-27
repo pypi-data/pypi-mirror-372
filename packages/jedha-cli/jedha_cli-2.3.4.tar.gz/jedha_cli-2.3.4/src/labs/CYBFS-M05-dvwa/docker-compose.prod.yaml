@@ -1,0 +1,43 @@
+services:
+  dvwa:
+    image: jedha/lab-dvwa:latest
+    container_name: dvwa
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    environment:
+      - MYSQL_HOSTNAME=${MYSQL_HOSTNAME:-db}
+      - MYSQL_USERNAME=${MYSQL_USERNAME:-dvwa}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-p@ssw0rd}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-dvwa}
+    depends_on:
+      - db
+    networks:
+      dvwa-network:
+        ipv4_address: 10.10.1.45
+    restart: unless-stopped
+
+  db:
+    image: mariadb:10.5
+    container_name: dvwa-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-dvwa}
+      - MYSQL_USER=${MYSQL_USERNAME:-dvwa}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-p@ssw0rd}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      dvwa-network:
+        ipv4_address: 10.10.1.46
+    restart: unless-stopped
+
+networks:
+  dvwa-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.1.0/24
+
+volumes:
+  db_data:

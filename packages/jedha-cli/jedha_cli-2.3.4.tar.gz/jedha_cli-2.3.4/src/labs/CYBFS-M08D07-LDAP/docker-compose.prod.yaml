@@ -1,0 +1,32 @@
+services:
+  ldap-server:
+    image: osixia/openldap
+    container_name: ldap-server
+    environment:
+      - LDAP_ORGANISATION=Corp
+      - LDAP_DOMAIN=corp.local
+      - LDAP_ADMIN_PASSWORD=str0ngp@sswOrd!
+      - COPY_SERVICE=true
+    expose:
+      - 389
+    networks:
+      lab-network:
+        ipv4_address: 11.10.10.89
+
+  linux-box:
+    image: jedha/lab-ldap-linux-box
+    container_name: linux-box
+    networks:
+      lab-network:
+        ipv4_address: 11.10.10.90
+    depends_on:
+      - ldap-server
+
+
+networks:
+  lab-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 11.10.10.0/24
