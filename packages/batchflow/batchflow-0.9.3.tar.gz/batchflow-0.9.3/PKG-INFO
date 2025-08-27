@@ -1,0 +1,226 @@
+Metadata-Version: 2.4
+Name: batchflow
+Version: 0.9.3
+Summary: ML pipelines, model configuration and batch management
+Author-email: Roman Kh <rhudor@gmail.com>
+License: Apache License 2.0
+License-File: LICENSE
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Topic :: Scientific/Engineering
+Requires-Python: >=3.9
+Requires-Dist: dill>=0.3
+Requires-Dist: llvmlite
+Requires-Dist: numba>=0.56
+Requires-Dist: numpy>=1.26
+Requires-Dist: scipy>=1.9
+Requires-Dist: tqdm>=4.19
+Provides-Extra: dev
+Requires-Dist: pandas>=0.24; extra == 'dev'
+Requires-Dist: pytest>=8.3.4; extra == 'dev'
+Requires-Dist: ruff; extra == 'dev'
+Provides-Extra: image
+Requires-Dist: matplotlib>=3.7; extra == 'image'
+Requires-Dist: pillow<11.0,>=9.4; extra == 'image'
+Provides-Extra: jupyter
+Requires-Dist: ipykernel; extra == 'jupyter'
+Requires-Dist: ipython; extra == 'jupyter'
+Requires-Dist: jupyter-client; extra == 'jupyter'
+Requires-Dist: jupyter-server; extra == 'jupyter'
+Requires-Dist: nbconvert; extra == 'jupyter'
+Requires-Dist: nbformat; extra == 'jupyter'
+Requires-Dist: notebook; extra == 'jupyter'
+Requires-Dist: requests; extra == 'jupyter'
+Provides-Extra: monitor
+Requires-Dist: psutil; extra == 'monitor'
+Requires-Dist: pynvml; extra == 'monitor'
+Provides-Extra: nn
+Requires-Dist: einops>=0.3; extra == 'nn'
+Requires-Dist: ptflops>=0.6; extra == 'nn'
+Requires-Dist: scikit-learn>=0.21.3; extra == 'nn'
+Requires-Dist: torch>=1.13; extra == 'nn'
+Requires-Dist: torchvision>=0.14; extra == 'nn'
+Provides-Extra: onnx
+Requires-Dist: onnx2torch>=1.5.0; extra == 'onnx'
+Requires-Dist: onnx>=1.14.0; extra == 'onnx'
+Provides-Extra: openvino
+Requires-Dist: openvino>=2025.0.0; extra == 'openvino'
+Provides-Extra: other
+Requires-Dist: urllib3>=1.25; extra == 'other'
+Provides-Extra: research
+Requires-Dist: multiprocess>=0.70; extra == 'research'
+Requires-Dist: py-nbtools>=0.9.14; extra == 'research'
+Provides-Extra: safetensors
+Requires-Dist: safetensors>=0.5.3; extra == 'safetensors'
+Provides-Extra: telegram
+Requires-Dist: pillow<11.0,>=9.4; extra == 'telegram'
+Description-Content-Type: text/markdown
+
+[![License](https://img.shields.io/github/license/analysiscenter/batchflow.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Python](https://img.shields.io/badge/python-3.9-blue.svg)](https://python.org)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0-orange.svg)](https://pytorch.org)
+[![codecov](https://codecov.io/gh/analysiscenter/batchflow/branch/master/graph/badge.svg)](https://codecov.io/gh/analysiscenter/batchflow)
+[![PyPI](https://badge.fury.io/py/batchflow.svg)](https://badge.fury.io/py/batchflow)
+[![Status](https://github.com/analysiscenter/batchflow/actions/workflows/status.yml/badge.svg?branch=master)](https://github.com/analysiscenter/batchflow/actions?query=workflow%3Astatus)
+
+
+# BatchFlow
+
+`BatchFlow` helps you conveniently work with random or sequential batches of your data
+and define data processing and machine learning workflows even for datasets that do not fit into memory.
+
+For more details see [the documentation and tutorials](https://analysiscenter.github.io/batchflow/).
+
+Main features:
+- flexible batch generaton
+- deterministic and stochastic pipelines
+- datasets and pipelines joins and merges
+- data processing actions
+- flexible model configuration
+- within batch parallelism
+- batch prefetching
+- ready to use ML models and proven NN architectures
+- convenient layers and helper functions to build custom models
+- a powerful research engine with parallel model training and extended experiment logging.
+
+## Basic usage
+
+```python
+my_workflow = my_dataset.pipeline()
+              .load('/some/path')
+              .do_something()
+              .do_something_else()
+              .some_additional_action()
+              .save('/to/other/path')
+```
+The trick here is that all the processing actions are lazy. They are not executed until their results are needed, e.g. when you request a preprocessed batch:
+```python
+my_workflow.run(BATCH_SIZE, shuffle=True, n_epochs=5)
+```
+or
+```python
+for batch in my_workflow.gen_batch(BATCH_SIZE, shuffle=True, n_epochs=5):
+    # only now the actions are fired and data is being changed with the workflow defined earlier
+    # actions are executed one by one and here you get a fully processed batch
+```
+or
+```python
+NUM_ITERS = 1000
+for i in range(NUM_ITERS):
+    processed_batch = my_workflow.next_batch(BATCH_SIZE, shuffle=True, n_epochs=None)
+    # only now the actions are fired and data is changed with the workflow defined earlier
+    # actions are executed one by one and here you get a fully processed batch
+```
+
+
+## Train a neural network
+`BatchFlow` includes ready-to-use proven architectures like VGG, Inception, ResNet and many others.
+To apply them to your data just choose a model, specify the inputs (like the number of classes or images shape)
+and call `train_model`. Of course, you can also choose a loss function, an optimizer and many other parameters, if you want.
+```python
+from batchflow.models.torch import ResNet34
+
+my_workflow = my_dataset.pipeline()
+              .init_model('model', ResNet34, config={'loss': 'ce', 'classes': 10})
+              .load('/some/path')
+              .some_transform()
+              .another_transform()
+              .train_model('ResNet34', inputs=B.images, targets=B.labels)
+              .run(BATCH_SIZE, shuffle=True)
+```
+
+For more advanced cases and detailed API see [the documentation](https://analysiscenter.github.io/batchflow/).
+
+
+## Installation
+
+> `BatchFlow` module is in the beta stage. Your suggestions and improvements are very welcome.
+
+> `BatchFlow` supports Python 3.9 or higher.
+
+### Stable python package
+
+With [uv](https://docs.astral.sh/uv/)
+```
+uv add batchflow
+```
+
+With [poetry](https://python-poetry.org/)
+```
+poetry add batchflow
+```
+
+With old-fashioned [pip](https://pip.pypa.io/en/stable/)
+```
+pip3 install batchflow
+```
+
+### Development version
+
+With [uv](https://docs.astral.sh/uv/)
+```
+git clone --branch my_branch https://github.com/analysiscenter/batchflow
+uv add --editable ./batchflow
+```
+
+You can skip `--branch` if you need `master`.
+
+With [poetry](https://python-poetry.org/)
+```
+poetry add --editable git+https://github.com/analysiscenter/batchflow#my_branch
+```
+
+With old-fashioned [pip](https://pip.pypa.io/en/stable/)
+```
+git clone --branch my_branch https://github.com/analysiscenter/batchflow
+pip install --editable ./batchflow
+```
+
+### Extras
+Some `batchflow` functions and classed require additional dependencies.
+In order to use that functionality you might need to install `batchflow` with extras (e.g. `batchflow[nn]`):
+
+- image - working with image datasets and plotting
+- nn - for neural networks (includes torch, torchvision, ...)
+- datasets - loading standard datasets (MNIST, CIFAR, ...)
+- profile - performance profiling
+- jupyter - utility functions for notebooks
+- research - multiprocess research
+- telegram - for monitoring pipelines via a telegram bot
+- dev - batchflow development (ruff, pytest, ...)
+
+You can install several extras at once, like `batchflow[image,nn,research]`.
+
+
+## Projects based on BatchFlow
+- [SeismiQB](https://github.com/GeoscienceML/seismiqb) - ML for seismic interpretation
+- [SeismicPro](https://github.com/GeoscienceML/SeismicPro) - ML for seismic processing
+- [PyDEns](https://github.com/analysiscenter/pydens) - DL Solver for ODE and PDE
+- [RadIO](https://github.com/analysiscenter/radio) - ML for CT imaging
+- [CardIO](https://github.com/analysiscenter/cardio) - ML for heart signals
+
+
+## Citing BatchFlow
+Please cite BatchFlow in your publications if it helps your research.
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1041203.svg)](https://doi.org/10.5281/zenodo.1041203)
+
+```
+Roman Khudorozhkov et al. BatchFlow library for fast ML workflows. 2017. doi:10.5281/zenodo.1041203
+```
+
+```
+@misc{roman_kh_2017_1041203,
+  author       = {Khudorozhkov, Roman and others},
+  title        = {BatchFlow library for fast ML workflows},
+  year         = 2017,
+  doi          = {10.5281/zenodo.1041203},
+  url          = {https://doi.org/10.5281/zenodo.1041203}
+}
+```
