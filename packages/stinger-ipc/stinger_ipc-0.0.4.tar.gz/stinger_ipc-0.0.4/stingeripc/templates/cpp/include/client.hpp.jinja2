@@ -1,0 +1,61 @@
+/*
+DO NOT MODIFY THIS FILE.  It is automatically generated and changes will be over-written
+on the next generation.
+
+It contains enumerations used by the {{stinger.name}} interface.
+*/
+
+
+#pragma once
+
+#include <cstdint>
+#include <functional>
+#include <map>
+#include <memory>
+#include <exception>
+#include <mutex>
+#include <rapidjson/document.h>
+#include <boost/uuid/uuid.hpp>
+
+#include "ibrokerconnection.hpp"
+#include "{{stinger.cpp.enum_header_file}}"
+#include "return_types.hpp"
+{%if stinger.properties | length > 0 %}#include "{{stinger.cpp.property_struct_header_file}}"{%endif%}
+
+class {{stinger.cpp.client_class_name}} {
+
+public:
+    // This is the name of the API.
+    static constexpr const char NAME[] = "{{stinger.name}}";
+    // This is the version of the API contract.
+    static constexpr const char INTERFACE_VERSION[] = "{{stinger.version}}";
+
+    // Constructor taking a connection object.
+    {{stinger.cpp.client_class_name}}(std::shared_ptr<IBrokerConnection> broker);
+
+    virtual ~{{stinger.cpp.client_class_name}}() = default;
+
+    {%for sig_name, sig in stinger.signals.items()%}
+    // Register a callback for the `{{sig_name}}` signal.
+    // The provided method will be called whenever a `{{sig_name}}` is received.
+    void register{{sig_name | UpperCamelCase}}Callback(const std::function<void({%for arg in sig.arg_list%}{{arg.cpp_type}}{%if not loop.last%}, {%endif%}{%endfor%})>& cb);
+    {%endfor%}
+
+    {%for method_name, method in stinger.methods.items()%}
+    // Calls the `{{method_name}}` method.
+    // Returns a future.  When that future resolves, it will have the returned value.
+    boost::future<{{method.return_value_cpp_class}}> {{method_name | camelCase}}({%for arg in method.arg_list%}{{arg.cpp_type}} {{arg.name}}{%if not loop.last%}, {%endif%}{%endfor%});
+    {%endfor%}
+private: 
+    std::shared_ptr<IBrokerConnection> _broker;
+    void _receiveMessage(const std::string& topic, const std::string& payload, const boost::optional<std::string> optCorrelationId, const boost::optional<MethodResultCode> optResultCode);
+    {%-for method_name, method in stinger.methods.items()%}
+    std::map<boost::uuids::uuid, boost::promise<{{method.return_value_cpp_class}}>> _pending{{method_name|UpperCamelCase}}MethodCalls;
+    {%-endfor%}
+    {%for sig_name, sig in stinger.signals.items()%}
+    std::function<void({%for arg in sig.arg_list%}{{arg.cpp_type}}{%if not loop.last%}, {%endif%}{%endfor%})> _{{sig_name | camelCase}}Callback;
+    {%endfor%}
+    {%-for method_name, method in stinger.methods.items()%}
+    void _handle{{method_name|UpperCamelCase}}Response(const std::string& topic, const std::string& payload, const std::string& optCorrelationId);
+    {%-endfor%}
+};
