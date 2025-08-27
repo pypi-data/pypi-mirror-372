@@ -1,0 +1,101 @@
+Metadata-Version: 2.1
+Name: SpongeExt
+Version: 1.3
+Summary: Sponge Extension For Enhanced Sampling
+Home-page: https://gitee.com/dechin/sponge-ext
+Author: Dechin CHEN
+Author-email: dechin.phy@gmail.com
+License: Apache 2.0 Licence
+Platform: any
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+# SpongeExt
+为MindSponge和CudaSPONGE设计的接口函数。CudaSPONGE部分通过SpongeExt，可以外接如PySAGES等基于Python的增强采样软件。MindSponge部分通过SpongeExt，可以扩展PyTorch后端，在GPU环境运行。
+
+## 安装教程
+从源码安装：
+```bash
+$ git clone https://gitee.com/dechin/sponge-ext.git && cd sponge-ext && python3 setup.py install --user
+```
+从pip安装：
+```bash
+$ python3 -m pip install SpongeExt --upgrade -i https://pypi.org/simple
+```
+
+## CudaSPONGE使用案例
+准备一系列的CudaSPONGE输入文件，例如examples中的`nvt.in`配置输入文件：
+```txt
+case1 MD simulation
+
+mode = NVT
+default_in_file_prefix = ../protein/alad
+
+pbc=0 
+cutoff=999
+
+dt = 1e-3
+step_limit = 2000
+write_information_interval = 10
+
+thermostat = middle_langevin
+middle_langevin_gamma = 10
+
+rst = nvt_restart
+
+coordinate_in_file = ../protein/alad_coordinate.txt
+plugin = /usr/local/python-3.7.5/lib/python3.7/site-packages/prips/_prips.so
+py = ../pysages_metad.py
+```
+
+这里使用到了一个使用pysages定义的增强采样方法`pysages_metad.py`，内容为：
+```python
+from SpongeExt import enhanced_sponge
+
+import pysages
+from pysages.colvars import DihedralAngle
+from pysages.methods import Metadynamics
+
+def phi_psi():
+    from numpy import pi
+    cvs = [DihedralAngle([4, 6, 8, 14]), DihedralAngle([6, 8, 14, 16])]
+    height = 5.0  # kJ/mol
+    sigma = [0.4, 0.4]  # radians
+    stride = 3
+    ngauss = 500
+    grid = pysages.Grid(lower=(-pi, -pi), upper=(pi, pi), shape=(50, 50), periodic=True)
+    method = Metadynamics(cvs, height, sigma, stride, ngauss, grid=grid)
+    return method
+
+pysages_method = phi_psi()
+Calculate_Force, Mdout_Print = enhanced_sponge(pysages_method)
+```
+
+然后使用运行指令运行即可：
+```bash
+$ SPONGE -mdin nvt.in
+```
+
+输出内容大致如下图所示：
+```txt
+------------------------------------------------------------------------------------------------------------
+           step =            1990,            time =           1.990,     temperature =         2388.79, 
+      potential =           56.45,            CV_0 =       -1.500586,            CV_1 =       -2.550561, 
+             LJ =           -0.79,         Coulomb =          -65.33,         nb14_LJ =            7.42, 
+        nb14_EE =           41.19,            bond =            6.05,           angle =           40.54, 
+       dihedral =           27.37, 
+------------------------------------------------------------------------------------------------------------
+           step =            2000,            time =           2.000,     temperature =         2430.97, 
+      potential =           60.92,            CV_0 =       -0.989361,            CV_1 =       -3.084765, 
+             LJ =           -0.22,         Coulomb =          -66.38,         nb14_LJ =            4.81, 
+        nb14_EE =           42.10,            bond =            9.91,           angle =           38.81, 
+       dihedral =           31.90, 
+------------------------------------------------------------------------------------------------------------
+```
+
+## 配置深度学习后端
+
+例如配置pytorch后端：
+```bash
+$ export DEEP_LEARNING_BACKEND=pytorch
+```
