@@ -1,0 +1,3 @@
+"""
+Kapso SDK serialization module.
+"""

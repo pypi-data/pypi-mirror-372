@@ -1,0 +1,5 @@
+__version__ = "0.3.1"
+__author__ = "Kapso AI"
+__email__ = "dev@kap.so"
+__license__ = "Proprietary"
+__copyright__ = "Copyright 2025 Kapso"

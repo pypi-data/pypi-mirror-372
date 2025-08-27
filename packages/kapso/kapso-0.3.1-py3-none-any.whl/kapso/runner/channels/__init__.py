@@ -1,0 +1,2 @@
+# Register default adapters here
+

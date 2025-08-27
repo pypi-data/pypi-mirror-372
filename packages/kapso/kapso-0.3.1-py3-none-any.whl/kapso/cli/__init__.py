@@ -1,0 +1,3 @@
+"""
+Kapso CLI package.
+"""
