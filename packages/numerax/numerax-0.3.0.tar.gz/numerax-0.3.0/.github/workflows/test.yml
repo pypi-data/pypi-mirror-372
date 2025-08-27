@@ -1,0 +1,39 @@
+name: tests
+
+# Run tests on pushes to main and pull requests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# Security: restrict permissions for CI jobs
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      # Install hatch for environment management
+      - name: Install Hatch
+        uses: pypa/hatch@install
+      
+      # Run code quality checks using hatch
+      - name: Run linting and formatting checks
+        run: hatch run lint:check
+      
+      # Run tests using hatch
+      - name: Run tests
+        run: hatch run test
