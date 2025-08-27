@@ -1,0 +1,287 @@
+Metadata-Version: 2.4
+Name: weave-cli
+Version: 1.1.0
+Summary: Weave Network CLI: network discovery, async port scanning, camera detection, and risk analysis.
+Author: Kai Gartner
+License: PolyForm Noncommercial License 1.0.0
+        
+        Acceptance
+        By using the software, you agree to all the terms of this license.
+        
+        Copyright License
+        The licensor grants you a nonexclusive, worldwide, nontransferable license to use, copy, modify, and
+        redistribute the software, with or without changes, in source and binary forms, for noncommercial
+        purposes only.
+        
+        Noncommercial Purposes
+        Noncommercial purposes means not intended for or directed towards commercial advantage or monetary
+        compensation. You may use the software for personal, educational, research, or internal evaluation
+        purposes. Any use by or on behalf of a for-profit company for its commercial advantage, including in
+        production, or in connection with a revenue-generating service or product, is a commercial use and is
+        not permitted under this license.
+        
+        Patents
+        The licensor grants you a patent license to make, have made, use, offer to sell, sell, import, and
+        otherwise transfer the software, where such license applies only to those patent claims the licensor
+        can license that are necessarily infringed by the software.
+        
+        Notices
+        You must ensure that anyone who gets a copy of any part of the software from you also gets a copy of
+        this license and any copyright notice, license notice, and noncommercial notice included with the
+        software. If you modify the software, you must include a notice stating that you have modified it.
+        
+        No Trademark License
+        This license does not grant you any right in the licensor’s trademarks, service marks, or logos.
+        
+        No Other Rights
+        These terms do not grant you any rights in the software not expressly granted by this license. The
+        software may be subject to other licenses.
+        
+        Disclaimer of Warranty
+        THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+        NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+        NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+        DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT
+        OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+        
+        Limitation of Liability
+        EXCEPT TO THE EXTENT REQUIRED BY APPLICABLE LAW, IN NO EVENT WILL THE LICENSOR BE LIABLE TO YOU FOR
+        DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE
+        OR INABILITY TO USE THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED
+        INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A FAILURE OF THE SOFTWARE TO OPERATE WITH
+        ANY OTHER PROGRAMS), EVEN IF THE LICENSOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+        
+        Termination
+        If you use the software in violation of these terms, this license terminates automatically. Upon
+        termination, you must cease all use and distribution of the software.
+        
+        Commercial Licensing
+        If you wish to use the software for commercial purposes, please contact the authors to obtain a
+        commercial license.
+        
+Project-URL: Homepage, https://github.com/ThePhotoCodeGrapher/Network-CLI-scanner
+Project-URL: Issues, https://github.com/ThePhotoCodeGrapher/Network-CLI-scanner/issues
+Keywords: network,scanner,security,cli,camera,onvif,discovery,port-scan,iot
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Information Technology
+Classifier: Intended Audience :: System Administrators
+Classifier: Topic :: Security
+Classifier: Topic :: System :: Networking
+Classifier: License :: Other/Proprietary License
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: typer[all]==0.12.3
+Requires-Dist: rich==13.7.1
+Requires-Dist: psutil==5.9.8
+Requires-Dist: async-timeout==4.0.3
+Requires-Dist: httpx==0.27.2
+Requires-Dist: netaddr==1.3.0
+Requires-Dist: speedtest-cli==2.1.3
+Requires-Dist: lxml==5.3.0
+Requires-Dist: zeep==4.3.1
+Requires-Dist: requests==2.32.3
+Requires-Dist: certifi==2024.7.4
+Dynamic: license-file
+
+# Weave Network CLI (WNC)
+
+Modular Python CLI for network discovery, port/protocol scanning, and device (e.g., IP camera) detection, guided by an interactive wizard with live progress.
+
+## Quickstart
+
+1. Create virtualenv and install deps:
+
+```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+2. Run the wizard (basic):
+
+```
+python -m wnc wizard
+```
+
+3. Full extended scan with JSON report and risk analysis:
+
+```
+python -m wnc wizard --yes --output scan_report.json --analyze
+```
+
+4. Or run commands directly:
+
+```
+python -m wnc scan internal
+python -m wnc scan ports --target 192.168.1.10 --top 1000
+python -m wnc scan cameras --subnet 192.168.1.0/24
+```
+
+## Features
+
+- Interactive wizard with Rich progress bars
+- Internal network discovery (interfaces, subnets)
+- Host discovery (TCP connect checks)
+- Async port scan and banner grabbing (HTTP/HTTPS/SSH/Redis/Memcached) with HTTP title extraction
+- Camera heuristics (HTTP/RTSP), ONVIF WS-Discovery, optional ONVIF SOAP info, optional ONVIF password change
+- Device fingerprinting from HTTP/RTSP/SSDP/mDNS/ONVIF evidence with confidence scoring
+- LAN latency to default gateway and DNS (median/p95 via TCP connect RTTs)
+- SSDP/UPnP discovery; mDNS service discovery
+- Passive ARP table parsing with MAC OUI vendor hints (no ARP sweep)
+- Speedtest and RTT-based rough location
+- Risk analyzer that scores and summarizes findings
+- Modular scanners in `wnc/scanners/`
+
+## CLI Flags (wizard)
+
+- `--extended/--no-extended` run extended tasks (default: on)
+- `--weak-auth/--no-weak-auth` test common default credentials for HTTP/RTSP on camera-like hosts (safe, read-only) (default: on)
+- `--creds "u1:p1,u2:p2"` custom username:password pairs to try for weak-auth
+- `--change-password` attempt ONVIF password change when weak creds found (DANGEROUS; modifies device)
+- `--change-user <user>` target username for ONVIF password change (defaults to the weak-cred username)
+- `--new-password <pw>` new password to set (required with `--change-password`)
+- `--wifi` collect Wi‑Fi info (macOS) including current SSID/BSSID/channel/RSSI and nearby APs
+- `--lan-speed` measure LAN latency to default gateway and DNS (RTT med/p95)
+- `--speedtest-runs <1-3>` number of speedtest runs
+- `--output <path>` write full JSON report to path
+- `--analyze/--no-analyze` run risk analyzer and include results in report (default: on)
+- `--yes` non-interactive; auto-accept prompts
+
+## Report (JSON)
+
+When `--output` is provided, the wizard writes a JSON file including:
+
+- `subnets`, `hosts`, `port_sample_hosts`, `port_open`
+- `udp_samples` (labeled UDP services per sampled host)
+- `cameras`, `onvif`, `onvif_info`, `weak_auth_findings`, `onvif_password_change`
+- `ssdp`, `mdns_records`, `arp`, `banners`
+- `devices` (fingerprinted vendor/product/type with confidence)
+- `wifi` (macOS current network and nearby APs)
+- `lan_speed` (gateway and DNS RTT stats, open ports tried)
+- `speedtest`, `location`, `location_top`, `location_targets`, `risk`, `summary`
+
+## Docker
+
+Build image:
+
+```bash
+docker build -t weave-network-cli:latest .
+```
+
+Run the wizard (save report locally):
+
+```bash
+# Linux: host networking gives best local LAN visibility
+# macOS/Windows: --network host is not supported the same way; container can still reach LAN via bridged networking
+
+docker run --rm \
+  --name wnc \
+  --network host \
+  -v "$PWD:/data" \
+  weave-network-cli:latest wizard --yes --extended --output /data/scan_report.json
+```
+
+Other commands:
+
+```bash
+docker run --rm --network host weave-network-cli:latest scan internal
+
+docker run --rm --network host weave-network-cli:latest scan ports --target 192.168.1.10 --top 200
+
+docker run --rm --network host weave-network-cli:latest scan cameras --subnet 192.168.1.0/24
+```
+
+Limitations in container:
+
+- `--wifi` (macOS Wi‑Fi details) will not work inside Docker.
+- Host network mode is recommended on Linux for local discovery.
+
+## npm (Node wrapper)
+
+You can use an npm wrapper to invoke WNC without installing Python. It prefers Docker (and falls back to local Python if available).
+
+Run via npx:
+
+```bash
+npx @thephotocodegrapher/wnc wizard --yes --extended --output ./scan_report.json
+```
+
+Or install globally:
+
+```bash
+npm i -g @thephotocodegrapher/wnc
+wnc wizard --yes --extended --output ./scan_report.json
+```
+
+Notes:
+
+- Requires Docker for best experience; on Linux, host networking is used automatically when available.
+- On macOS/Windows, Docker networking differs; discovery still works via bridged networking.
+
+## Python API
+
+Use WNC programmatically without packaging to PyPI. Import sync helpers from `wnc`:
+
+```python
+from wnc import internal_subnets, hosts, ports, cameras, wizard
+
+subs = internal_subnets()
+print("Subnets:", subs)
+
+if subs:
+    live = hosts(subnet=subs[0])
+    print("Live hosts:", live[:10])
+
+    if live:
+        open_ports = ports(live[0], top_n=100)
+        print("Open ports:", [(r.port, r.service) for r in open_ports])
+
+    cams = cameras(subs[0])
+    for c in cams[:5]:
+        print("Camera:", c.ip, c.vendor, c.evidence[:3])
+
+# Run the interactive wizard non-interactively and save a JSON report
+wizard(yes=True, extended=True, output="scan_report.json")
+```
+
+Available helpers in `wnc`:
+
+- `internal_subnets() -> List[str]`
+- `hosts(subnet, limit=None) -> List[str]`
+- `ports(host, top_n=200, ports=None) -> List[PortResult]`
+- `cameras(subnet) -> List[CameraCandidate]`
+- `wizard(...same flags as CLI...) -> None`
+
+## Notes
+
+- ICMP ping typically requires elevated privileges. This tool uses fast TCP connect checks to infer live hosts.
+- Scans are best-effort and may miss hosts with strict firewalls.
+- ONVIF SOAP device information is unauthenticated by default and best-effort (short timeouts).
+- ONVIF password change is disabled by default; only runs with `--change-password` and requires `--new-password`. Behavior varies by vendor.
+
+## License
+
+This project is released under the PolyForm Noncommercial License 1.0.0. You may use, copy, modify, and redistribute the software for noncommercial purposes.
+
+- Noncommercial means not intended for or directed toward commercial advantage or monetary compensation.
+- For commercial use, please contact the authors to obtain a commercial license.
+
+See the full text in `LICENSE`.
+
+## Maintainer
+
+- [Kai Gartner](https://linkedin.com/in/kaigartner)
+
+## Project Meta
+
+- [Contributing](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security Policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)
+- [Third-Party Notices](THIRD_PARTY.md)
