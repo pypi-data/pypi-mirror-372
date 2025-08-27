@@ -1,0 +1,333 @@
+# Alembic Database Operations Guide
+
+This directory contains Alembic database migration configuration for ResinKit API.
+
+## Overview
+
+Alembic is a database migration tool for SQLAlchemy. This setup uses:
+- **Database**: SQLite (configured via settings.DATABASE_URL)
+- **Models**: Defined in `resinkit_api/db/models.py`
+- **Configuration**: `alembic.ini` in the db directory
+- **Migrations**: Stored in `versions/` subdirectory
+
+## Directory Structure
+
+```
+resinkit_api/db/
+├── alembic.ini           # Alembic configuration file
+├── alembic/
+│   ├── README           # This file
+│   ├── env.py           # Migration environment configuration
+│   ├── script.py.mako   # Migration template
+│   └── versions/        # Migration files
+│       ├── a53a22092259_create_initial_tables.py
+│       ├── 32c843eb8225_add_task_expiry.py
+│       ├── adfa6c905b9d_add_task_expiry.py
+│       ├── b8c1bd22cb20_add_sql_sources_table.py
+│       └── a261d8461fde_rename_sql_sources_to_data_sources.py
+├── models.py            # SQLAlchemy model definitions
+├── database.py          # Database session management
+└── *_crud.py           # CRUD operations
+```
+
+## Prerequisites
+
+1. **Run from project root directory**
+2. **Virtual environment activated** (if using one)
+3. **Database URL configured** in settings (defaults to SQLite)
+
+## Basic Operations
+
+All commands should be run from the **project root directory**:
+
+### Check Current Migration Status
+
+```bash
+# Show current revision
+python -m alembic -c resinkit_api/db/alembic.ini current
+
+# Show migration history
+python -m alembic -c resinkit_api/db/alembic.ini history
+
+# Show detailed migration info
+python -m alembic -c resinkit_api/db/alembic.ini show <revision_id>
+```
+
+### Apply Migrations
+
+```bash
+# Upgrade to latest version
+python -m alembic -c resinkit_api/db/alembic.ini upgrade head
+
+# Upgrade to specific revision
+python -m alembic -c resinkit_api/db/alembic.ini upgrade <revision_id>
+
+# Upgrade by relative amount (e.g., +2 revisions)
+python -m alembic -c resinkit_api/db/alembic.ini upgrade +2
+```
+
+### Downgrade Migrations
+
+```bash
+# Downgrade by one revision
+python -m alembic -c resinkit_api/db/alembic.ini downgrade -1
+
+# Downgrade to specific revision
+python -m alembic -c resinkit_api/db/alembic.ini downgrade <revision_id>
+
+# Downgrade to base (remove all migrations)
+python -m alembic -c resinkit_api/db/alembic.ini downgrade base
+```
+
+## Creating and Modifying Tables
+
+### Step 1: Update Models
+
+First, modify `resinkit_api/db/models.py`:
+
+```python
+# Example: Adding a new table
+class NewTable(Base):
+    """Description of the new table"""
+    
+    __tablename__ = "new_table"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        server_default=func.current_timestamp(),
+    )
+    
+    # Define indexes
+    __table_args__ = (
+        Index("idx_new_table_name", "name"),
+    )
+
+# Example: Modifying existing table
+class ExistingTable(Base):
+    # ... existing fields ...
+    
+    # Add new field
+    new_field = Column(String, nullable=True)  # Start as nullable
+```
+
+### Step 2: Generate Migration
+
+```bash
+# Auto-generate migration from model changes
+python -m alembic -c resinkit_api/db/alembic.ini revision --autogenerate -m "add_new_table"
+
+# Create empty migration (for manual changes)
+python -m alembic -c resinkit_api/db/alembic.ini revision -m "manual_migration_description"
+```
+
+### Step 3: Review and Edit Migration
+
+Alembic will create a new file in `versions/`. **Always review the generated migration**:
+
+1. **Check the upgrade() function** - Does it match your intended changes?
+2. **Check the downgrade() function** - Can it properly rollback the changes?
+3. **Handle data migration** if needed (see examples below)
+4. **Test with non-production data first**
+
+### Step 4: Apply Migration
+
+```bash
+# Apply the new migration
+python -m alembic -c resinkit_api/db/alembic.ini upgrade head
+```
+
+## Migration Best Practices
+
+### 1. **Backwards Compatible Changes**
+
+When adding new columns, make them nullable initially:
+
+```python
+def upgrade() -> None:
+    # Good: nullable initially
+    op.add_column('users', sa.Column('email', sa.String(), nullable=True))
+
+def downgrade() -> None:
+    op.drop_column('users', 'email')
+```
+
+### 2. **Data Migration with Schema Changes**
+
+When you need to migrate data along with schema changes:
+
+```python
+def upgrade() -> None:
+    # 1. Add new column
+    op.add_column('users', sa.Column('full_name', sa.String(), nullable=True))
+    
+    # 2. Migrate existing data
+    connection = op.get_bind()
+    connection.execute(sa.text("""
+        UPDATE users 
+        SET full_name = first_name || ' ' || last_name 
+        WHERE first_name IS NOT NULL AND last_name IS NOT NULL
+    """))
+    
+    # 3. Make column non-nullable if needed
+    op.alter_column('users', 'full_name', nullable=False)
+    
+    # 4. Drop old columns
+    op.drop_column('users', 'first_name')
+    op.drop_column('users', 'last_name')
+```
+
+### 3. **Renaming Tables (Preserving Data)**
+
+Example from our recent data_sources migration:
+
+```python
+def upgrade() -> None:
+    # Create new table
+    op.create_table('new_table_name', ...)
+    
+    # Copy data if old table exists
+    connection = op.get_bind()
+    result = connection.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table' AND name='old_table'"))
+    if result.fetchone():
+        connection.execute(sa.text("""
+            INSERT INTO new_table_name (col1, col2, col3)
+            SELECT col1, col2, col3 FROM old_table
+        """))
+        op.drop_table('old_table')
+```
+
+### 4. **Index Management**
+
+```python
+def upgrade() -> None:
+    # Create table with indexes
+    op.create_table('my_table', ...)
+    
+    with op.batch_alter_table('my_table', schema=None) as batch_op:
+        batch_op.create_index('idx_my_table_name', ['name'], unique=False)
+        batch_op.create_index('idx_my_table_email', ['email'], unique=True)
+
+def downgrade() -> None:
+    with op.batch_alter_table('my_table', schema=None) as batch_op:
+        batch_op.drop_index('idx_my_table_email')
+        batch_op.drop_index('idx_my_table_name')
+    
+    op.drop_table('my_table')
+```
+
+## Version Management
+
+### Migration File Naming
+
+Alembic generates files with format: `<revision_id>_<description>.py`
+
+Example: `a261d8461fde_rename_sql_sources_to_data_sources.py`
+
+### Revision IDs
+
+- **Unique identifiers** for each migration
+- **Generated automatically** by Alembic
+- **Sequential chain** - each migration references the previous one
+
+### Branching and Merging
+
+If multiple developers create migrations simultaneously:
+
+```bash
+# Show heads (multiple branches)
+python -m alembic -c resinkit_api/db/alembic.ini heads
+
+# Merge branches
+python -m alembic -c resinkit_api/db/alembic.ini merge -m "merge_branches" <rev1> <rev2>
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Import Errors in Migrations**
+   ```python
+   # Fix: Import required modules at top of migration file
+   from resinkit_api.db.models import JSONString, TaskStatus
+   ```
+
+2. **SQLite Constraints**
+   ```python
+   # Use batch operations for SQLite
+   with op.batch_alter_table('table_name', schema=None) as batch_op:
+       batch_op.add_column(sa.Column('new_col', sa.String()))
+   ```
+
+3. **Migration Out of Sync**
+   ```bash
+   # Check what Alembic thinks vs. actual database
+   python -m alembic -c resinkit_api/db/alembic.ini current
+   python -m alembic -c resinkit_api/db/alembic.ini history
+   
+   # Stamp database to specific revision (if needed)
+   python -m alembic -c resinkit_api/db/alembic.ini stamp <revision_id>
+   ```
+
+### Testing Migrations
+
+1. **Backup your database** before applying migrations
+2. **Test on copy** of production data first
+3. **Test both upgrade and downgrade** paths
+4. **Run E2E tests** after migration
+
+### Emergency Recovery
+
+If migration fails:
+
+```bash
+# Downgrade to previous working version
+python -m alembic -c resinkit_api/db/alembic.ini downgrade -1
+
+# Check database state
+python -m alembic -c resinkit_api/db/alembic.ini current
+
+# Fix migration file and retry
+python -m alembic -c resinkit_api/db/alembic.ini upgrade head
+```
+
+## Environment Configuration
+
+The setup automatically:
+- **Reads database URL** from `settings.DATABASE_URL`
+- **Configures SQLite batch operations** for constraint handling
+- **Sets up logging** for migration tracking
+- **Includes all models** via `Base.metadata`
+
+## Example Workflows
+
+### Adding a New Table
+
+1. Define model in `models.py`
+2. Generate migration: `python -m alembic -c resinkit_api/db/alembic.ini revision --autogenerate -m "add_user_profiles"`
+3. Review generated file in `versions/`
+4. Apply: `python -m alembic -c resinkit_api/db/alembic.ini upgrade head`
+5. Test with E2E tests
+
+### Modifying Existing Table
+
+1. Update model in `models.py`
+2. Generate migration with descriptive name
+3. **Carefully review** for data safety
+4. Test upgrade/downgrade on copy
+5. Apply to production
+
+### Schema Refactoring
+
+1. Plan migration strategy (usually multi-step)
+2. Create migration for new structure
+3. Create migration for data migration
+4. Create migration for cleanup
+5. Test entire sequence thoroughly
+
+---
+
+**Always test migrations thoroughly and maintain backups of production data.**
