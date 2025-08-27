@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>STRkit Browser</title>
+    <script src="https://cdn.jsdelivr.net/npm/igv@2.15.12/dist/igv.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6"></script>
+
+<!--    <script src="https://cdn.jsdelivr.net/npm/d3-color@3"></script>-->
+<!--    <script src="https://cdn.jsdelivr.net/npm/d3-interpolate@3"></script>-->
+<!--    <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3"></script>-->
+
+    <script>
+        const palettes = [d3.interpolateBlues, d3.interpolateReds];
+
+        const ui = {
+            showGaussians: true,
+        };
+
+        const state = {
+            callData: null,
+        };
+
+        let params = {
+            cmd: {},
+            report: {},
+        };
+        let reportMetadata = {};
+
+        // --------------------------------------------------------------------
+        // Adapted from https://observablehq.com/@d3/histogram until the next set of '----'
+        // Copyright 2021 Observable, Inc.
+        // Released under the ISC license:
+        // Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee
+        // is hereby granted, provided that the above copyright notice and this permission notice appear in all
+        // copies.
+        // THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+        // SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+        // AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+        // WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+        // OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+        // SOFTWARE.
+
+        const normalPdf = (mu, sigma) => x =>
+            (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.pow(Math.E, -0.5 * Math.pow((x - mu) / sigma, 2));
+
+        function Histogram(data, {
+          // normal stuff:
+          peaks,
+
+          // hist stuff:
+          value = d => d, // convenience alias for x
+          domain, // convenience alias for xDomain
+          label, // convenience alias for xLabel
+          format, // convenience alias for xFormat
+          type = d3.scaleLinear, // convenience alias for xType
+          x = value, // given d in data, returns the (quantitative) x-value
+          y = () => 1, // given d in data, returns the (quantitative) weight
+          thresholds = 40, // approximate number of bins to generate, or threshold function
+          normalize, // whether to normalize values to a total of 100%
+          marginTop = 20, // top margin, in pixels
+          marginRight = 30, // right margin, in pixels
+          marginBottom = 30, // bottom margin, in pixels
+          marginLeft = 40, // left margin, in pixels
+          width = 640, // outer width of chart, in pixels
+          height = 400, // outer height of chart, in pixels
+          insetLeft = 0.5, // inset left edge of bar
+          insetRight = 0.5, // inset right edge of bar
+          xType = type, // type of x-scale
+          xDomain = domain, // [xmin, xmax]
+          xRange = [marginLeft, width - marginRight], // [left, right]
+          xLabel = label, // a label for the x-axis
+          xFormat = format, // a format specifier string for the x-axis
+          yType = d3.scaleLinear, // type of y-scale
+          yDomain, // [ymin, ymax]
+          yRange = [height - marginBottom, marginTop], // [bottom, top]
+          yLabel = "↑ Frequency", // a label for the y-axis
+          yFormat = normalize ? "%" : undefined, // a format specifier string for the y-axis
+          color = "currentColor", // bar fill color
+          showGaussians = true,
+        } = {}) {
+          // Compute values.
+          const X = d3.map(data, x);
+          const Y0 = d3.map(data, y);
+          const I = d3.range(X.length);
+
+          // Compute bins.
+          const bins = d3.bin().thresholds(thresholds).value(i => X[i])(I);
+          const Y = Array.from(bins, I => d3.sum(I, i => Y0[i]));
+          if (normalize) {
+            const total = d3.sum(Y);
+            for (let i = 0; i < Y.length; ++i) Y[i] /= total;
+          }
+
+          // Compute default domains.
+          if (xDomain === undefined) xDomain = [bins[0].x0 - 1, bins[bins.length - 1].x1 + 1];
+          if (yDomain === undefined) yDomain = [0, d3.max(Y)];
+
+          // Construct scales and axes.
+          const xScale = xType(xDomain, xRange);
+          const yScale = yType(yDomain, yRange);
+          const xAxis = d3.axisBottom(xScale).ticks(width / 80, xFormat).tickSizeOuter(0);
+          const yAxis = d3.axisLeft(yScale).ticks(height / 40, yFormat);
+          yFormat = yScale.tickFormat(100, yFormat);
+
+          const svg = d3.create("svg")
+              .attr("width", width)
+              .attr("height", height)
+              .attr("viewBox", [0, 0, width, height])
+              .attr("style", "max-width: 100%; height: auto; height: intrinsic;");
+
+          svg.append("g")
+              .attr("transform", `translate(${marginLeft},0)`)
+              .call(yAxis)
+              .call(g => g.select(".domain").remove())
+              .call(g => g.selectAll(".tick line").clone()
+                  .attr("x2", width - marginLeft - marginRight)
+                  .attr("stroke-opacity", 0.1))
+              .call(g => g.append("text")
+                  .attr("x", -marginLeft)
+                  .attr("y", 10)
+                  .attr("fill", "currentColor")
+                  .attr("text-anchor", "start")
+                  .text(yLabel));
+
+          const barWidth = d => Math.max(0, xScale(d.x1) - xScale(d.x0) - insetLeft - insetRight);
+
+          svg.append("g")
+              .attr("fill", color)
+            .selectAll("rect")
+            .data(bins)
+            .join("rect")
+              .attr("x", d => xScale(d.x0) + insetLeft - (params.report.fractional ? 0 : barWidth(d)/2))
+              .attr("width", barWidth)
+              .attr("y", (d, i) => yScale(Y[i]))
+              .attr("height", (d, i) => yScale(0) - yScale(Y[i]))
+            .append("title")
+              .text((d, i) => [`${d.x0} ≤ x < ${d.x1}`, yFormat(Y[i])].join("\n"));
+
+          if (peaks && showGaussians) {
+            const xs = [];
+            for (let i = xDomain[0]; i < xDomain[1]; i += 0.01) {
+              xs.push(i);
+            }
+            const line = d3.line()
+              .curve(d3.curveBasis)
+              .x(d => xScale(d[0]))
+              .y(d => yScale(d[1]));
+            const max = yDomain[1];
+            const pdfMaxes = [];
+            for (let i = 0; i < peaks.modal_n; i++) {
+              pdfMaxes.push(1 / (Math.sqrt(2 * Math.PI) * peaks.stdevs[i]));
+            }
+            const maxPdfMax = Math.max(...pdfMaxes);
+            for (let i = 0; i < peaks.modal_n; i++) {
+              const pdf = normalPdf(peaks.means[i], peaks.stdevs[i]);
+              svg.append("path")
+                .datum(xs.map(xx => [xx, pdf(xx) * (max / maxPdfMax)])) // peaks.weights[i]
+                .attr("fill", "none")
+                .attr("stroke", palettes[i](0.7))
+                .attr("stroke-width", 2.5)
+                .attr("stroke-linejoin", "round")
+                .attr("d", line);
+            }
+          }
+
+          svg.append("g")
+              .attr("transform", `translate(0,${height - marginBottom})`)
+              .call(xAxis)
+              .call(g => g.append("text")
+                  .attr("x", width - marginRight)
+                  .attr("y", 27)
+                  .attr("fill", "currentColor")
+                  .attr("text-anchor", "end")
+                  .text(xLabel));
+
+          return svg.node();
+        }
+
+        // --------------------------------------------------------------------
+
+        const kmerDistribution = (data, {width, height}) => {
+            return Plot.plot({
+                width, height,
+                y: {
+                    domain: d3.sort(data, d => -d.count).map(d => d.kmer).slice(0, 15),
+                },
+                x: {
+                    grid: true,
+                },
+                marks: [
+                    Plot.barX(data, {y: "kmer", x: "count"}),
+                    // Plot.ruleY([0]),
+                ],
+            });
+        };
+
+        // --------------------------------------------------------------------
+
+        const regionPadding = 20;
+
+        let locusSearchBox = null;
+        let searchResponseList = null;
+
+        let btnToggleCurves = null;
+
+        let histogramContainer = null;
+        let kmerColumn = null;
+        let kmerContainer = null;
+        let scalesContainer = null;
+        let igvContainer = null;
+        let reportMetadataTable = null;
+
+        let sampleDisplay = null;
+        let regionDisplay = null;
+        let motifDisplay = null;
+        let refGenome = null;
+        let refCopies = null;
+        let callDisplay = null;
+        let call95Display = null;
+
+        let browser = null;
+
+
+        let searchResponses = [];
+
+        const updateSearchResponses = sr => {
+            if (!searchResponseList) return;
+            searchResponses = sr.results;
+            // noinspection JSUnresolvedVariable
+            const res = sr.results.map(r =>
+                `<li onclick="${r.disabled ? "" : "handleSearchResultClick(${r.i})"}"
+                     class="${r.disabled ? "disabled" : ""}">${r.contig}:${r.start}-${r.end}`).join("");
+            searchResponseList.innerHTML = res || "<em>No results found.</em>";
+        };
+
+        const performSearch = q =>
+            fetch("/loci" + (q ? `?q=${encodeURIComponent(q.trim())}` : ""))
+                .then(r => r.json())
+                .then(updateSearchResponses)
+                .catch(console.error);
+
+        const makeScale = (j, b) => {
+            const scale = document.createElement("div");
+            scale.setAttribute("data-label", `Allele ${j+1}`);
+            const scaleGradient = document.createElement("div");
+            scaleGradient.setAttribute("data-lower", b.min.toFixed(params.report.fractional ? 1 : 0));
+            scaleGradient.setAttribute(
+                "style",
+                `--scale-lower: ${palettes[j](b.span === 0 ? 0.6 : 0.3)};
+                 --scale-upper: ${palettes[j](b.span === 0 ? 0.6 : 0.9)}`);
+            scaleGradient.setAttribute("data-upper", b.max.toFixed(params.report.fractional ? 1 : 0));
+            scale.appendChild(scaleGradient);
+            scalesContainer.appendChild(scale);
+        };
+        const getScalePosition = (b, cn) => b.span === 0
+            ? 0.6
+            : 0.3 + ((cn - b.min) / b.span) * 0.6;
+
+        const makeBounds = (min, max) => ({min, max, span: max - min});
+
+        /** {% raw %}
+         * @param {{
+         *     contig: string,
+         *     start: number,
+         *     end: number,
+         *     motif: string,
+         *     ref_cn: number,
+         *     call: number[],
+         *     call_95_cis: Array.<number[]>,
+         *     reads: {
+         *         cn: number,
+         *         weight: number,
+         *         peak: number,
+         *     },
+         *     read_peaks_called: boolean,
+         *     peaks: {
+         *         kmers: Array.<Object<string, number>>,
+         *         means: number[],
+         *         weights: number[],
+         *         stdevs: number,
+         *         modal_n: number
+         *     }
+         * }} callData
+         {% endraw %}*/
+        const renderCall = () => {
+            const callData = state.callData;
+
+            console.debug("call data", callData);
+
+            /** @type number[] */
+            const cns = Object.values(callData.reads ?? {}).map(read => read.cn);
+            const thresholds = Math.min(100, Math.max(...cns) - Math.min(...cns));
+
+            // Add histogram
+
+            histogramContainer.innerHTML = "";
+            histogramContainer.appendChild(Histogram(cns, {
+                peaks: callData.peaks,
+                thresholds,
+                value: d => d,
+                label: "Copy number →",
+                yLabel: "↑ Read count",
+                width: 800,
+                height: 500,
+                color: "#9FA199",
+                showGaussians: ui.showGaussians,
+            }));
+
+            // Add k-mer plots, if available
+
+            if (callData.peaks.kmers) {
+                kmerColumn.classList.remove("hidden");
+                kmerContainer.innerHTML = "";
+
+                callData.peaks.kmers.forEach(k => {
+                    const data = Object.entries(k).map(([kmer, count]) => ({kmer, count}));
+                    kmerContainer.appendChild(kmerDistribution(data, {width: 300, height: 500}));
+                });
+
+            } else {
+                kmerColumn.classList.add("hidden");
+            }
+
+            // -----
+
+            const getReadsForPeak = q => Object.entries(callData.reads)
+                .filter(e => e[1]["p"] === q)
+                .map(e => e[1]["cn"]);
+
+            const bounds = (() => {
+                if (!callData.read_peaks_called || !Object.entries(callData.reads).length) return null;
+                if (callData.peaks.means.length > 1) {
+                    // 2 peaks since read peak labels are only generated for diploids
+                    return [getReadsForPeak(0), getReadsForPeak(1)].map(
+                        rs => makeBounds(Math.min(...rs), Math.max(...rs)));
+                } else {
+                    const calledReads = getReadsForPeak(0);
+                    return [makeBounds(Math.min(...calledReads), Math.max(...calledReads))];  // single peak
+                }
+            })();
+
+            const region = `${callData.contig}:${callData.start+1-regionPadding}-${callData.end+regionPadding}`;
+
+            locusSearchBox.value = region;
+
+            regionDisplay.innerText = region;
+            motifDisplay.innerText = callData.motif;
+            refGenome.innerText = params.cmd.ref.split("/").at(-1);
+            refCopies.innerText = callData.ref_cn.toFixed(params.report.fractional ? 1 : 0);
+            callDisplay.innerHTML = callData.call
+                .map((c, ci) =>
+                    `<span style="color: ${palettes[ci](bounds ? getScalePosition(bounds[ci], c) : 0.6)}">${
+                      c.toFixed(params.report.fractional ? 1 : 0)}</span>`)
+                .join('<span style="color: #666;">&boxv;</span>');
+            // TODO: Proper scale for 95% CI!!!
+            call95Display.innerHTML = callData.call_95_cis
+                .map((ci, cii) => "(" +
+                    ci.map((c, cpi) =>
+                        `<span style="color: ${palettes[cii](bounds ? getScalePosition(bounds[cii], c) : 0.6)}">
+                            ${c.toFixed(params.report.fractional ? 1 : 0)}
+                        </span>`).join("-") + ")")
+                .join('<span style="color: #666;">&boxv;</span>');
+
+            scalesContainer.innerHTML = "";
+            igvContainer.innerHTML = "";  // TODO: properly deconstruct old browser
+
+            const readColours = (() => {
+                if (!bounds) return {};
+                bounds.forEach((b, i) => makeScale(i, b));
+                return Object.fromEntries(Object.entries(callData.reads)
+                    .filter(([_r, rd]) => rd["p"] !== undefined)
+                    .map(([r, rd]) => [r, palettes[rd["p"]](getScalePosition(bounds[rd["p"]], rd["cn"]))]));
+            })();
+
+            // Remove existing browser instance if present
+            if (browser) {
+                igv.removeBrowser(browser);
+                browser = null;
+            }
+
+            const alignTracks = [{
+                name: params.cmd.align_name,
+                url: `/align_file`,
+                indexURL: `/align_index`,
+                format: params.cmd.align_format,
+                showSoftClips: true,
+                showInsertionText: true,
+                showDeletionText: true,
+                color: alignment => readColours[alignment.readName] ?? "rgb(180, 180, 180)",
+                sort: {
+                    chr: callData.contig,
+                    position: ((callData.start + callData.end) / 2).toFixed(0),
+                    option: "INSERT_SIZE",
+                },
+            }];
+
+            // Set up new IGV browser instance
+            igv.createBrowser(igvContainer, {
+                genome: "{{ ref }}",
+                locus: region,
+                roi: [{
+                    name: "STR",
+                    color: "rgba(255, 200, 127, 0.15)",
+                    features: [{chr: callData.contig, start: callData.start, end: callData.end}],
+                }],
+                tracks: alignTracks,
+            }).then(b => {
+                browser = b;
+                browser.on("trackclick", (track, popoverData) => {
+                    console.log(track, popoverData);
+
+                    const alignmentData = Object.fromEntries(
+                        popoverData.filter(p => typeof p === "object").map(p => [p.name, p.value]));
+
+                    if (alignmentData["Read Name"]) {
+                        const read = alignmentData["Read Name"];
+                        const cn = callData.read_cns[read];
+                        let peakLabel = callData.read_peak_labels?.[read];
+                        if (peakLabel !== undefined) {
+                            peakLabel = `Allele ${(peakLabel+1).toFixed(0)}`;
+                        } else {
+                            peakLabel = "-";
+                        }
+                        return `<div class="alignment-data">
+                                <label>Read Name:</label><span>${read}</span>
+                                <label>Est. Copy #:</label><span>${cn.toFixed(1)}</span>
+                                <label>Rel. Copy #:</label><span>${(cn - callData.ref_cn).toFixed(1)}</span>
+                                <label>Peak Label:</label><span>${peakLabel}</span>
+                            </div>`;
+                    }
+
+                    const ins = alignmentData["Insertion"]
+                    if (ins) {
+                        return `<div class="alignment-data insertion">
+                                <label>Position:</label><span>${alignmentData["Location"]}</span>
+                                <label>Size:</label><span>${ins.length}</span>
+                                <label>Insertion:</label><span>${ins}</span>
+                            </div>`;
+                    }
+                });
+            }).catch(console.error);
+        };
+
+        const fetchCallData = i => {
+            fetch(`/call_data/${i}`)
+                .then(r => r.json())
+                .then(callData => {
+                    state.callData = callData;
+                    renderCall();
+                })
+                .catch(console.error);
+        }
+
+        const fetchParams = () =>
+            fetch(`/params`)
+                .then(r => r.json())
+                .then(ps => {
+                  params = ps;
+                  console.debug("params", ps);
+                })
+                .catch(console.error);
+
+        const fetchReportMetadata = () =>
+            fetch("/report-metadata")
+                .then(r => r.json())
+                .then(rm => {
+                  reportMetadata = rm;
+                  console.debug("report metadata", rm);
+                })
+                .catch(console.error);
+
+        const handleSearchResultClick = i => {
+            fetchCallData(i);
+        };
+
+        const handleToggleCurvesClick = () => {
+            ui.showGaussians = !ui.showGaussians;
+            renderCall();
+        };
+
+        // --------------------------------------------------------------------
+
+        document.addEventListener("DOMContentLoaded", () => {
+            locusSearchBox = document.getElementById("locus-search-box");
+            searchResponseList = document.getElementById("search-responses");
+
+            btnToggleCurves = document.getElementById("btn-toggle-curves");
+
+            histogramContainer = document.getElementById("histogram");
+            kmerColumn = document.getElementById("col-k-mer-dist");
+            kmerContainer = document.getElementById("k-mer-plot");
+            scalesContainer = document.getElementById("scales");
+            igvContainer = document.getElementById("igv-browser");
+            reportMetadataTable = document.getElementById("report-metadata");
+
+            sampleDisplay = document.getElementById("sample");
+            regionDisplay = document.getElementById("region");
+            motifDisplay = document.getElementById("motif");
+            refGenome = document.getElementById("ref-genome");
+            refCopies = document.getElementById("ref-copies");
+            callDisplay = document.getElementById("call");
+            call95Display = document.getElementById("call-95");
+
+            locusSearchBox.addEventListener("focusin", () => {
+                searchResponseList.classList.add("active");
+                searchResponseList.setAttribute("aria-hidden", "false");
+                locusSearchBox.select();
+            });
+            locusSearchBox.addEventListener("focusout", () => {
+                setTimeout(() => {
+                    searchResponseList.classList.remove("active");
+                    searchResponseList.setAttribute("aria-hidden", "true");
+                }, 200);  // Need enough time for clicks outside to register  TODO: less hacky solution
+            });
+            locusSearchBox.addEventListener("keyup", e => {
+                const v = e.target.value;
+                console.log(e.target.value);
+                const sw = v.startsWith("c") || v.startsWith("ch") || v.startsWith("chr");
+                if (v.length < 1 || (sw && v.length < 4)) {
+                    searchResponseList.innerHTML = "<em>Keep typing...</em>";
+                    return;
+                }
+                // TODO: debounce
+                performSearch(v);
+            });
+
+            btnToggleCurves.addEventListener("click", handleToggleCurvesClick);
+
+            document.querySelectorAll(".tab-link").forEach(tL => {
+                tL.addEventListener("click", e => {
+                    document.querySelectorAll(".tab-links li")
+                        .forEach(tL2 => tL2.classList.remove("active"));
+                    e.target.parentElement.classList.add("active");
+                    document.querySelectorAll(".tab-content")
+                        .forEach(tC => tC.classList.remove("active"));
+                    document.getElementById(tL.dataset.for).classList.add("active");
+                    browser.visibilityChange();
+                });
+            });
+
+            // Load initial data
+            fetchParams().then(() => {
+                performSearch();
+                fetchCallData({{ initial_i }});
+            });
+
+            fetchReportMetadata().then(() => {
+                if (reportMetadata.sample_id) {
+                    sampleDisplay.innerText = reportMetadata.sample_id;
+                }
+
+                const other = {};
+
+                const renderObj = (k, v) => {
+                    const header = document.createElement("tr");
+                    const th = document.createElement("th");
+                    th.setAttribute("colspan", "2");
+                    th.innerText = k;
+                    header.appendChild(th);
+                    reportMetadataTable.appendChild(header);
+
+                    Object.entries(v).forEach(([vk, vv]) => {
+                        const tr = document.createElement("tr");
+                        const th = document.createElement("th");
+                        th.style.textAlign = "left";
+                        th.innerText = vk;
+                        tr.append(th);
+                        const td = document.createElement("td");
+                        td.innerText = JSON.stringify(vv);
+                        tr.append(td);
+                        reportMetadataTable.append(tr);
+                    });
+                }
+
+                Object.entries(reportMetadata).forEach(([k, v]) => {
+                    if (v instanceof Object) {
+                        renderObj(k, v);
+                    } else {
+                        other[k] = v;
+                    }
+                });
+
+                renderObj("other", other);
+            });
+        });
+    </script>
+
+    <!--suppress CssUnresolvedCustomProperty -->
+    <style>
+        * { font-family: sans-serif; }
+
+        body {
+            height: 100vh;
+            padding: 0; margin: 0;
+
+            /*noinspection CssUnknownTarget*/
+            background-image: url("{{ url_for('static', filename='logo.png') }}");
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            background-position: bottom 24px right 36px;
+            background-size: 300px auto;
+        }
+
+        .help-text {
+            color: #666;
+            font-style: italic;
+            margin: 0;
+        }
+
+        #strkit {
+            height: 100vh;
+            overflow-y: auto;
+            padding: 24px 36px;
+            background-color: rgba(254, 254, 254, 0.7);
+            box-sizing: border-box;
+        }
+
+        header {
+            display: flex;
+            padding-bottom: 24px;
+            margin: 0 0 24px;
+            border-bottom: 2px solid #F0F0F0;
+            color: #333;
+        }
+
+        h1 {
+            flex: 1;
+            font-family: sans-serif;
+            font-size: 28px;
+            line-height: 34px;
+            height: 32px;
+            margin: 0;
+        }
+        h1 span {
+            font-weight: normal;
+        }
+
+        #sample {
+            font-style: italic;
+            color: #666;
+        }
+
+        #locus-search {
+            position: relative;
+        }
+        #locus-search label {
+            font-size: 18px;
+            line-height: 32px;
+            color: #555;
+        }
+        #locus-search-box {
+            box-sizing: border-box;
+            font-size: 18px;
+            vertical-align: top;
+            width: 14em;
+            height: 32px;
+            line-height: 32px;
+            padding: 0 6px;
+            color: #333;
+        }
+        #locus-search-box-dec {
+            position: absolute;
+            left: 340px;
+            top: 5px;
+            color: #999;
+            pointer-events: none;
+        }
+        #search-responses {
+            position: absolute;
+            top: 18px;
+            right: 0;
+            z-index: 100;
+            padding: 8px 0;
+            list-style: none;
+            min-width: 14em;
+            border: 1px solid #E3E3E3;
+            border-radius: 3px;
+            background-color: #FEFEFE;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            display: none;
+        }
+        #search-responses.active {
+            display: block;
+        }
+        #search-responses li {
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        #search-responses li.disabled {
+            cursor: not-allowed;
+            padding: 4px 8px;
+            color: #999;
+        }
+        #search-responses li:hover {
+            background-color: #F0F0F0;
+        }
+        #search-responses em {
+            padding: 4px 8px;
+            color: #555;
+        }
+
+        #locus-meta {
+            padding: 12px;
+            margin-bottom: 8px;
+            width: 36em;
+            display: grid;
+            grid-template-columns: 7em 7em 7em 14em;
+            column-gap: 8px;
+            row-gap: 4px;
+            border: 1px solid #E3E3E3;
+            border-radius: 3px;
+            background-color: #F9F9F9;
+            font-size: 20px;
+            color: #333;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        #locus-meta label {
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .tab-links {
+            list-style: none;
+            margin: 0; padding: 0;
+            display: flex;
+            gap: 16px;
+        }
+        .tab-links li {
+            padding: 16px 8px;
+        }
+        .tab-links li a {
+            color: #666;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .tab-links li.active a {
+            color: black;
+            text-decoration: none;
+        }
+        .tab-content {
+            border: 1px solid #E3E3E3;
+            border-radius: 3px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            box-sizing: border-box;
+            display: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+        }
+        .tab-content.active {
+            display: inline-block;
+        }
+
+        #tab-overview {
+            width: 100%;
+            flex-direction: row;
+            gap: 12px;
+        }
+        #tab-overview.active {
+            display: flex;
+        }
+        #tab-overview h2 {
+            margin: 0 0 12px 0;
+            font-size: 20px;
+        }
+        #tab-overview h2 button {
+            margin-left: 1.5rem;
+            vertical-align: top;
+        }
+        #tab-overview header {
+
+        }
+        #tab-overview > div {
+            flex: 1;
+        }
+
+        #tab-browser {
+            width: 100%;
+        }
+
+        #col-k-mer-dist.hidden {
+            display: none;
+        }
+
+        #k-mer-plot {
+            display: flex;
+            gap: 12px;
+            flex-direction: row;
+        }
+
+        #scales {
+            display: flex;
+            gap: 16px;
+        }
+        #scales > div {
+            display: flex;
+            gap: 8px;
+        }
+        #scales > div::before {
+            display: block;
+            height: 22px;
+            content: attr(data-label);
+            font-family: sans-serif;
+            font-weight: bold;
+            line-height: 22px;
+        }
+        #scales > div > div {
+            padding: 2px;
+            height: 16px;
+            width: 150px;
+            border: 1px solid #666;
+            background: linear-gradient(90deg, var(--scale-lower), var(--scale-upper));
+            display: flex;
+        }
+        #scales > div > div::before {
+            content: attr(data-lower);
+            flex: 1;
+            color: white;
+            font-weight: bold;
+            font-family: sans-serif;
+            /*noinspection CssNonIntegerLengthInPixels*/
+            -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.8);
+            /*noinspection CssNonIntegerLengthInPixels,CssUnknownProperty*/
+            text-stroke: 0.5px rgba(0, 0, 0, 0.8);
+        }
+        #scales > div > div::after {
+            content: attr(data-upper);
+            color: white;
+            font-weight: bold;
+            font-family: sans-serif;
+            /*noinspection CssNonIntegerLengthInPixels*/
+            -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.8);
+            /*noinspection CssNonIntegerLengthInPixels,CssUnknownProperty*/
+            text-stroke: 0.5px rgba(0, 0, 0, 0.8);
+        }
+
+        .alignment-data {
+            margin: 8px 5px;
+            width: 300px;
+            display: grid;
+            grid-template-columns: 80px 200px;
+            column-gap: 8px;
+            row-gap: 4px;
+            font-size: 11px;
+        }
+        #igv-browser {
+            width: 100%;
+        }
+
+        /*noinspection CssUnusedSymbol*/
+        .igv-ui-1_3_0-popover > div:last-child > div.alignment-data.insertion {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+        .igv-ui-1_3_0-popover > div:last-child > div.alignment-data > label { font-weight: bold; text-align: right; }
+        .igv-ui-1_3_0-popover > div:last-child > div.alignment-data > span { font-weight: normal; white-space: normal; }
+
+
+        #report-metadata {
+            border-collapse: collapse;
+            color: #333;
+        }
+        #report-metadata th, td {
+            border: 1px solid #E0E0E0;
+            padding: 4px 8px;
+            font-family: monospace;
+        }
+        #report-metadata th[colspan] {
+            background-color: #EFEFEF;
+        }
+
+
+        @media screen and (max-width: 1320px) {
+            h1 {
+                font-size: 20px;
+            }
+        }
+
+        @media screen and (max-width: 1100px) {
+            h1 {
+                font-size: 18px;
+            }
+
+            #tab-overview {
+                flex-direction: column;
+            }
+        }
+
+        @media screen and (max-width: 980px) {
+            header {
+                flex-direction: column;
+            }
+
+            #locus-meta {
+                width: 21em;
+                grid-template-columns: 7em 14em;
+            }
+        }
+
+        @media screen and (max-width: 550px) {
+            h1 {
+                font-size: 16px;
+            }
+
+            #locus-meta {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="strkit">
+    <header>
+        <h1>
+            STRkit Browser: <span id="sample"></span> <span id="region"></span> &mdash; <span id="motif"></span>
+        </h1>
+        <div id="locus-search">
+            <label for="locus-search-box">Select locus:</label>
+            <input id="locus-search-box" placeholder="chr#:start-end" />
+            <span id="locus-search-box-dec" aria-hidden="true">&or;</span>
+            <ul id="search-responses"></ul>
+        </div>
+    </header>
+    <div id="locus-meta">
+        <label for="ref-genome">Ref. Genome:</label><span id="ref-genome"></span>
+        <label for="ref-copies">Ref. # Copies:</label><span id="ref-copies"></span>
+        <label for="call">Final Call:</label><span id="call"></span>
+        <label for="call-95">Call 95%CI:</label><span id="call-95"></span>
+    </div>
+    <ul class="tab-links">
+       <li class="active"><a class="tab-link" data-for="tab-overview">Overview</a></li>
+       <li><a class="tab-link" data-for="tab-browser">Browser</a></li>
+       <li><a class="tab-link" data-for="tab-report">Report</a></li>
+    </ul>
+    <div class="tab-content active" id="tab-overview">
+        <div id="col-rc-hist">
+            <h2>Read count histogram <button id="btn-toggle-curves">Toggle Curves</button></h2>
+            <div id="histogram"></div>
+        </div>
+        <div id="col-k-mer-dist" class="hidden"> <!-- TODO: Only if k-mer content exists -->
+            <div class="col-header">
+                <h2>K-mer distribution</h2>
+                <p class="help-text">Plots may be truncated after top 15 k-mers.</p>
+            </div>
+            <div id="k-mer-plot"></div>
+        </div>
+    </div>
+    <div class="tab-content" id="tab-browser">
+        <div id="scales"></div>
+        <div id="igv-browser"></div>
+    </div>
+    <div class="tab-content" id="tab-report">
+        <table id="report-metadata"></table>
+    </div>
+</div>
+</body>
+</html>
