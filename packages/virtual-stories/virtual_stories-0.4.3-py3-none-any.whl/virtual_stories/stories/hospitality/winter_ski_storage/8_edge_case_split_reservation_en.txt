@@ -1,0 +1,31 @@
+"""
+Split reservation across two lockers due to capacity.
+ROLES: user (guest with many items), assistant (attendant allocating multiple lockers)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"allocate_lockers","description":"Allocate multiple lockers for a reservation.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"pieces":{"type":"integer","minimum":1,"maximum":12}},"required":["reservation_id","pieces"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Summit Ridge Lodge
+Policy: Large parties may be split across lockers when capacity requires
+
+user:
+We have five sets to store under SR300—can you take them all?
+
+assistant channel=analysis:
+Allocate multiple lockers; confirm clearly.
+
+assistant channel=commentary to=tool.allocate_lockers:
+{"reservation_id":"SR300","pieces":5}
+
+tool.allocate_lockers channel=commentary to=assistant:
+{"status":"allocated","lockers":["A-02","A-03"]}
+
+assistant channel=final:
+We’ve allocated lockers A‑02 and A‑03 for your five sets. We’ll label them under SR300 for easy pickup.

@@ -1,0 +1,48 @@
+"""
+Guest asks about last-minute suite upgrade at check-in; accepts a flash offer.
+
+ROLES: user (walk-in at check-in time), assistant (front desk agent offering flash upgrade rate)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"check_room_upgrade_options","description":"Check real-time upgrade availability for flash offers.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"}},"required":["reservation_id"]},"strict":true},
+  {"name":"process_room_upgrade","description":"Apply flash upgrade.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"room_type":{"type":"string"}},"required":["reservation_id","room_type"]},"strict":true}
+]
+```
+"""
+
+system:
+You are at Cityline Midtown Hotel (hotel_id: cityline_atlanta). Address: 88 Peachtree St NE, Atlanta, GA 30303. Timezone: America/New_York. Flash offers may be extended at check‑in for unoccupied suites, subject to manager approval.
+
+user:
+Any chance of a last‑minute suite upgrade if I’m checking in now? My ID is RSV55990.
+
+assistant channel=analysis:
+Check options for RSV55990.
+
+assistant channel=commentary to=tool.check_room_upgrade_options:
+{"reservation_id":"RSV55990"}
+
+tool.check_room_upgrade_options channel=commentary to=assistant:
+{"available":["junior_suite","executive_suite"],"rates":{"junior_suite":45.0,"executive_suite":95.0}}
+
+assistant channel=final:
+We have a junior suite for $45/night and an executive suite for $95/night as a flash offer right now. Would you like one?
+
+user:
+Executive suite—let’s make it a good trip.
+
+assistant channel=analysis:
+Process executive suite.
+
+assistant channel=commentary to=tool.process_room_upgrade:
+{"reservation_id":"RSV55990","room_type":"executive_suite"}
+
+tool.process_room_upgrade channel=commentary to=assistant:
+{"status":"confirmed","new_room_type":"executive_suite"}
+
+assistant channel=final:
+Excellent choice—executive suite confirmed. Welcome to Cityline, and enjoy your stay!
+

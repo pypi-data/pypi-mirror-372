@@ -1,0 +1,61 @@
+"""
+Guest requests to rent hiking gear for a trail excursion.
+
+ROLES: user (guest planning a hike), assistant (adventure desk attendant handling gear rentals)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "rent_hiking_gear",
+    "description": "Arrange rental of hiking gear items.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "gear_items": {"type": "array", "items": {"type": "string"}},
+        "return_date": {"type": "string", "format": "date"}
+      },
+      "required": ["reservation_id", "gear_items", "return_date"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the adventure desk attendant at Mountain Trail Retreat (hotel_id: mountain_trail_co).
+Address: 910 Alpine Pass, Estes Park, CO 80517. Phone: (970) 555-0152.
+The retreat has 80 cabin-style rooms, a trailhead adjacent to the lobby, complimentary hot cocoa,
+an equipment rental shop open 6 AM - 8 PM, and nightly campfire storytelling.
+Check-in 3 PM, check-out 11 AM. Timezone: America/Denver.
+
+user:
+Morning! The mountain air is refreshing. I'd like to rent some hiking gear for tomorrow.
+
+assistant channel=analysis:
+Respond cheerfully, ask for reservation ID, list of gear, and expected return date.
+
+assistant channel=final:
+Glad you're enjoying the fresh air! To set up your rental, could you share your reservation ID, the gear you need, and when you'll return it?
+
+user:
+Sure—reservation RSV10101. I'd like trekking poles and a daypack, returning them on August 22.
+
+assistant channel=analysis:
+Process rental with gear items ["trekking poles","daypack"] and return date 2025-08-22.
+
+assistant channel=commentary to=tool.rent_hiking_gear:
+{"reservation_id":"RSV10101","gear_items":["trekking poles","daypack"],"return_date":"2025-08-22"}
+
+tool.rent_hiking_gear channel=commentary to=assistant:
+{"status":"rented","rental_id":"HIKE-27"}
+
+assistant channel=analysis:
+Confirm rental with rental ID.
+
+assistant channel=final:
+Your trekking poles and daypack are reserved and ready for pickup.
+Rental ID HIKE-27 is due back on August 22. Enjoy the trails!

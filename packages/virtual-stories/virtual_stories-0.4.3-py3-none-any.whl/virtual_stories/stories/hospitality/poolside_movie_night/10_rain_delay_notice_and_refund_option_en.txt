@@ -1,0 +1,78 @@
+"""
+Guest asks about rain delays, SMS alerts, and refund/credit options for movie night.
+
+ROLES: user (guest weighing whether to attend in rain), assistant (events coordinator handling alerts and credits)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "subscribe_weather_sms",
+    "description": "Subscribe a guest to SMS alerts for rain delays or venue changes.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "phone": { "type": "string" }
+      },
+      "required": ["hotel_id", "phone"]
+    },
+    "strict": true
+  },
+  {
+    "name": "offer_rain_credit",
+    "description": "Offer rain credit or refund for reserved seats.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "reservation_id": { "type": "string" },
+        "preference": { "type": "string", "enum": ["credit","refund"] }
+      },
+      "required": ["hotel_id", "reservation_id", "preference"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the events coordinator at Blue Horizon Hotel (hotel_id: blue_horizon_hnl). Address: 300 Kalakaua Ave, Honolulu, HI 96815. Timezone: Pacific/Honolulu. Check-in 3:00 PM, check-out 11:00 AM. Currency: USD.
+Amenities: oceanview pool deck, Sunday cinema at sunset, SMS alert system for weather changes, rain credits usable within 30 days.
+
+user:
+If it rains, will I get a text about delays? And if I skip, can I get a credit? My reservation is BH-77.
+
+assistant channel=analysis:
+Offer SMS subscription and provide credit option for BH-77.
+
+assistant channel=commentary to=tool.subscribe_weather_sms:
+{"hotel_id":"blue_horizon_hnl","phone":"+18085551234"}
+
+tool.subscribe_weather_sms channel=commentary to=assistant:
+{"status":"subscribed"}
+
+assistant channel=commentary to=tool.offer_rain_credit:
+{"hotel_id":"blue_horizon_hnl","reservation_id":"BH-77","preference":"credit"}
+
+tool.offer_rain_credit channel=commentary to=assistant:
+{"status":"credit_issued","credit_code":"RAIN-351","valid_days":30}
+
+assistant channel=analysis:
+Share subscription success and credit code with policy note.
+
+assistant channel=final:
+You’ll receive SMS updates if we delay or change venues—your number is now subscribed. If you choose to skip, I’ve issued a rain credit for BH-77: code RAIN-351, valid for 30 days toward another movie night.
+
+user:
+Mahalo—sunset screenings must be gorgeous there.
+
+assistant channel=analysis:
+Offer small talk.
+
+assistant channel=final:
+They are—the colors over Waikiki are hard to beat. Hope the skies cooperate tonight!
+

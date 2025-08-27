@@ -1,0 +1,54 @@
+"""
+Guest inquires about currency exchange and engages in small talk.
+ROLES: user (guest needing currency exchange), assistant (front desk agent providing currency service info)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_currency_exchange",
+    "description": "Check if the hotel can exchange a given currency and provide the rate.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier." },
+        "currency_code": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "ISO currency code to exchange." }
+      },
+      "required": ["hotel_id", "currency_code"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi-Fi, gym, pool, on-site restaurant, 24-hour business center, valet parking, spa, and airport shuttle. Complimentary breakfast 6:00 AM–10:00 AM. Pets up to 40 lb allowed with $75 fee. Currency: USD. Provide warm service and use tools for currency exchange inquiries.
+
+user:
+Hi there! Hope you're doing well. Do you exchange euros at the front desk?
+
+assistant channel=analysis:
+Guest asks about exchanging euros (EUR). Use tool and acknowledge greeting.
+
+assistant channel=commentary to=tool.check_currency_exchange:
+{"hotel_id":"skyline_city_hotel_nyc","currency_code":"EUR"}
+
+tool.check_currency_exchange channel=commentary to=assistant:
+{"available":true,"rate":1.07}
+
+assistant channel=analysis:
+Confirm availability and rate, respond warmly.
+
+assistant channel=final:
+I'm doing great, thanks! Yes, we can exchange euros at the front desk. Today's rate is about 1 EUR to 1.07 USD. Stop by anytime if you'd like to swap some currency.
+
+user:
+Awesome, thanks for the info. See you later.
+
+assistant channel=analysis:
+Wrap up with friendly note; no tool.
+
+assistant channel=final:
+You're welcome! Looking forward to seeing you later.

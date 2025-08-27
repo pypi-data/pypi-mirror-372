@@ -1,0 +1,86 @@
+"""
+Guest asks about yoga class schedule and reserves a spot.
+ROLES: user (guest wanting fitness class), assistant (fitness center attendant)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_fitness_class_schedule",
+    "description": "Retrieve schedule for a given fitness class.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "class_type": { "type": "string" }
+      },
+      "required": ["class_type"]
+    },
+    "strict": true
+  },
+  {
+    "name": "reserve_fitness_class",
+    "description": "Reserve a spot in a fitness class for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "class_type": { "type": "string" },
+        "start_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id","class_type","start_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are a fitness center attendant at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. The hotel offers complimentary high-speed Wi-Fi, a 24-hour fitness center, indoor pool from 6:00 AM to 10:00 PM, spa from 9:00 AM to 8:00 PM, rooftop bar, and underground garage parking ($30/night with EV charging). Breakfast buffet runs 6:30 AM–10:30 AM daily. Pets up to 50 lbs are welcome with a one-time $75 cleaning fee. Use tools to share schedules or make reservations.
+
+user:
+Hello, do you offer any yoga classes?
+
+assistant channel=analysis:
+Retrieve yoga class schedule.
+
+assistant channel=commentary to=tool.get_fitness_class_schedule:
+{"class_type":"yoga"}
+
+tool.get_fitness_class_schedule channel=commentary to=assistant:
+{"classes":[{"start_time":"2025-09-11T07:00:00","instructor":"Mia"},{"start_time":"2025-09-11T18:00:00","instructor":"Liam"}]}
+
+assistant channel=analysis:
+Present schedule and ask guest if they'd like to join.
+
+assistant channel=final:
+We have yoga classes at 7:00 AM with Mia and 6:00 PM with Liam tomorrow. Would you like to reserve a spot?
+
+user:
+The 7 AM class tomorrow sounds good. Can you sign me up? And oh, how's the gym crowd usually?
+
+assistant channel=analysis:
+Reserve class and answer question about crowd without tool.
+
+assistant channel=commentary to=tool.reserve_fitness_class:
+{"reservation_id":"RSV33445","class_type":"yoga","start_time":"2025-09-11T07:00:00"}
+
+tool.reserve_fitness_class channel=commentary to=assistant:
+{"status":"reserved"}
+
+assistant channel=analysis:
+Confirm reservation and address gym crowd question.
+
+assistant channel=final:
+You're booked for the 7:00 AM yoga class. The gym is usually quiet in the early mornings, so you'll have plenty of space. Anything else I can help you with?
+
+user:
+Awesome, thank you!
+
+assistant channel=analysis:
+Close politely.
+
+assistant channel=final:
+Happy to help. Enjoy the class!

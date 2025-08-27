@@ -1,0 +1,106 @@
+"""
+Guest reports in-room Wi‑Fi connectivity issues and requests a quick fix.
+ROLES: user (guest with intermittent Wi‑Fi in room 1510), assistant (tech support coordinating credentials, diagnostics, and onsite assistance)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_wifi_credentials",
+    "description": "Provide current Wi‑Fi SSID and password for the guest floor.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "room_number": { "type": "string" }
+      },
+      "required": ["hotel_id", "room_number"]
+    },
+    "strict": true
+  },
+  {
+    "name": "run_wifi_diagnostics",
+    "description": "Run diagnostics for the room access point and return status.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "test_duration_sec": { "type": "integer", "minimum": 5, "maximum": 120 }
+      },
+      "required": ["room_number"]
+    },
+    "strict": true
+  },
+  {
+    "name": "create_it_ticket",
+    "description": "Create an onsite IT ticket for a technician visit.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "normal", "high"] },
+        "issue_summary": { "type": "string" }
+      },
+      "required": ["room_number", "priority", "issue_summary"]
+    },
+    "strict": true
+  },
+  {
+    "name": "send_followup_sms",
+    "description": "Send a follow-up SMS with troubleshooting tips or ETA.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "phone_e164": { "type": "string", "pattern": "^\\+?[1-9]\\d{1,14}$" },
+        "message": { "type": "string" }
+      },
+      "required": ["phone_e164", "message"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are tech support for Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi‑Fi, gym, pool, on-site restaurant. Provide clear steps, confirm room number and device count, and only use tools to share Wi‑Fi credentials, run diagnostics, dispatch a technician, and send follow-ups.
+
+user:
+Hi, Wi‑Fi keeps dropping in room 1510. Can you help? My phone is +15556667777.
+
+assistant channel=analysis:
+Share credentials, run diagnostics for room 1510; if signal weak, schedule tech within 30 minutes; send SMS with ETA.
+
+assistant channel=commentary to=tool.get_wifi_credentials:
+{"hotel_id":"skyline_city_hotel_nyc","room_number":"1510"}
+
+tool.get_wifi_credentials channel=commentary to=assistant:
+{"ssid":"Skyline_Guest_15F","password":"StaySkyline2025!"}
+
+assistant channel=commentary to=tool.run_wifi_diagnostics:
+{"room_number":"1510","test_duration_sec":15}
+
+tool.run_wifi_diagnostics channel=commentary to=assistant:
+{"status":"degraded","packet_loss_pct":8.5,"recommendation":"onsite_check"}
+
+assistant channel=commentary to=tool.create_it_ticket:
+{"room_number":"1510","priority":"high","issue_summary":"Wi‑Fi intermittent; packet loss ~8.5% on 15F AP"}
+
+tool.create_it_ticket channel=commentary to=assistant:
+{"ticket_id":"IT-1510-9281","eta_min":25}
+
+assistant channel=commentary to=tool.send_followup_sms:
+{"phone_e164":"+15556667777","message":"Skyline City Hotel: Tech ticket IT-1510-9281 created. ETA ~25 min. Meanwhile, try forgetting and rejoining SSID Skyline_Guest_15F with password StaySkyline2025!."}
+
+tool.send_followup_sms channel=commentary to=assistant:
+{"status":"sent"}
+
+assistant channel=final:
+Thanks for flagging this. I’ve created ticket IT-1510-9281; our technician will arrive in about 25 minutes. I also texted tips and your Wi‑Fi credentials to +15556667777. If the signal drops again, I can move you closer to the access point.
+
+

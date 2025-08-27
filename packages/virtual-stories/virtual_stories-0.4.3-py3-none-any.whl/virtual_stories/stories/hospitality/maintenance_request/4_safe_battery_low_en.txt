@@ -1,0 +1,54 @@
+"""
+In-room safe shows low-battery warning.
+
+ROLES: user (guest concerned about accessing belongings), assistant (front desk coordinating maintenance)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "dispatch_locksmith",
+    "description": "Dispatch a technician to service or open an in-room safe.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_number": { "type": "string" },
+        "emergency": { "type": "boolean" }
+      },
+      "required": ["reservation_id", "room_number", "emergency"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are at Harborline Wharf Hotel (hotel_id: wharf_bos). Address: 450 Seaport Blvd, Boston, MA 02210. Timezone: America/New_York.
+Amenities: harbor view decks, oyster bar, heated lap pool. Safes can show low battery; engineering can replace batteries or open with override in guest presence.
+
+user:
+Hi! My safe says “Low Batt”. Nice view of the harbor tonight.
+
+assistant channel=analysis:
+Acknowledge view; dispatch non-emergency within an hour. Reservation RSV917.
+
+assistant channel=commentary to=tool.dispatch_locksmith:
+{"reservation_id":"RSV917","room_number":"917","emergency":false}
+
+tool.dispatch_locksmith channel=commentary to=assistant:
+{"status":"dispatched","technician_id":"BOS-LOCK-2","eta_minutes":50}
+
+assistant channel=analysis:
+Confirm and set expectations.
+
+assistant channel=final:
+Agreed—the reflections on the water are special. I’ve dispatched BOS-LOCK-2 with a 50‑minute ETA to replace the batteries and ensure you can access your items. We’ll service it in your presence for security.
+
+user:
+Thanks—I’ll be in.
+
+assistant channel=final:
+Perfect. If timing shifts, just message us and we’ll adjust.

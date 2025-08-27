@@ -1,0 +1,99 @@
+"""
+Guest wants to book a birthday dinner celebration with special touches.
+
+ROLES: user (person planning birthday surprise), assistant (events coordinator specializing in celebrations)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_birthday_availability",
+    "description": "Check availability for birthday celebration dining.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "party_size": { "type": "integer" },
+        "celebration_type": { "type": "string", "enum": ["quiet", "surprise", "full_celebration"] }
+      },
+      "required": ["date", "time", "party_size", "celebration_type"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_birthday_dinner",
+    "description": "Book birthday celebration dinner with special arrangements.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "party_size": { "type": "integer" },
+        "name": { "type": "string" },
+        "birthday_person": { "type": "string" },
+        "special_requests": { "type": "string" }
+      },
+      "required": ["date", "time", "party_size", "name", "birthday_person"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the events coordinator at Desert Rose Hotel & Casino (hotel_id: desert_rose_las_vegas). Address: 101 Strip Boulevard, Las Vegas, NV 89101.
+Timezone: America/Los_Angeles. Hotel amenities include casino, shows, pools, and celebrity chef restaurant "Stardust".
+Celebration packages: birthday (complimentary dessert, photo with chef, birthday song), surprise packages (coordination assistance), VIP treatments.
+Entertainment: live music, celebrity sightings, special effects dining experiences.
+
+user:
+Hi! I want to book a birthday dinner for my sister this Saturday. It's her 30th birthday and I want to make it special. We're a group of 8 people.
+
+assistant channel=analysis:
+This is a birthday celebration request. I should check availability and offer our birthday celebration options to make it memorable.
+
+assistant channel=final:
+Happy early birthday to your sister! We'd love to help make her 30th birthday celebration special at Stardust restaurant. Let me check our availability for Saturday for a group of 8.
+
+assistant channel=commentary to=tool.check_birthday_availability:
+{"date":"2025-08-24","time":"20:00","party_size":8,"celebration_type":"full_celebration"}
+
+tool.check_birthday_availability channel=commentary to=assistant:
+{"available":true,"celebration_options":["birthday_cake","chef_photo","party_favors","vip_service"],"table_location":"celebrity_view"}
+
+assistant channel=analysis:
+Excellent! We have availability with great celebration options. Share the birthday package details and book the reservation.
+
+assistant channel=final:
+Perfect! We have availability at 8 PM with a celebrity view table. For her 30th birthday, we offer our Celebration Package which includes a complimentary birthday cake, photo with our celebrity chef, party favors, and VIP service throughout the evening. This would make it truly memorable! May I book this for you?
+
+user:
+That sounds absolutely perfect! Please book it under my name, Michael Chen. It's a surprise for Sarah - she doesn't know about the celebration yet. Could you make sure the cake says "Happy 30th Sarah"?
+
+assistant channel=analysis:
+Book the birthday dinner with the special surprise arrangements and cake customization.
+
+assistant channel=commentary to=tool.book_birthday_dinner:
+{"date":"2025-08-24","time":"20:00","party_size":8,"name":"Michael Chen","birthday_person":"Sarah Chen","special_requests":"surprise celebration, cake message 'Happy 30th Sarah', coordinate surprise timing"}
+
+tool.book_birthday_dinner channel=commentary to=assistant:
+{"status":"confirmed","reservation_id":"BIRTH-0824-08","special_arrangements":"surprise_coordination, custom_cake, vip_service"}
+
+assistant channel=analysis:
+Confirm the booking and provide helpful details about the surprise coordination to ensure everything goes smoothly.
+
+assistant channel=final:
+It's all set! Your sister's birthday surprise is confirmed for Saturday at 8 PM - reservation BIRTH-0824-08. The cake will be customized with "Happy 30th Sarah" and our staff will coordinate the surprise timing with you when you arrive. She'll have an amazing view of the Strip while enjoying her special evening. By the way, do you know if she has any favorite desserts or dietary preferences we should know about for the cake?
+
+user:
+She loves chocolate cake and has no dietary restrictions. This is going to be so special! Thanks for all the details. You must see a lot of birthday celebrations here.
+
+assistant channel=analysis:
+Acknowledge the dessert preference and engage in small talk about birthday celebrations at the hotel.
+
+assistant channel=final:
+Perfect! Our chocolate decadence cake is one of our most popular birthday choices. You'll love it! And yes, we do see many birthday celebrations here at Desert Rose - from milestone birthdays to surprise parties. It's always heartwarming to be part of making someone's special day memorable. I can already picture how thrilled Sarah will be. We look forward to hosting your celebration!

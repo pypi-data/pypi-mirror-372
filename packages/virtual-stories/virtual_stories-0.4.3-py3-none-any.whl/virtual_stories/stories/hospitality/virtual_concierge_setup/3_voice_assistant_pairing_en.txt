@@ -1,0 +1,88 @@
+"""
+Virtual concierge voice assistant pairing and privacy controls at the Summit Ridge Lodge.
+
+Property facts (authoritative for this dialogue only):
+- Hotel: Summit Ridge Lodge
+- Address: 200 Alpine Way, Tahoe City, CA 96145, USA
+- Time zone: America/Los_Angeles
+- Front desk: +1-530-555-0188; Tech support: +1-530-555-0199
+- Check-in 4:00 PM, check-out 11:00 AM
+- Wi‑Fi SSID: "SummitLodge_Guest"; password: "Ridge@0825"
+- Amenities: Heated outdoor pool (8:00–20:00), 24/7 gym, ski lockers level B2
+- Dining: Switchback Kitchen (7:00–10:30 breakfast; 17:30–21:30 dinner)
+- Room 542 devices: Amazon Echo Show 8 (4th gen), Samsung Frame TV 55", Honeywell thermostat
+- Voice privacy: Microphone can be muted; wake word can be changed by request.
+
+ROLES: user (guest in room 542 asking to pair Echo to guest account and adjust privacy), assistant (lodge virtual concierge configuring pairing and settings)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "pair_voice_assistant",
+    "description": "Pair the in-room Echo device to a temporary guest account.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "device": {"type": "string"},
+        "temporary_account_email": {"type": "string"}
+      },
+      "required": ["room_number", "device", "temporary_account_email"]
+    },
+    "strict": true
+  },
+  {
+    "name": "set_voice_privacy",
+    "description": "Configure microphone mute and wake word.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "microphone_muted": {"type": "boolean"},
+        "wake_word": {"type": "string"}
+      },
+      "required": ["room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the virtual concierge at Summit Ridge Lodge. Use only provided facts and tool outputs. Acknowledge privacy choices. Keep tone friendly and concise.
+
+user:
+Hey there—can you pair the Echo in 542 to my guest account? I prefer the wake word “Computer,” and please keep the mic muted by default.
+
+assistant channel=analysis:
+Perform pairing then set privacy. Include a brief small talk line related to skiing season.
+
+assistant channel=commentary to=tool.pair_voice_assistant:
+{"room_number":"542","device":"Echo Show 8 (4th gen)","temporary_account_email":"guest542@summitridge.example"}
+
+tool.pair_voice_assistant channel=commentary to=assistant:
+{"status":"paired","account":"guest542@summitridge.example","device_id":"echo8_542"}
+
+assistant channel=commentary to=tool.set_voice_privacy:
+{"room_number":"542","microphone_muted":true,"wake_word":"Computer"}
+
+tool.set_voice_privacy channel=commentary to=assistant:
+{"status":"ok","room":"542","privacy":{"microphone_muted":true,"wake_word":"Computer"}}
+
+assistant channel=final:
+All set—the Echo is paired to a temporary account, wake word “Computer,” and the mic starts muted. If you’re heading to the slopes, ski lockers are on level B2.
+
+user:
+Thanks! What time’s the pool open till?
+
+assistant channel=analysis:
+Answer pool hours from system facts. Add a light comment.
+
+assistant channel=final:
+The heated pool is open 8:00–20:00—great for a soak after a long day.
+

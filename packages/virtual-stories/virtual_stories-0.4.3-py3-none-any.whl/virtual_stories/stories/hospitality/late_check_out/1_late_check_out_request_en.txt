@@ -1,0 +1,48 @@
+"""
+Guest requests late check-out beyond standard time.
+
+ROLES: user (guest wanting extra time before departure), assistant (front desk agent verifying availability and fees)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_late_checkout_availability",
+    "description": "Determine if late check-out can be offered.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string", "description": "Confirmed reservation identifier." },
+        "requested_time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$", "description": "Requested check-out time in HH:MM format." }
+      },
+      "required": ["reservation_id", "requested_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc), 350 7th Ave, New York, NY 10001.
+Timezone: America/New_York. Standard check-out is 11:00 AM. Late check-out until 2:00 PM costs $40 if available.
+Amenities include free Wi-Fi, gym, pool, and restaurant. Be polite and verify details before calling tools.
+
+user:
+Good morning! My flight isn’t until later. Could I stay in my room until 2 p.m.? My reservation ID is RSV98765.
+
+assistant channel=analysis:
+Check if late check-out to 14:00 is available for RSV98765.
+
+assistant channel=commentary to=tool.check_late_checkout_availability:
+{"reservation_id":"RSV98765","requested_time":"14:00"}
+
+tool.check_late_checkout_availability channel=commentary to=assistant:
+{"available":true,"fee":40.0}
+
+assistant channel=analysis:
+Notify guest late check-out is available with fee and confirm.
+
+assistant channel=final:
+We can extend your stay until 2:00 PM for a $40 late check‑out fee. Would you like me to confirm that?

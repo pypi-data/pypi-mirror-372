@@ -1,0 +1,57 @@
+"""
+Guest rents a family bundle including a child carrier.
+
+ROLES: user (guest hiking with child), assistant (adventure desk coordinating bundle rental)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "rent_hiking_gear",
+    "description": "Arrange rental of hiking gear items.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "gear_items": {"type": "array", "items": {"type": "string"}},
+        "return_date": {"type": "string", "format": "date"}
+      },
+      "required": ["reservation_id", "gear_items", "return_date"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the trail center coordinator at Pine Ridge Resort (hotel_id: pine_ridge_ut). Address: 221 Canyon Loop, Springdale, UT 84767. Timezone: America/Denver. Family hiking bundles available (child carrier, daypack, sun hats). Water refill station in lobby.
+
+user:
+Hello! Your lobby water station is a lifesaver. Can I rent a child carrier and a daypack for a weekend hike?
+
+assistant channel=analysis:
+Respond cheerfully; ask for reservation ID and return date; gear list ["child carrier","daypack"].
+
+assistant channel=final:
+Happy it helped! I can reserve those—what’s your reservation ID, and when will you return them?
+
+user:
+RSV31313. We’ll bring them back on 2025-10-19.
+
+assistant channel=analysis:
+Create rental with return date 2025-10-19.
+
+assistant channel=commentary to=tool.rent_hiking_gear:
+{"reservation_id":"RSV31313","gear_items":["child carrier","daypack"],"return_date":"2025-10-19"}
+
+tool.rent_hiking_gear channel=commentary to=assistant:
+{"status":"rented","rental_id":"HIKE-45"}
+
+assistant channel=analysis:
+Confirm and offer sun hats.
+
+assistant channel=final:
+Reserved—child carrier and daypack are set (HIKE-45), due back 2025-10-19. We also have sun hats if you’d like to add them.
+

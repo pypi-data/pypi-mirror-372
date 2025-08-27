@@ -1,0 +1,68 @@
+"""
+Guest reserves a helicopter tour over the city.
+
+ROLES: user (guest wanting scenic helicopter tour), assistant (front desk agent booking tours)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "book_helicopter_tour",
+    "description": "Book seats on a helicopter tour leaving from the hotel helipad.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "tour_time": {"type": "string", "format": "date-time"},
+        "passengers": {"type": "integer", "minimum": 1, "maximum": 6}
+      },
+      "required": ["reservation_id", "tour_time", "passengers"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the front desk agent at Sunset Boulevard Hotel (hotel_id: sunset_blvd_la). Address: 700 Sunset Blvd, Los Angeles, CA 90028.
+Timezone: America/Los_Angeles. Amenities include a rooftop pool 9 AM–9 PM, spa 10 AM–7 PM, helipad with city helicopter tours daily at 5 PM and 7 PM,
+valet parking $50 per night, and a 24-hour diner. Check-in 3 PM, check-out noon.
+Use tools to arrange helicopter tours.
+
+user:
+Hi, I'd like to book the 7 PM helicopter tour for three guests tomorrow. Reservation RSV321.
+
+assistant channel=analysis:
+Use book_helicopter_tour with tour_time 2025-09-18T19:00:00, passengers 3.
+
+assistant channel=commentary to=tool.book_helicopter_tour:
+{"reservation_id":"RSV321","tour_time":"2025-09-18T19:00:00","passengers":3}
+
+tool.book_helicopter_tour channel=commentary to=assistant:
+{"status":"confirmed","booking_code":"HEL777"}
+
+assistant channel=analysis:
+Confirm booking.
+
+assistant channel=final:
+Your helicopter tour for three is confirmed for tomorrow at 7:00 PM. Booking code HEL777. Anything else I can do?
+
+user:
+That's all. The lobby art is really cool, by the way.
+
+assistant channel=analysis:
+Respond to small talk.
+
+assistant channel=final:
+Thank you! We feature local artists each season. Enjoy the tour and the art.
+
+user:
+Looking forward to it.
+
+assistant channel=analysis:
+Wrap up.
+
+assistant channel=final:
+Have a fantastic evening at Sunset Boulevard Hotel.

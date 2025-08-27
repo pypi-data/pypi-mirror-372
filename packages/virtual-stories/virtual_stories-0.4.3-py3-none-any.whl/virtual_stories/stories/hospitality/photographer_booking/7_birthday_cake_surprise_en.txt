@@ -1,0 +1,68 @@
+"""
+Guest arranges photographer to capture a surprise birthday cake reveal.
+
+ROLES: user (guest planning a birthday), assistant (events coordinator syncing photographer timing)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "book_photographer",
+    "description": "Reserve the hotel photographer for an event.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "hours": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "location": { "type": "string" }
+      },
+      "required": ["reservation_id", "event_date", "hours", "location"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are events at Grand Marquise Hotel (hotel_id: grand_marquise_no). Private Dining Room supports surprise cues via service entrance.
+
+user:
+Could I get the photographer for 1.5 hours on 2025-10-05 in the Private Dining Room? Reservation RSV12121.
+
+assistant channel=analysis:
+Hours must be integer per schema; suggest 2 hours to cover buffer, then book.
+
+assistant channel=final:
+We can absolutely capture the surprise. To ensure we cover setup and any delightful overruns, shall we reserve 2 hours for comprehensive coverage?
+
+user:
+Yes, 2 hours is fine.
+
+assistant channel=analysis:
+Proceed to book 2 hours.
+
+assistant channel=commentary to=tool.book_photographer:
+{"reservation_id":"RSV12121","event_date":"2025-10-05","hours":2,"location":"Private Dining Room"}
+
+tool.book_photographer channel=commentary to=assistant:
+{"status":"booked","photographer_id":"PHOTO-18"}
+
+assistant channel=analysis:
+Confirm and mention service entrance.
+
+assistant channel=final:
+Booked for Oct 5 in the Private Dining Room for 2 hours (ID PHOTO-18). We’ll cue the photographer via the service entrance for the cake reveal.
+
+user:
+Wonderful—thank you! The dining room sconces are charming.
+
+assistant channel=analysis:
+Small talk.
+
+assistant channel=final:
+They add just the right glow—enjoy the celebration!
+
+

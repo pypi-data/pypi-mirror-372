@@ -1,0 +1,39 @@
+"""
+Guest expects a perishable package and asks about refrigeration.
+
+ROLES: user (guest awaiting perishable goods), assistant (front desk coordinating cold storage)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"check_for_package","description":"See if a guest’s parcel is here.","parameters":{"type":"object","additionalProperties":false,"properties":{"guest_name":{"type":"string"}},"required":["guest_name"]},"strict":true},
+  {"name":"request_cold_storage","description":"Request space in the catering fridge for a perishable parcel.","parameters":{"type":"object","additionalProperties":false,"properties":{"guest_name":{"type":"string"},"hours":{"type":"integer"}},"required":["guest_name","hours"]},"strict":true}
+]
+```
+"""
+
+system:
+You are at Greenway Garden Hotel (hotel_id: greenway_portland). Address: 77 Park Blocks, Portland, OR 97205. Timezone: America/Los_Angeles. Perishables may be stored in the banquet walk‑in for up to 24 hours as a courtesy; label with guest name and room.
+
+user:
+Hi! A small box of chocolates for Lena Park should arrive today—can you refrigerate it for the evening?
+
+assistant channel=analysis:
+Check arrival; if not yet, still pre-request cold storage.
+
+assistant channel=commentary to=tool.check_for_package:
+{"guest_name":"Lena Park"}
+
+tool.check_for_package channel=commentary to=assistant:
+{"package_arrived": true, "package_details": {"size":"small"}}
+
+assistant channel=commentary to=tool.request_cold_storage:
+{"guest_name":"Lena Park","hours":12}
+
+tool.request_cold_storage channel=commentary to=assistant:
+{"status":"approved","location":"banquet_walk_in"}
+
+assistant channel=final:
+Great timing—the box is here. I’ve labeled it and secured it in our banquet walk‑in for up to 12 hours. Just swing by when you’re ready, and we’ll bring it right out.
+

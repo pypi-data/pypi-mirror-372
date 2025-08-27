@@ -1,0 +1,56 @@
+"""
+Guest rents a game console for in-room entertainment.
+
+ROLES: user (guest wanting a console), assistant (tech concierge coordinating rentals)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "rent_game_console",
+    "description": "Deliver a game console to a guest room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "console_type": { "type": "string", "enum": ["PlayBox", "GameSphere", "Switcheroo"] },
+        "rental_duration_hours": { "type": "integer", "minimum": 1, "maximum": 48 }
+      },
+      "required": ["reservation_id", "console_type", "rental_duration_hours"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the tech concierge at Desert Star Lodge (hotel_id: desert_star_phx). Address: 200 S Canyon Rd, Phoenix, AZ 85003. Timezone: America/Phoenix. The lodge offers desert views, a 24-hour rooftop pool, free Wi-Fi, and a gaming lounge. Game consoles can be delivered to rooms on request.
+
+user:
+Hey! Could I rent a Switcheroo for 4 hours to room 502? Also, hope your shift's not too busy.
+
+assistant channel=analysis:
+Respond to small talk and arrange console rental for reservation RSV50005.
+
+assistant channel=commentary to=tool.rent_game_console:
+{"reservation_id":"RSV50005","console_type":"Switcheroo","rental_duration_hours":4}
+
+tool.rent_game_console channel=commentary to=assistant:
+{"status":"delivered","device_id":"CON-12"}
+
+assistant channel=analysis:
+Confirm delivery and reply to small talk.
+
+assistant channel=final:
+Not too busy at all! Switcheroo console CON-12 is on its way and will be yours for the next 4 hours.
+
+user:
+Awesome, thanks!
+
+assistant channel=analysis:
+Reply courteously, no further action.
+
+assistant channel=final:
+Enjoy your gaming session.

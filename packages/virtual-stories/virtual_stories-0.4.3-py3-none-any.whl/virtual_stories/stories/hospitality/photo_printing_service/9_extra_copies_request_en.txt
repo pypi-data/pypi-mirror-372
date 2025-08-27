@@ -1,0 +1,48 @@
+"""
+Guest asks for extra copies of a previously printed set.
+
+ROLES: user (guest needing duplicates), assistant (business center attendant reprinting a small set quickly)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "print_photos",
+    "description": "Print digital photos for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "quantity": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "finish_type": { "type": "string", "enum": ["glossy", "matte"] }
+      },
+      "required": ["reservation_id", "quantity", "finish_type"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the copy/print associate at Harbor Lights Hotel (hotel_id: harbor_lights_bos). Address: 200 Atlantic Ave, Boston, MA 02110. Timezone: America/New_York. We can rerun previous print jobs as extra copies on request.
+
+user:
+Hi! Could you run 5 extra glossy copies of the set I just printed?
+
+assistant channel=analysis:
+Confirm reprint capability; submit 5 glossy for RSV50505; no new upload needed.
+
+assistant channel=commentary to=tool.print_photos:
+{"reservation_id":"RSV50505","quantity":5,"finish_type":"glossy"}
+
+tool.print_photos channel=commentary to=assistant:
+{"status":"printed","pickup_location":"business_center_front_desk"}
+
+assistant channel=analysis:
+Confirm extra copies ready.
+
+assistant channel=final:
+Done—5 extra glossy copies are ready at the business center front desk.
+

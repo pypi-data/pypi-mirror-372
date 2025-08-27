@@ -1,0 +1,133 @@
+"""
+Customer inquires about delayed package delivery from online shopping.
+ROLES: user (buyer asking about a delayed laptop order), assistant (ShopEasy support agent providing tracking updates and remedy)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_order_status",
+    "description": "Fetch order summary including items, carrier, tracking number, and promised dates.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "order_id": { "type": "string", "description": "ShopEasy order identifier." },
+        "email": { "type": "string", "format": "email", "description": "Customer email for verification." }
+      },
+      "required": ["order_id"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_tracking_status",
+    "description": "Query the carrier for real-time tracking updates and ETA.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "carrier_code": { "type": "string", "enum": ["ups", "fedex", "usps", "dhl"], "description": "Normalized carrier code." },
+        "tracking_number": { "type": "string", "description": "Carrier tracking number." },
+        "destination_postal_code": { "type": "string", "description": "Postal code for delivery address (optional)." }
+      },
+      "required": ["carrier_code", "tracking_number"]
+    },
+    "strict": true
+  },
+  {
+    "name": "apply_account_credit",
+    "description": "Apply a goodwill credit to the customer's account for delay inconvenience.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "email": { "type": "string", "format": "email", "description": "Customer email identifier." },
+        "amount_cents": { "type": "integer", "minimum": 100, "maximum": 5000, "description": "Credit amount in cents." },
+        "reason_code": { "type": "string", "enum": ["delay_gt_24h", "courier_delay", "system_error"], "description": "Reason for credit." }
+      },
+      "required": ["email", "amount_cents", "reason_code"]
+    },
+    "strict": true
+  },
+  {
+    "name": "send_tracking_link_sms",
+    "description": "Send a tracking link to the customer via SMS.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "phone_e164": { "type": "string", "pattern": "^\\+?[1-9]\\d{1,14}$", "description": "Destination phone number in E.164 format." },
+        "tracking_url": { "type": "string", "format": "uri", "description": "Public tracking URL." },
+        "order_id": { "type": "string", "description": "Related order identifier." }
+      },
+      "required": ["phone_e164", "tracking_url"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a customer service representative for ShopEasy, an e-commerce platform. Be empathetic, verify details before using tools, and provide clear order status.
+
+user:
+I ordered a laptop last week and it was supposed to arrive yesterday, but I haven't received it yet. Can you check what's happening?
+
+assistant channel=analysis:
+First acknowledge and ask for order details (order_id, email/phone, and optional ZIP). No tools yet.
+
+assistant channel=final:
+I’m sorry your laptop didn’t arrive as expected—that’s frustrating. I’ll check right now.
+
+Could you share:
+- Order ID
+- Email you used for the purchase (and phone for SMS updates, if you’d like)
+- Destination ZIP (optional, helps confirm with the carrier)
+
+user:
+Order ID: SE-2024-12345. Email: alex@example.com. Phone: +15551234567. Please text me updates.
+
+assistant channel=analysis:
+We can look up the order, then query the carrier for real-time ETA. If delayed >24h, apply a goodwill credit and send the tracking link via SMS.
+
+assistant channel=commentary to=tool.get_order_status:
+{"order_id":"SE-2024-12345","email":"alex@example.com"}
+
+tool.get_order_status channel=commentary to=assistant:
+{"order_id":"SE-2024-12345","status":"in_transit","item":"15.6\" Professional Laptop","carrier_code":"ups","tracking_number":"1Z999AA10123456784","promised_delivery_date":"2025-08-22","ship_from":"Reno, NV","destination_postal_code":"94107"}
+
+assistant channel=commentary to=tool.get_tracking_status:
+{"carrier_code":"ups","tracking_number":"1Z999AA10123456784","destination_postal_code":"94107"}
+
+tool.get_tracking_status channel=commentary to=assistant:
+{"status":"in_transit","current_location":"Cityville Distribution Center","delay_reason":"High volume","eta":"2025-08-23T16:00:00-07:00","events":[{"ts":"2025-08-22T17:10:00Z","desc":"Arrived at facility"}]}
+
+assistant channel=analysis:
+Delay exceeded by ~1 day; offer $15 credit (1500 cents). Then text the tracking link.
+
+assistant channel=commentary to=tool.apply_account_credit:
+{"email":"alex@example.com","amount_cents":1500,"reason_code":"delay_gt_24h"}
+
+tool.apply_account_credit channel=commentary to=assistant:
+{"status":"applied","credit_id":"CR-58122","amount_cents":1500}
+
+assistant channel=commentary to=tool.send_tracking_link_sms:
+{"phone_e164":"+15551234567","tracking_url":"https://track.shopeasy.example/ups/1Z999AA10123456784","order_id":"SE-2024-12345"}
+
+tool.send_tracking_link_sms channel=commentary to=assistant:
+{"status":"sent","message_id":"sms_ab12cd"}
+
+assistant channel=analysis:
+Summarize: order in transit at Cityville DC, ETA Sat 2–6 PM (local). Credit applied and SMS sent.
+
+assistant channel=final:
+Thanks—here’s the latest on your order SE-2024-12345:
+
+- Status: In transit (Cityville Distribution Center); carrier: UPS
+- Updated ETA: Sat 08/23 between 2:00–6:00 PM
+- Tracking: I’ve texted you the live link
+- Credit: $15 applied to your account for the delay
+
+Would you like me to set a delivery note (safe drop/signature) or arrange a hold-at-location if your plans change?

@@ -1,0 +1,97 @@
+"""
+Guest requests a private beach yoga session for special occasion and inquires about customization options.
+
+ROLES: user (couple celebrating anniversary seeking romantic experience), assistant (luxury concierge arranging personalized activities)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_private_yoga_availability",
+    "description": "Check availability for private yoga sessions and special arrangements.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier." },
+        "date": { "type": "string", "format": "date", "description": "Requested date for the session." },
+        "occasion": { "type": "string", "description": "Special occasion for the private session." }
+      },
+      "required": ["hotel_id", "date", "occasion"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_private_yoga",
+    "description": "Book a customized private yoga session with special touches.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier." },
+        "client_name": { "type": "string", "description": "Name of the client." },
+        "session_datetime": { "type": "string", "format": "date-time", "description": "Session start time in ISO 8601." },
+        "customizations": { "type": "array", "items": {"type": "string"}, "description": "List of requested customizations." },
+        "occasion": { "type": "string", "description": "Special occasion." }
+      },
+      "required": ["hotel_id", "client_name", "session_datetime", "occasion"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the luxury concierge at Azure Bay Luxury Resort & Spa (hotel_id: azure_bay_luxury_resort). Address: 1250 Azure Coast Dr, St. Thomas, USVI 00802.
+Timezone: America/St_Thomas. Check-in 3:00 PM, check-out 12:00 PM.
+Amenities: private white sand cove, luxury spa, couples' cabanas, fine dining, complimentary champagne service, and personalized concierge. Currency: USD. Private beach yoga sessions can be arranged with romantic sunset views, champagne service, and custom music playlists.
+
+user:
+Hello! My husband and I are celebrating our 10th anniversary this week and we'd love a private beach yoga session. Is that something you can arrange?
+
+assistant channel=analysis:
+Express enthusiasm for the anniversary and check availability for private sessions.
+
+assistant channel=final:
+Congratulations on your 10th anniversary! That's absolutely something we can arrange. Our private beach yoga sessions are perfect for romantic celebrations. Let me check availability for this week.
+
+assistant channel=commentary to=tool.check_private_yoga_availability:
+{"hotel_id":"azure_bay_luxury_resort","date":"2025-09-18","occasion":"anniversary"}
+
+tool.check_private_yoga_availability channel=commentary to=assistant:
+{"available_slots":[{"time":"16:00","duration":"75_min","view":"sunset_cove"},{"time":"18:00","duration":"60_min","view":"moonlight_bay"}],"special_offers":["champagne_toast","romantic_music","flower_petals"]}
+
+assistant channel=analysis:
+Present the options with romantic details and special anniversary touches.
+
+assistant channel=final:
+We have two beautiful options for your anniversary! The 4:00 PM session offers a 75-minute experience in our sunset cove with breathtaking Caribbean views, or the 6:00 PM session is a 60-minute moonlight experience in the bay. Both include complimentary champagne service, romantic music playlists, and flower petals. Which setting sounds more magical for your celebration?
+
+user:
+The sunset cove at 4 PM sounds absolutely perfect! We're the Chen family. Can we add some special touches like our favorite music and maybe a small cake?
+
+assistant channel=analysis:
+Book the private session with the requested customizations.
+
+assistant channel=commentary to=tool.book_private_yoga:
+{"hotel_id":"azure_bay_luxury_resort","client_name":"Chen","session_datetime":"2025-09-18T16:00:00","customizations":["custom_playlist","celebration_cake","anniversary_decorations"],"occasion":"10th_anniversary"}
+
+tool.book_private_yoga channel=commentary to=assistant:
+{"status":"confirmed","booking_id":"PRIV-YOGA-ANN-789","instructor":"Maya (romantic specialist)","special_prep":"Custom playlist and cake arranged"}
+
+assistant channel=analysis:
+Confirm the booking and provide details about the romantic experience.
+
+assistant channel=final:
+Your anniversary sunset yoga session is confirmed—booking ID PRIV-YOGA-ANN-789! Maya, our romantic specialist, will guide you through a gentle couples' flow as the sun sets over the Caribbean. We'll have your favorite music playlist ready, a small celebration cake, and anniversary decorations. This will be a truly magical experience!
+
+user:
+This is going to be incredible! What's the best way to prepare for a couples' yoga session? Any tips for beginners?
+
+assistant channel=analysis:
+Provide helpful preparation advice based on general knowledge - no tool needed for this small talk.
+
+assistant channel=final:
+Wonderful! For couples' yoga, wear comfortable, breathable clothing and bring an open heart. Our session will be gentle and beginner-friendly with lots of partner poses to build connection. Just relax and enjoy the romance of the Caribbean sunset—everything else is taken care of!

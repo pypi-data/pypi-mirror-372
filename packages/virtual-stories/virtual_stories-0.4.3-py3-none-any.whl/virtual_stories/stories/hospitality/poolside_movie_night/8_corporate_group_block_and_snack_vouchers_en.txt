@@ -1,0 +1,80 @@
+"""
+Corporate guest asks about blocking seats for a small team and snack vouchers.
+
+ROLES: user (team lead coordinating 8 colleagues), assistant (group sales liaison)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "hold_group_block",
+    "description": "Place a temporary hold for a group block of seats.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "group_name": { "type": "string" },
+        "movie_date": { "type": "string", "format": "date" },
+        "seats": { "type": "integer", "minimum": 5, "maximum": 12 }
+      },
+      "required": ["hotel_id", "group_name", "movie_date", "seats"]
+    },
+    "strict": true
+  },
+  {
+    "name": "issue_snack_vouchers",
+    "description": "Issue snack vouchers for a group block.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "group_name": { "type": "string" },
+        "count": { "type": "integer", "minimum": 1, "maximum": 20 }
+      },
+      "required": ["hotel_id", "group_name", "count"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the group sales liaison at Skyline Harbor Hotel (hotel_id: skyline_harbor_sf). Address: 160 Embarcadero, San Francisco, CA 94105. Timezone: America/Los_Angeles. Check-in 3:00 PM, check-out 12:00 PM. Currency: USD.
+Amenities: infinity pool with city view, weekday cinema pop-ups, corporate perks program, digital snack vouchers.
+
+user:
+Hi! Can I hold eight seats for our team “BayTech” for tomorrow’s pool movie and get snack vouchers?
+
+assistant channel=analysis:
+Hold 8 seats for BayTech for 2025-08-25, then issue 8 vouchers.
+
+assistant channel=commentary to=tool.hold_group_block:
+{"hotel_id":"skyline_harbor_sf","group_name":"BayTech","movie_date":"2025-08-25","seats":8}
+
+tool.hold_group_block channel=commentary to=assistant:
+{"status":"held","block_id":"SH-BLK-88","expires_at":"2025-08-24T22:00:00-07:00"}
+
+assistant channel=commentary to=tool.issue_snack_vouchers:
+{"hotel_id":"skyline_harbor_sf","group_name":"BayTech","count":8}
+
+tool.issue_snack_vouchers channel=commentary to=assistant:
+{"status":"issued","codes":["SNK-201","SNK-202","SNK-203","SNK-204","SNK-205","SNK-206","SNK-207","SNK-208"]}
+
+assistant channel=analysis:
+Confirm hold and share voucher codes.
+
+assistant channel=final:
+I’ve held eight seats for BayTech—block SH-BLK-88—through 10 PM tonight. Here are eight snack voucher codes you can distribute: SNK-201 to SNK-208. Redeem them at the concessions counter.
+
+user:
+Great—love that skyline view. Do you recommend arriving early?
+
+assistant channel=analysis:
+Provide tip without tool.
+
+assistant channel=final:
+Yes—arriving 20–30 minutes early helps your team sit together comfortably and beat the elevator rush to the pool deck.
+

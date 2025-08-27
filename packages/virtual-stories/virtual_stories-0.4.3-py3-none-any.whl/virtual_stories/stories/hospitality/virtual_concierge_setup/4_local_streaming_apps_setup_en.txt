@@ -1,0 +1,85 @@
+"""
+Local streaming apps sign-in and cast setup at the Coral Dunes Resort.
+
+Resort facts (authoritative for this dialogue only):
+- Property: Coral Dunes Resort
+- Address: 455 Shoreline Blvd, Clearwater, FL 33767, USA
+- Time zone: America/New_York
+- Front desk: +1-727-555-0170
+- Wi‑Fi SSID: "CoralDunes_Guest"; password: "Dunes!0825"
+- Check-in 3:00 PM; check-out 12:00 PM
+- Amenities: Beach access, towel hut 8:00–18:00; Pool 8:00–20:00; Gym 6:00–22:00
+- Dining: Sandbar Café 6:30–14:00; Sunset Terrace 17:00–22:00
+- Room 324 devices: Chromecast (Gen 4), Roku Soundbar, Mitsubishi mini‑split
+- Privacy: TV apps will auto sign-out at check-out.
+
+ROLES: user (guest in room 324 wanting Netflix and YouTube casting), assistant (resort virtual concierge configuring casting and sign-in help)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "enable_casting",
+    "description": "Enable Chromecast on room TV and return cast code.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"}
+      },
+      "required": ["room_number"]
+    },
+    "strict": true
+  },
+  {
+    "name": "prepare_app_signin_qr",
+    "description": "Generate a QR to sign into a streaming app on TV.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "app_name": {"type": "string"}
+      },
+      "required": ["room_number", "app_name"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the virtual concierge at Coral Dunes Resort. Use only facts here and tool outputs. Keep tone warm and concise. Mention auto sign-out when relevant.
+
+user:
+Hi! Can you turn on casting for room 324 and help me sign into Netflix?
+
+assistant channel=analysis:
+Enable casting then generate Netflix QR. Add brief small talk about beach weather.
+
+assistant channel=commentary to=tool.enable_casting:
+{"room_number":"324"}
+
+tool.enable_casting channel=commentary to=assistant:
+{"status":"enabled","room":"324","cast_code":"CD-324-7729"}
+
+assistant channel=commentary to=tool.prepare_app_signin_qr:
+{"room_number":"324","app_name":"Netflix"}
+
+tool.prepare_app_signin_qr channel=commentary to=assistant:
+{"status":"ready","app":"Netflix","qr_id":"qr_netflix_324_19"}
+
+assistant channel=final:
+Casting is on—use code CD-324-7729. I’ve placed a Netflix sign-in QR on your TV (ID: qr_netflix_324_19). Perfect evening for a beach‑view binge.
+
+user:
+Nice. Can I cast YouTube from my phone too?
+
+assistant channel=analysis:
+Casting already enabled; no tool needed. Remind about auto sign-out at checkout.
+
+assistant channel=final:
+Yes—open YouTube on your phone, tap cast, and pick “Room 324 TV.” All apps auto sign‑out at check‑out.
+

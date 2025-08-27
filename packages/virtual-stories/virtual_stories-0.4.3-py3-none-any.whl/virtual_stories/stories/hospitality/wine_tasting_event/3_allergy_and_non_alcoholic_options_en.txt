@@ -1,0 +1,40 @@
+"""
+Dietary accommodations and non‑alcoholic pairings at wine tasting.
+ROLES: user (guest with nut allergy seeking NA options), assistant (concierge capturing notes and registering)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"register_wine_tasting","description":"Register guest for tasting date.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"date":{"type":"string","format":"date"},"party_size":{"type":"integer","minimum":1,"maximum":10}},"required":["reservation_id","date","party_size"]},"strict":true},
+  {"name":"set_dietary_notes","description":"Record dietary notes for a reservation.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"notes":{"type":"string"}},"required":["reservation_id","notes"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Vineyard View Inn
+Address: 12 Oak Lane, Sonoma, CA 95476 | Timezone: America/Los_Angeles
+Event: Friday tasting at 6 PM; NA pairing flight available upon request
+Allergens: Nut‑free and gluten‑free snacks upon advance notice
+
+user:
+I’m allergic to nuts and prefer non‑alcoholic pairings for two people this Friday. Res ID R5551.
+
+assistant channel=analysis:
+Register party; add dietary notes for nut‑free and NA pairings; include friendly small talk.
+
+assistant channel=commentary to=tool.register_wine_tasting:
+{"reservation_id":"R5551","date":"2025-09-12","party_size":2}
+
+tool.register_wine_tasting channel=commentary to=assistant:
+{"status":"registered"}
+
+assistant channel=commentary to=tool.set_dietary_notes:
+{"reservation_id":"R5551","notes":"Nut‑free snacks; non‑alcoholic pairing flight for 2"}
+
+tool.set_dietary_notes channel=commentary to=assistant:
+{"status":"saved"}
+
+assistant channel=final:
+You’re confirmed for Friday at 6 PM with nut‑free snacks and non‑alcoholic pairings for two. If you arrive early, our Oak Lane patio has shaded seating.

@@ -1,0 +1,39 @@
+"""
+Guest asks for a cabana plus evening firepit bundle.
+
+ROLES: user (guest planning evening by the pool), assistant (front desk coordinating bundle)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"book_cabana","description":"Reserve a cabana.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"date":{"type":"string","format":"date"},"time_slot":{"type":"string"}},"required":["reservation_id","date","time_slot"]},"strict":true},
+  {"name":"reserve_firepit","description":"Reserve a poolside firepit for an evening time.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"time":{"type":"string"}},"required":["reservation_id","time"]},"strict":true}
+]
+```
+"""
+
+system:
+You are at Coral Key Resort & Spa (hotel_id: coral_key_keywest). Address: 220 Sunset Way, Key West, FL 33040. Timezone: America/New_York. Firepits are reservable 7:00–9:00 PM; s’mores kits available at the bar.
+
+user:
+Can I grab a 3–5 PM cabana and a firepit at 7 PM? Reservation RSV10020.
+
+assistant channel=analysis:
+Book cabana 15:00–17:00; reserve firepit at 19:00.
+
+assistant channel=commentary to=tool.book_cabana:
+{"reservation_id":"RSV10020","date":"2025-07-18","time_slot":"15:00-17:00"}
+
+tool.book_cabana channel=commentary to=assistant:
+{"cabana_number":7,"status":"confirmed"}
+
+assistant channel=commentary to=tool.reserve_firepit:
+{"reservation_id":"RSV10020","time":"19:00"}
+
+tool.reserve_firepit channel=commentary to=assistant:
+{"status":"confirmed","firepit_number":2}
+
+assistant channel=final:
+Confirmed—Cabana 7 from 3–5 PM and Firepit 2 at 7 PM. S’mores kits are at the bar if you’d like a cozy finish.
+

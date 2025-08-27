@@ -1,0 +1,90 @@
+"""
+Nonprofit asks about hosting a 150-person charity gala in November.
+ROLES: user (event organizer), assistant (events coordinator assisting bookings)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "search_event_space_availability",
+    "description": "Check availability of event spaces for a given date and attendance size.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event_date": { "type": "string", "format": "date", "description": "Requested event date." },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500, "description": "Expected number of attendees." }
+      },
+      "required": ["event_date","attendees"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_event_quote",
+    "description": "Get a pricing quote for a specific event space and duration.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string", "description": "Event space identifier." },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500 },
+        "hours": { "type": "integer", "minimum": 1, "maximum": 12 }
+      },
+      "required": ["room_name","event_date","attendees","hours"]
+    },
+    "strict": true
+  },
+  {
+    "name": "hold_event_space",
+    "description": "Place a temporary hold on an event space.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer" },
+        "organizer_name": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["room_name","event_date","attendees","organizer_name","email"]
+    },
+    "strict": true
+  },
+  {
+    "name": "confirm_event_booking",
+    "description": "Confirm a held event space reservation with payment.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hold_id": { "type": "string" },
+        "payment_token": { "type": "string", "minLength": 8 }
+      },
+      "required": ["hold_id","payment_token"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are an events coordinator at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi‑Fi, gym, pool, on-site restaurant. Currency: USD; taxes 14.75% + occupancy tax $3.50/night. Be clear and only use tools to check space availability, quote pricing, and manage bookings.
+
+user:
+We're planning a charity gala for 150 guests on November 12. Do you have a space and pricing?
+assistant channel=analysis:
+Search availability, quote Grand Ballroom 5 hours.
+assistant channel=commentary to=tool.search_event_space_availability:
+{"event_date":"2026-11-12","attendees":150}
+tool.search_event_space_availability channel=commentary to=assistant:
+{"available_spaces":[{"room_name":"Grand Ballroom","capacity":200}]}
+assistant channel=commentary to=tool.get_event_quote:
+{"room_name":"Grand Ballroom","event_date":"2026-11-12","attendees":150,"hours":5}
+tool.get_event_quote channel=commentary to=assistant:
+{"room_name":"Grand Ballroom","base_rate":4500.00,"service_charge":900.00,"total":5400.00}
+assistant channel=final:
+Our Grand Ballroom can host 150 guests on Nov 12. Five hours would be $5,400. Shall I reserve it temporarily?

@@ -1,0 +1,49 @@
+"""
+Winter Market details with chalet stalls, skating, and cocoa kiosks.
+Multi-turn planning with rental and timing.
+
+ROLES: user (guest asking about Winter Market), assistant (concierge coordinating rentals and tips)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"get_event_schedule","description":"Get Winter Market schedule and features.","parameters":{"type":"object","additionalProperties":false,"properties":{"event_name":{"type":"string"},"date":{"type":"string","format":"date"}},"required":["event_name","date"]},"strict":true},
+  {"name":"reserve_skate_rental","description":"Reserve ice skates at rink.","parameters":{"type":"object","additionalProperties":false,"properties":{"size":{"type":"string"},"slot":{"type":"string"},"guest_name":{"type":"string"}},"required":["size","slot","guest_name"]},"strict":true}
+]
+```
+"""
+
+system:
+Hotel: Northwind Plaza, 300 Frost Avenue, Riverbank District. 220 rooms; lobby fireplace lounge 07:00–23:00; cocoa bar 16:00–21:00. Market is at Riverbank Square (8‑minute walk). Ice rink sessions start on the hour 10:00–20:00; skate rentals limited. Hotel umbrellas available at bell desk. Wi‑Fi SSID “Northwind-Guest”.
+
+user:
+Is the Winter Market open in the evenings, and can I skate around 18:00?
+
+assistant channel=analysis:
+Check market schedule for evening; confirm rink slot 18:00 and offer rental.
+
+assistant channel=commentary to=tool.get_event_schedule:
+{"event_name":"Riverbank Winter Market","date":"2025-12-14"}
+
+tool.get_event_schedule channel=commentary to=assistant:
+{"hours":"11:00-21:00","rink_slots":["10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],"notes":"Cocoa kiosks peak 18:30"}
+
+assistant channel=final:
+Yes—it's open 11:00 to 21:00, and there’s a skating session at 18:00. It’s an 8‑minute walk from Northwind Plaza; if it’s snowing, the bell desk can loan an umbrella.
+
+Just curious—do you prefer skating before cocoa, or cocoa first for courage?
+
+user:
+Skating first! Can you reserve size 8 skates for Emma at 18:00?
+
+assistant channel=commentary to=tool.reserve_skate_rental:
+{"size":"8","slot":"18:00","guest_name":"Emma"}
+
+tool.reserve_skate_rental channel=commentary to=assistant:
+{"status":"confirmed","rental_id":"RINK-18-EM-8"}
+
+assistant channel=final:
+You’re set: size 8 at 18:00 for Emma (ID RINK-18-EM-8). Rink check‑in is on the south side of Riverbank Square. If you warm up after, our cocoa bar runs until 21:00.
+
+

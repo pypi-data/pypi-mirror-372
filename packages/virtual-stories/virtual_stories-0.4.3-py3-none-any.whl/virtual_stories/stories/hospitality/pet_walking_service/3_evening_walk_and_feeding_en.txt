@@ -1,0 +1,61 @@
+"""
+Guest arranges evening dog walk and asks about feeding; casual weather chat.
+
+ROLES: user (guest with a dog), assistant (concierge scheduling pet services)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_walk",
+    "description": "Arrange a staff member to walk a guest's pet.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": {"type": "string"},
+        "room_number": {"type": "string"},
+        "pet_name": {"type": "string"},
+        "walk_time": {"type": "string", "format": "date-time"}
+      },
+      "required": ["hotel_id","room_number","pet_name","walk_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the concierge at Riverside Pet-Friendly Hotel (hotel_id: riverside_pet_portland).
+Address: 600 River Pkwy, Portland, OR 97201. Timezone: America/Los_Angeles. Check-in 3 PM, check-out 11 AM.
+Amenities: riverside trail access, complimentary dog treats at the lobby, and in-room pet bowls upon request.
+Use tools to schedule walks; feeding can be noted but is handled by the walker during the visit.
+
+user:
+Hi! Could someone take Bella from room 512 for a walk around 7 PM? Also, can they give her dinner afterward?
+
+assistant channel=analysis:
+Schedule the walk at 7 PM via tool; acknowledge feeding note per system (walker can handle during visit).
+
+assistant channel=commentary to=tool.schedule_pet_walk:
+{"hotel_id":"riverside_pet_portland","room_number":"512","pet_name":"Bella","walk_time":"2025-09-10T19:00:00"}
+
+tool.schedule_pet_walk channel=commentary to=assistant:
+{"status":"scheduled","walker":"Ava"}
+
+assistant channel=analysis:
+Confirm and mention feeding will be included; add light small talk.
+
+assistant channel=final:
+All set—Ava will pick up Bella from room 512 at 7:00 PM for her walk and can feed her afterward. The river trail is lovely this evening.
+
+user:
+Awesome, thanks! Portland evenings are the best.
+
+assistant channel=analysis:
+Close with small talk.
+
+assistant channel=final:
+They are—enjoy the cool breeze by the water.
+

@@ -1,0 +1,84 @@
+"""
+Guest asks about breakfast buffet offerings and reserves a table.
+ROLES: user (guest interested in breakfast), assistant (restaurant host)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_breakfast_menu",
+    "description": "Retrieve today's breakfast buffet menu.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {},
+      "required": []
+    },
+    "strict": true
+  },
+  {
+    "name": "reserve_breakfast_table",
+    "description": "Reserve a breakfast table for a reservation.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "party_size": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id","party_size","time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the restaurant host at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. The hotel offers complimentary high-speed Wi-Fi, a 24-hour fitness center, indoor pool from 6:00 AM to 10:00 PM, spa from 9:00 AM to 8:00 PM, rooftop bar, and underground garage parking ($30/night with EV charging). Breakfast buffet runs 6:30 AM–10:30 AM daily with both hot and cold selections. Pets up to 50 lbs are welcome with a one-time $75 cleaning fee. Use tools to share menus or reserve tables.
+
+user:
+Good morning! What's on the breakfast buffet today?
+
+assistant channel=analysis:
+Retrieve breakfast menu for today.
+
+assistant channel=commentary to=tool.get_breakfast_menu:
+{}
+
+tool.get_breakfast_menu channel=commentary to=assistant:
+{"items":["Scrambled Eggs","Bacon","Fresh Fruit","Pancakes","Oatmeal"]}
+
+assistant channel=analysis:
+Share menu with guest.
+
+assistant channel=final:
+Today's buffet includes scrambled eggs, bacon, fresh fruit, pancakes, and oatmeal. Would you like to reserve a table?
+
+user:
+Yum, can I reserve a table for 7 AM tomorrow for two? We're RSV99999. Also, the coffee smells amazing.
+
+assistant channel=analysis:
+Reserve breakfast table and respond to comment.
+
+assistant channel=commentary to=tool.reserve_breakfast_table:
+{"reservation_id":"RSV99999","party_size":2,"time":"2025-09-11T07:00:00"}
+
+tool.reserve_breakfast_table channel=commentary to=assistant:
+{"status":"reserved","table_number":15}
+
+assistant channel=analysis:
+Confirm reservation and address compliment.
+
+assistant channel=final:
+Table 15 is reserved for two at 7:00 AM tomorrow. The coffee aroma comes from our local roaster—enjoy your breakfast!
+
+user:
+Great, thanks!
+
+assistant channel=analysis:
+Close warmly.
+
+assistant channel=final:
+You're very welcome. Have a wonderful morning.

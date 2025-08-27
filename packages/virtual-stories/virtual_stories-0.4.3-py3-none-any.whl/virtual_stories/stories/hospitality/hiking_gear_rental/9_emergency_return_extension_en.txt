@@ -1,0 +1,57 @@
+"""
+Guest asks to extend the return date due to weather delay.
+
+ROLES: user (guest delayed by weather), assistant (adventure desk rebooking rental period by processing a new rental entry)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "rent_hiking_gear",
+    "description": "Arrange rental of hiking gear items.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "gear_items": {"type": "array", "items": {"type": "string"}},
+        "return_date": {"type": "string", "format": "date"}
+      },
+      "required": ["reservation_id", "gear_items", "return_date"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the alpine desk at Summit Ridge Hotel (hotel_id: summit_ridge_co). Address: 2 Switchback Rd, Vail, CO 81657. Timezone: America/Denver. Weather delays are accommodated by issuing a new rental with updated return date.
+
+user:
+Hello—quick heads-up. A storm rolled in and I can’t get back today. Can I extend my trekking pole rental by one day?
+
+assistant channel=analysis:
+Explain policy: issue a new rental to extend. Ask for reservation ID and new return date. Gear assumed to be ["trekking poles"].
+
+assistant channel=final:
+Thanks for letting us know. We handle extensions by issuing a new rental with the updated return date. What’s your reservation ID and the new return date?
+
+user:
+RSV12121. New return date 2025-09-23.
+
+assistant channel=analysis:
+Create a new rental entry for trekking poles with new return date.
+
+assistant channel=commentary to=tool.rent_hiking_gear:
+{"reservation_id":"RSV12121","gear_items":["trekking poles"],"return_date":"2025-09-23"}
+
+tool.rent_hiking_gear channel=commentary to=assistant:
+{"status":"rented","rental_id":"HIKE-93"}
+
+assistant channel=analysis:
+Confirm extension via new rental ID.
+
+assistant channel=final:
+Got it—we’ve issued an extension entry (HIKE-93) for your trekking poles, now due back 2025-09-23. Stay safe until the storm passes.
+

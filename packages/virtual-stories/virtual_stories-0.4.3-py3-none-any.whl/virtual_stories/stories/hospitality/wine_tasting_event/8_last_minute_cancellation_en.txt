@@ -1,0 +1,31 @@
+"""
+Last‑minute cancellation for wine tasting.
+ROLES: user (guest canceling same‑day), assistant (concierge applying policy and updating list)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"cancel_registration","description":"Cancel an existing tasting registration.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"date":{"type":"string","format":"date"}},"required":["reservation_id","date"]},"strict":true}
+]
+```
+"""
+
+system:
+Property: Coral Bay Resort
+Policy: Cancellations accepted up to 3 PM event day; later cancellations free the spots but may be marked as no‑show
+
+user:
+We need to cancel tonight’s tasting under CBR220—sorry for the late notice.
+
+assistant channel=analysis:
+Apply policy and cancel; respond courteously.
+
+assistant channel=commentary to=tool.cancel_registration:
+{"reservation_id":"CBR220","date":"2025-09-12"}
+
+tool.cancel_registration channel=commentary to=assistant:
+{"status":"canceled","timestamp":"2025-09-12T16:10:00-07:00"}
+
+assistant channel=final:
+Understood—your spots are released. For future tastings, cancellations before 3 PM help us offer seats to others. We hope to welcome you another Friday.

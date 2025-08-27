@@ -1,0 +1,64 @@
+"""
+Guest requests a shuttle to Burbank Airport (BUR) and wants to book a seat.
+ROLES: user (guest heading to BUR), assistant (front desk agent checking schedule and booking)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_shuttle_schedule",
+    "description": "Retrieve upcoming shuttle departure times for a given airport.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "airport_code": { "type": "string" }
+      },
+      "required": ["airport_code"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_airport_shuttle",
+    "description": "Reserve a seat on the airport shuttle.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "airport_code": { "type": "string" },
+        "departure_time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "guest_name": { "type": "string" },
+        "room_number": { "type": "string" }
+      },
+      "required": ["airport_code","departure_time","guest_name","room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Sunset Bay Hotel Los Angeles (hotel_id: sunset_bay_la). Address: 420 Sunset Blvd, Los Angeles, CA 90028. Timezone: America/Los_Angeles. Check-in 4:00 PM, check-out 11:00 AM. Amenities: rooftop pool, free Wi‑Fi, valet parking. Currency: USD; taxes 15% + tourism fee $5/night. Be clear and only use tools to check shuttle schedules and book seats.
+
+user:
+Good morning! Loved the rooftop view. I need a shuttle to Burbank Airport tomorrow around 9 AM. I'm Alex in room 1220.
+
+assistant channel=analysis:
+Check schedule for BUR, then book 9:00 if available.
+
+assistant channel=commentary to=tool.check_shuttle_schedule:
+{"airport_code":"BUR"}
+
+tool.check_shuttle_schedule channel=commentary to=assistant:
+{"departures":["07:30","09:00","11:00"]}
+
+assistant channel=commentary to=tool.book_airport_shuttle:
+{"airport_code":"BUR","departure_time":"09:00","guest_name":"Alex","room_number":"1220"}
+
+tool.book_airport_shuttle channel=commentary to=assistant:
+{"status":"confirmed","reservation_number":"SHUT-9001"}
+
+assistant channel=final:
+Your seat on the 9:00 AM shuttle to BUR is confirmed (reservation SHUT-9001). Please be in the lobby by 8:50 AM. Need anything else before your flight?

@@ -1,0 +1,98 @@
+"""
+Guest needs help resetting the safe after accidentally changing the code.
+
+ROLES: user (guest who accidentally changed safe code and can't access contents), assistant (security technician at modern hotel)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "reset_safe_code",
+    "description": "Reset a safe to factory settings and help guest set a new code.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string", "description": "Room number for safe reset" },
+        "reset_reason": { "type": "string", "description": "Reason for the reset" }
+      },
+      "required": ["room_number", "reset_reason"]
+    },
+    "strict": true
+  },
+  {
+    "name": "verify_safe_access",
+    "description": "Verify that guest can access the safe after reset.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "test_code": { "type": "string", "description": "Code to test access" }
+      },
+      "required": ["room_number", "test_code"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a security technician at W Hotel Times Square (hotel_id: w_times_square). Address: 1567 Broadway, New York, NY 10036.
+Timezone: America/New_York. This modern lifestyle hotel features cutting-edge technology, smart safes with mobile connectivity, and 24-hour technical support.
+Check-in 4:00 PM, check-out 12:00 PM. Provide quick technical solutions for guest technology issues.
+
+user:
+Hi, I have a bit of a problem. I was trying to change my safe code and I think I accidentally locked myself out. I can't remember what the new code is, and I have my wallet and phone inside. Can you help me reset it?
+
+assistant channel=analysis:
+Guest has accidentally changed their safe code and can't access their valuables. I need to help them reset the safe and regain access.
+
+assistant channel=commentary to=tool.reset_safe_code:
+{"room_number":"1423","reset_reason":"accidentally changed code"}
+
+tool.reset_safe_code channel=commentary to=assistant:
+{"reset_status":"completed","new_default_code":"0000","instructions":"Enter 0000 to access, then set new code","security_note":"Change from default immediately"}
+
+assistant channel=analysis:
+Safe has been reset. Now I should guide the guest through accessing it and setting a new code.
+
+assistant channel=final:
+No problem at all! I've reset your safe to the factory default code. You can now access it by entering 0000. Once you're in, I strongly recommend changing it to a new code right away for security.
+
+user:
+Got it! I'm in now. How do I set a new code? I want to make sure this doesn't happen again.
+
+assistant channel=analysis:
+Guest wants to know how to set a new code. I should provide clear instructions for changing the code.
+
+assistant channel=commentary to=tool.verify_safe_access:
+{"room_number":"1423","test_code":"0000"}
+
+tool.verify_safe_access channel=commentary to=assistant:
+{"access_confirmed":true,"code_change_instructions":"Press RESET button, enter new 4-digit code twice, press LOCK","best_practices":"Use memorable but not obvious code","avoid_codes":"1111, 1234, birthdates"}
+
+assistant channel=analysis:
+Access is confirmed. I can now provide the code change instructions and best practices.
+
+assistant channel=final:
+Perfect! To set a new code: Press the RESET button, enter your new 4-digit code, press RESET again, enter the same code to confirm, then press LOCK. Choose something memorable but not obvious - avoid 1111, 1234, or your birthdate. Maybe use a favorite number with some variation.
+
+user:
+Thanks for the tip! I've set a new code that I'll remember. The view from my room is amazing - I can see the entire Times Square from up here. It's so vibrant even at night!
+
+assistant channel=analysis:
+Guest has successfully reset the code and is making small talk about the view. No tools needed for the view comment.
+
+assistant channel=final:
+Excellent! You're all set now. Yes, the Times Square views from our rooms are spectacular, especially at night when all the lights and billboards come alive. It's one of the best vantage points in the city - much better than being down in the crowds!
+
+user:
+I agree, it's much more peaceful up here. Thanks again for the quick help with the safe. I really appreciate the efficient service.
+
+assistant channel=analysis:
+Guest is appreciative and concluding. I should respond warmly and offer further assistance.
+
+assistant channel=final:
+You're very welcome! We're here to make sure your stay is as smooth as possible. If you need any more help with the safe or anything else during your stay, just give us a call. Enjoy the amazing views and your time in Times Square!

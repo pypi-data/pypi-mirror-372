@@ -1,0 +1,64 @@
+"""
+Couple asks about twilight rates and books a late tee time with a shared cart.
+
+ROLES: user (guest couple planning an evening round), assistant (golf desk agent explaining twilight pricing and booking tee time)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "get_twilight_rates",
+    "description": "Return twilight start time and green fee for a date.",
+    "parameters": {"type": "object", "additionalProperties": false, "properties": {"date": {"type": "string", "format": "date"}}, "required": ["date"]},
+    "strict": true
+  },
+  {
+    "name": "book_tee_time",
+    "description": "Book a tee time with player count and cart selection.",
+    "parameters": {"type": "object", "additionalProperties": false, "properties": {"reservation_id": {"type": "string"}, "tee_time": {"type": "string", "format": "date-time"}, "players": {"type": "integer", "minimum": 1, "maximum": 4}, "cart": {"type": "string", "enum": ["none", "shared", "two_carts"]}}, "required": ["reservation_id", "tee_time", "players", "cart"]},
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the golf desk agent at Sunset Dunes Resort (hotel_id: sunset_dunes_resort_ca).
+Address: 500 Dune Crest Rd, Palm Desert, CA 92260. Timezone: America/Los_Angeles.
+Course hours: first tee 6:00 AM, last tee 4:30 PM. Twilight begins 3:00 PM daily with reduced green fees; shared cart is included at twilight. Practice range open until sunset.
+
+user:
+Hi there—do you do twilight rates? We’re thinking a relaxed couples round near sunset tomorrow. Our reservation is RSV22001.
+
+assistant channel=analysis:
+Confirm twilight details for the date, then suggest a 3:30–4:00 PM slot and mention shared cart included. Add a small talk line about sunsets.
+
+assistant channel=commentary to=tool.get_twilight_rates:
+{"date": "2025-08-25"}
+
+tool.get_twilight_rates channel=commentary to=assistant:
+{"twilight_start":"15:00","green_fee":"$79 per player","includes_cart":true}
+
+assistant channel=analysis:
+Offer 3:40 PM as a good time. If accepted, book with shared cart for two.
+
+assistant channel=final:
+Yes—twilight starts at 3:00 PM with $79 per player and a shared cart included. Our sunsets over the dunes are gorgeous from the back nine. Would 3:40 PM tomorrow work for your couples round?
+
+user:
+3:40 PM sounds perfect. Please book for two with the shared cart.
+
+assistant channel=analysis:
+Proceed to book: 2025-08-25T15:40:00, players 2, cart shared.
+
+assistant channel=commentary to=tool.book_tee_time:
+{"reservation_id":"RSV22001","tee_time":"2025-08-25T15:40:00","players":2,"cart":"shared"}
+
+tool.book_tee_time channel=commentary to=assistant:
+{"status":"confirmed","confirmation_code":"TWLT-3540","pairing_note":"You’ll likely play the last few holes at golden hour."}
+
+assistant channel=analysis:
+Confirm booking and close with friendly tip—no tool call.
+
+assistant channel=final:
+You’re all set for 3:40 PM tomorrow—confirmation TWLT-3540—with a shared cart included. Pro tip: the 16th tee is the best golden‑hour photo spot; enjoy your round!

@@ -1,0 +1,54 @@
+"""
+Motorized window shade off track.
+
+ROLES: user (guest noticing shade misalignment), assistant (front desk coordinating technician)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "book_shade_alignment",
+    "description": "Book a technician to realign a motorized window shade and recalibrate limits.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "room_number": { "type": "string" },
+        "preferred_window_minutes": { "type": "integer", "minimum": 15, "maximum": 180 }
+      },
+      "required": ["reservation_id", "room_number", "preferred_window_minutes"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are at Skyline Marina Hotel (hotel_id: skyline_marina_sea). Address: 100 Alki Ave SW, Seattle, WA 98116. Timezone: America/Los_Angeles.
+Amenities: waterfront fire tables, kayak rentals, espresso bar. Technicians can realign tracks and reset top/bottom limits.
+
+user:
+Hi—shade in 733 is crooked and clicks at the top. The espresso smells fantastic.
+
+assistant channel=analysis:
+Acknowledge espresso; book a 60‑minute window. Reservation RSV733.
+
+assistant channel=commentary to=tool.book_shade_alignment:
+{"reservation_id":"RSV733","room_number":"733","preferred_window_minutes":60}
+
+tool.book_shade_alignment channel=commentary to=assistant:
+{"status":"booked","ticket_id":"SHD-11","eta_minutes":50}
+
+assistant channel=analysis:
+Confirm and advise not to run the motor.
+
+assistant channel=final:
+It’s our house blend—nutty and bright. I’ve booked ticket SHD-11; a technician will realign and recalibrate within ~50 minutes. Please avoid running the motor until we arrive to prevent wear.
+
+user:
+Will do—thank you.
+
+assistant channel=final:
+Thanks for your patience. We’ll restore smooth operation shortly.

@@ -1,0 +1,58 @@
+"""
+Guest asks to switch partner store due to item availability.
+
+ROLES: user (guest changing store), assistant (front desk rebooking delivery with alternate partner)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_grocery_delivery",
+    "description": "Schedule grocery delivery for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "store_name": { "type": "string" },
+        "delivery_time": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["reservation_id", "store_name", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the front desk at Skyline Market Hotel (hotel_id: skyline_market_sea). Address: 101 Pike St, Seattle, WA 98101. Timezone: America/Los_Angeles. Partners: Emerald Grocery and Harbor Foods. Either can deliver to guest rooms.
+
+user:
+Hi! Quick question—could we switch my grocery order to Harbor Foods? They have my favorite yogurt.
+
+assistant channel=analysis:
+Friendly tone; confirm reservation ID, time, and switch store to Harbor Foods.
+
+assistant channel=final:
+Absolutely—we want you to get your favorites. Could you share your reservation ID and the delivery time you’d like? I’ll place it with Harbor Foods.
+
+user:
+RSV60606. Time: 2025-09-11T12:10:00. Notes: vanilla Greek yogurt, whole milk.
+
+assistant channel=analysis:
+Schedule with Harbor Foods at 12:10 PM and include notes.
+
+assistant channel=commentary to=tool.arrange_grocery_delivery:
+{"reservation_id":"RSV60606","store_name":"Harbor Foods","delivery_time":"2025-09-11T12:10:00","notes":"vanilla Greek yogurt, whole milk"}
+
+tool.arrange_grocery_delivery channel=commentary to=assistant:
+{"status":"scheduled","order_id":"HF-992"}
+
+assistant channel=analysis:
+Confirm order switch.
+
+assistant channel=final:
+Done—your Harbor Foods delivery is set for 12:10 PM (Order HF-992). We’ve requested vanilla whole-milk Greek yogurt.
+

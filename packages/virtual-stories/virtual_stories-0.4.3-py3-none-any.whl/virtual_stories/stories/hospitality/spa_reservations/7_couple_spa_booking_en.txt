@@ -1,0 +1,81 @@
+"""
+Couple wants to book a relaxation package and reschedule time with friendly banter.
+
+ROLES: user (guest booking spa for two), assistant (front desk agent handling spa reservations)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "book_spa_appointment",
+    "description": "Book a spa treatment with date, time, and package name.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "package": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "guests": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["hotel_id", "package", "date", "time", "guests"]
+    },
+    "strict": true
+  },
+  {
+    "name": "reschedule_spa_appointment",
+    "description": "Change time of an existing spa appointment.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "appointment_id": { "type": "string" },
+        "new_time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" }
+      },
+      "required": ["appointment_id", "new_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Phone: (212) 555-0100. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi-Fi, gym, indoor pool, full-service spa open 8 AM–10 PM, business center, rooftop restaurant, and 24-hour room service.
+
+user:
+Hi! My partner and I are celebrating. Can we book the "Relax Together" package this Saturday at 3:00 PM?
+
+assistant channel=analysis:
+Cheerfully confirm request and book appointment for two using tool.
+
+assistant channel=commentary to=tool.book_spa_appointment:
+{"hotel_id":"skyline_city_hotel_nyc","package":"Relax Together","date":"2025-08-16","time":"15:00","guests":2}
+
+tool.book_spa_appointment channel=commentary to=assistant:
+{"appointment_id":"SPA-9001","status":"booked"}
+
+assistant channel=analysis:
+Confirm booking and inquire if anything else needed.
+
+assistant channel=final:
+Your "Relax Together" package is booked for Saturday at 3:00 PM—appointment SPA-9001. Anything else for your celebration?
+
+user:
+Thanks! Actually, could we shift it to 4:00 PM? And how's your day going?
+
+assistant channel=analysis:
+Engage in small talk and reschedule appointment using tool.
+
+assistant channel=commentary to=tool.reschedule_spa_appointment:
+{"appointment_id":"SPA-9001","new_time":"16:00"}
+
+tool.reschedule_spa_appointment channel=commentary to=assistant:
+{"status":"rescheduled"}
+
+assistant channel=analysis:
+Confirm new time and reply to small talk.
+
+assistant channel=final:
+No problem—it's now at 4:00 PM, and my day's going great, thanks for asking! Enjoy your relaxation together.

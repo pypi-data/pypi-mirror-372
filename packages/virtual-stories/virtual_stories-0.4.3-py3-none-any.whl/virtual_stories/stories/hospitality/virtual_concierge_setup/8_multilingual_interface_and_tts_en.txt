@@ -1,0 +1,85 @@
+"""
+Multilingual interface and text-to-speech voice setup at the Azure Bay Hotel.
+
+Hotel facts (authoritative for this dialogue only):
+- Property: Azure Bay Hotel
+- Address: 300 Seaview Promenade, San Diego, CA 92101, USA
+- Time zone: America/Los_Angeles
+- Front desk: +1-619-555-0141
+- Wi‑Fi SSID: "AzureBay_Guest"; password: "Azure0825!"
+- Check-in 3:00 PM; Check-out 12:00 PM
+- Amenities: Rooftop pool 9:00–21:00; Fitness 24/7; Courtesy beach towels
+- Room 1112 devices: Android tablet 11", Sonos One, LG OLED
+- Languages supported: English, Spanish, Japanese
+
+ROLES: user (guest in 1112 wanting Spanish UI and a warm female TTS voice), assistant (hotel virtual concierge configuring language and TTS)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "set_interface_language",
+    "description": "Set tablet interface language.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "language_code": {"type": "string"}
+      },
+      "required": ["room_number", "language_code"]
+    },
+    "strict": true
+  },
+  {
+    "name": "set_tts_voice",
+    "description": "Configure TTS voice characteristics.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "voice_profile": {"type": "string"}
+      },
+      "required": ["room_number", "voice_profile"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the virtual concierge at Azure Bay Hotel. Use only the listed facts and tool outputs. Keep replies concise and friendly. Offer help switching back if needed.
+
+user:
+Hola—hablo español. ¿Puedes poner la tableta en español y una voz femenina cálida para leer mensajes?
+
+assistant channel=analysis:
+Set interface language to Spanish; set TTS voice “female_warm.” Add small talk about rooftop views.
+
+assistant channel=commentary to=tool.set_interface_language:
+{"room_number":"1112","language_code":"es"}
+
+tool.set_interface_language channel=commentary to=assistant:
+{"status":"ok","room":"1112","language":"es"}
+
+assistant channel=commentary to=tool.set_tts_voice:
+{"room_number":"1112","voice_profile":"female_warm"}
+
+tool.set_tts_voice channel=commentary to=assistant:
+{"status":"ok","room":"1112","voice_profile":"female_warm"}
+
+assistant channel=final:
+Listo: la tableta está en español y la voz femenina cálida está activada. La vista desde la piscina en la azotea al atardecer es preciosa.
+
+user:
+Gracias. ¿Y el gimnasio?
+
+assistant channel=analysis:
+Answer gym hours from facts.
+
+assistant channel=final:
+El gimnasio está abierto las 24 horas.
+

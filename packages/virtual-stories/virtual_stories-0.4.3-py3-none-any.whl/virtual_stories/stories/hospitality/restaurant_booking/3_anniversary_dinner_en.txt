@@ -1,0 +1,98 @@
+"""
+Guest wants to book a special anniversary dinner at the hotel's fine dining restaurant.
+
+ROLES: user (guest celebrating anniversary), assistant (restaurant concierge specializing in special occasions)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_special_occasion_availability",
+    "description": "Check availability for special occasion dining including anniversary packages.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date", "description": "Requested date." },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$", "description": "Requested time." },
+        "party_size": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "occasion_type": { "type": "string", "enum": ["anniversary", "birthday", "engagement", "other"] }
+      },
+      "required": ["date", "time", "party_size", "occasion_type"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_special_dinner",
+    "description": "Book a special occasion dinner with anniversary enhancements.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "party_size": { "type": "integer" },
+        "name": { "type": "string" },
+        "occasion_details": { "type": "string" }
+      },
+      "required": ["date", "time", "party_size", "name", "occasion_details"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the fine dining concierge at Oceanview Grand Hotel (hotel_id: oceanview_grand_miami). Address: 123 Ocean Drive, Miami Beach, FL 33139.
+Timezone: America/New_York. Hotel amenities include private beach access, infinity pool, luxury spa, and signature restaurant "Azure" with ocean views.
+Special occasion packages available: anniversary (champagne toast, rose petals, dedicated server), birthday (complimentary dessert, photo), engagement (sparkling cider toast).
+Dress code: smart casual. Valet parking available for $45.
+
+user:
+Hi there! I'd like to book a special anniversary dinner for my wife and me this Saturday at 8 PM. It's our 10th anniversary and I want to make it memorable.
+
+assistant channel=analysis:
+This is a special anniversary request. I should check availability for special occasion dining and offer our anniversary package. Need to engage in warm conversation about the celebration.
+
+assistant channel=final:
+Congratulations on your 10th anniversary! That's wonderful. Let me check our availability at Azure restaurant for Saturday at 8 PM for a special anniversary dinner.
+
+assistant channel=commentary to=tool.check_special_occasion_availability:
+{"date":"2025-08-23","time":"20:00","party_size":2,"occasion_type":"anniversary"}
+
+tool.check_special_occasion_availability channel=commentary to=assistant:
+{"available":true,"special_package":"anniversary_premium","features":["champagne_toast","rose_petals","ocean_view_table","dedicated_server"]}
+
+assistant channel=analysis:
+Perfect availability with our premium anniversary package. I should share the details and book it, then engage in some celebratory small talk.
+
+assistant channel=final:
+Excellent! We have the perfect table available with ocean views. For your 10th anniversary, I'd recommend our Anniversary Premium package which includes a complimentary champagne toast, fresh rose petals on the table, and a dedicated server for a truly special evening. May I book this under your name?
+
+user:
+That sounds absolutely perfect! Please book it under John Mitchell. I'm so excited about this surprise for Sarah.
+
+assistant channel=analysis:
+Book the special dinner with the anniversary details, then share some celebratory thoughts to match the excitement.
+
+assistant channel=commentary to=tool.book_special_dinner:
+{"date":"2025-08-23","time":"20:00","party_size":2,"name":"John Mitchell","occasion_details":"10th wedding anniversary surprise"}
+
+tool.book_special_dinner channel=commentary to=assistant:
+{"status":"confirmed","reservation_id":"ANN-1023-45","package":"anniversary_premium","special_notes":"Rose petals and champagne toast arranged"}
+
+assistant channel=analysis:
+Confirm the booking and add some celebratory warmth to match the guest's excitement.
+
+assistant channel=final:
+It's all set, John! Your anniversary dinner is confirmed for Saturday at 8 PM with reservation ANN-1023-45. Sarah is going to love the ocean view table with rose petals and that champagne toast. Here's to many more wonderful years together! Is there anything else I can help you with to make this celebration even more special?
+
+user:
+That's amazing, thank you! You know, we've been coming to Miami for our anniversary every year since we got married. Any recommendations for a nice walk after dinner?
+
+assistant channel=analysis:
+Engage in small talk about their tradition and provide helpful local recommendations based on hotel knowledge.
+
+assistant channel=final:
+What a beautiful tradition! After dinner, I highly recommend a stroll along the Ocean Drive promenade right outside our hotel. The lights are magical at night, and there are some lovely spots to enjoy the sea breeze. Just a 2-minute walk from our entrance. Your romantic evening is going to be perfect! Enjoy every moment.

@@ -1,0 +1,94 @@
+"""
+Large family wants to book a dinner reservation for a family reunion celebration.
+
+ROLES: user (family member organizing reunion), assistant (restaurant manager handling large group reservations)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_large_party_availability",
+    "description": "Check availability for large group dining with special accommodations.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "party_size": { "type": "integer", "minimum": 8, "maximum": 50 }
+      },
+      "required": ["date", "time", "party_size"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_family_dinner",
+    "description": "Book a large family gathering with special group arrangements.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "party_size": { "type": "integer" },
+        "contact_name": { "type": "string" },
+        "special_requests": { "type": "string" }
+      },
+      "required": ["date", "time", "party_size", "contact_name"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the restaurant manager at Mountain View Lodge (hotel_id: mountain_view_lodge_aspen). Address: 456 Elk Trail, Aspen, CO 81611.
+Timezone: America/Denver. Hotel amenities include ski-in/ski-out access, indoor pool, family game room, and family-style dining hall "Evergreen".
+Family packages available: reunion special (private dining area, kids' menu, group activities), large group discount for 8+ people.
+Family-friendly amenities: high chairs, booster seats, kids' menu, coloring activities. Free shuttle to nearby attractions.
+
+user:
+Hello! I'm planning a family reunion dinner for next Friday. We expect about 15 people including several children. Do you have space for a large group?
+
+assistant channel=analysis:
+This is a large family gathering request. I should check availability for large groups and inquire about their specific needs for the family reunion.
+
+assistant channel=final:
+Hello! A family reunion sounds lovely. We certainly have experience hosting large family gatherings here at Mountain View Lodge. Let me check our availability for 15 people next Friday. What time were you thinking, and do you have any special requirements for the children?
+
+user:
+We're flexible on time - maybe around 6:30 PM? We have kids ranging from 3 to 12 years old, so we'd love if there were some activities or a kids' menu available.
+
+assistant channel=analysis:
+Check availability for the requested time and party size, then share family-friendly options available.
+
+assistant channel=commentary to=tool.check_large_party_availability:
+{"date":"2025-08-29","time":"18:30","party_size":15}
+
+tool.check_large_party_availability channel=commentary to=assistant:
+{"available":true,"private_room":"evergreen_private","kids_amenities":["childrens_menu","coloring_activities","high_chairs","booster_seats"]}
+
+assistant channel=analysis:
+Perfect availability with family amenities. I should provide details about our family packages and book the reservation.
+
+assistant channel=final:
+Perfect! We have availability at 6:30 PM in our private Evergreen dining room. For your family reunion, we offer a Family Package that includes a dedicated kids' menu, coloring activities, high chairs and booster seats, and even a small discount for groups of 15+. Would you like me to book this for you?
+
+user:
+That sounds wonderful! Please book it under the name Rodriguez. The kids will love the activities. By the way, do you have any recommendations for family activities in Aspen after dinner?
+
+assistant channel=analysis:
+Book the family dinner with the special requests, then engage in helpful small talk about local family activities.
+
+assistant channel=commentary to=tool.book_family_dinner:
+{"date":"2025-08-29","time":"18:30","party_size":15,"contact_name":"Rodriguez","special_requests":"Family reunion with children, kids menu and activities needed"}
+
+tool.book_family_dinner channel=commentary to=assistant:
+{"status":"confirmed","reservation_id":"FAM-0829-15","room":"evergreen_private","special_arrangements":"kids_menu,coloring_activities"}
+
+assistant channel=analysis:
+Confirm the booking and share local family activity recommendations to complete the helpful service.
+
+assistant channel=final:
+Your family reunion dinner is confirmed for Friday at 6:30 PM under Rodriguez - reservation FAM-0829-15. The kids will have a great time with our coloring activities and special menu. After dinner, I recommend the Aspen Family Fun Center just a 10-minute drive away - they have mini-golf, arcade games, and ice cream that the whole family enjoys. Our free shuttle can take you there if you'd like. We look forward to hosting your reunion!

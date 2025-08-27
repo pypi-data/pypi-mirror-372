@@ -1,0 +1,56 @@
+"""
+Guest asks for access passes to the rooftop pool.
+
+ROLES: user (guest excited for a swim with a view), assistant (concierge managing pool access)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "grant_pool_access",
+    "description": "Issue rooftop pool access passes for specific date and number of guests.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "guests": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["reservation_id", "guests", "date"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the concierge at Skyline Loft Hotel (hotel_id: skyline_loft_chi). Address: 910 High St, Chicago, IL 60601. The rooftop pool is open from 09:00 to 21:00, and guests require daily wristband passes available at the concierge desk.
+
+user:
+Hi, the skyline looks amazing tonight! Could I get passes for the rooftop pool for tomorrow for two people?
+
+assistant channel=analysis:
+Engage with the small talk, then ask for reservation ID. Convert "tomorrow" to specific date 2025-07-15 for booking.
+
+assistant channel=final:
+The view is fantastic, isn't it? I'd be glad to arrange pool passes. Could you share your reservation ID so I can reserve two passes for tomorrow?
+
+user:
+Absolutely—my reservation ID is RSV77889.
+
+assistant channel=analysis:
+Proceed to grant two pool passes for 2025-07-15.
+
+assistant channel=commentary to=tool.grant_pool_access:
+{"reservation_id":"RSV77889","guests":2,"date":"2025-07-15"}
+
+tool.grant_pool_access channel=commentary to=assistant:
+{"status":"granted","pass_ids":["POOL-31","POOL-32"]}
+
+assistant channel=analysis:
+Notify guest about pass pickup.
+
+assistant channel=final:
+You're all set! Two pool passes are reserved for July 15th. Pick them up at the concierge desk anytime tomorrow, and enjoy the swim with that skyline view!

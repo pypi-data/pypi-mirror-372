@@ -1,0 +1,59 @@
+"""
+Guest requests guidance on smart room features and asks about voice commands.
+
+ROLES: user (guest unfamiliar with smart controls), assistant (front desk tech specialist)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "send_orientation_guide",
+    "description": "Send a link to a smart-room orientation guide.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier." },
+        "room_number": { "type": "string", "description": "Guest room number." },
+        "contact_method": { "type": "string", "enum": ["sms", "email"], "description": "How to send the guide." },
+        "contact": { "type": "string", "description": "Phone number or email address." }
+      },
+      "required": ["hotel_id", "room_number", "contact_method", "contact"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the tech specialist at Alpine Smart Lodge (hotel_id: alpine_smart_lodge_zrh). Address: 12 Summit Rd, Zurich 8001, Switzerland.
+Timezone: Europe/Zurich. Check-in 2:00 PM, check-out 11:00 AM.
+Amenities: smart rooms with tablet-controlled lights and blinds, mountain-view sauna, complimentary Swiss breakfast, electric vehicle charging, and ski storage. Currency: CHF. Provide friendly assistance with high-tech rooms.
+
+user:
+Hi! Those mountains are stunning. I'm in room 302 and can't figure out the smart blinds—could you send a quick guide to my phone +41790001111?
+
+assistant channel=analysis:
+Appreciate the view; send orientation guide via SMS to +41790001111 for room 302.
+
+assistant channel=commentary to=tool.send_orientation_guide:
+{"hotel_id":"alpine_smart_lodge_zrh","room_number":"302","contact_method":"sms","contact":"+41790001111"}
+
+tool.send_orientation_guide channel=commentary to=assistant:
+{"status":"sent","link":"https://example.com/guide/302"}
+
+assistant channel=analysis:
+Confirm message sent.
+
+assistant channel=final:
+The Alps do put on a show! I've texted you a link with instructions for the blinds and other smart controls. Let me know if it doesn't come through.
+
+user:
+Got it, thanks! Can I control things with voice, too?
+
+assistant channel=analysis:
+Answer about voice commands; no tool needed.
+
+assistant channel=final:
+Yes—just say "Hey Alpine" followed by the command, like "close blinds" or "set lights to warm." Enjoy the tech and the view!

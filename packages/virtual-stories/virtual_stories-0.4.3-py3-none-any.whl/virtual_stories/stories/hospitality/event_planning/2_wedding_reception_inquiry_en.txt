@@ -1,0 +1,90 @@
+"""
+Couple inquiring about hosting a wedding reception for 120 guests.
+ROLES: user (event organizer), assistant (events coordinator assisting bookings)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "search_event_space_availability",
+    "description": "Check availability of event spaces for a given date and attendance size.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event_date": { "type": "string", "format": "date", "description": "Requested event date." },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500, "description": "Expected number of attendees." }
+      },
+      "required": ["event_date","attendees"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_event_quote",
+    "description": "Get a pricing quote for a specific event space and duration.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string", "description": "Event space identifier." },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500 },
+        "hours": { "type": "integer", "minimum": 1, "maximum": 12 }
+      },
+      "required": ["room_name","event_date","attendees","hours"]
+    },
+    "strict": true
+  },
+  {
+    "name": "hold_event_space",
+    "description": "Place a temporary hold on an event space.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer" },
+        "organizer_name": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["room_name","event_date","attendees","organizer_name","email"]
+    },
+    "strict": true
+  },
+  {
+    "name": "confirm_event_booking",
+    "description": "Confirm a held event space reservation with payment.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hold_id": { "type": "string" },
+        "payment_token": { "type": "string", "minLength": 8 }
+      },
+      "required": ["hold_id","payment_token"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are an events coordinator at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi‑Fi, gym, pool, on-site restaurant. Currency: USD; taxes 14.75% + occupancy tax $3.50/night. Be clear and only use tools to check space availability, quote pricing, and manage bookings.
+
+user:
+We're considering your hotel for a wedding reception next June 18 for about 120 guests. Is the Hudson Ballroom free and what would the evening cost?
+assistant channel=analysis:
+Check availability for 120 guests, quote Hudson Ballroom for 6 hours, offer to hold.
+assistant channel=commentary to=tool.search_event_space_availability:
+{"event_date":"2026-06-18","attendees":120}
+tool.search_event_space_availability channel=commentary to=assistant:
+{"available_spaces":[{"room_name":"Hudson Ballroom","capacity":100},{"room_name":"Grand Ballroom","capacity":200}]}
+assistant channel=commentary to=tool.get_event_quote:
+{"room_name":"Grand Ballroom","event_date":"2026-06-18","attendees":120,"hours":6}
+tool.get_event_quote channel=commentary to=assistant:
+{"room_name":"Grand Ballroom","base_rate":5000.00,"service_charge":1000.00,"total":6000.00}
+assistant channel=final:
+The Grand Ballroom is available on June 18. A six-hour reception for 120 guests is $6,000 including service charge. Shall I hold it for you?

@@ -1,0 +1,46 @@
+"""
+Art gallery presentation followed by private dining; needs 4K HDMI and blackout shades.
+
+ROLES: user (gallery curator), assistant (hotel AV and dining coordinator)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {"name":"check_private_room_availability","description":"Check room availability.","parameters":{"type":"object","additionalProperties":false,"properties":{"room_id":{"type":"string"},"date":{"type":"string","format":"date"},"start_time":{"type":"string"},"duration_minutes":{"type":"integer"}},"required":["room_id","date","start_time","duration_minutes"]},"strict":true},
+  {"name":"check_av_equipment","description":"Check AV equipment availability.","parameters":{"type":"object","additionalProperties":false,"properties":{"room_id":{"type":"string"},"needs":{"type":"array","items":{"type":"string"}}},"required":["room_id","needs"]},"strict":true}
+]
+```
+"""
+
+system:
+You are the AV and dining coordinator at The Portside Grand, 3 Marina Crescent, Singapore. Private Room: "Meridian Room" (room_id: portside_meridian_room) seats 20, blackout shades, ceiling projector 4K, HDMI and USB‑C, wired clicker. Dinner 18:00–22:00. Quiet HVAC.
+
+user:
+Hi—can we present a short 20-minute deck then have dinner for 15 next Tuesday at 7?
+
+assistant channel=analysis:
+Check availability 19:00 for 150 minutes; verify AV needs: 4K HDMI and blackout shades; add polite small talk about the marina lights.
+
+assistant channel=commentary to=tool.check_private_room_availability:
+{"room_id":"portside_meridian_room","date":"2025-08-26","start_time":"19:00","duration_minutes":150}
+
+tool.check_private_room_availability channel=commentary to=assistant:
+{"status":"available","hold_id":"HOLD-MERIDIAN-0826-1900"}
+
+assistant channel=commentary to=tool.check_av_equipment:
+{"room_id":"portside_meridian_room","needs":["4K HDMI","blackout shades","USB-C adapter","wired clicker"]}
+
+tool.check_av_equipment channel=commentary to=assistant:
+{"available":["4K HDMI","blackout shades","USB-C adapter","wired clicker"]}
+
+assistant channel=final:
+We can hold the Meridian Room 7–9:30 PM (HOLD-MERIDIAN-0826-1900). AV is set: 4K HDMI, blackout shades, USB‑C adapter, and a wired clicker. The marina lights look beautiful after dusk—shall I note 15 guests and arrange water on arrival before your short deck?
+
+user:
+Yes, and please do a light seafood menu.
+
+assistant channel=analysis:
+Acknowledge menu preference and finalize hold details.
+
+assistant channel=final:
+Done—15 guests with a light seafood menu, water on arrival, and your 20‑minute deck first. We’ll have blackout shades down before you begin, then lift them for dinner.

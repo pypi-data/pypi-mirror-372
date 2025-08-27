@@ -1,0 +1,58 @@
+"""
+Guest sets substitution preferences for a grocery order.
+
+ROLES: user (guest specifying substitutions), assistant (front desk coordinating partner store delivery)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_grocery_delivery",
+    "description": "Schedule grocery delivery for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "store_name": { "type": "string" },
+        "delivery_time": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["reservation_id", "store_name", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the front desk at The Copper Lantern (hotel_id: copper_lantern_den). Address: 910 17th St, Denver, CO 80202. Timezone: America/Denver. Partner grocer: Front Range Foods, offering item substitutions if out of stock; please include clear substitution rules in notes.
+
+user:
+Good afternoon! Your lobby playlist is excellent. I want to set an order with substitution rules in case items are out.
+
+assistant channel=analysis:
+Thank them, ask for reservation ID, desired delivery time, store, and substitution notes.
+
+assistant channel=final:
+Appreciate the kind words—we curate carefully! I can help. What’s your reservation ID, preferred delivery time, and your substitution preferences (e.g., brand switch okay, no price increases)?
+
+user:
+RSV30003. Please book Front Range Foods for 2025-09-08T14:00:00. Substitutions: same brand different size OK; if brand unavailable, store brand OK; no price increases over 10%.
+
+assistant channel=analysis:
+Schedule with provided substitution guidelines.
+
+assistant channel=commentary to=tool.arrange_grocery_delivery:
+{"reservation_id":"RSV30003","store_name":"Front Range Foods","delivery_time":"2025-09-08T14:00:00","notes":"Substitutions: same brand different size OK; store brand if brand unavailable; no price increase >10%"}
+
+tool.arrange_grocery_delivery channel=commentary to=assistant:
+{"status":"scheduled","order_id":"FRF-455"}
+
+assistant channel=analysis:
+Confirm and restate rules.
+
+assistant channel=final:
+Booked—Front Range Foods will deliver at 2:00 PM (Order FRF-455). I’ve noted: same brand/different size OK, store brand if needed, and no price increase above 10%.
+

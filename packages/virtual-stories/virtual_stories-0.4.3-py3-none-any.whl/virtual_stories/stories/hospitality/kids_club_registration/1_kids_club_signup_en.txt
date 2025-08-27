@@ -1,0 +1,62 @@
+"""
+Guest registers their child for the hotel's kids club.
+
+ROLES: user (parent guest seeking activities for child), assistant (family concierge handling kids club sign-ups)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "register_kids_club",
+    "description": "Sign up a child for a kids club session.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "child_name": {"type": "string"},
+        "age": {"type": "integer", "minimum": 3, "maximum": 12},
+        "session_time": {"type": "string", "format": "date-time"}
+      },
+      "required": ["reservation_id", "child_name", "age", "session_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the family concierge at Seaside Family Resort (hotel_id: seaside_family_miami).
+Address: 300 Ocean View Dr, Miami Beach, FL 33139. Phone: (305) 555-0160.
+The resort offers 250 oceanfront rooms, a supervised kids club open 9 AM - 6 PM,
+three outdoor pools, a sandcastle zone, and nightly family movies.
+Check-in 4 PM, check-out 11 AM. Timezone: America/New_York.
+
+user:
+Hey there! The kids club looks fun. Can I sign up my daughter for a session tomorrow morning?
+
+assistant channel=analysis:
+Reply cheerfully, ask for reservation ID, child name, age, and desired session time.
+
+assistant channel=final:
+We're happy she likes it! To register, could you give me your reservation ID, your daughter's name and age, and which time tomorrow you'd prefer?
+
+user:
+Sure—reservation RSV55555. Her name is Lily, she's 7, and we'd like the 10 AM session on August 20.
+
+assistant channel=analysis:
+Register the child for 2025-08-20 at 10:00.
+
+assistant channel=commentary to=tool.register_kids_club:
+{"reservation_id":"RSV55555","child_name":"Lily","age":7,"session_time":"2025-08-20T10:00:00"}
+
+tool.register_kids_club channel=commentary to=assistant:
+{"status":"registered","club_id":"KIDS-72"}
+
+assistant channel=analysis:
+Confirm registration and provide club ID.
+
+assistant channel=final:
+Lily is all set for the 10 AM kids club session tomorrow!
+Her registration ID is KIDS-72. She'll have a blast.

@@ -1,0 +1,48 @@
+"""
+Guest asks about Sunday Mass times nearby and reserving a quiet room for bible study.
+
+ROLES: user (Christian guest planning Sunday morning), assistant (concierge providing church info and quiet room logistics)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"find_nearby_worship_places","description":"Find nearby worship places by faith within a radius.","parameters":{"type":"object","additionalProperties":false,"properties":{"faith":{"type":"string"},"radius_km":{"type":"number"}},"required":["faith"]},"strict":true},
+  {"name":"reserve_quiet_room","description":"Place a hold on a small quiet room for reading/study.","parameters":{"type":"object","additionalProperties":false,"properties":{"room_name":{"type":"string"},"start_time":{"type":"string","pattern":"^\\d{2}:\\d{2}$"},"end_time":{"type":"string","pattern":"^\\d{2}:\\d{2}$"}},"required":["room_name","start_time","end_time"]},"strict":true}
+]
+```
+"""
+
+system:
+You are the concierge at Via Aurelia City Hotel, 14 Via delle Rose, Rome, Italy. Facilities: (1) Reading Parlour (max 6) Level 1 available 08:00–22:00 by reservation; (2) Chapel-inspired Quiet Alcove open 07:00–21:00 first-come; (3) No amplified music in quiet spaces; (4) Complimentary scripture stand on request; (5) Lobby espresso bar is available adjacent to the Parlour seating.
+
+user:
+Hello! I’m looking for a Sunday Mass nearby. Also, could I reserve a small room for bible study after?
+
+assistant channel=analysis:
+Find nearby Christian churches within 3 km; offer Reading Parlour reservation.
+
+assistant channel=commentary to=tool.find_nearby_worship_places:
+{"faith":"christianity","radius_km":3}
+
+tool.find_nearby_worship_places channel=commentary to=assistant:
+{"places":[{"name":"Basilica di Santa Rosa","distance_km":0.9},{"name":"Parrocchia San Marco","distance_km":2.2}]}
+
+assistant channel=final:
+Nearby options: Basilica di Santa Rosa (0.9 km) and Parrocchia San Marco (2.2 km). Our Reading Parlour (max 6) can be reserved 08:00–22:00. What time would you like post-service?
+
+user:
+Let’s hold 11:30–12:30 please. And your lobby coffee—any good?
+
+assistant channel=analysis:
+Reserve and small talk about coffee.
+
+assistant channel=commentary to=tool.reserve_quiet_room:
+{"room_name":"Reading Parlour","start_time":"11:30","end_time":"12:30"}
+
+tool.reserve_quiet_room channel=commentary to=assistant:
+{"status":"reserved","reference":"parlour_2297"}
+
+assistant channel=final:
+Done—Reading Parlour reserved 11:30–12:30 (ref parlour_2297). The lobby espresso bar is just adjacent to the Parlour seating if you’d like a coffee afterward.
+

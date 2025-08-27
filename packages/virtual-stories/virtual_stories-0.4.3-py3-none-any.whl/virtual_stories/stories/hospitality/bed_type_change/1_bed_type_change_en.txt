@@ -1,0 +1,55 @@
+"""
+Guest requests a change in bed type from the front desk.
+
+ROLES: user (guest preferring a different bed configuration), assistant (front desk agent managing room arrangements)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "change_bed_type",
+    "description": "Update the bed type for a guest's room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "bed_type": { "type": "string", "enum": ["king", "queen", "twin"] }
+      },
+      "required": ["reservation_id", "bed_type"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a front desk agent at Summit View Hotel (hotel_id: summit_view_hotel). Address: 480 Mountain Rd, Denver, CO 80202. Standard rooms feature king beds, but queen or twin configurations can be arranged subject to availability.
+
+user:
+Hello! Beautiful mountain views today, aren't they? I was wondering if I could switch my room to have twin beds.
+
+assistant channel=analysis:
+Share appreciation for the view, then request the guest's reservation ID to check availability for twin beds.
+
+assistant channel=final:
+The mountains are gorgeous, aren't they? I'd be happy to look into that for you. Could you provide your reservation ID so I can check availability for twin beds?
+
+user:
+Yes, of course—it's RSV33445.
+
+assistant channel=analysis:
+Attempt to change bed type to twin for RSV33445.
+
+assistant channel=commentary to=tool.change_bed_type:
+{"reservation_id":"RSV33445","bed_type":"twin"}
+
+tool.change_bed_type channel=commentary to=assistant:
+{"status":"confirmed","room":"1205"}
+
+assistant channel=analysis:
+Inform the guest about the successful change.
+
+assistant channel=final:
+You're all set! We've switched your room to a twin-bed configuration in room 1205. Let us know if there's anything else we can do to make your stay more comfortable.

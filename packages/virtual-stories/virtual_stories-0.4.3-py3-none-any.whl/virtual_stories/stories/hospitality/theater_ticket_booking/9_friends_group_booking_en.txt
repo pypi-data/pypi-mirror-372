@@ -1,0 +1,114 @@
+"""
+Group of friends seeks theater tickets for a fun night out.
+
+ROLES: user (group of friends planning entertainment), assistant (concierge arranging group theater experience)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "find_group_friendly_shows",
+    "description": "Find theater shows that work well for groups of friends.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "group_size": {"type": "integer", "minimum": 3, "maximum": 20},
+        "social_type": {"type": "string", "enum": ["friends", "casual_group", "celebration"]},
+        "date": {"type": "string", "format": "date"},
+        "preferred_time": {"type": "string", "pattern": "^\\d{2}:\\d{2}$"}
+      },
+      "required": ["group_size", "social_type", "date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "reserve_group_experience",
+    "description": "Book theater tickets for groups with social enhancements.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "show_name": {"type": "string"},
+        "show_time": {"type": "string", "format": "date-time"},
+        "seats": {"type": "integer", "minimum": 3, "maximum": 20},
+        "seating_arrangement": {"type": "string", "enum": ["together", "pairs", "flexible"]},
+        "group_features": {"type": "string"}
+      },
+      "required": ["reservation_id", "show_name", "show_time", "seats"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Social Scene Hotel (hotel_id: social_scene_nyc).
+Address: 770 Broadway, New York, NY 10003. Phone: (212) 555-0770.
+The hotel features 180 social hub rooms with entertainment centers, group event planning services, partnerships with social-friendly theaters, pre-show meetup spaces, and group activity coordination.
+Check-in 3 PM, check-out 12 PM. Timezone: America/New_York.
+
+user:
+Hey! My friends and I are in town for the weekend and want to see a show together. There are 6 of us total. Any recommendations for something fun and energetic?
+
+assistant channel=analysis:
+Group of 6 friends wants fun, energetic theater experience. Should look for shows that work well for social groups.
+
+assistant channel=final:
+Sounds like a fun group! For 6 friends, we have great options for energetic, entertaining shows. Could you share your reservation ID and what night you're thinking of?
+
+user:
+Our reservation ID is FRIENDS2025021. We're thinking Saturday night - something with great music and maybe some audience interaction would be perfect!
+
+assistant channel=analysis:
+Search for energetic, interactive shows suitable for a group of 6 friends on Saturday night.
+
+assistant channel=commentary to=tool.find_group_friendly_shows:
+{"group_size":6,"social_type":"friends","date":"2025-08-24","preferred_time":"20:00"}
+
+tool.find_group_friendly_shows channel=tool.find_group_friendly_shows:
+{"available_shows":[{"name":"Hamilton","time":"20:00","group_features":"energetic, interactive elements, great for groups","seating":"flexible arrangements"},{"name":"The Book of Mormon","time":"19:30","group_features":"hilarious, sing-along moments, perfect for friends","seating":"can seat together"},{"name":"Wicked","time":"21:00","group_features":"magical, audience engagement, visually stunning","seating":"premium group options"}]}
+
+assistant channel=analysis:
+All shows are good for groups. The Book of Mormon at 7:30 PM has hilarious elements and sing-along moments that would be perfect for friends. Hamilton is energetic but more serious.
+
+assistant channel=final:
+I have some fantastic options for your group! "The Book of Mormon" at 7:30 PM would be perfect for friends - it's hilarious with lots of sing-along moments and interactive elements. "Hamilton" is incredibly energetic and great for groups too. Which style appeals more to your crew?
+
+user:
+The Book of Mormon sounds hilarious! We love shows where we can laugh together and maybe even sing along. That would be perfect for our group.
+
+assistant channel=analysis:
+Reserve 6 tickets for The Book of Mormon with group seating arrangement for friends.
+
+assistant channel=commentary to=tool.reserve_group_experience:
+{"reservation_id":"FRIENDS2025021","show_name":"The Book of Mormon","show_time":"2025-08-24T19:30:00","seats":6,"seating_arrangement":"together","group_features":"social experience for friends"}
+
+tool.reserve_group_experience channel=tool.reserve_group_experience:
+{"status":"confirmed","ticket_ids":"MORMON-FRIENDS-2025-156","total_cost":"$720","seating_notes":"seats 101-106 in row F, center section"}
+
+assistant channel=analysis:
+Confirm the group booking and mention the seating arrangement that will enhance the social experience.
+
+assistant channel=final:
+Excellent choice! Your group tickets MORMON-FRIENDS-2025-156 are confirmed for 7:30 PM with seats 101-106 together in the center section. You'll all be able to laugh and react together - it's going to be a blast! Total cost is $720 for the group.
+
+user:
+Perfect! Being together in the center will make it so much more fun. You know, there's nothing like experiencing live theater with good friends.
+
+assistant channel=analysis:
+The guest appreciates the group seating and is talking about the social aspect. This is good small talk about shared experiences - no tools needed.
+
+assistant channel=final:
+I couldn't agree more! There's something magical about sharing a live performance with friends - the laughter, the reactions, the memories you'll create. Your group is going to have an unforgettable night together!
+
+user:
+That's exactly what we're hoping for! Can't wait to see everyone's faces during the funny parts.
+
+assistant channel=analysis:
+The guest is excited about the shared experience. This is a positive close to the conversation.
+
+assistant channel=final:
+I love hearing that! The Book of Mormon has so many hilarious moments that you'll all be talking about for weeks. Have an amazing time with your friends - this is going to be one of the highlights of your weekend! 🎭👯‍♀️

@@ -1,0 +1,59 @@
+"""
+Guest asks for a quick nail trim walk-in slot.
+
+ROLES: user (guest with small dog), assistant (concierge arranging a short grooming service)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_grooming",
+    "description": "Book a pet grooming appointment at the onsite salon.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "pet_name": { "type": "string" },
+        "service_type": { "type": "string", "enum": ["bath", "full_groom"] },
+        "appointment_time": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reservation_id", "pet_name", "service_type", "appointment_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are concierge at Paws & Relax Lodge (hotel_id: paws_relax_seattle). Salon can accommodate nail trims inside bath slots when available.
+
+user:
+Hey! Can you squeeze in a quick nail trim for Pico around 3:30 PM today? Reservation RSV60606.
+
+assistant channel=analysis:
+Use bath slot as placeholder; book a bath at 15:30 noting it’s for nails only is not permitted by schema—keep within schema and confirm verbally.
+
+assistant channel=commentary to=tool.schedule_pet_grooming:
+{"reservation_id":"RSV60606","pet_name":"Pico","service_type":"bath","appointment_time":"2025-08-19T15:30:00"}
+
+tool.schedule_pet_grooming channel=commentary to=assistant:
+{"status":"scheduled","appointment_id":"GROOM-28"}
+
+assistant channel=analysis:
+Confirm intent verbally.
+
+assistant channel=final:
+We’ve slotted Pico at 3:30 PM (ID GROOM-28). We’ll focus on a tidy-up during that bath window and trim his nails there. See you then!
+
+user:
+Thanks—also, love the complimentary treats at check-in.
+
+assistant channel=analysis:
+Small talk.
+
+assistant channel=final:
+Pico approved those treats first—glad they made you smile!
+
+

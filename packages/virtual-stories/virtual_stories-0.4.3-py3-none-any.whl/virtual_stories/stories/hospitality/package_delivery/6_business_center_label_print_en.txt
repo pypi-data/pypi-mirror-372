@@ -1,0 +1,71 @@
+"""
+Guest needs to confirm a package arrival and asks about printing a return label.
+
+ROLES: user (business traveler awaiting a box), assistant (front desk/concierge)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_for_package",
+    "description": "Check whether a guest's package is on file.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "guest_name": { "type": "string" } },
+      "required": ["guest_name"]
+    },
+    "strict": true
+  },
+  {
+    "name": "print_return_label",
+    "description": "Send a PDF return label to the business center printers.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "guest_name": { "type": "string" }, "pages": { "type": "integer" } },
+      "required": ["guest_name","pages"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Parkline Downtown Hotel (hotel_id: parkline_austin). Address: 500 Congress Ave, Austin, TX 78701. Timezone: America/Chicago. Business center: 24/7 access with room key; printing is $0.25/page, first 5 pages complimentary for Elite guests. Packages are stored in a secure back office; SMS alerts are sent on receipt.
+
+user:
+Morning! Could you see if a box for Taylor Reed is here? Also, I’ll need to print a return label later.
+
+assistant channel=analysis:
+Check for package; then explain printing.
+
+assistant channel=commentary to=tool.check_for_package:
+{"guest_name":"Taylor Reed"}
+
+tool.check_for_package channel=commentary to=assistant:
+{"package_arrived": true, "package_details": {"size":"medium"}}
+
+assistant channel=analysis:
+Offer pickup and label printing. Add light small talk about morning.
+
+assistant channel=final:
+Good morning—your medium box is here and secured in our back office. You can pick it up anytime at the desk. For the return label, the business center printers are available 24/7; printing is $0.25 per page, and if you’re Elite, your first five pages are on us. Coffee in the lobby pairs nicely with errands if you need a boost.
+
+user:
+Perfect. Could you queue a two-page label under my name for later today?
+
+assistant channel=analysis:
+Send two pages to printer for Taylor.
+
+assistant channel=commentary to=tool.print_return_label:
+{"guest_name":"Taylor Reed","pages":2}
+
+tool.print_return_label channel=commentary to=assistant:
+{"status":"queued","printer":"BusinessCenter-02"}
+
+assistant channel=final:
+Done—your two-page label is queued on BusinessCenter‑02. Just tap your room key at the printer to release it.
+

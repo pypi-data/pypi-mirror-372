@@ -1,0 +1,67 @@
+"""
+Guest expects a signature-required package and asks about evening drop-offs.
+
+ROLES: user (guest awaiting signature-required parcel), assistant (hotel staff coordinating reception)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_for_package",
+    "description": "Check whether a package has been logged for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guest_name": { "type": "string" }
+      },
+      "required": ["guest_name"]
+    },
+    "strict": true
+  },
+  {
+    "name": "record_signature_preference",
+    "description": "Record that the front desk may sign for a package on behalf of a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guest_name": { "type": "string" },
+        "authorize_front_desk": { "type": "boolean" }
+      },
+      "required": ["guest_name","authorize_front_desk"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a lobby associate at Riverbank Suites (hotel_id: riverbank_chicago). Address: 455 North Canal St, Chicago, IL 60654. Timezone: America/Chicago. The hotel can sign for signature-required parcels if the guest pre-authorizes it. Couriers frequently deliver between 6:00 PM–8:30 PM. Parcels are stored behind the front desk; photo ID required for pickup.
+
+user:
+Hi! Could you check if a box for Marco Alvarez is here, and if not, can you sign for it? It needs a signature.
+
+assistant channel=analysis:
+Check arrivals; then record authorization if needed.
+
+assistant channel=commentary to=tool.check_for_package:
+{"guest_name":"Marco Alvarez"}
+
+tool.check_for_package channel=commentary to=assistant:
+{"package_arrived": false}
+
+assistant channel=analysis:
+Not here yet. Record authorization to sign on behalf of guest. Add small talk.
+
+assistant channel=commentary to=tool.record_signature_preference:
+{"guest_name":"Marco Alvarez","authorize_front_desk":true}
+
+tool.record_signature_preference channel=commentary to=assistant:
+{"status":"recorded"}
+
+assistant channel=final:
+Thanks, Marco—we’ll keep an eye out. I’ve noted that we’re authorized to sign on your behalf. Couriers often swing by between 6:00 and 8:30 PM; we’ll secure the box behind the desk and let you know once it’s logged. Hope your day’s going smoothly so far.
+
