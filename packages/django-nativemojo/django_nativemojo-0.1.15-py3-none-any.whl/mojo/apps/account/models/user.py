@@ -1,0 +1,388 @@
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.db import models
+from mojo.models import MojoModel, MojoSecrets
+from mojo.helpers.settings import settings
+from mojo import errors as merrors
+from mojo.helpers import dates
+from mojo.apps.account.utils.jwtoken import JWToken
+from mojo.apps import metrics
+import uuid
+
+SYS_USER_PERMS_PROTECTION = {
+    "manage_users": "manage_users",
+    "manage_groups": "manage_users",
+    "view_logs": "manage_users",
+    "view_incidents": "manage_users",
+    "view_admin": "manage_users",
+    "view_taskqueue": "manage_users",
+    "view_global": "manage_users",
+    "manage_notifications": "manage_users",
+    "manage_files": "manage_users",
+    "force_single_session": "manage_users",
+    "file_vault": "manage_users",
+    "manage_aws": "manage_users"
+}
+
+USER_PERMS_PROTECTION = settings.get("USER_PERMS_PROTECTION", {})
+USER_PERMS_PROTECTION.update(SYS_USER_PERMS_PROTECTION)
+
+USER_LAST_ACTIVITY_FREQ = settings.get("USER_LAST_ACTIVITY_FREQ", 300)
+METRICS_TIMEZONE = settings.get("METRICS_TIMEZONE", "America/Los_Angeles")
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("The Email field must be set")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        return self.create_user(email, password, **extra_fields)
+
+    def get_by_natural_key(self, username):
+        """Required for Django authentication"""
+        return self.get(**{self.model.USERNAME_FIELD: username})
+
+class User(MojoSecrets, AbstractBaseUser, MojoModel):
+    """
+    Full custom user model.
+    """
+    created = models.DateTimeField(auto_now_add=True, editable=False)
+    modified = models.DateTimeField(auto_now_add=True, editable=True)
+    last_activity = models.DateTimeField(default=None, null=True, db_index=True)
+
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
+    username = models.TextField(unique=True)
+    email = models.EmailField(unique=True)
+    phone_number = models.CharField(max_length=32, blank=True, null=True, default=None)
+    is_active = models.BooleanField(default=True, db_index=True)
+    display_name = models.CharField(max_length=80, blank=True, null=True, default=None)
+    # key used for sessions and general authentication algs
+    auth_key = models.TextField(null=True, default=None)
+    onetime_code = models.TextField(null=True, default=None)
+    # JSON-based permissions field
+    permissions = models.JSONField(default=dict, blank=True)
+    # JSON-based metadata field
+    metadata = models.JSONField(default=dict, blank=True)
+
+    # required default fields
+    first_name = models.CharField(max_length=80, default="")
+    last_name = models.CharField(max_length=80, default="")
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)  # Required for admin access
+    is_superuser = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+    is_email_verified = models.BooleanField(default=False)
+    is_phone_verified = models.BooleanField(default=False)
+
+    avatar = models.ForeignKey('fileman.File', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+')
+
+    USERNAME_FIELD = 'username'
+    objects = CustomUserManager()
+
+    class RestMeta:
+        NO_SHOW_FIELDS = ["password", "auth_key", "onetime_code"]
+        SEARCH_FIELDS = ["username", "email", "display_name"]
+        VIEW_PERMS = ["view_users", "manage_users", "owner"]
+        SAVE_PERMS = ["manage_users", "owner"]
+        LIST_DEFAULT_FILTERS = {
+            "is_active": True
+        }
+        UNIQUE_LOOKUP = ["username", "email"]
+        GRAPHS = {
+            "basic": {
+                "fields": [
+                    'id',
+                    'display_name',
+                    'username',
+                    'last_login',
+                    'last_activity',
+                    'is_active'
+                ],
+                "graphs": {
+                    "avatar": "basic"
+                }
+            },
+            "default": {
+                "fields": [
+                    'id',
+                    'display_name',
+                    'username',
+                    'email',
+                    'phone_number',
+                    'last_login',
+                    'last_activity',
+                    'permissions',
+                    'metadata',
+                    'is_active'
+                ],
+                "graphs": {
+                    "avatar": "basic"
+                }
+            },
+            "full": {
+                "graphs": {
+                    "avatar": "basic"
+                }
+            }
+        }
+
+    def __str__(self):
+        return self.email
+
+    def is_request_user(self, request=None):
+        if request is None:
+            request = self.active_request
+        if request is None:
+            return False
+        return request.user.id == self.id
+
+    def touch(self):
+        # can't subtract offset-naive and offset-aware datetimes
+        if self.last_activity and not dates.is_today(self.last_activity, METRICS_TIMEZONE):
+            metrics.record("user_activity_day", category="user", min_granularity="days")
+        if self.last_activity is None or dates.has_time_elsapsed(self.last_activity, seconds=USER_LAST_ACTIVITY_FREQ):
+            self.last_activity = dates.utcnow()
+            self.atomic_save()
+
+    def get_auth_key(self):
+        if self.auth_key is None:
+            self.auth_key = uuid.uuid4().hex
+            self.atomic_save()
+        return self.auth_key
+
+    def set_username(self, value):
+        if not isinstance(value, str):
+            raise ValueError("Username must be a string")
+        self.username = value
+
+    def set_permissions(self, value):
+        if not isinstance(value, dict):
+            return
+        for key in value:
+            if key in USER_PERMS_PROTECTION:
+                if not self.active_user.has_permission(USER_PERMS_PROTECTION[key]):
+                    raise merrors.PermissionDeniedException()
+            elif not self.active_user.has_permission("manage_users"):
+                raise merrors.PermissionDeniedException()
+            if bool(value[key]):
+                self.add_permission(key, commit=False)
+            else:
+                self.remove_permission(key, commit=False)
+
+    def has_module_perms(self, app_label):
+        """Check if user has any permissions in a given app."""
+        return True  # Or customize based on your `permissions` JSON
+
+    def has_permission(self, perm_key):
+        """Check if user has a specific permission in JSON field."""
+        if isinstance(perm_key, (list, set)):
+            for pk in perm_key:
+                if self.has_permission(pk):
+                    return True
+            return False
+        if perm_key == "all":
+            return True
+        return self.permissions.get(perm_key, False)
+
+    def add_permission(self, perm_key, value=True, commit=True):
+        """Dynamically add a permission."""
+        changed = False
+        if isinstance(perm_key, (list, set)):
+            for pk in perm_key:
+                if self.permissions.get(pk) != value:
+                    self.permissions[pk] = value
+                    changed = True
+        else:
+            if self.permissions.get(perm_key) != value:
+                self.permissions[perm_key] = value
+                changed = True
+        if changed:
+            self.log(f"Added permission {perm_key}", "permission:added")
+        if commit and changed:
+            self.save()
+
+    def remove_permission(self, perm_key, commit=True):
+        """Remove a permission."""
+        changed = False
+        if isinstance(perm_key, (list, set)):
+            for pk in perm_key:
+                if pk in self.permissions:
+                    del self.permissions[pk]
+                    changed = True
+        else:
+            if perm_key in self.permissions:
+                del self.permissions[perm_key]
+                changed = True
+        if changed:
+            self.log(f"Removed permission {perm_key}", "permission:removed")
+        if commit and changed:
+            self.save()
+
+    def remove_all_permissions(self):
+        self.permissions = {}
+        self.save()
+
+    def save_password(self, value):
+        self.set_password(value)
+        self.save()
+
+    def validate_email(self):
+        import re
+        if not self.email:
+            raise merrors.ValueException("Email is required")
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", str(self.email)):
+            raise merrors.ValueException("Invalid email format")
+        return True
+
+    def validate_username(self):
+        if not self.username:
+            raise merrors.ValueException("Username is required")
+        if len(str(self.username)) <= 2:
+            raise merrors.ValueException("Username must be more than 2 characters")
+        # Check for special characters (only allow alphanumeric, underscore, dot, and @)
+        import re
+        if not re.match(r'^[a-zA-Z0-9_.@]+$', str(self.username)):
+            raise merrors.ValueException("Username can only contain letters, numbers, underscores, dots, and @")
+        # If username contains @, it must match the email field
+        if '@' in str(self.username) and str(self.username) != str(self.email):
+            raise merrors.ValueException("Username containing @ must match the email address")
+        return True
+
+    def set_new_password(self, new_password):
+        self.debug("SET NEW PASSWORD")
+        # Validate password strength
+        if len(new_password) < 8:
+            raise merrors.ValueException("Password must be at least 8 characters long")
+
+        strength_score = 0
+
+        # Length contributes to strength (longer is better)
+        if len(new_password) >= 12:
+            strength_score += 2
+        elif len(new_password) >= 10:
+            strength_score += 1
+
+        # Check for mixed case
+        has_upper = any(c.isupper() for c in new_password)
+        has_lower = any(c.islower() for c in new_password)
+        if has_upper and has_lower:
+            strength_score += 1
+
+        # Check for numbers
+        has_numbers = any(c.isdigit() for c in new_password)
+        if has_numbers:
+            strength_score += 1
+
+        # Check for special characters
+        import re
+        has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', new_password))
+        if has_special:
+            strength_score += 1
+
+        # Require minimum strength score
+        if strength_score < 2:
+            raise merrors.ValueException("Password is too weak. Use a longer password or include a mix of uppercase, lowercase, numbers, and special characters")
+
+        self.set_password(new_password)
+        self._set_field_change("new_password", "*", "*********")
+
+    def can_change_password(self):
+        if self.pk == self.active_user.pk:
+            return True
+        if self.active_user.is_superuser:
+            return True
+        if self.active_user.has_permission(["manage_users"]):
+            return True
+        return False
+
+    def generate_username_from_email(self):
+        """Generate a username from email, falling back to email if username exists."""
+        if not self.email:
+            raise merrors.ValueException("Email is required to generate username")
+
+        # Try using the part before @ as username
+        potential_username = self.email.split("@")[0].lower()
+
+        # Check if this username already exists
+        qset = User.objects.filter(username=potential_username)
+        if self.pk is not None:
+            qset = qset.exclude(pk=self.pk)
+
+        # If username doesn't exist, use it
+        if not qset.exists():
+            return potential_username
+
+        # Fall back to using the full email as username
+        return self.email.lower()
+
+    def on_rest_pre_save(self, changed_fields, created):
+        self.debug("PRE SAVE")
+        creds_changed = False
+        if "email" in changed_fields:
+            creds_changed = True
+            self.validate_email()
+            self.email = self.email.lower()
+            if not self.username:
+                self.username = self.generate_username_from_email()
+            elif "@" in self.username and self.username != self.email:
+                self.username = self.email
+            qset = User.objects.filter(email=self.email)
+            if self.pk is not None:
+                qset = qset.exclude(pk=self.pk)
+            if qset.exists():
+                raise merrors.ValueException("Email already exists")
+        if "username" in changed_fields:
+            creds_changed = True
+            self.validate_username()
+            self.username = self.username.lower()
+            qset = User.objects.filter(username=self.username)
+            if self.pk is not None:
+                qset = qset.exclude(pk=self.pk)
+            if qset.exists():
+                raise merrors.ValueException("Username already exists")
+        if self.pk is not None:
+            # only super user can change email or username
+            if creds_changed and not self.active_user.is_superuser:
+                raise merrors.PermissionDeniedException("You are not allowed to change email or username")
+            if "password" in changed_fields:
+                raise merrors.PermissionDeniedException("You are not allowed to change password")
+            if "new_password" in changed_fields:
+                if not self.can_change_password():
+                    raise merrors.PermissionDeniedException("You are not allowed to change password")
+                self.debug("CHANGING PASSWORD")
+                self.log("****", kind="password:changed")
+            if "email" in changed_fields:
+                self.log(kind="email:changed", log=f"{changed_fields['email']} to {self.email}")
+            if "username" in changed_fields:
+                self.log(kind="username:changed", log=f"{changed_fields['username']} to {self.username}")
+        self.debug("on_rest_pre_save", changed_fields, creds_changed, self.active_user.is_superuser)
+
+
+    def check_edit_permission(self, perms, request):
+        if "owner" in perms and self.is_request_user():
+            return True
+        return request.user.has_permission(perms)
+
+    @classmethod
+    def validate_jwt(cls, token):
+        token_manager = JWToken()
+        jwt_data = token_manager.decode(token, validate=False)
+        if jwt_data.uid is None:
+            return None, "Invalid token data"
+        user = User.objects.filter(id=jwt_data.uid).last()
+        if user is None:
+            return None, "Invalid token user"
+        token_manager.key = user.auth_key
+        if not token_manager.is_token_valid(token):
+            if token_manager.is_expired:
+                return user, "Token expired"
+            return user, "Token has invalid signature"
+        return user, None
