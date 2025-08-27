@@ -1,0 +1,32 @@
+spec:
+  inputs:
+    addon-name:
+      description: "The path of the addon you want to build"
+    addon-parent_path:
+      default: "."
+      description: "The default path where the addon is"
+    stage:
+      description: "The stage where to add this job"
+      default: deploy
+    tag:
+      default: "lint"
+      description: "The name of the tag for this job"
+    dependencies:
+      type: array
+      description: "Previous builder job"
+    python_version:
+      default: "3.13"
+---
+# This module is only available for the container image
+include:
+  - local: templates/upload-pypi.yml
+    inputs:
+      addon-name: "$[[ inputs.addon-name ]]"
+      addon-parent_path: "$[[ inputs.addon-parent_path ]]"
+      name: "pypi:test"
+      stage: "$[[ inputs.stage ]]"
+      tag: "$[[ inputs.tag ]]"
+      dependencies: $[[ inputs.dependencies ]]
+      publish_url: "https://test.pypi.org/legacy/"
+      registry_token_var: $TESTPYPI_REGISTRY_TOKEN
+      python_version: "$[[ inputs.python_version ]]"
