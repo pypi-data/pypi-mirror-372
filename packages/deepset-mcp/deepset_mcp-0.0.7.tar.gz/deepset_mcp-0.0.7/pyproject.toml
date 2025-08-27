@@ -1,0 +1,145 @@
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/deepset_mcp"]
+
+[project]
+name = "deepset-mcp"
+dynamic = ["version"]
+description = "Collection of MCP tools and Agents to work with the deepset AI platform. Create, debug or learn about pipelines on the platform. Useable from the CLI, Cursor, Claude Code, or other MCP clients."
+license = "Apache-2.0"
+readme = "README.md"
+authors = [
+    { name = "Mathis Lucka", email = "mathis.lucka@deepset.ai" },
+    { name = "Tanay Soni", email = "tanay.soni@deepset.ai" }
+]
+keywords = [
+  "MCP",
+  "Agents",
+  "LLM",
+  "deepset",
+  "Haystack",
+  "pipelines",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: Freely Distributable",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.11"
+
+dependencies = [
+    "fastapi",
+    "mcp>=1.10.1",
+    "httpx",
+    "pydantic>=2.0.0",
+    "pyyaml",
+    "numpy",
+    "model2vec",
+    "glom",
+    "rich",
+    "pyjwt[crypto]",
+    "typer",
+    "orjson",
+]
+
+[project.urls]
+Homepage = "https://deepset.ai"
+
+[project.scripts]
+deepset-mcp = "deepset_mcp.main:app"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "python-dotenv",
+    "docker"
+]
+lint = [
+    "ruff",
+]
+
+types = [
+    "mypy",
+    "types-PyYAML",
+    "pandas-stubs",
+]
+
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+]
+
+[project.optional-dependencies]
+redis = ["redis>=4.0.0"]
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+markers = [
+    "integration: marks tests that interact with external resources (e.g. deepset API).",
+    "extra_slow: marks tests that take a long time to run (e.g. pipeline deployment)."
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+include = ["pyproject.toml", "src/**/*.py", "test/**/*.py"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "D",   # docstrings
+]
+ignore = [
+    "D100", # Ok to not have docstring for public modules
+    "D104", # Ok to not have docstring for public package
+    "D401", # First line of docstring in imperative mode
+]
+isort = { combine-as-imports = true, known-first-party = ["deepset_mcp"] }
+
+[tool.ruff.lint.per-file-ignores]
+"test/*" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.mypy]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["glom"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# These tests intentionally test runtime decorator behavior that mypy cannot understand
+module = ["test.unit.tokonomics.*"]
+disable_error_code = ["arg-type", "attr-defined", "operator", "misc", "type-arg", "no-any-return", "assignment"]
