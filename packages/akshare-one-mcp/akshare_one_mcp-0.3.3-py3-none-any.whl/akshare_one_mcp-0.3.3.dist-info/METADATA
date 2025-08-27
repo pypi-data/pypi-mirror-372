@@ -1,0 +1,166 @@
+Metadata-Version: 2.3
+Name: akshare-one-mcp
+Version: 0.3.3
+Summary: MCP server that provides access to Chinese stock market data using akshare-one
+Keywords: akshare,stock,mcp,mcp-server
+Author: zwldarren
+Author-email: zwldarren <zwldarren@gmail.com>
+License: MIT
+Requires-Dist: akshare-one>=0.3.10
+Requires-Dist: fastmcp>=2.11.3
+Requires-Dist: uvicorn>=0.35.0
+Requires-Python: >=3.12
+Project-URL: Homepage, https://github.com/zwldarren/akshare-one-mcp
+Project-URL: Repository, https://github.com/zwldarren/akshare-one-mcp.git
+Description-Content-Type: text/markdown
+
+# AKShare One MCP Server
+
+<div align="center">
+  <a href="README.md">English</a> | 
+  <a href="README_zh.md">中文</a>
+</div>
+
+[![smithery badge](https://smithery.ai/badge/@zwldarren/akshare-one-mcp)](https://smithery.ai/server/@zwldarren/akshare-one-mcp)
+
+An MCP server based on [akshare-one](https://github.com/zwldarren/akshare-one), providing interfaces for China stock market data. It offers a set of tools for retrieving financial information including historical stock data, real-time data, news data, financial statements, etc.
+
+<a href="https://glama.ai/mcp/servers/@zwldarren/akshare-one-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@zwldarren/akshare-one-mcp/badge" alt="akshare-one-mcp MCP server" />
+</a>
+
+## Tools
+
+### `get_hist_data`
+
+Get historical stock market data. 'eastmoney_direct' supports all A, B, H shares.
+
+- symbol (string): Stock code (e.g. '000001')
+- interval (string): Time interval ('minute','hour','day','week','month','year') (default: 'day')
+- interval_multiplier (number, optional): Interval multiplier (default: 1)
+- start_date (string, optional): Start date in YYYY-MM-DD format (default: '1970-01-01')
+- end_date (string, optional): End date in YYYY-MM-DD format (default: '2030-12-31')
+- adjust (string, optional): Adjustment type ('none', 'qfq', 'hfq') (default: 'none')
+- source (string, optional): Data source ('eastmoney', 'eastmoney_direct', 'sina') (default: 'eastmoney')
+- indicators_list (list, optional): Technical indicators to add (e.g. ['SMA', 'EMA', 'RSI', 'MACD', 'BOLL', 'STOCH', 'ATR', 'CCI', 'ADX', 'WILLR', 'AD', 'ADOSC', 'OBV', 'MOM', 'SAR', 'TSF', 'APO', 'AROON', 'AROONOSC', 'BOP', 'CMO', 'DX', 'MFI', 'MINUS_DI', 'MINUS_DM', 'PLUS_DI', 'PLUS_DM', 'PPO', 'ROC', 'ROCP', 'ROCR', 'ROCR100', 'TRIX', 'ULTOSC'])
+- recent_n (number, optional): Number of most recent records to return (default: 100)
+
+### `get_realtime_data`
+
+Get real-time stock market data. 'eastmoney_direct' supports all A, B, H shares.
+
+- symbol (string, optional): Stock code
+- source (string, optional): Data source ('xueqiu', 'eastmoney', 'eastmoney_direct') (default: 'eastmoney_direct')
+
+### `get_news_data`
+
+Get stock-related news data.
+
+- symbol (string): Stock code
+- recent_n (number, optional): Number of most recent records to return (default: 10)
+
+### `get_balance_sheet`
+
+Get company balance sheet data.
+
+- symbol (string): Stock code
+- recent_n (number, optional): Number of most recent records to return (default: 10)
+
+### `get_income_statement`
+
+Get company income statement data.
+
+- symbol (string): Stock code
+- recent_n (number, optional): Number of most recent records to return (default: 10)
+
+### `get_cash_flow`
+
+Get company cash flow statement data.
+
+- symbol (string): Stock code
+- source (string, optional): Data source (default: 'sina')
+- recent_n (number, optional): Number of most recent records to return (default: 10)
+
+### `get_inner_trade_data`
+
+Get company insider trading data.
+
+- symbol (string): Stock code
+
+### `get_financial_metrics`
+
+Get key financial metrics from the three major financial statements.
+
+- symbol (string): Stock code
+- recent_n (number, optional): Number of most recent records to return (default: 10)
+
+### `get_time_info`
+
+Get current time with ISO format, timestamp, and the last trading day.
+
+## Usage Instructions
+
+### Running Modes
+
+The server supports two modes: stdio and streamable-http
+
+**Command Line Arguments:**
+- `--streamable-http`: Enable HTTP mode (default: stdio mode)
+- `--host`: Host to bind to in HTTP mode (default: 0.0.0.0)
+- `--port`: Port to listen on in HTTP mode (default: 8081)
+
+**Note:** When using streamable-http mode, the MCP server will be available at `http://{host}:{port}/mcp`. For the default configuration, this would be `http://0.0.0.0:8081/mcp`.
+
+### Installing via Smithery
+
+To install akshare-one-mcp for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@zwldarren/akshare-one-mcp):
+
+```bash
+npx -y @smithery/cli install @zwldarren/akshare-one-mcp --client claude
+```
+
+### Installing via `uv`
+
+Install [uv](<https://docs.astral.sh/uv/getting-started/installation/>) if you haven't already.
+
+Add the following configuration:
+
+```json
+"mcpServers": {
+    "akshare-one-mcp": {
+        "command": "uvx",
+        "args": ["akshare-one-mcp"]
+    }
+}
+```
+
+### Installing via local source code
+
+1. Clone this repository:
+
+    ```bash
+    git clone https://github.com/zwldarren/akshare-one-mcp.git
+    cd akshare-one-mcp
+    ```
+
+2. Install dependencies:
+
+    ```bash
+    uv sync
+    ```
+
+3. Add the following configuration:
+
+    ```json
+    "mcpServers": {
+        "akshare-one-mcp": {
+            "command": "uv",
+            "args": [
+                "--directory",
+                "/path/to/akshare-one-mcp",
+                "run",
+                "akshare-one-mcp"
+            ]
+        }
+    }
+    ```
