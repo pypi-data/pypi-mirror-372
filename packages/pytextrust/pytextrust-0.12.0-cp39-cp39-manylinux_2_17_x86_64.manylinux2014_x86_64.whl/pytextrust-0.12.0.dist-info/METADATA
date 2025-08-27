@@ -1,0 +1,290 @@
+Metadata-Version: 2.4
+Name: pytextrust
+Version: 0.12.0
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Classifier: Programming Language :: Rust
+Requires-Dist: pydantic
+Requires-Dist: typing
+Requires-Dist: regex
+License-File: LICENSE
+Summary: Library designed as a python wrapper to unleash Rust text processing power combined with Python
+Keywords: text-processing,regex-matching,entity-system,literal-replacement
+Home-Page: https://gitlab.com/g6313/pytextrust
+Author: Guillermo Gonzalez <guillermogsjc@gmail.com>
+Author-email: Guillermo Gonzalez <guillermogsjc@gmail.com>
+License: MIT
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
+Project-URL: Homepage, https://gitlab.com/g6313/pytextrust
+
+# PyTextRust
+
+High-performance text processing library that unleashes the power of Rust's state-of-the-art regex engine for Python. Built as a direct wrapper around Rust's `regex` crate - the fastest and most feature-complete regex implementation available.
+
+PyTextRust focuses on sparse text patterns and optimized algorithms, delivering exceptional performance through Rust's zero-cost abstractions and Python's ease of use.
+
+[Give some happiness](https://www.paypal.com/donate/?business=V4NHA93BU6WPA&no_recurring=0&item_name=The+children+need+to+eat+but+I+am+too+busy&currency_code=EUR)
+
+## 🚀 Performance Features
+
+### Non-Unicode Mode
+Achieve 6-12x faster processing for ASCII-like text by disabling unicode matching:
+- `unicode=False` removes unicode overhead from matching
+- `substitute_bound=True` optimizes word boundaries for maximum DFA utilization
+- `substitute_latin_char=True` handles accented characters efficiently
+
+### Parallel Processing
+Built-in parallelization with configurable thread counts and chunk sizes for maximum throughput on large text collections.
+
+## 🔍 Regex Pattern Matching
+
+Powered by Rust's state-of-the-art regex engine with intelligent pattern compilation and RegexSet optimization.
+
+```python
+from pytextrust.regex_operator import apply_patterns_to_texts
+
+# Find multiple patterns across texts with high performance
+patterns = [r"\b\d{3}-\d{3}-\d{4}\b", r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"]
+texts = ["Call me at 555-123-4567 or email john@example.com", "My number is 999-888-7777"]
+
+results = apply_patterns_to_texts(
+    patterns=patterns,
+    texts=texts,
+    unicode=False,  # 6-12x faster for ASCII text
+    substitute_bound=True,  # Optimize word boundaries
+    case_insensitive=True,
+    n_threads=4
+)
+
+# Results contain match_results, invalid_pattern_indexes, etc.
+print(results['match_results'])  # Matched positions by text and pattern
+print(f"Total matches: {results['n_total_matches']}")
+```
+
+### Regex Compilation Check
+```python
+from pytextrust.regex_operator import check_regex_compile
+
+# Validate regex patterns before processing
+pattern = r"(?P<phone>\b\d{3}-\d{3}-\d{4}\b)"
+base_nonunicode, base, fancy, python = check_regex_compile(pattern)
+print(f"Base non-unicode: {base_nonunicode}, Base: {base}, Fancy: {fancy}, Python: {python}")
+```
+
+### Regex Matching
+```python
+from pytextrust.regex_operator import match_patterns_to_texts
+
+# Fast pattern-text matching using RegexSet
+patterns = [r"\bpython\b", r"\brust\b", r"\bjavascript\b"]
+texts = ["I love python programming", "Rust is fast", "JavaScript is versatile"]
+
+matches, invalid_patterns = match_patterns_to_texts(
+    patterns=patterns,
+    texts=texts,
+    unicode=False,
+    substitute_bound=True,
+    regexset_chunk_size=1000,
+    regexset_size_mb_limit=100
+)
+print(matches)  # Returns matched (text_index, pattern_index) pairs
+print(f"Invalid patterns: {invalid_patterns}")  # Pattern indexes that failed compilation
+```
+
+## 📝 Literal Text Replacement
+
+Ultra-fast literal replacement using Rust's aho-corasick algorithm with boundary checking.
+
+```python
+from pytextrust.replacer import replace_literal_patterns
+
+# High-performance literal replacement with word boundaries
+patterns = ["uno", "dos", "tres"]
+replacements = ["1", "2", "3"]
+texts = ["es el numero uno o el dos y el tres"]
+
+replaced_texts, num_replacements = replace_literal_patterns(
+    literal_patterns=patterns,
+    replacements=replacements,
+    text_to_replace=texts,
+    is_bounded=True,  # Respect word boundaries
+    case_insensitive=True,
+    n_jobs=4
+)
+
+print(replaced_texts)  # ['es el numero 1 o el 2 y el 3']
+print(num_replacements)  # 3
+```
+
+### Lookup-Based Replacement
+```python
+from pytextrust.replacer import LookUpReplacer
+
+# Create lookup-based replacer
+lookup_dict = {"hello": "hi", "world": "earth", "python": "snake"}
+replacer = LookUpReplacer(provided_lookup_dict=lookup_dict)
+
+# Replace individual tokens
+print(replacer.replace_token("hello"))  # "hi"
+print(replacer.replace_token("world"))  # "earth"
+
+# Replace texts (for bulk operations, save to file first)
+texts = ["hello world, python is great"]
+LookUpReplacer.write_lookup(lookup_dict, "/tmp/lookup.bin")
+bulk_replacer = LookUpReplacer(bulk_lookup_path="/tmp/lookup.bin")
+replaced_texts = bulk_replacer.replace_texts(texts)
+print(replaced_texts)  # Modified texts with replacements
+```
+
+## 🧮 Text Similarity and Distance
+
+Advanced text similarity calculations with multiple algorithms and parallel processing.
+
+```python
+from pytextrust.similarity import parallel_calculate_similarity, Similarity
+
+# Calculate similarity between texts and patterns
+haystacks = ["The quick brown fox jumps over the lazy dog", "Python is a great language"]
+patterns = ["quick brown", "lazy cat", "python language"]
+
+similarities = parallel_calculate_similarity(
+    haystack=haystacks,
+    patterns=patterns,
+    step=1,  # Character step size
+    similarity=Similarity.JACCARD.value,  # Choose similarity algorithm
+    par_chunk_size=1000,
+    n_threads=1
+)
+print(similarities)  # 2D array: [haystack_index][pattern_index] similarity scores
+print(f"Shape: {len(similarities)}x{len(similarities[0])}")
+```
+
+### Single Text Similarity Search
+```python
+from pytextrust.similarity import single_similarity_search, Similarity
+
+# Find similarity in a single text
+haystack = "The quick brown fox jumps over the lazy dog"
+patterns = ["quick brown", "lazy dog", "jumping cat"]
+
+results = single_similarity_search(
+    haystack=haystack,
+    patterns=patterns,
+    step=1,
+    similarity=Similarity.COSINEJACCARDCOMBINED.value
+)
+print(results)  # Similarity scores for each pattern in the text
+```
+
+
+## 🔤 Text Tokenization and Processing
+
+Efficient text tokenization and token-based operations.
+
+```python
+from pytextrust.token import tokenize, get_match_from_token_range
+
+# Tokenize text into words
+text = "The quick brown fox jumps"
+tokens = tokenize(text)
+print(tokens)  # ['The', 'quick', 'brown', 'fox', 'jumps']
+
+# Convert token ranges to character positions
+start_char, end_char = get_match_from_token_range(
+    text=text,
+    token_start=1,  # 'quick'
+    token_end=3     # 'brown'
+)
+print(f"Characters {start_char}-{end_char}: '{text[start_char:end_char]}'")
+```
+
+### Token Mapping
+```python
+from pytextrust.token import map_match_by_tokens
+
+# Map matches between original and lemmatized text representations
+# Original text with multiple word forms
+source = "  Ñ  ha habido eventos multiples  "
+# Lemmatized version with standardized forms  
+lemmatized = " Ç  hacer haber evento multiple "
+
+# Map a match found in lemmatized text back to original text positions
+mapped_start, mapped_end = map_match_by_tokens(
+    source=source,          # Original text
+    matched=lemmatized,     # Lemmatized text
+    match_start=2,          # Start position in lemmatized text
+    match_end=7             # End position in lemmatized text
+)
+print(f"Mapped to original text position: {mapped_start}-{mapped_end}")
+print(f"Original text segment: '{source[mapped_start:mapped_end]}'")
+```
+
+### Vocabulary Computation
+```python
+from pytextrust.token import compute_vocabulary
+
+# Compute token frequencies across texts  
+texts = ["hello world", "world hello", "hello python world"]
+
+vocabulary = compute_vocabulary(
+    text_list=texts,
+    n_threads=4
+)
+print(vocabulary)  # {'hello': 3.0, 'world': 3.0, 'python': 1.0}
+```
+
+## 🧹 Text Normalization
+
+Clean and normalize text with efficient processing.
+
+```python
+from pytextrust.normalization import normalize_text
+
+# Normalize text with multiple options
+texts = ["HELLO    WORLD!!", "  Múltiple   SPÂCES   "]
+
+cleaned = normalize_text(
+    text_list=texts,
+    reduce_accents=True,              # Remove accents: á -> a
+    reduce_punctuation=True,          # Remove punctuation  
+    reduce_multi_whitespaces=True,    # Clean multiple whitespaces
+    transform_to_lower_case=True      # Convert to lowercase
+)
+print(cleaned)  # ['hello world', 'multiple spaces']
+```
+
+## ⚡ Performance Tips
+
+1. **Use non-unicode mode** (`unicode=False`) for 6-12x speed boost on ASCII text
+2. **Enable boundary substitution** (`substitute_bound=True`) for optimal DFA usage
+3. **Configure parallel processing** with appropriate `n_threads` and chunk sizes
+4. **Pre-compile lookups** for repeated literal replacements
+5. **Use RegexSet limits** to control memory usage: `regexset_size_limit`, `regexset_dfa_size_limit`
+
+## 🛠️ Installation
+
+```bash
+pip install pytextrust
+```
+
+
+## 📚 Documentation
+
+This library leverages Rust's world-class regex engine and text processing capabilities:
+
+- [Rust regex crate](https://docs.rs/regex/latest/regex/) - State-of-the-art regex implementation
+- [aho-corasick](https://docs.rs/aho-corasick/latest/aho_corasick/) - Fast multi-pattern string matching
+- [Performance guidelines](https://github.com/rust-lang/regex/blob/master/PERFORMANCE.md)
+
+## 🏆 Performance Benchmarks
+
+PyTextRust consistently outperforms pure Python solutions:
+- **6-12x faster** regex matching in non-unicode mode
+- **Parallel processing** scales linearly with CPU cores  
+- **Memory efficient** RegexSet compilation reduces overhead
+- **Zero-copy operations** where possible through Rust integration
+
+The underlying Rust regex engine is recognized as one of the fastest available, making PyTextRust ideal for high-throughput text processing applications.
