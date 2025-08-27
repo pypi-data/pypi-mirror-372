@@ -1,0 +1,44 @@
+jobs:
+  multiple-jobs-1:
+    description: Test matrix
+    strategy:
+      matrix:
+        animal: [dog, cat]
+        color: [black, brown]
+    steps:
+      - name: Run test
+        run: |
+          echo ${{ matrix.color }} ${{matrix.animal }}
+
+  job-thing-1:
+    name: first
+    steps:
+      - name: First step
+        run: |
+          sleep 2
+
+  multiple-jobs-2:
+    name: "${{ matrix.color }} ${{ matrix.animal }}"
+    description: Test matrix
+    needs: job-thing-1
+    strategy:
+      matrix:
+        include:
+          - animal: dog
+            color: red
+          - animal: cat
+            color: black
+          - animal: dog
+            color: brown
+    steps:
+      - name: Run test
+        run: |
+          echo ${{ matrix.color }} ${{matrix.animal }}
+
+  dep-job-a:
+    description: Job that depdends on multiple-jobs-1
+    needs: [multiple-jobs-1]
+    steps:
+      - run: |
+          echo Third job
+          sleep 1
