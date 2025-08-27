@@ -1,0 +1,119 @@
+[build-system]
+requires = ['hatchling', 'hatch-vcs', 'hatch-fancy-pypi-readme']
+build-backend = 'hatchling.build'
+
+[project]
+name = 'dry-foundation'
+authors = [
+  { name = 'Mitch Negus', email = 'mitchnegus57@gmail.com' },
+]
+description = 'Tools and components for building customized and consistent small-scale Flask applications.'
+license = { text = 'GNU GPLv3' }
+requires-python = '>=3.10'
+dependencies = [
+  'Flask>=2.2.2',
+  'gunicorn>=23.0.0',
+  'SQLAlchemy>=2.0.0',
+  'sqlalchemy-views>=0.3.2',
+  'pytest>=8.4.1',
+]
+keywords = [
+]
+classifiers = [
+  'Development Status :: 3 - Alpha',
+  'Framework :: Flask',
+  'Framework :: Pytest',
+  'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+  'Natural Language :: English',
+  'Operating System :: OS Independent',
+  'Programming Language :: Python',
+]
+dynamic = ['readme', 'version']
+
+[project.urls]
+Download = 'https://pypi.org/project/dry-foundation/'
+Homepage = 'https://github.com/mitchnegus/DRY-Foundation'
+Repository = 'https://github.com/mitchnegus/DRY-Foundation'
+Changelog = 'https://github.com/mitchnegus/DRY-Foundation/blob/main/docs/source/CHANGELOG.md'
+
+# Set DRY Foundation as a pytest plugin to use the `AppTestManager` functionality
+[project.entry-points.pytest11]
+dry_foundation = "dry_foundation.testing.manager"
+
+[project.optional-dependencies]
+dev = [
+  'nox~=2025.5.1',
+  'dry_foundation[docs,test]',
+]
+docs = [
+  'furo',
+  'sphinx',
+  'myst-parser',
+]
+test = [
+  'coverage==7.10.3',
+  # pytest included in standard dependencies
+]
+
+[tool.hatch.version]
+source = 'vcs'
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  'src/dry_foundation',
+]
+
+[tool.hatch.build.hooks.vcs]
+version-file = 'src/dry_foundation/_version.py'
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = 'text/markdown'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = 'README.md'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = 'src="((?!https?:\/\/)\S+?)"'
+replacement = 'src="https://raw.githubusercontent.com/mitchnegus/dry-foundation/main/\1"'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\[(.+?)\]\(((?!https?://)\S+?)\)'
+replacement = '[\1](https://github.com/mitchnegus/dry-foundation/blob/main/\g<2>)'
+
+[tool.pytest.ini_options]
+addopts = [
+  '--import-mode=importlib',
+]
+pythonpath = ["tests/helpers"]
+norecursedirs = ["tests/helpers"]
+
+[tool.coverage.run]
+omit = [
+   '_version.py',
+]
+
+[tool.coverage.report]
+exclude_also = [
+  'raise NotImplementedError',
+  'pass',
+]
+
+[tool.ruff.format]
+exclude = [
+  'src/dry_foundation/_version.py',
+]
+
+[tool.ruff.lint]
+select = ['A', 'C4', 'E', 'F', 'I', 'PIE', 'PT', 'UP', 'SIM']
+exclude = [
+  'src/dry_foundation/_version.py',
+]
+ignore = [
+  'PIE790',
+  'PT007',
+  'PT011',
+  'SIM300',  # Yoda condition detection is poor in tests
+]
+
+[tool.ruff.lint.isort]
+known-local-folder = ["testing_helpers"]
