@@ -1,0 +1,127 @@
+<tal:portlet i18n:domain="euphorie">
+  <div class="portlet span-${view/columns}"
+       id="${view/element_id}"
+       tal:define="
+         sessions_by_organisation view/sessions_by_organisation;
+       "
+  >
+    <div class="content"
+         tal:define="
+           toLocalizedTime nocall: context/@@plone/toLocalizedTime;
+           webhelpers nocall:here/@@webhelpers;
+           account webhelpers/get_current_account;
+           my_group account/group;
+           language here/@@plone_portal_state/language;
+         "
+    >
+      <article class="portlet-intro">
+        <header class="portlet-title-group">
+          <h2 class="portlet-title">
+            <tal:title i18n:translate="">Risk assessments</tal:title>
+            <em tal:condition="my_group">(${my_group/short_name})</em>
+          </h2>
+        </header>
+        <form class="portlet-tool-group pat-inject pat-autosubmit"
+              action="${request/getURL}#portlet-body-my-ras"
+              tal:condition="webhelpers/use_archive_feature"
+        >
+          <div class="pat-collapsible pat-context-menu closed align-right"
+               id="initiators-menu"
+               data-pat-collapsible="close-trigger: .context-menu:not(#initiators-menu),.close-menu"
+          >
+            <strong class="context-menu-label menu-trigger"
+                    i18n:translate=""
+            >
+              Filters
+            </strong>
+            <p class="close-menu"
+               i18n:translate=""
+            >
+              Close
+            </p>
+            <fieldset class="pat-checklist">
+              <label>
+                <input checked="${python:'checked' if view.hide_archived else None}"
+                       name="hide_archived"
+                       type="checkbox"
+                       value="1"
+                />
+                <input name="hide_archived_marker"
+                       type="hidden"
+                       value="1"
+                />
+                <tal:i18n i18n:translate="">Hide archived risk assessments</tal:i18n>
+              </label>
+            </fieldset>
+          </div>
+        </form>
+      </article>
+      <div class="portlet-body"
+           id="portlet-body-my-ras"
+      >
+        <tal:sessions condition="sessions_by_organisation">
+          <article class="pat-rich">
+            <p i18n:translate="info_select_session">Select an earlier session to complete or review or
+              <a class="pat-modal"
+                 href="${here/absolute_url}/@@new-session.html#document-content"
+                 data-pat-modal="class: panel medium"
+                 i18n:name="start_session"
+                 i18n:translate="link_start_session"
+              >start a new risk assessment</a>.
+            </p>
+          </article>
+          <tal:organisation tal:repeat="organisation sessions_by_organisation">
+            <h3 class="separation-title"
+                tal:condition="organisation"
+            >
+              ${python: view.organisation_view.get_organisation_title(organisation)}
+            </h3>
+            <tal:sessions tal:define="
+                            sessions python: sessions_by_organisation[organisation];
+                          ">
+              <metal:assessments_list use-macro="view/assessments_list_macro" />
+              <p class="list-footer"
+                 tal:condition="sessions"
+              >
+                <a class="pat-inject more-link"
+                   href="${here/absolute_url}/assessments#content"
+                   data-pat-inject="history: record"
+                   tal:condition="not: organisation"
+                   i18n:translate="label_more_risk_assessments"
+                >
+                  More risk assessments&hellip;
+                </a>
+                <a class="pat-inject more-link"
+                   href="${here/absolute_url}/assessments?organisation=${organisation/owner_id}#content"
+                   data-pat-inject="history: record"
+                   tal:condition="organisation"
+                   i18n:translate="label_more_risk_assessments_for"
+                >
+                  More risk assessments for
+                  <tal:i18n i18n:name="organisation">${python: view.organisation_view.get_organisation_title(organisation)}</tal:i18n>&hellip;
+                </a>
+              </p>
+            </tal:sessions>
+          </tal:organisation>
+        </tal:sessions>
+        <tal:no-sessions condition="not:sessions_by_organisation">
+          <article class="pat-rich">
+            <p i18n:translate="info_select_session">Select an earlier session to complete or review or
+              <a class="pat-modal"
+                 href="${here/absolute_url}/@@new-session.html#document-content"
+                 data-pat-modal="class: panel medium"
+                 i18n:name="start_session"
+              >${view/label_start_session}</a>
+            </p>
+            <p class="pat-message info"
+               i18n:translate="message_you_dont_have_any_risk_assessments_yet"
+            >
+              You don't have any risk assessments yet.
+            </p>
+          </article>
+        </tal:no-sessions>
+      </div>
+
+    </div>
+  </div>
+</tal:portlet>

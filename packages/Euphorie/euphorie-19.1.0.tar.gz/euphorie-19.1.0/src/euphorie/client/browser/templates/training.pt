@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      meta:interpolation="true"
+      metal:use-macro="context/@@shell/macros/shell"
+      tal:define="
+        client nocall:request/client;
+        webhelpers nocall:context/@@webhelpers;
+        slide_data view/slide_data|python:{};
+      "
+      i18n:domain="euphorie"
+>
+
+  <body>
+    <metal:slot fill-slot="content"
+                tal:define="
+                  view_name string:@@${view/__name__};
+                  can_edit webhelpers/can_edit_session;
+                  question_intro_url view/question_intro_url|nothing;
+                  enable_training_questions view/enable_training_questions;
+                  logo view/logo_url;
+                "
+    >
+      <div class="pat-scroll-box"
+           id="content-pane"
+      >
+        <tal:block replace="tile:statusmessages" />
+        <div class="pat-toolbar sticky"
+             id="training-toolbar"
+        >
+          <div class="toolbar-functions-area">
+            <div class="toolbar-section">
+              <a class="icon menu pat-toggle"
+                 id="toggle-tree"
+                 href="#tree"
+                 data-pat-toggle="selector: #main; value: sidebar-off sidebar-on;"
+              >Toggle tree</a>
+              <a class="icon icon-th-list pat-tooltip"
+                 href="#toc-trainings"
+                 title="Table of contents"
+                 data-pat-tooltip="position-list: tl; source: ajax; class: toc"
+                 i18n:attributes="title label_table_of_contents"
+                 i18n:translate="label_table_of_contents"
+              >
+                    Table of contents
+              </a>
+              <div id="toc-trainings"
+                   hidden
+              >
+                <nav class="assessment-toc pat-navigation">
+                  <tal:items repeat="slide_path slide_data/keys">
+                    <tal:slide define="
+                                 slide_info python:slide_data[slide_path];
+                                 training_view python:slide_info['training_view'];
+                                 slide python:slide_info['slide_contents'];
+                               ">
+                      <a class="item ${slide_type} scroll-trigger"
+                         href="#card-content-${training_view/number_id}"
+                         tal:define="
+                           slide_type slide/slide_type;
+                         "
+                      >
+                        <span class="number field"><strong class="index-number">${training_view/number}</strong></span>
+                        <span class="label field">${training_view/slide_title}</span>
+                      </a>
+                    </tal:slide>
+                  </tal:items>
+                </nav>
+              </div>
+            </div>
+            <div class="toolbar-section quick-functions"
+                 id="training-toolbar-quick-functions"
+            >
+              <button class="pat-button icon-desktop default pat-fullscreen"
+                      data-pat-fullscreen="selector:#slide-0"
+              ><tal:training condition="enable_training_questions"
+                              i18n:translate=""
+                >Take training and test</tal:training><tal:notraining condition="not:enable_training_questions"
+                                i18n:translate=""
+                >Run slideshow</tal:notraining></button>
+
+              <a class="icon more pat-tooltip"
+                 href="#assessments-more-menu-trainings"
+                 data-pat-tooltip="position-list: tr; source: ajax"
+                 tal:condition="view/more_menu_contents"
+                 i18n:translate=""
+              >More&hellip;</a>
+              <div id="assessments-more-menu-trainings"
+                   hidden
+              >
+                <ul class="menu">
+                  <li tal:repeat="entry view/more_menu_contents">
+                    <a class="${entry/class}"
+                       href="${entry/url}"
+                       data-pat-modal="${entry/data_pat_modal|nothing}"
+                    >${entry/label}</a>
+                  </li>
+
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="presentation-slide stand-alone"
+             id="title-card"
+        >
+          <section class="slide-content template-cover pat-auto-scale"
+                   data-pat-auto-scale="size: contain"
+          >
+            <h1 class="slide-title">
+                ${view/session/title}
+            </h1>
+            <p class="slide-byline"
+               tal:condition="view/show_slide_byline|python:True"
+               i18n:translate="label_online_oira_training"
+            >
+                Online OiRA training
+            </p>
+            <p class="button-bar">
+              <a class="pat-button pat-inject default"
+                 id="assessments-training-start-button"
+                 href="training-slides#slide-1"
+                 data-pat-inject="target: #slide-0"
+                 i18n:translate=""
+              >Start</a>
+            </p>
+            <figure class="tool-icon">
+              <img alt=""
+                   src="${image_url}"
+                   tal:define="
+                     image_url view/tool_image_url;
+                   "
+                   tal:condition="image_url"
+              />
+            </figure>
+            <figure class="organisation-logo"
+                    tal:condition="logo"
+            >
+              <img alt=""
+                   src="${logo}"
+              />
+            </figure>
+          </section>
+        </div>
+
+        <div class="presentation-sections">
+          <tal:items repeat="slide_path slide_data/keys">
+            <tal:slide define="
+                         slide_info python:slide_data[slide_path];
+                         item python:slide_info['item'];
+                         training_view python:slide_info['training_view'];
+                         slide python:slide_info['slide_contents'];
+                       ">
+              <div class="training-card"
+                   tal:define="
+                     slide_template slide/slide_template;
+                     counter training_view/number_id;
+                     content_item nocall:training_view/zodb_elem;
+                     slide_type slide/slide_type;
+                     description training_view/description;
+                     image_urls training_view/image_urls;
+                     measures_in_place slide/measures_in_place;
+                     active_measures_in_place python:[entry for entry in measures_in_place.values() if entry['active']];
+                     measures_planned slide/measures_planned;
+                     active_measures_planned python:[entry for entry in measures_planned.values() if entry['active']];
+                     training_notes training_view/training_notes|nothing;
+                   "
+              >
+                <div class="training-card-section"
+                     id="section-${counter}"
+                >
+                  <section class="section-content ${slide_template}"
+                           id="card-content-${counter}"
+                  >
+                    <section class="card-body pat-rich">
+                      <p class="card-function-bar">
+                        <a class="card-edit-button pat-modal executed"
+                           href="#modal-content-${counter}"
+                           data-pat-modal="class: medium panel"
+                           tal:condition="python:slide_type=='risk' and can_edit"
+                           i18n:translate="button_edit"
+                        >Edit</a>
+                        <span class="card-number">${training_view/number}
+                        </span>
+                      </p>
+                      <h2 class="card-title"
+                          id="card-title-${training_view/number_id}"
+                      >
+                        <span class="card-title-label">${training_view/slide_title}</span>
+                      </h2>
+                      <section class="description"
+                               tal:condition="python:slide_type!='module'"
+                      >
+                        <div class="card-illustrations pat-gallery"
+                             tal:condition="image_urls"
+                        >
+                          <figure class="illustration"
+                                  tal:repeat="image_url image_urls"
+                          >
+                            <a href="${image_url}">
+                              <img src="${image_url}"
+                                   title=""
+                              />
+                            </a>
+                          </figure>
+                        </div>
+                        <span tal:replace="structure python:webhelpers.get_safe_html(description)"></span>
+                      </section>
+                      <tal:module condition="python:slide_type=='module'">
+                        <div class="card-hero"
+                             tal:condition="image_urls"
+                        >
+                          <figure class="illustration">
+                            <img src="${python:image_urls[0]}"
+                                 title=""
+                            />
+                          </figure>
+                        </div>
+                        <span tal:replace="structure python:webhelpers.get_safe_html(description)"></span>
+                      </tal:module>
+                    </section>
+                  </section>
+                </div>
+                <div class="training-card-section concatenate template-measures"
+                     id="section-measures-in-place-${counter}"
+                >
+                  <section class="mode-view section-content template-measures"
+                           id="card-content-${counter}"
+                           tal:condition="active_measures_in_place"
+                  >
+                    <section class="card-body pat-rich">
+                      <h3 class="card-subtitle">
+                    ${view/heading_measures_in_place}
+                      </h3>
+                      <ul class="measure-list"
+                          id="card-measures-"
+                      >
+                        <tal:measures tal:repeat="measure active_measures_in_place">
+                          <li tal:define="
+                                measure_text python:measure['action'];
+                              "
+                              tal:condition="measure_text"
+                              tal:content="structure python:webhelpers.get_safe_html(measure_text)"
+                          >measure</li>
+                        </tal:measures>
+                      </ul>
+                    </section>
+                  </section>
+                  <div class="training-card-section concatenate template-measures"
+                       id="section-measures-planned-${counter}"
+                  >
+                    <section class="mode-view section-content template-measures"
+                             id="card-content-${counter}"
+                             tal:condition="active_measures_planned"
+                    >
+                      <section class="card-body pat-rich">
+                        <h3 class="card-subtitle">
+                    ${view/heading_measures_planned}
+                        </h3>
+                        <ul class="measure-list"
+                            id="card-measures-"
+                        >
+                          <tal:measures tal:repeat="measure active_measures_planned">
+                            <li tal:define="
+                                  measure_text python:measure['action'];
+                                "
+                                tal:condition="measure_text"
+                                tal:content="structure python:webhelpers.get_safe_html(measure_text)"
+                            >measure</li>
+                          </tal:measures>
+                        </ul>
+                      </section>
+                    </section>
+                    <div id="modal-content-${counter}"
+                         hidden="hidden"
+                         tal:condition="python:training_view.item_type=='risk'"
+                    >
+                      <h1 class="panel-class-"
+                          i18n:translate=""
+                      >Edit training card</h1>
+
+                      <form class="pat-form wizard-box panel-class- pat-inject"
+                            action="${request/URL}"
+                            method="post"
+                            data-pat-inject="source: #section-measures-${counter}; target: #section-measures-${counter} &amp;&amp; source: #slide-0; target: #slide-0"
+                      >
+                        <input name="risk_id"
+                               type="hidden"
+                               value="${item/id}"
+                        />
+                        <div class="panel-body"
+                             id="modal-panel-body"
+                        >
+                          <div class="container">
+                            <metal:call use-macro="webhelpers/macros/training_configuration_inner" />
+                          </div>
+                        </div>
+
+                        <div class="buttons pat-bumper panel-footer"
+                             id="modal-panel-footer"
+                        >
+                          <div class="container">
+
+                            <button class="pat-button default close-panel"
+                                    disabled="${python:'disabled' if not can_edit else None}"
+                                    type="submit"
+                                    i18n:translate="Save"
+                            >Save</button>
+                            <button class="pat-button close-panel"
+                                    type="button"
+                                    i18n:translate="button_cancel"
+                            >Cancel</button>
+                          </div>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+
+                  <div class="training-card-section concatenate template-notes"
+                       id="section-notes-${counter}"
+                  >
+                    <section class="mode-view section-content template-measures"
+                             id="card-content-${counter}"
+                             tal:condition="training_notes"
+                    >
+                      <section class="card-body pat-rich">
+                        <h3 class="card-subtitle"
+                            i18n:translate="label_notes"
+                        >
+                    Notes
+                        </h3>
+                        <span tal:replace="structure python:webhelpers.get_safe_html(training_notes)"></span>
+                      </section>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </tal:slide>
+          </tal:items>
+        </div>
+
+        <div class="presentation-placeholder">
+          <div class="presentation-slide"
+               id="slide-0"
+          >
+
+            <section class="slide-content template-cover pat-auto-scale"
+                     data-pat-auto-scale="size: contain"
+            >
+              <h1 class="slide-title">
+                    ${view/session/title}
+              </h1>
+              <p class="slide-byline"
+                 i18n:translate="label_online_oira_training"
+              >
+                    Online OiRA training
+              </p>
+              <p class="button-bar">
+                <a class="pat-button pat-inject default"
+                   id="assessments-training-start-button"
+                   href="${here/absolute_url}/@@training-slides#slide-1"
+                   data-pat-inject="target: #slide-0"
+                   i18n:translate=""
+                >Start</a>
+              </p>
+              <figure class="tool-icon">
+                <img alt=""
+                     src="${image_url}"
+                     tal:define="
+                       image_url view/tool_image_url;
+                     "
+                     tal:condition="image_url"
+                />
+              </figure>
+              <figure class="organisation-logo"
+                      tal:condition="logo"
+              >
+                <img alt=""
+                     src="${logo}"
+                />
+              </figure>
+            </section>
+          </div>
+        </div>
+
+
+        <tal:nodata condition="not:slide_data">
+          <h2 i18n:translate="">No training content is available</h2>
+        </tal:nodata>
+
+      </div>
+    </metal:slot>
+  </body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      id="consultancy"
+      metal:use-macro="context/@@shell/macros/shell"
+      tal:define="
+        webhelpers nocall:context/@@webhelpers;
+      "
+      i18n:domain="euphorie"
+>
+
+  <body>
+    <metal:slot fill-slot="content">
+      <div class="pat-scroll-box"
+           id="content-pane"
+           tal:define="
+             consultant context/session/consultancy/account|nothing;
+             is_validated context/session/is_validated;
+             current_user webhelpers/get_current_account;
+             current_user_organisation current_user/organisation;
+             current_session_organisation context/session/account/organisation;
+             external_user python: current_user_organisation != current_session_organisation;
+             role_consultant python: consultant and current_user == consultant;
+           "
+      >
+        <metal:call use-macro="webhelpers/macros/toolbar" />
+        <tal:block replace="tile:statusmessages" />
+
+        <article class="pat-rich"
+                 id="page-intro"
+        >
+          <h1 tal:condition="not:role_consultant"
+              i18n:translate="label_consultancy"
+          >
+            Consultancy
+          </h1>
+          <tal:comment tal:condition="nothing">The info that you can request consultancy is only for your own organisation. All external users cannot request it, so they don't need it, and they are likely consultants anyway.</tal:comment>
+          <p tal:condition="not:external_user"
+             i18n:translate="message_find_consultants"
+          >
+            It is possible to request assistance in completing a risk assessment or to have a risk analysis performed by you and validated by an OSH consultant. An OSH consultant can give your risk assessment an offical validation mark. A validation can only be requested by users with the permission level &lsquo;Manage&rsquo; or higher.
+          </p>
+
+        </article>
+
+        <tal:role_user tal:condition="not:role_consultant">
+          <p class="pat-message success"
+             tal:define="
+               raw_time view/validated_info/raw_time|nothing;
+               language here/plone_portal_state/language;
+             "
+             tal:condition="python:is_validated"
+             i18n:translate="message_session_validated"
+          >
+            <time class="date-stamp pat-display-time"
+                  datetime="${value}"
+                  data-pat-display-time="from-now: false; locale: ${language}"
+                  tal:define="
+                    value python:webhelpers.timezoned_date(raw_time);
+                  "
+                  i18n:name="validation_time"
+            >${value}</time>:
+            <a href="mailto:${view/validated_info/consultant_email}"
+               i18n:name="consultant"
+            >${view/validated_info/consultant_name}</a>
+          has reviewed and validated this risk assessment
+          </p>
+          <p class="pat-message info"
+             tal:condition="python:consultant and not is_validated"
+             i18n:translate="message_session_under_review"
+          >
+				    This risk assessment is currently under review by
+            <a href="mailto:${consultant/email}"
+               i18n:name="consultant"
+            >${consultant/title}</a>.
+          </p>
+
+          <div class="button-bar pat-bumper"
+               id="nav-bar"
+               tal:condition="python:not is_validated and not consultant and view.is_admin"
+          >
+            <a class="pat-modal pat-button default"
+               href="${here/absolute_url}/@@panel-request-validation#document-content"
+               data-pat-modal="class: medium panel"
+               tal:condition="view/consultants"
+               i18n:translate="label_request_validation_imp"
+            >Request validation</a>
+            <a class="pat-modal pat-button default"
+               disabled="disabled"
+               data-pat-modal="class: medium panel"
+               tal:condition="not:view/consultants"
+               i18n:translate="label_request_validation_imp"
+            >Request validation</a>
+          </div>
+        </tal:role_user>
+
+        <tal:external_user tal:condition="python:external_user and not role_consultant">
+          <p class="pat-message notice"
+             i18n:translate="message_no_validation_requested"
+          >
+            No validation is requested at this time.
+          </p>
+        </tal:external_user>
+
+        <tal:role_consultant tal:condition="role_consultant">
+          <!-- Current user is assigned consultant for this session -->
+          <tal:not_validated tal:condition="not:is_validated">
+            <p class="pat-message notice"
+               i18n:translate="message_you_are_requested_to_validate_assessment"
+            >
+            You are requested to review and validate this risk assessment.
+            </p>
+            <div class="button-bar pat-bumper"
+                 id="nav-bar"
+            >
+              <a class="pat-modal pat-button default"
+                 href="${here/absolute_url}/@@panel-validate-risk-assessment#document-content"
+                 data-pat-modal="class: small panel"
+                 i18n:translate="label_validate_this_risk_assessment_imp"
+              >Validate this risk assessment</a>
+            </div>
+          </tal:not_validated>
+          <p class="pat-message success"
+             tal:condition="is_validated"
+             i18n:translate="message_you_reviewed_and_validated_risk_assessment"
+          >
+            You have reviewed and validated this risk assessment.
+          </p>
+        </tal:role_consultant>
+
+        <tal:comment tal:condition="nothing">The info about consultancy is only for your own organisation. All external users cannot request it, so they don't need it, and they are likely consultants anyway.</tal:comment>
+        <ul class="link-list"
+            tal:condition="not:external_user"
+        >
+          <li>
+            <a class="pat-inject"
+               href="${context/absolute_url}/@@consultants"
+               data-pat-inject="history: record; source: #content; target: #content"
+               i18n:translate=""
+            >Find an OSH consultant.</a>
+          </li>
+          <li tal:define="
+                organisation view/organisation;
+              "
+              tal:condition="organisation"
+          >
+            <a class="pat-modal"
+               href="${webhelpers/country_url}/@@panel-add-user-to-organisation/${organisation/organisation_id}?role=consultant#document-content"
+               data-pat-modal="class: medium panel"
+               tal:condition="view/is_admin"
+               i18n:translate=""
+            >Add an OSH consultant to your organisation.</a>
+          </li>
+          <li>
+            <a class="pat-inject"
+               href="${webhelpers/country_url}/++resource++euphorie.resources/assets/oira/help/${webhelpers/help_language}/pages/3-carrying-out-a-risk-assessment.html"
+               data-pat-inject="history: record; source: #content; target: #content; scroll: #consultancy"
+               i18n:translate=""
+            >Learn more about consultancy.</a>
+          </li>
+        </ul>
+
+        <tal:block replace="tile:client-analytics" />
+
+      </div></metal:slot>
+  </body>
+</html>

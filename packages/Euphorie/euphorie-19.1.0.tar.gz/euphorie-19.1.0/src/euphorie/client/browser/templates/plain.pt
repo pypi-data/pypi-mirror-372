@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      meta:interpolation="true"
+      metal:define-macro="shell"
+      tal:define="
+        webhelpers nocall:context/@@webhelpers;
+        client nocall:request/client;
+        page_section webhelpers/get_phase;
+        came_from webhelpers/came_from;
+        came_from_param python:came_from and 'came_from=%s' % came_from or '';
+        tools context/@@tools;
+      "
+      i18n:domain="euphorie"
+>
+
+  <head>
+    <title i18n:translate="title_tool">OiRA - Online interactive Risk Assessment</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type"
+          content="text/html; charset=UTF-8"
+    />
+    <meta http-equiv="X-UA-Compatible"
+          content="IE=Edge"
+    />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1"
+    />
+    <link href="${webhelpers/style_url}/apple-touch-icon.png"
+          rel="icon"
+          type="image/png"
+    />
+
+    <script src="${webhelpers/js_url}"
+            type="text/javascript"
+    ></script>
+    <link href="${webhelpers/css_url}"
+          rel="stylesheet"
+          type="text/css"
+    />
+
+    <style type="text/css">
+@page {
+    size: A4 portrait;
+    margin:2cm 0.5cm 2cm 0.5cm;
+
+    @bottom-right {
+        font-size: 8pt;
+        font-family: sans-serif;
+    }
+    @bottom-left {
+        font-size: 8pt;
+        content: flow(footer);
+        text-align:left;
+        font-family: sans-serif;
+    }
+}
+
+html {
+    height: inherit;
+}
+body, h1, h2, h3, h4, h5, h6, p, blockquote, ul, ol, li, table, tr, th, td, form, fieldset, legend, button, div, object, figure, img {
+    margin: 0;
+    border: 0;
+    padding: 0;
+    list-style: none;
+    text-align: left;
+}
+body {
+    color: #222;
+    font-family: "Roboto Condensed",sans-serif;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 14px;
+    line-height: 150%;
+    background: #fff;
+    letter-spacing: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    orphans:3;
+    widows:4;
+    border: 0;
+    list-style: none;
+    text-align: left;
+}
+div.print-footer {
+  flow: static(footer);
+}
+.osc-off #main,
+.sidebar-off #content,
+.osc-off.sidebar-off #content {
+    position: inherit;
+    height: inherit;
+}
+#main {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    transition: left 0.5s, filter 2s;
+}
+#content {
+    left: 0;
+    padding: 6% 15% 10% 10%;
+    line-height: 1.5em;
+    top: 3rem;
+    right: 0;
+    bottom: 0;
+    transition: all 0.5s;
+}
+article.rich.report h1 {
+    font-weight: 400;
+    font-size: 36px;
+    line-height: 40px;
+    /*margin-bottom: 0.7em;*/
+}
+a {
+    text-decoration: none;
+    color: #0081be;
+}
+p.byline {
+    float:right;
+    text-align: right;
+    width: 20%;
+}
+.page-toc ul {
+    padding-left: 1em;
+}
+article.rich.report h2, .pat-rich h2 {
+    font-size: 1.5em;
+    line-height: 130%;
+    margin-bottom: 0.7em;
+    padding-top: 0;
+}
+h3 {
+    clear: both;
+}
+article.rich.report h3, .pat-rich h3 {
+    margin-bottom: 1em;
+    font-size: 1.5em;
+}
+article.report .title-line h3 {
+    margin-bottom: 0;
+    font-size: 1.5em;
+}
+h2.title {
+  line-height:100%;
+  font-weight:400;
+  margin-bottom:1.2em;
+}
+.twelve, .row .twelve {
+    width: 100%;
+}
+[class*="column"]+[class*="column"]:last-child {
+    float: right;
+}
+.column, .columns {
+    float: left;
+    min-height: 1px;
+    padding: 0 15px;
+    position: relative;
+    box-sizing: border-box;
+}
+dl.status .row div.columns{
+    font-size: 85%;
+}
+dl.status dd .high-prio-risks {
+    margin-bottom: 3.5em;
+}
+dl.status dd .high-prio-risks h4 {
+    color: rgba(0,0,0,0.6);
+}
+dl.status dd .high-prio-risks li {
+    margin-left: 0;
+    padding-left: 1em;
+}
+dl.status dd .high-prio-risks li:before {
+    float: left;
+    margin-left: -1em;
+}
+dt {
+    page-break-after: avoid;
+}
+dd, .page-toc {
+    page-break-after: always;
+}
+.graph {
+    position: relative;
+}
+
+.graph span:first-child {
+  border-top-left-radius: 1em;
+  border-bottom-left-radius: 1em;
+}
+.graph span:last-child {
+  border-top-right-radius: 1em;
+  border-bottom-right-radius: 1em;
+}
+    </style>
+
+    <metal:javascriptslot define-slot="javascript_head_slot" />
+    <metal:styleslot define-slot="style_slot" />
+  </head>
+
+  <body class="osh-off test-session osc-off osc-s-off sidebar-off"
+        tal:define="
+          is_anonymous webhelpers/anonymous;
+          base_url webhelpers/base_url;
+        "
+        i18n:domain="euphorie"
+  >
+    <div id="main">
+      <div id="content">
+        <p id="warning-bar"
+           tal:condition="webhelpers/is_guest_account"
+        >
+          <tal:testsession i18n:translate="info_testsession">This is a test session.
+            <tal:name i18n:name="link_sign_in"><a class="registration"
+                 href="${base_url}/@@login?${came_from_param}#login"
+                 i18n:translate="link_sign_in"
+              >Sign in</a></tal:name>
+            to save your data.</tal:testsession><a class="icon-help-circle iconified pat-tooltip"
+             href="${base_url}/tooltips#test-session-active"
+             data-pat-tooltip="source: ajax; position-list: lt; class: rich info"
+             i18n:translate="Info"
+          >Info</a>
+        </p>
+        <tal:statusmsg tal:repeat="message webhelpers/messages">
+          <p class="pat-notification"
+             data-pat-notification="type: banner"
+             tal:content="message/message | nothing"
+             tal:attributes="
+               id string:${message/id}-body;
+               data-pat-notification string:${attrs/data-pat-notification};;
+                                   class: ${message/type};
+             "
+          >Status message</p>
+        </tal:statusmsg>
+
+        <metal:block define-slot="content" />
+      </div>
+    </div>
+
+    <tal:block replace="tile:client-analytics" />
+  </body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      id="sessions"
+      meta:interpolation="true"
+      metal:use-macro="context/@@shell/macros/shell"
+      tal:define="
+        webhelpers nocall:context/@@webhelpers;
+      "
+      i18n:domain="euphorie"
+>
+  <body>
+    <metal:content fill-slot="content"
+                   tal:define="
+                     language view/portal/plone_portal_state/language;
+                     sessions view/sessions;
+                     description context/Description|string:;
+                     introduction python:getattr(context, 'introduction', '') or '';
+                     is_anonymous webhelpers/anonymous;
+                   "
+    >
+      <div id="content-pane"
+           tal:define="
+             tool nocall:context;
+             sector nocall:tool/aq_parent;
+             country nocall:sector/aq_parent;
+           "
+      >
+        <tal:block replace="tile:statusmessages" />
+        <tal:banner replace="structure here/@@tool-banner|nothing">
+          Proto foresees a banner in the tool view,
+          that can be used for call for actions, see:
+
+          - https://oira.cornelis.amsterdam/tools/audio-visual-productions
+
+        </tal:banner>
+        <div class="pat-toolbar">
+          <div class="toolbar-functions-area">
+            <div class="toolbar-section quick-navigation">
+              <a class="pat-back-button pat-inject"
+                 href="${country/absolute_url}/surveys"
+                 data-pat-inject="history: record; source: #content; target: #content;"
+                 i18n:translate="label_tools"
+              >Tools</a>
+            </div>
+          </div>
+        </div>
+        <div class="tool-info-sheet">
+          <div class="tool-meta-data">
+            <figure class="tool-icon">
+              <img src="++resource++euphorie.resources/assets/oira/style/placeholder-1x1.png"
+                   style="background-image: url(${python:webhelpers.get_tool_image_url(tool)})"
+              />
+            </figure>
+
+            <p class="tool-tags tag-cloud">
+
+              <a class="tag pat-inject"
+                 data-pat-inject="history: record"
+              >${sector/title}</a>
+
+              <a class="tag pat-inject"
+                 href="${country/absolute_url}/surveys?country=${country/id}#content"
+                 data-pat-inject="history: record"
+              >${python: webhelpers.getTranslatedCountryName(country.getId())}</a>
+
+              <a class="tag pat-inject"
+                 href="${country/absolute_url}/surveys?language=${tool_lang}#content"
+                 data-pat-inject="history: record"
+                 tal:define="
+                   tool_lang python: tool.Language().split('-')[0];
+                 "
+                 tal:condition="tool_lang"
+              >${python: webhelpers.getNameForLanguageCode(tool_lang)}</a>
+
+            </p>
+
+            <form class="button-bar"
+                  action="${webhelpers/country_or_client_url}/@@tryout#main"
+                  method="post"
+                  data-pat-inject="history: record"
+                  tal:condition="is_anonymous"
+            >
+              <button class="default small pat-button"
+                      type="submit"
+                      value="start-ra"
+                      i18n:translate="button_start_test_session"
+              >Test session</button>
+              <input name="came_from"
+                     type="hidden"
+                     value="${here/absolute_url}"
+              />
+              <metal:honeypot use-macro="webhelpers/macros/honeypot" />
+            </form>
+
+            <p class="button-bar"
+               tal:condition="not:is_anonymous"
+            >
+              <a class="default pat-button pat-modal"
+                 id="button-new-session"
+                 href="${here/absolute_url}/@@new-session.html#document-content"
+                 data-pat-modal="class: panel small"
+                 tal:condition="not:is_anonymous"
+                 i18n:translate="button_start_session"
+              >Start risk assessment</a>
+            </p>
+          </div>
+          <div class="tool-description">
+            <div class="pat-rich tool-text">
+              <h1 class="tool-name">${context/Title}</h1>
+              <section class="summary"
+                       tal:condition="python:description.strip()"
+              >
+                <p tal:content="description"></p>
+              </section>
+              <section class="body ${python: 'show-less' if sessions else ''}"
+                       id="tool-body-text"
+                       tal:condition="python:introduction.strip()"
+              >
+                <p tal:replace="structure introduction"></p>
+                <p class="more-bar pat-bumper"
+                   tal:condition="sessions"
+                >
+                  <button class="pat-button pat-switch focus"
+                          data-pat-switch="#tool-body-text show-less show-more"
+                          i18n:translate="label_read_more"
+                  >Read more</button>
+                </p>
+              </section>
+            </div>
+
+            <div class="risk-assessments ra-list"
+                 tal:condition="sessions"
+            >
+              <h2 class="ra-list-title"
+                  i18n:translate=""
+              >Risk assessments made with this tool</h2>
+
+              <ul class="ras">
+                <li class="ra"
+                    tal:repeat="session sessions"
+                >
+                  <h4 class="name field">
+                    <a class="pat-inject follow"
+                       href="${session/absolute_url}/@@start"
+                       data-pat-inject="
+                          source: #content; target: #content;
+                              &amp;&amp;
+                          source: #osc; target: #osc;
+                              &amp;&amp;
+                          source: #toolbar; target: #toolbar;
+                          history: record"
+                    >
+                      ${session/title}
+                      <em tal:condition="not:session/title">
+                        [<tal:i18n i18n:translate="label_missing_title">Title is missing</tal:i18n>]
+                      </em>
+                    </a>
+                  </h4>
+                  <p class="date field">
+                    <span class="last-saved">
+                      <tal:i18n i18n:translate="">Last saved</tal:i18n>
+                      <time class="pat-display-time"
+                            datetime="${value}"
+                            data-pat-display-time="from-now: true; locale: ${language}"
+                            tal:define="
+                              value python:webhelpers.timezoned_date(session.modified);
+                            "
+                      >${value}</time>
+                    </span>
+                  </p>
+                  <p class="field icons">
+                    <a class="icon more-menu iconified icon-ellipsis pat-tooltip inactive"
+                       href="${session/absolute_url}/@@more_menu#more-menu"
+                       data-pat-tooltip="source: ajax; position-list: tr"
+                       i18n:translate=""
+                    >More</a>
+                  </p>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+
+      </div>
+    </metal:content>
+
+    <metal:splash fill-slot="splash_message_slot">
+      <div class="splash-message"
+           id="splash-message"
+           tal:condition="python:splash_message is not None"
+      >
+        <hr class="trigger pat-switch"
+            data-pat-switch="selector: body; remove: splash-on-motd*; add: splash-off-${splash_message/id}; store: local"
+        />
+        <article class="pat-rich content">
+          <p>
+            <img src="${style_url}/oira-logo-colour.svg"
+                 width="20%"
+            />
+          </p>
+          <h1 tal:content="structure splash_message/title">Message of the day!</h1>
+          <tal:content content="structure splash_message/text" />
+        </article>
+      </div>
+    </metal:splash>
+
+    <metal:slot fill-slot="aside-header">
+      <header id="osc-header">
+      </header>
+    </metal:slot>
+
+    <metal:slot fill-slot="aside-navigator">
+      <div id="navigation">
+      </div>
+    </metal:slot>
+
+  </body>
+</html>

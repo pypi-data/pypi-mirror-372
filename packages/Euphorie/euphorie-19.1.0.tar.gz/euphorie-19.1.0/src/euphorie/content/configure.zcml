@@ -1,0 +1,231 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:z3c="http://namespaces.zope.org/z3c"
+    i18n_domain="untranslated"
+    >
+
+  <include package="ftw.upgrade" />
+  <include package="plone.app.z3cform" />
+  <include package="plone.namedfile" />
+  <include package="plone.formwidget.namedfile" />
+  <include package="plone.app.dexterity" />
+  <include package="plone.app.vocabularies" />
+  <include package="plone.uuid" />
+  <include package="euphorie.htmllaundry" />
+  <include package="Products.membrane" />
+
+  <include file="permissions.zcml" />
+
+  <include package=".behaviors" />
+  <include package=".browser" />
+  <include package=".subscribers" />
+  <include package=".widgets" />
+
+  <browser:resourceDirectory
+      name="euphorie.static"
+      directory="static"
+      />
+
+  <five:registerClass
+      class=".fti.ConditionalDexterityFTI"
+      permission="cmf.ManagePortal"
+      addview="plone.dexterity.fti"
+      global="False"
+      icon="plone.dexterity.fti.gif"
+      meta_type="Conditional Dexterity FTI"
+      />
+
+  <subscriber handler=".login.SectorLoginHandler" />
+  <subscriber
+      for="euphorie.content.risk.IRisk
+           zope.lifecycleevent.ObjectCopiedEvent"
+      handler=".risk.handle_risk_pasted"
+      />
+  <subscriber
+      for="euphorie.content.risk.IRisk
+           zope.lifecycleevent.ObjectMovedEvent"
+      handler=".risk.handle_risk_pasted"
+      />
+  <subscriber
+      for="euphorie.content.survey.ISurvey
+           euphorie.content.interfaces.ISurveyUnpublishEvent"
+      handler=".survey.handleSurveyUnpublish"
+      />
+
+  <subscriber
+      for="euphorie.content.survey.ISurvey
+           Products.CMFCore.interfaces.IActionSucceededEvent"
+      handler=".surveygroup.handleSurveyPublish"
+      />
+
+  <subscriber
+      for="euphorie.content.survey.ISurvey
+           zope.lifecycleevent.interfaces.IObjectRemovedEvent"
+      handler=".surveygroup.handleSurveyRemoved"
+      />
+
+  <adapter
+      factory=".survey.SurveyAttributeField"
+      for=".survey.ISurvey
+           zope.schema.interfaces.IField"
+      />
+
+  <adapter
+      factory=".user.UserProvider"
+      provides="Products.membrane.interfaces.user.IMembraneUserObject"
+      />
+
+  <adapter
+      factory=".user.UserProvider"
+      provides="Products.membrane.interfaces.user.IMembraneUserObject"
+      for=".countrymanager.ICountryManager"
+      />
+
+  <adapter factory=".user.UniqueLoginValidator" />
+  <adapter factory=".user.UserAuthentication" />
+  <adapter factory=".user.UserChanger" />
+  <adapter factory=".user.PasswordDataManager" />
+  <adapter factory=".user.UserProperties" />
+
+  <adapter
+      factory=".countrymanager.CountryManagerLocalRoleProvider"
+      name="euphorie.countrymanager"
+      />
+
+  <adapter
+      factory=".countrymanager.SearchableTextIndexer"
+      name="SearchableText"
+      />
+
+  <adapter factory=".dependency.ConditionalFieldValidator" />
+  <adapter factory=".dependency.ConditionalTextFieldWidget" />
+  <adapter factory=".dependency.ConditionalHtmlTextFieldWidget" />
+
+  <adapter
+      factory=".help.SearchableTextIndexer"
+      name="SearchableText"
+      />
+
+  <adapter
+      factory=".module.ConstructionFilter"
+      name="euphorie.module"
+      />
+
+  <adapter
+      factory=".module.SearchableTextIndexer"
+      name="SearchableText"
+      />
+
+  <adapter
+      factory=".page.SearchableTextIndexer"
+      name="SearchableText"
+      />
+
+  <adapter
+      factory=".profilequestion.SearchableTextIndexer"
+      name="SearchableText"
+      />
+
+  <adapter
+      factory=".risk.ConstructionFilter"
+      name="euphorie.risk"
+      />
+
+  <adapter
+      factory=".risk.SearchableTextIndexer"
+      name="SearchableText"
+      />
+
+  <adapter
+      factory=".sector.SectorLocalRoleProvider"
+      name="euphorie.sector"
+      />
+
+  <adapter
+      factory=".sector.SearchableTextIndexer"
+      name="SearchableText"
+      />
+
+  <adapter
+      factory=".survey.SearchableTextIndexer"
+      name="SearchableText"
+      />
+
+  <adapter
+      factory=".survey.LanguageIndexer"
+      name="Language"
+      />
+
+  <adapter
+      factory=".solution.SearchableTextIndexer"
+      name="SearchableText"
+      />
+
+  <adapter factory=".module.ImageSizeValidator" />
+
+  <adapter factory=".risk.ImageSizeValidator" />
+
+  <adapter
+      factory=".training_question.ConstructionFilter"
+      name="euphorie.training_question"
+      />
+
+  <include package=".behaviour" />
+
+  <genericsetup:registerProfile
+      name="default"
+      title="Euphorie content types"
+      description="Content types for defining sectors and surveys"
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+      directory="profiles/default"
+      />
+
+  <include package="euphorie.upgrade.content" />
+
+  <browser:page
+      name="clean-content"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+      class=".upgrade.CleanupContent"
+      permission="cmf.ManagePortal"
+      />
+
+  <utility
+      factory=".utils.ToolTypesInfo"
+      provides=".utils.IToolTypesInfo"
+      />
+
+  <utility
+      provides="zope.schema.interfaces.IVocabularyFactory"
+      name="euphorie.tool_types_vocabulary"
+      component=".utils.ToolTypesVocabularyFactory"
+      />
+
+  <utility
+      provides="zope.schema.interfaces.IVocabularyFactory"
+      name="euphorie.measures_text_handling_vocabulary"
+      component=".utils.MeasuresTextHandlingVocabularyFactory"
+      />
+
+
+  <browser:page
+      name="export_users"
+      for="euphorie.content.sectorcontainer.ISectorContainer"
+      class=".utils.UserExport"
+      permission="cmf.ManagePortal"
+      layer="plonetheme.nuplone.skin.interfaces.NuPloneSkin"
+      />
+
+
+  <browser:page
+      name="export_users_csv"
+      for="euphorie.content.sectorcontainer.ISectorContainer"
+      class=".utils.UserExportCSV"
+      permission="cmf.ManagePortal"
+      layer="plonetheme.nuplone.skin.interfaces.NuPloneSkin"
+      />
+
+</configure>

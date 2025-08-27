@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      meta:interpolation="true"
+      metal:use-macro="context/@@layout/macros/layout"
+      i18n:domain="euphorie"
+>
+  <body>
+    <metal:title fill-slot="title">${context/title}</metal:title>
+
+    <metal:content fill-slot="content">
+      <h2 i18n:translate="">Add content from library</h2>
+
+      <p i18n:translate="">You can use content from the standard libary as
+      provided by OSHA in your own surveys. Just select the module or risk you
+        want to use in the list below and it will be copied to your survey.</p>
+
+      <p class="message notice"
+         tal:condition="not:view/at_root"
+         i18n:translate=""
+      >Please note that you may not be able to
+      use all available content: profile questions can only be used at the top
+      level of your survey, and modules may be too deeply nested to fit in
+        <em i18n:name="title">`${context/title}`</em>.</p>
+
+      <form action="${context/absolute_url}/@@library-insert"
+            method="POST"
+      >
+        <p i18n:translate="">Show library from
+          <select name="survey"
+                  i18n:name="dropdown"
+          >
+            <optgroup label="${sector/title}"
+                      tal:repeat="sector view/library"
+            >
+              <option value="${survey/path}"
+                      tal:repeat="survey sector/surveys"
+              >${survey/title}</option>
+            </optgroup>
+          </select>.
+        </p>
+
+        <tal:sector repeat="sector view/library">
+          <div class="dependsOn-survey-equals-${survey/path}"
+               tal:repeat="survey sector/surveys"
+          >
+            <h3><a href="${sector/url}">${sector/title}</a>
+              -
+              <a href="${survey/url}">${survey/title}</a></h3>
+
+            <tal:content define="
+                           children survey/children;
+                           top python:True;
+                         ">
+              <ul class="${python:'survey library' if top else None}"
+                  metal:define-macro="renderTree"
+              >
+                <li tal:repeat="item children">
+                  <button class="micro floatAfter"
+                          name="path"
+                          value="${item/path}"
+                          tal:condition="not:item/disabled"
+                  >Insert</button>
+                  <a class="${python:'disabled' if item['disabled'] else None}"
+                     href="${item/url}"
+                  ><strong class="counter">${item/number}</strong>
+                    <em class="icon ${item/portal_type}"></em>${item/title}</a>
+                  <tal:subtree tal:define="
+                                 children item/children;
+                                 top python:False;
+                               "
+                               tal:condition="python:children"
+                  ><metal:block use-macro="template/macros/renderTree" /></tal:subtree>
+                </li>
+              </ul>
+            </tal:content>
+          </div>
+        </tal:sector>
+      </form>
+    </metal:content>
+
+    <script metal:fill-slot="scripts"
+            type="text/javascript"
+    >
+// &lt;![CDATA[
+    $(".survey.library button").hover(
+        function() {
+            $(this).closest("li").addClass("focus");
+        },
+        function() {
+            $(this).closest("li").removeClass("focus");
+        }
+    );
+// ]]&gt;
+    </script>
+  </body>
+</html>

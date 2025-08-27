@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      meta:interpolation="true"
+      metal:use-macro="context/@@shell/macros/shell"
+      tal:define="
+        client nocall:request/client;
+        webhelpers nocall:context/@@webhelpers;
+        isAnonymous here/portal_membership/isAnonymousUser;
+      "
+      i18n:domain="euphorie"
+>
+  <metal:slot fill-slot="content">
+    <h1 i18n:translate="header_terms">Terms and conditions</h1>
+
+    <tal:if condition="not:isAnonymous">
+      <p class="message warning"
+         tal:condition="view/terms_changed"
+         i18n:translate="terms_changed"
+      >
+    The terms and conditions have changed since your last visit. Please read the new terms and conditions carefully before proceding.
+      </p>
+    </tal:if>
+
+    <form class="concise"
+          action="${request/getURL}"
+          method="POST"
+    >
+      <fieldset class="concise">
+        <input name="came_from"
+               type="hidden"
+               value="${view/came_from}"
+               tal:condition="view/came_from"
+        />
+        <div class="conditions"
+             id="conditions"
+        >
+          <metal:macro use-macro="context/@@terms-conditions/macros/terms-conditions-text" />
+        </div>
+        <p class="buttonBar"
+           tal:condition="not:isAnonymous"
+        >
+          <button id="agreeButton"
+                  type="submit"
+                  value="agree"
+                  i18n:translate="agree_and_continue"
+          >Agree and continue</button>
+        </p>
+      </fieldset>
+    </form>
+
+    <ul id="navigation">
+      <metal:home use-macro="webhelpers/macros/homelink" />
+      <li><a href="${webhelpers/help_url}#authentication"
+           i18n:translate="navigation_help"
+        >Help</a></li>
+    </ul>
+    <metal:css use-macro="context/appendix/macros/appendix" />
+    <metal:css use-macro="webhelpers/macros/javascript" />
+    <script meta:interpolation="false"
+            type="text/javascript"
+    >
+// &lt;![CDATA[
+    function updateButton() {
+        var $conditions = $(this),
+            button = $("#agreeButton")[0],
+            at_bottom;
+
+        if (!button.disabled) {
+            return;
+        }
+
+        at_bottom=(this.scrollHeight-$conditions.scrollTop())&lt;=$conditions.innerHeight();
+        if (at_bottom) {
+            button.disabled=false;
+        }
+    }
+
+    $(document).ready(function() {
+        $("#conditions").scroll(updateButton);
+    });
+// ]]&gt;
+    </script>
+  </metal:slot>
+</html>

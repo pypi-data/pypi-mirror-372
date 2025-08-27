@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      class="no-js"
+      lang="${language}"
+      meta:interpolation="true"
+      metal:define-macro="shell"
+      tal:define="
+        webhelpers nocall:context/@@webhelpers;
+        portal_state context/plone_portal_state;
+        language portal_state/language;
+        splash_message webhelpers/splash_message;
+        no_splash view/no_splash|nothing;
+        tool_notification webhelpers/tool_notification;
+        client nocall:request/client;
+        media_url webhelpers/media_url;
+        style_url webhelpers/style_url;
+        page_section webhelpers/get_phase;
+        sidebar_default python:page_section in ['identification', 'actionplan'] and 'sidebar-on' or 'sidebar-off';
+        came_from_param webhelpers/came_from_param;
+        initial_view request/initial_view|nothing;
+        tools context/@@tools;
+        variation_class python:getattr(view, 'variation_class', None);
+      "
+      i18n:domain="euphorie"
+>
+
+  <head>
+    <title i18n:translate="title_tool">OiRA - Online interactive Risk Assessment</title>
+    <meta http-equiv="Content-Type"
+          content="text/html; charset=UTF-8"
+    />
+    <meta http-equiv="X-UA-Compatible"
+          content="IE=Edge"
+    />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1"
+    />
+    <meta http-equiv="pragma"
+          content="no-cache"
+    />
+    <meta http-equiv="expires"
+          content="-1"
+    />
+    <link href="${webhelpers/favicon_url}"
+          rel="icon"
+          type="image/png"
+    />
+
+    <script src="${webhelpers/js_url}"
+            type="text/javascript"
+            tal:condition="not:webhelpers/is_outdated_browser"
+    ></script>
+    <script src="${webhelpers/client_url}/++resource++plone.session.refreshsupport.js"
+            type="text/javascript"
+    ></script>
+    <tal:custom_js replace="structure webhelpers/custom_js|nothing" />
+
+    <link href="${webhelpers/css_url}"
+          rel="stylesheet"
+          type="text/css"
+    />
+    <link href="${webhelpers/client_url}/acl_users/session/refresh?session_refresh=true&amp;type=css&amp;minutes=5"
+          rel="stylesheet"
+          type="text/css"
+    />
+    <tal:custom_css replace="structure webhelpers/custom_css|nothing" />
+
+    <meta name="description"
+          content="${webhelpers/tool_description}"
+    />
+    <meta property="og:type"
+          content="website"
+    />
+    <meta property="og:title"
+          content="${webhelpers/tool_name|string:OiRA - Online interactive Risk Assessment}"
+    />
+    <meta property="og:description"
+          content="${webhelpers/tool_description}"
+    />
+    <meta property="og:url"
+          content="${webhelpers/base_url}/@@tryout?${came_from_param}"
+    />
+    <meta property="og:image"
+          content="${style_url}/oira-tile.png"
+    />
+
+
+
+    <metal:javascriptslot define-slot="javascript_head_slot" />
+    <metal:styleslot define-slot="style_slot" />
+    <script>
+    function openSlideFullScreen(slide) {
+      var docElm = document.documentElement;
+      if (docElm.requestFullscreen) {
+        document.getElementById(slide).requestFullscreen()
+      }
+      else if (docElm.mozRequestFullScreen) {
+        document.getElementById(slide).mozRequestFullScreen()
+      }
+      else if (docElm.webkitRequestFullScreen) {
+        document.getElementById(slide).webkitRequestFullScreen()
+      }
+      else if (docElm.msRequestFullscreen) {
+        document.getElementById(slide).msRequestFullscreen()
+      }
+    }
+    </script>
+  </head>
+
+  <body class="${python:'splash-on-' + splash_message['id'] if not is_anonymous and not no_splash and not webhelpers.is_guest_account and splash_message and not page_section else ''} ${python:'splash-on-' + tool_notification['id'] if tool_notification and initial_view else ''} osh-off ${python: 'test-session' if webhelpers.is_guest_account else ''} osc-off osc-s-off osc-size-normal"
+        id="body"
+        tal:define="
+          is_anonymous webhelpers/anonymous;
+          base_url webhelpers/base_url;
+        "
+        i18n:domain="euphorie"
+  >
+    <div class="sidebar-off"
+         id="main"
+    >
+      <span class="hidden"
+            id="metadata"
+            hidden="hidden"
+      >
+        <span id="country_name">${webhelpers/country_name}</span>
+        <span id="sector_name">${webhelpers/sector_name}</span>
+        <span id="tool_name">${webhelpers/tool_name}</span>
+        <span id="language_code">${webhelpers/language_code}</span>
+      </span>
+      <header id="toolbar">
+        <a class="title-group ${python:'pat-inject pat-switch' if not is_anonymous else None}"
+           href="${webhelpers/country_or_client_url}"
+           title="Dashboard"
+           data-pat-inject="source: #content; target: #content; history: record"
+           data-pat-switch="selector: body; remove: osc-s-on; add: osc-s-off;"
+           i18n:attributes="title home_link"
+        >
+          <h1 class="logo">
+			OiRA
+          </h1>
+        </a>
+        <tal:anon condition="python:not is_anonymous or webhelpers.is_guest_account">
+          <style>
+              @media only screen and (max-width: 768px) {
+                  #toolbar > a#toggle-osc, #toolbar > button#toggle-osc {
+                      /* Hotfix: Show the OSC menu in mobile nav. */
+                      /* Ref: scrum-1036. */
+                      display: inline-block;
+                  }
+                  #toolbar .title-group {
+                      /* Needed for Shrome/Safari but not Firefox. */
+                      /* For Firefox the logo is pushed a bit too far from the hamburger menu. */
+                      margin-left: 50px;
+                  }
+              }
+          </style>
+          <a class="iconified pat-toggle"
+             id="toggle-osc"
+             href="#osc"
+             title="Show/hide menu"
+             data-pat-toggle="selector: body; value: osc-on osc-off; store: local &amp;&amp; selector: body; value: osc-s-on osc-s-off;"
+             i18n:attributes="title tooltip_menu_toggle"
+          >
+                Menu
+          </a>
+
+          <p id="warning-bar"
+             tal:condition="webhelpers/is_guest_account"
+          >
+            <tal:testsession i18n:translate="label_testsession">Test session</tal:testsession><a class="icon-help-circle iconified pat-tooltip"
+               href="${base_url}/tooltips#test-session-active"
+               data-pat-tooltip="source: ajax; position-list: lt; class: rich info"
+               i18n:translate="Info"
+            >Info</a>
+          </p>
+        </tal:anon>
+
+
+        <metal:include use-macro="context/@@includes/macros/osh"
+                       tal:define="
+                         id string:hamburger;
+                       "
+        />
+
+        <tal:if_not_anon condition="python: not is_anonymous and not webhelpers.is_guest_account">
+          <a class="iconified pat-tooltip pat-switch"
+             id="user-menu"
+             href="${webhelpers/session_overview_url}/user-menu.html#menu-content"
+             data-pat-switch="selector: body; remove: osc-s-on; add: osc-s-off;"
+             data-pat-tooltip="source: ajax;"
+             i18n:translate="more_link"
+          >More</a>
+        </tal:if_not_anon>
+        <a class="iconified pat-tooltip pat-switch"
+           id="help-menu"
+           href="${webhelpers/session_overview_url}/help-menu.html#menu-content"
+           data-pat-switch="selector: body; remove: osc-s-on; add: osc-s-off;"
+           data-pat-tooltip="source: ajax"
+           tal:condition="python: not is_anonymous"
+           i18n:translate="help_link"
+        >Help</a>
+        <a class="home iconified icon-home ${python:'pat-inject pat-switch' if not is_anonymous else None}"
+           href="${webhelpers/country_or_client_url}"
+           title="Dashboard"
+           data-pat-inject="source: #content; target: #content; history: record"
+           data-pat-switch="selector: body; remove: osc-s-on; add: osc-s-off;"
+           tal:condition="python: not is_anonymous"
+           i18n:attributes="title home_link"
+           i18n:translate="home_link"
+        >Dashboard</a>
+      </header>
+      <div id="content">
+        <aside class="${variation_class}"
+               id="tree"
+               tal:condition="python:variation_class=='variation-risk-assessment'"
+        >
+          <metal:include use-macro="context/@@includes/macros/osh"
+                         tal:define="
+                           id string:tool-navigation;
+                         "
+          />
+          <metal:slot define-slot="aside-navigator">
+            <ol class="navigation pat-navigation"
+                id="steps"
+            >
+              <tal:not_anon define="
+                              tree view/tree|nothing;
+                            "
+                            condition="not:is_anonymous"
+              >
+                <tal:loop repeat="data webhelpers/survey_tree_data">
+                  <li class="${data/class}"
+                      id="${data/id}"
+                  >
+                    <a class="${data/name} pat-switch pat-inject"
+                       href="${data/href}"
+                       data-pat-inject="history: record"
+                       data-pat-switch="selector: #main; remove: sidebar-*; add: sidebar-off"
+                       tal:condition="not:data/disabled"
+                    >${data/title}</a>
+                    <a class="${data/name}"
+                       tal:condition="data/disabled"
+                    >${data/title}</a>
+
+                    <tal:block condition="python: data['has_tree'] and tree">
+                      <metal:call use-macro="webhelpers/macros/survey_tree" />
+                    </tal:block>
+                  </li>
+                </tal:loop>
+
+                <li id="home">
+                  <a class="home pat-switch pat-inject"
+                     href="${webhelpers/country_or_client_url}"
+                     data-pat-inject="history: record"
+                     data-pat-switch="selector: #main; remove: sidebar-*; add: sidebar-off"
+                     i18n:translate="label_exit"
+                  >Exit</a>
+                </li>
+              </tal:not_anon>
+            </ol>
+          </metal:slot>
+
+        </aside>
+        <div class="${variation_class}"
+             id="main-content"
+        >
+          <span id="messages">
+            <tal:statusmsg tal:repeat="message webhelpers/messages">
+              <p class="pat-notification"
+                 id="${message/id}-body"
+                 data-pat-notification="type: banner; class: ${message/type}; close-text: ${webhelpers/closetext}"
+                 tal:content="message/message | nothing"
+              >Status message</p>
+            </tal:statusmsg>
+          </span>
+
+          <metal:block define-slot="content" />
+        </div>
+      </div>
+    </div>
+
+    <tal:anon condition="not:is_anonymous">
+
+      <!-- The aside header and sessions browser comes from a macro -->
+      <aside id="osc">
+        <a class="pat-inject icon-search"
+           hidden
+           href="${here/absolute_url}/@@session-browser-sidebar"
+           data-pat-inject="source: #osc::element; target: #osc::element; trigger: autoload;"
+           i18n:translate=""
+        >Loading Risk Assessments&hellip;</a>
+      </aside>
+      <tal:logo condition="webhelpers/show_logo">
+        <metal:logo use-macro="context/logo/macros/logo" />
+      </tal:logo>
+    </tal:anon>
+
+    <!-- modal link editor -->
+    <template id="tiptap-modal-hyperlink-fieldname-comments">
+      <h1>Edit Link</h1>
+      <div class="panel-body link-panel">
+        <div class="container">
+          <form class="pat-form">
+            <fieldset class="vertical">
+              <fieldset class="group url">
+                <legend i18n:translate="">URL</legend>
+                <span class="button-field type-url">
+                  <input class="pat-autofocus"
+                         name="tiptap-href"
+                         oninput="if (this.value) { this.nextElementSibling.href = this.value; } else { this.nextElementSibling.removeAttribute('href'); }"
+                         type="url"
+                         value=""
+                  />
+                  <a class="follow"
+                     id="event-url-follow-button"
+                     href=""
+                     target="_blank"
+                     title="Visit this URL"
+                     i18n:attributes="title"
+                     i18n:translate=""
+                  >Follow</a>
+                </span>
+              </fieldset>
+              <label>
+                <tal:i18n i18n:translate="">Link text</tal:i18n>
+                <input name="tiptap-text"
+                       type="text"
+                />
+              </label>
+            </fieldset>
+          </form>
+          <div class="buttons button-bar pat-bumper"
+               id="modal-button-bar"
+          >
+            <button class="pat-button default close-panel icon-ok-circle"
+                    name="tiptap-confirm"
+                    type="submit"
+                    i18n:translate=""
+            >Insert</button>
+            <button class="pat-button close-panel icon-cancel-circle"
+                    type="button"
+                    i18n:translate=""
+            >Cancel</button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- context menu link -->
+    <template id="tiptap-context-menu-hyperlink-fieldname-comments">
+      <ul class="menu tiptap-link-context-menu">
+        <li>
+          <a class="icon-link close-panel tiptap-open-new-link"
+             href=""
+             target="_blank"
+             i18n:translate=""
+          >Visit linked web page</a>
+        </li>
+        <li>
+          <a class="icon-pencil close-panel tiptap-edit-link"
+             i18n:translate=""
+          >Edit link</a>
+        </li>
+        <li>
+          <a class="icon-unlink close-panel tiptap-unlink"
+             i18n:translate=""
+          >Unlink</a>
+        </li>
+      </ul>
+    </template>
+
+    <tal:block replace="tile:client-analytics" />
+
+    <metal:splashmessageslot define-slot="splash_message_slot" />
+
+    <metal:browser_warning define-slot="browser_warning_slot">
+      <metal:call use-macro="context/browser-warning/macros/warning" />
+    </metal:browser_warning>
+
+    <metal:call use-macro="webhelpers/macros/webstats_js" />
+
+
+  </body>
+</html>

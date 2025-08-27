@@ -1,0 +1,73 @@
+Creating and publishing a survey
+================================
+
+Before we can start we must set up our test environment:
+
+>>> app = layer['portal']
+>>> portal = layer['portal']
+>>> from plone.testing.zope import Browser
+>>> browser = Browser(app)
+>>> browser.handleErrors=False
+>>> portal.error_log._ignored_exceptions=()
+>>> from euphorie.content.tests import utils
+>>> sector=utils.createSector(portal, "hiswa", title=u"HISWA",
+...       login="hiswa", password="hiswa")
+>>> from transaction import commit; commit()
+
+Before we can do anything we must login with the sector account:
+
+>>> browser.open("{site_url}/@@login?came_from={site_url}/sectors/nl/hiswa".format(site_url=portal.absolute_url()))
+>>> browser.getControl(name="__ac_name").value="hiswa"
+>>> browser.getControl(name="__ac_password").value="hiswa"
+>>> browser.getForm(id="loginForm").submit()
+
+We are now logged in at the homepage for the sector:
+
+>>> browser.url
+'http://nohost/plone/sectors/nl/hiswa'
+
+We can now create a survey and an initial version:
+
+>>> browser.getLink("add a new OiRA Tool").click()
+>>> browser.getControl(name="form.widgets.title").value="Harbours"
+>>> browser.getControl(name="source").value=["scratch"]
+>>> browser.getControl(name="form.buttons.save").click()
+
+Now that we have created a survey we can publish it:
+
+>>> browser.getControl(name="survey").value=["standard"]
+>>> button=browser.getControl(name="action", index=1)
+>>> button.click()
+
+We must confirm we want to publish:
+
+>>> browser.contents
+'...Are you sure you want to publish this OiRA Tool?...'
+>>> browser.getControl(name="form.buttons.button_publish").click()
+>>> browser.contents
+'...Successfully published the OiRA Tool. It can be accessed at...'
+
+Now lets add a risk:
+
+>>> browser.getLink("Add Module").click()
+>>> browser.getControl(name="form.widgets.title").value="Crane handling"
+>>> browser.getControl(name="form.widgets.description").value="<p>All about cranes</p>"
+>>> browser.getControl(name="form.buttons.save").click()
+>>> browser.getLink("Add Risk").click()
+>>> browser.getControl(name="form.widgets.title").value="Are all cranes secured?"
+>>> browser.getControl(name="form.widgets.problem_description").value="Not all cranes are secured."
+>>> browser.getControl(name="form.widgets.description").value="<p>Unsecured cranes add many risks.</p>"
+>>> browser.getControl(name="form.buttons.save").click()
+
+The currently published version should already be selected:
+
+>>> browser.getControl(name="survey").value
+['standard']
+
+Lets publish our updates now:
+
+>>> button=browser.getControl(name="action", index=1)
+>>> button.click()
+>>> browser.getControl(name="form.buttons.button_publish").click()
+>>> browser.contents
+'...Successfully published the OiRA Tool. It can be accessed at...'

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      metal:use-macro="context/@@shell/macros/shell"
+      i18n:domain="euphorie"
+>
+  <metal:slot fill-slot="content">
+    <tal:block replace="tile:statusmessages" />
+    <div id="content-pane">
+      <metal:homescreen_navigation define-macro="homescreen_navigation">
+        <tal:banner replace="structure here/@@dashboard-banner|nothing">
+          Proto foresees a banner in the dashboard,
+          that can be used for call for actions, see:
+
+          - https://oira.cornelis.amsterdam/index-logged-in
+
+        </tal:banner>
+        <div class="pat-toolbar"
+             id="tools-toolbar"
+             tal:define="
+               dashboard_tab webhelpers/get_dashboard_tab;
+               is_anonymous webhelpers/anonymous;
+             "
+        >
+          <div class="toolbar-navigation-area"
+               tal:condition="not:is_anonymous"
+          >
+            <div class="toolbar-section navigation"
+                 id="assessments-toolbar-navigation"
+            >
+              <nav class="pat-tabs pat-button-cluster pat-navigation"
+                   id="homescreen-sections"
+              >
+                <a class="icon icon-gauge pat-inject ${python:'current' if dashboard_tab=='dashboard' else None}"
+                   href="${here/absolute_url}"
+                   data-pat-inject="history: record; source: #application-content; target: #application-content &amp;&amp; source: #toolbar-functions-area::element; target: #toolbar-functions-area::element"
+                >Home</a>
+                <a class="pat-inject ${python:'current' if dashboard_tab=='surveys' else None}"
+                   href="${here/absolute_url}/surveys"
+                   data-pat-inject="history: record; source: #application-content; target: #application-content &amp;&amp; source: #toolbar-functions-area::element; target: #toolbar-functions-area::element"
+                   i18n:translate="label_tools"
+                >Tools</a>
+                <a class="pat-inject ${python:'current' if dashboard_tab=='assessments' else None}"
+                   href="${here/absolute_url}/assessments"
+                   data-pat-inject="history: record; source: #application-content; target: #application-content &amp;&amp; source: #toolbar-functions-area::element; target: #toolbar-functions-area::element"
+                   i18n:translate="label_assessments"
+                >Assessments</a>
+                <!--  We do not have these kind of views yet
+                <a class="pat-inject"
+                   href="${here/absolute_url}/trainings"
+                   data-pat-inject="history: record; source: #application-content; target: #application-content && source: #toolbar-functions-area::element; target: #toolbar-functions-area::element"
+                >Trainings</a>
+                -->
+                <a class="pat-inject ${python:'current' if dashboard_tab=='certificates' else None}"
+                   href="${here/absolute_url}/certificates"
+                   data-pat-inject="history: record; source: #application-content; target: #application-content &amp;&amp; source: #toolbar-functions-area::element; target: #toolbar-functions-area::element"
+                   tal:condition="webhelpers/show_certificates_tab"
+                   i18n:translate="label_certificates"
+                >Certificates</a>
+                <a class="pat-inject ${python:'current' if dashboard_tab=='organisation' else None}"
+                   href="${here/absolute_url}/@@organisation"
+                   data-pat-inject="history: record; source: #application-content; target: #application-content &amp;&amp; source: #toolbar-functions-area::element; target: #toolbar-functions-area::element"
+                   tal:condition="not:webhelpers/hide_organisation_tab"
+                   i18n:translate=""
+                >Organisation</a>
+              </nav>
+
+            </div>
+          </div>
+          <div class="toolbar-functions-area"
+               id="toolbar-functions-area"
+               tal:condition="not:view/form_action_name|nothing"
+          ></div>
+          <form class="toolbar-functions-area pat-inject pat-form pat-autosubmit"
+                id="toolbar-functions-area"
+                action="${here/absolute_url}/${view/form_action_name}#application-content"
+                method="POST"
+                data-pat-inject="history: record"
+                tal:condition="view/form_action_name|nothing"
+          >
+            <div class="toolbar-section view-options"
+                 id="assessments-toolbar-view-options"
+            >
+              <metal:slot define-slot="view_options">
+                <label class="pat-select bare"
+                       tal:replace="nothing"
+                >
+                  <select name="dashboard-view">
+                    <option><!-- Show internal assessments -->Default view</option>
+                    <option><!-- Fremdfirmen Darstellung --><!-- Show external assessments --><!-- Fremdfirmen GBUs Darstellung -->Fremdfirmenkoordination</option>
+                  </select>
+                </label>
+              </metal:slot>
+            </div>
+            <div class="toolbar-section quick-functions"
+                 id="assessments-toolbar-quick-functions"
+            >
+              <metal:slot define-slot="quick_functions" />
+            </div>
+          </form>
+        </div>
+      </metal:homescreen_navigation>
+      <div id="application-content">
+        <div class="row pat-masonry"
+             id="dashboard"
+             data-pat-masonry="column-width: .grid-sizer; gutter: 0; item-selector: .portlet; stamp: .stamp;"
+        >
+          <div class="grid-sizer"></div>
+          <tal:portlets repeat="portlet view/portlets">
+            <tal:portlet condition="portlet/available|python:True">
+              <div class="portlet span-${portlet/columns|string:1}"
+                   id="${portlet/element_id}"
+                   tal:condition="portlet/element_id|nothing"
+              >
+                <a class="pat-inject infinite-scrolling-trigger"
+                   href="${context/absolute_url}/@@${portlet/__name__}#${portlet/element_id}"
+                   data-pat-inject="trigger: autoload"
+                >Loading&hellip;</a>
+              </div>
+              <tal:comment replace="nothing"><!-- Fallback: If the view has no element_id member, we can't properly pre-render the div --></tal:comment>
+              <a class="pat-inject infinite-scrolling-trigger"
+                 href="${context/absolute_url}/@@${portlet/__name__}"
+                 data-pat-inject="trigger: autoload; target: self::element"
+                 tal:condition="not:portlet/element_id|nothing"
+              >Loading&hellip;</a>
+            </tal:portlet>
+          </tal:portlets>
+        </div>
+      </div>
+
+    </div>
+  </metal:slot>
+
+  <metal:slot fill-slot="splash_message_slot">
+    <div class="splash-message"
+         id="splash-message"
+    >
+      <tal:splash condition="python:splash_message is not None">
+        <hr class="trigger pat-switch"
+            data-pat-switch="selector: body; remove: splash-on-motd*; add: splash-off-${splash_message/id}; store: local"
+        />
+        <article class="pat-rich content">
+          <p>
+            <img src="${style_url}/oira-logo-colour.svg"
+                 width="20%"
+            />
+          </p>
+          <h1 tal:content="structure splash_message/title">Message of the day!</h1>
+          <tal:content content="structure splash_message/text" />
+        </article>
+      </tal:splash>
+    </div>
+  </metal:slot>
+
+  <metal:slot fill-slot="aside-header">
+    <form class="pat-inject pat-autosubmit"
+          id="osc-header"
+          action="${absolute_url}/@@${view/__name__}#browser"
+    >
+      <tal:in_group condition="python: root_group and root_parent">
+        <a class="back-button pat-inject"
+           href="${absolute_url}/@@${view/__name__}?groupid=${root_parent/group_id|nothing}"
+           data-pat-inject="history: record; source: #osc-header; target: #osc-header &amp;&amp; source: #osc; target: #osc"
+           i18n:translate=""
+        >Back</a>
+        <h2 class="column-title">${root_group/fullname}</h2>
+      </tal:in_group>
+
+      <!--
+        <tal:root condition="python: not root_group or not root_parent">
+          <label class="pat-select bare">
+            <select>
+              <option i18n:translate="">Group by department</option>
+              <option i18n:translate="">Group by tool</option>
+              <option>Group by publication date</option>
+              <option>Group by modification date</option>
+              <option>Group by user</option>
+              <option>Group by country</option>
+              <option>Group by sector</option>
+            </select>
+          </label>
+        </tal:root>
+        -->
+
+      <a class="no-label pat-modal iconified icon-plus"
+         id="button-new-session-quick"
+         href="${webhelpers/session_overview_url}/@@new-session.html#document-content"
+         title="Start a new risk assessment"
+         data-pat-modal="class: panel small"
+         i18n:attributes="title link_start_session"
+         i18n:translate="New"
+      >New</a>
+      <button class="no-label iconified icon-resize-full pat-toggle"
+              id="button-osc-expand"
+              title="Expand sidebar"
+              data-pat-toggle="selector: body; value: osc-size-full osc-size-normal"
+              tal:condition="webhelpers/use_locking_feature"
+              i18n:attributes="title"
+              i18n:translate=""
+      >Expand sidebar</button>
+
+    </form>
+  </metal:slot>
+
+
+</html>

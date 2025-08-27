@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      meta:interpolation="true"
+      metal:use-macro="context/@@modal-template/macros/shell"
+      i18n:domain="euphorie"
+>
+  <body>
+    <metal:slot fill-slot="content">
+      <div class="pat-modal small"
+           id="document-content"
+           tal:define="
+             webhelpers nocall:context/@@webhelpers;
+             base_url webhelpers/base_url;
+           "
+      >
+        <h1 i18n:translate="label_new_session_test">New test session</h1>
+        <form class="wizard-box panel-class-small pat-inject"
+              action="${request/URL}"
+              method="post"
+              data-pat-inject="source: #content; target: #content; &amp;&amp; source: #osc; target: #osc; &amp;&amp; source: #toolbar; target: #toolbar"
+              tal:condition="view/allow_guest_accounts"
+        >
+          <input name="action"
+                 type="hidden"
+                 value="new"
+          />
+          <div class="panel-body"
+               tal:define="
+                 root view/get_survey_templates_tree_root;
+                 template_count python:len(view.get_survey_templates());
+               "
+          >
+            <div class="container">
+              <article class="pat-rich">
+                <p i18n:translate="label_select_new_session">Start a new session by choosing one of the following sectoral tools.</p>
+              </article>
+
+              <fieldset class="vertical">
+                <label class="tool-list-many">
+                  <select class="pat-autosuggest"
+                          name="survey"
+                          placeholder="Select an OiRA tool"
+                          data-pat-autosuggest="minimum-input-length:0"
+                          i18n:attributes="placeholder label_select_oira_tool"
+                  >
+                    <option value="">&nbsp;</option>
+                    <metal:templates define-macro="templates_many">
+                      <tal:surveys define="
+                                     surveys root/survey_templates;
+                                   ">
+                        <option value="${survey/id}"
+                                tal:repeat="survey surveys"
+                        >${survey/title}</option>
+                      </tal:surveys>
+                    </metal:templates>
+                    <tal:categories repeat="child root/categories">
+                      <optgroup label="${child/title}">
+                        <tal:survey define="
+                                      root child;
+                                    ">
+                          <metal:node use-macro="template/macros/templates_many" />
+                        </tal:survey>
+                      </optgroup>
+                    </tal:categories>
+                  </select>
+                </label>
+              </fieldset>
+
+              <p>
+                <tal:span i18n:translate="testsession_benefits_limitations">Read here about the
+                  <strong i18n:name="benefits"
+                          i18n:translate="benefits"
+                  >benefits</strong><sup i18n:name="tooltip_benefits"><a class="icon-help-circle iconified pat-tooltip"
+                       href="${base_url}/tooltips#test-session-benefits"
+                       data-pat-tooltip="source: ajax; position-list: lt; class: rich info"
+                    >Info</a></sup>
+                  and
+                  <strong i18n:name="limitations"
+                          i18n:translate="limitations"
+                  >limitations</strong><sup i18n:name="tooltip_limitations"><a class="icon-help-circle iconified pat-tooltip"
+                       href="${base_url}/tooltips#test-session-limitations"
+                       data-pat-tooltip="source: ajax; position-list: lt; class: rich info"
+                    >Info</a></sup>
+                  of a test session.</tal:span>
+              </p>
+              <p>
+                <tal:span i18n:translate="testsession_register">Or
+                  <a href="${view/register_url}"
+                     i18n:name="register_link"
+                  ><strong i18n:translate="label_register">register</strong></a>
+                  instead. Find out why you should register<sup i18n:name="tooltip_register"><a class="icon-help-circle iconified pat-tooltip"
+                       href="${base_url}/tooltips#why-register"
+                       data-pat-tooltip="source: ajax; position-list: lt; class: rich info"
+                    >Info</a></sup>.</tal:span>
+              </p>
+            </div>
+          </div>
+          <div class="buttons panel-footer">
+            <div class="container">
+              <button class="pat-button pat-depends close-panel"
+                      type="submit"
+                      data-pat-depends="condition: survey; action: enable"
+                      i18n:translate="button_start_session"
+              >Start risk assessment</button>
+              <button class="pat-button close-panel"
+                      type="button"
+                      i18n:translate="button_cancel"
+              >Cancel</button>
+            </div>
+          </div>
+        </form>
+        <tal:not_allowed condition="not:view/allow_guest_accounts">
+          <div class="panel-body">
+            <article class="rich">
+              <p i18n:translate="">Starting a test session is not available in this OiRA application.</p>
+            </article>
+          </div>
+          <div class="buttons panel-footer">
+            <button class="pat-button close-panel"
+                    type="button"
+                    i18n:translate="button_close"
+            >Close</button>
+          </div>
+        </tal:not_allowed>
+      </div>
+    </metal:slot>
+  </body>
+</html>

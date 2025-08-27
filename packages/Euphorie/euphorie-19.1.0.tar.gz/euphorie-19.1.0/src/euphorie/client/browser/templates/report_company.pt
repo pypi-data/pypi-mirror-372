@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      id="report_company"
+      meta:interpolation="true"
+      metal:use-macro="context/@@shell/macros/shell"
+      tal:define="
+        webhelpers nocall:context/@@webhelpers;
+        tools nocall:context/@@tools;
+        client nocall:request/client;
+      "
+      i18n:domain="euphorie"
+>
+
+  <body>
+    <metal:slot fill-slot="content"
+                tal:define="
+                  company view/session/company;
+                "
+    >
+      <form class="pat-form concise"
+            action="${request/getURL}"
+            enctype="${view/enctype}"
+            method="${view/method}"
+      >
+        <div class="pat-scroll-box"
+             id="content-pane"
+        >
+          <metal:call use-macro="webhelpers/macros/toolbar" />
+          <article class="pat-rich">
+            <h1 i18n:translate="header_feedback">Feedback.</h1>
+
+            <p class="message error"
+               tal:condition="view/status"
+               i18n:translate="warn_fix_errors"
+            >Please fix the indicated errors.</p>
+            <p class="summary"
+               i18n:translate="company_report_intro"
+            >
+        Thank you for using OiRA. Before we go to the report we would kindly like to ask you to give us some feedback via the survey below. This information is meant to improve the tools and the services provided.
+              <strong>This data will not appear in your reports.</strong>
+            </p>
+            <fieldset class="vertical">
+              <label tal:define="
+                       widget nocall:view/widgets/country;
+                       value widget/value;
+                     ">
+                <tal:span i18n:translate="label_company_country">Your country</tal:span>
+                <select name="${widget/name}"
+                        tal:define="
+                          value python:value or webhelpers.country;
+                        "
+                >
+                  <option value=""></option>
+                  <option selected="${python:'selected' if value==country['id'] else None}"
+                          value="${country/id}"
+                          tal:repeat="country view/countries"
+                  >${country/title}</option>
+                </select>
+                <tal:error condition="widget/error"
+                           replace="structure widget/error/render|nothing"
+                />
+              </label>
+
+              <fieldset class="pat-checklist radio"
+                        tal:define="
+                          widget nocall:view/widgets/employees;
+                          value widget/value;
+                        "
+              >
+                <legend i18n:translate="label_employee_numbers">Number of employees</legend>
+                <label><input checked="${python:'checked' if '1-9' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="1-9"
+                  />
+                  <tal:span i18n:translate="employee_numbers_1_to_9">1 to 9 employees</tal:span></label>
+                <label><input checked="${python:'checked' if '10-49' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="10-49"
+                  />
+                  <tal:span i18n:translate="employee_numbers_10_to_49">10 to 49 employees</tal:span></label>
+                <label><input checked="${python:'checked' if '50-249' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="50-249"
+                  />
+                  <tal:span i18n:translate="employee_numbers_50_to_249">50 to 249 employees</tal:span></label>
+                <label><input checked="${python:'checked' if '250+' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="250+"
+                  />
+                  <tal:span i18n:translate="employee_numbers_250_or_more">250 or more employees</tal:span></label>
+                <tal:error condition="widget/error"
+                           replace="structure widget/error/render|nothing"
+                />
+              </fieldset>
+
+              <fieldset class="pat-checklist radio"
+                        tal:define="
+                          widget nocall:view/widgets/conductor;
+                          value widget/value;
+                        "
+              >
+                <legend i18n:translate="label_conductor">The risk assessment was conducted by</legend>
+                <label><input checked="${python:'checked' if 'staff' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="staff"
+                  />
+                  <tal:span i18n:translate="conductor_staff">own staff</tal:span></label>
+                <label><input checked="${python:'checked' if 'third-party' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="third-party"
+                  />
+                  <tal:span i18n:translate="conductor_third_party">an external consultant or service provider</tal:span></label>
+                <label><input checked="${python:'checked' if 'both' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="both"
+                  />
+                  <tal:span i18n:translate="conductor_both">both own staff and an external consultant or service provider</tal:span></label>
+                <tal:error condition="widget/error"
+                           replace="structure widget/error/render|nothing"
+                />
+              </fieldset>
+
+              <fieldset class="pat-checklist radio"
+                        tal:define="
+                          widget nocall:view/widgets/referer;
+                          value widget/value;
+                        "
+              >
+                <legend i18n:translate="label_referer">Through which channel did you learn about this tool?</legend>
+                <label><input checked="${python:'checked' if 'employers-organisation' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="employers-organisation"
+                  />
+                  <tal:span i18n:translate="referer_employers_organisation">an employers' organisation</tal:span></label>
+                <label><input checked="${python:'checked' if 'trade-union' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="trade-union"
+                  />
+                  <tal:span tal:condition="python: webhelpers.country != 'fr'"
+                            i18n:translate="referer_trade_union"
+                  >a trade union organisation</tal:span><tal:span tal:condition="python: webhelpers.country == 'fr'">votre CARSAT, CRAMIF, CGSS</tal:span></label>
+                <label><input checked="${python:'checked' if 'national-public-institution' in value in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="national-public-institution"
+                  />
+                  <tal:span i18n:translate="referer_national_public_institution">a national public institution/administration</tal:span><br />
+                  (<tal:span i18n:translate="info_referer_national_public_institution">Ministry, Labour Inspectorate, National Institute for Safety and Health at Work, etc.</tal:span>)</label>
+                <label><input checked="${python:'checked' if 'eu-institution' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="eu-institution"
+                  />
+                  <tal:span i18n:translate="referer_eu_institution">an European institution/administration</tal:span><br />
+                  (<tal:span i18n:translate="info_referer_eu_institution">The European Agency for Safety and Health at Work, European social partners, etc.</tal:span>)</label>
+                <label><input checked="${python:'checked' if 'health-safety-experts' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="health-safety-experts"
+                  />
+                  <tal:span tal:condition="python: webhelpers.country != 'fr'"
+                            i18n:translate="referer_health_safety_expert"
+                  >health and safety experts</tal:span><tal:span tal:condition="python: webhelpers.country == 'fr'">votre service de sant&eacute; au travail, autres experts en sant&eacute; et s&eacute;curit&eacute;</tal:span></label>
+                <label><input checked="${python:'checked' if 'other' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="other"
+                  />
+                  <tal:span i18n:translate="referer_other">other channel</tal:span></label>
+                <tal:error condition="widget/error"
+                           replace="structure widget/error/render|nothing"
+                />
+              </fieldset>
+
+              <fieldset class="pat-checklist radio"
+                        tal:define="
+                          widget nocall:view/widgets/workers_participated;
+                          value widget/value;
+                        "
+              >
+                <legend i18n:translate="label_workers_participated">Workers were invited to participate in the risk assessment</legend>
+                <label><input checked="${python:'checked' if 'True' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="True"
+                  />
+                  <tal:span i18n:translate="label_yes">Yes</tal:span></label>
+                <label><input checked="${python:'checked' if 'False' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="False"
+                  />
+                  <tal:span i18n:translate="label_no">No</tal:span></label>
+                <tal:error condition="widget/error"
+                           replace="structure widget/error/render|nothing"
+                />
+              </fieldset>
+
+              <fieldset class="pat-checklist radio"
+                        tal:define="
+                          widget nocall:view/widgets/needs_met;
+                          value widget/value;
+                        "
+              >
+                <legend i18n:translate="label_needs_met">Did this OiRA tool meet your needs?</legend>
+                <label><input checked="${python:'checked' if 'True' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="True"
+                  />
+                  <tal:span i18n:translate="label_yes">Yes</tal:span></label>
+                <label><input checked="${python:'checked' if 'False' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="False"
+                  />
+                  <tal:span i18n:translate="label_no">No</tal:span></label>
+                <tal:error condition="widget/error"
+                           replace="structure widget/error/render|nothing"
+                />
+              </fieldset>
+
+              <fieldset class="pat-checklist radio"
+                        tal:define="
+                          widget nocall:view/widgets/recommend_tool;
+                          value widget/value;
+                        "
+              >
+                <legend i18n:translate="label_recommend_tool">Would you recommend this OiRA tool to an enterprise similar to yours?</legend>
+                <label><input checked="${python:'checked' if 'True' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="True"
+                  />
+                  <tal:span i18n:translate="label_yes">Yes</tal:span></label>
+                <label><input checked="${python:'checked' if 'False' in value else None}"
+                         name="${widget/name}"
+                         type="radio"
+                         value="False"
+                  />
+                  <tal:span i18n:translate="label_no">No</tal:span></label>
+                <tal:error condition="widget/error"
+                           replace="structure widget/error/render|nothing"
+                />
+              </fieldset>
+
+            </fieldset>
+          </article>
+        </div>
+        <p class="button-bar pat-bumper"
+           id="nav-bar"
+        >
+          <button class="pat-button back"
+                  name="form.buttons.previous"
+                  type="submit"
+                  i18n:translate="label_previous"
+          >Previous</button>
+          <button class="pat-button continue"
+                  name="form.buttons.next"
+                  type="submit"
+                  i18n:translate="label_save_and_continue"
+          >Save and continue</button>
+          <button class="pat-button skip"
+                  name="form.buttons.skip"
+                  type="submit"
+                  i18n:translate="label_skip"
+          >Skip this step</button>
+        </p>
+      </form>
+    </metal:slot>
+  </body>
+</html>

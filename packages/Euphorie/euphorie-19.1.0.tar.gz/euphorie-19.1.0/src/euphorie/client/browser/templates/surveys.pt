@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      meta:interpolation="true"
+      metal:use-macro="context/@@shell/macros/shell"
+      i18n:domain="euphorie"
+>
+
+  <!-- The equivalent template in the Jekyll prototype is /tools -->
+
+  <body>
+    <metal:slot fill-slot="content">
+      <div id="content-pane"
+           tal:define="
+             is_anonymous webhelpers/anonymous;
+           "
+      >
+
+        <article class="pat-rich"
+                 id="screen-intro"
+                 tal:condition="is_anonymous"
+        >
+          <h1 i18n:translate="label_try_oira">
+                Try OiRA
+          </h1>
+          <p i18n:translate="explanation_try_oira">
+                Try any of the tools below anonymously by clicking on the button 'Test session' of the tool of your choice.
+                In a test session you cannot save your work. All progess will be lost unless you
+            <a href="${webhelpers/country_or_client_url}/@@login#registration"
+               i18n:name="label_link_register"
+               i18n:translate="label_link_register"
+            >register</a>.
+          </p>
+
+        </article>
+
+        <metal:homescreen_navigation use-macro="here/view/macros/homescreen_navigation">
+          <metal:slot fill-slot="view_options">
+            <div class="pat-collapsible pat-context-menu closed align-left no-label icon-filter"
+                 id="filter-menu"
+                 data-pat-collapsible="close-trigger: .context-menu:not(#filter-menu),.close-menu;"
+            >
+              <strong class="context-menu-label menu-trigger"
+                      i18n:translate=""
+              >Filters</strong>
+              <p class="close-menu"
+                 i18n:translate="button_close"
+              >Close</p>
+              <fieldset class="vertical">
+                <label>
+                  <tal:i18n i18n:translate="">Country</tal:i18n>
+                  <select name="country">
+                    <option value=""
+                            i18n:translate=""
+                    >All countries</option>
+                    <option selected="${python: 'selected' if view.country == country['id'] else None}"
+                            value="${country/id}"
+                            tal:repeat="country view/countries"
+                    >${country/Title}</option>
+                  </select>
+                </label>
+                <label tal:replace="nothing">
+                  <tal:i18n i18n:translate="">Sector</tal:i18n>
+                  <select name="sector">
+                    <option value=""
+                            tal:attributes="
+                              selected python:'selected' if not request.form.get('sector') else None;
+                            "
+                            i18n:translate="option_all_sectors"
+                    >All sectors</option>
+                    <option value="${sector/getId}"
+                            tal:repeat="sector view/sectors"
+                            tal:attributes="
+                              selected python:'selected' if request.form.get('sector') == sector.getId() else None;
+                            "
+                    >${sector/Title}</option>
+                  </select>
+                </label>
+                <label>
+                  <tal:i18n i18n:translate="label_language">Language</tal:i18n>
+                  <select name="Language">
+                    <option value=""
+                            i18n:translate=""
+                    >All languages</option>
+                    <option selected="${python: 'selected' if request.get('Language') == lang['code'] else None}"
+                            value="${lang/code}"
+                            tal:repeat="lang view/languages"
+                    >${python:lang['code'].upper()} - ${lang/name}</option>
+                  </select>
+                </label>
+                <!--                 <label>
+      Department
+                  <select>
+                    <option selected
+                            i18n:translate="option_all_departments"
+                    >All departments</option>
+                  </select>
+                </label> -->
+                <fieldset class="group">
+                  <legend i18n:translate="label_sorting">Sorting</legend>
+                  <fieldset class="pat-checklist radio">
+                    <label><tal:i18n i18n:translate="label_newest_first">Newest first</tal:i18n>
+                      <input checked
+                             name="sort_on"
+                             type="radio"
+                             value="created"
+                      />
+                    </label>
+                    <label><tal:i18n i18n:translate="label_alphabetical">Alphabetical</tal:i18n>
+                      <input name="sort_on"
+                             type="radio"
+                             value="sortable_title"
+                      />
+                    </label>
+                  </fieldset>
+                </fieldset>
+              </fieldset>
+            </div>
+          </metal:slot>
+
+          <metal:slot fill-slot="quick_functions">
+            <label class="pat-toolbar-function pat-toolbar-search-field ${python:'fixed' if is_anonymous else None}">
+              <input name="SearchableText"
+                     placeholder="Search tools"
+                     type="search"
+                     i18n:attributes="placeholder label_search_tools"
+              />
+            </label>
+          </metal:slot>
+        </metal:homescreen_navigation>
+
+        <div id="application-content"><div class="tool-tiles pat-masonry"
+               data-pat-masonry="column-width: .grid-sizer; gutter: 0; item-selector: .tool-tile"
+          >
+            <div class="grid-sizer"></div>
+
+            <div class="tool-tile"
+                 tal:repeat="tool_info view/tools"
+            >
+              <tal:tool tal:define="
+                          category python:tool_info[0];
+                          tool python:tool_info[1];
+                          tool_id python:tool_info[2];
+                          sector nocall:tool/aq_parent;
+                          country nocall:sector/aq_parent;
+                          description tool/Description|string:;
+                        ">
+                <a class="pat-inject"
+                   href="${tool/absolute_url}${python:'/tool-info' if is_anonymous else None}#content"
+                   data-pat-inject="history: record"
+                >
+                  <figure class="tool-icon">
+                    <img src="++resource++euphorie.resources/assets/oira/style/placeholder-1x1.png"
+                         style="background-image: url(${python:webhelpers.get_tool_image_url(tool)})"
+                    />
+                  </figure>
+                </a>
+                <div class="tool-info">
+                  <h2 class="tool-title">${tool/title}</h2>
+
+                  <p class="tool-tags tag-cloud">
+
+                    <a class="tag pat-inject"
+                       data-pat-inject="history: record; source: #application-content; target: #application-content &amp;&amp; source: #assessments-toolbar-view-options; target: #assessments-toolbar-view-options"
+                       tal:condition="nothing"
+                    >${sector/title}</a>
+
+                    <a class="tag pat-inject"
+                       href="${here/absolute_url}/${view/__name__}?country=${country/id}"
+                       data-pat-inject="history: record; source: #application-content; target: #application-content &amp;&amp; source: #assessments-toolbar-view-options; target: #assessments-toolbar-view-options"
+                    >${python: webhelpers.getTranslatedCountryName(country.getId())}</a>
+
+                    <a class="tag pat-inject"
+                       href="${here/absolute_url}/${view/__name__}?Language=${tool_lang}&amp;country="
+                       data-pat-inject="history: record; source: #application-content; target: #application-content &amp;&amp; source: #assessments-toolbar-view-options; target: #assessments-toolbar-view-options"
+                       tal:define="
+                         tool_lang python: tool.Language().split('-')[0];
+                       "
+                       tal:condition="tool_lang"
+                    >${python: webhelpers.getNameForLanguageCode(tool_lang, native=False)}</a>
+
+                  </p>
+                  <section class="summary"
+                           tal:condition="python:description.strip()"
+                  >
+                    <p>${python:description.strip()}</p>
+                  </section>
+
+                  <form class="button-bar"
+                        action="${webhelpers/country_or_client_url}/@@tryout#main"
+                        method="post"
+                        data-pat-inject="history: record"
+                        tal:condition="is_anonymous"
+                  >
+                    <button class="default small pat-button"
+                            type="submit"
+                            value="start-ra"
+                            i18n:translate="button_start_test_session"
+                    >Test session</button>
+                    <input name="came_from"
+                           type="hidden"
+                           value="${tool/absolute_url}"
+                    />
+                    <metal:honeypot use-macro="webhelpers/macros/honeypot" />
+                    <a class="small pat-button pat-inject"
+                       href="${tool/absolute_url}/tool-info#content"
+                       data-pat-inject="history: record"
+                       i18n:translate="button_information"
+                    >Information</a>
+                  </form>
+
+                  <form class="button-bar"
+                        action="${tool/absolute_url}/@@new-session.html#main"
+                        method="post"
+                        data-pat-inject="history: record"
+                        tal:condition="not:is_anonymous"
+                  >
+                    <button class="default small pat-button focus"
+                            name="tool-button"
+                            type="submit"
+                            value="start-ra"
+                            i18n:translate="button_start_session"
+                    >Start risk assessment</button>
+                    <input name="survey"
+                           type="hidden"
+                           value="${tool_id}"
+                    />
+                    <input name="action"
+                           type="hidden"
+                           value="new"
+                    />
+                    <a class="small pat-button pat-inject"
+                       href="${tool/absolute_url}#content"
+                       data-pat-inject="history: record"
+                       i18n:translate="button_information"
+                    >Information</a>
+                  </form>
+                </div>
+              </tal:tool>
+            </div>
+
+
+          </div>
+        </div>
+
+      </div>
+    </metal:slot>
+
+  </body>
+</html>

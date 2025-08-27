@@ -1,0 +1,105 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:plone="http://namespaces.plone.org/plone"
+    i18n_domain="untranslated"
+    >
+
+  <five:registerPackage
+      package="."
+      initialize=".initialize"
+      />
+
+  <include package="plone.patternslib" />
+  <include package="plonestatic.euphorie" />
+  <include package="euphorie.content" />
+  <include
+      package="."
+      file="permissions.zcml"
+      />
+
+  <interface
+      interface=".interfaces.IClientSkinLayer"
+      type="zope.publisher.interfaces.browser.IBrowserSkinType"
+      name="Euphorie"
+      />
+
+  <include package=".adapters" />
+  <include package=".browser" />
+  <include package=".notifications" />
+  <include package=".mails" />
+  <include package=".subscribers" />
+  <include package=".docx" />
+  <include package=".widgets" />
+
+  <browser:defaultView
+      name="view"
+      for=".client.IClient"
+      />
+
+  <adapter factory=".client.ClientUserProvider" />
+
+  <adapter factory=".client.ClientLocalRolesProvider" />
+
+  <adapter
+      factory=".client.ClientPublishTraverser"
+      provides="zope.publisher.interfaces.IPublishTraverse"
+      />
+
+  <browser:defaultView
+      name="index_html"
+      for="Products.CMFCore.interfaces.IContentish"
+      layer=".interfaces.IClientSkinLayer"
+      />
+
+  <browser:defaultView
+      name="index_html"
+      for=".model.BaseObject"
+      layer=".interfaces.IClientSkinLayer"
+      />
+
+  <browser:defaultView
+      name="index_html"
+      for="Products.CMFCore.interfaces.IFolderish"
+      layer=".interfaces.IClientSkinLayer"
+      />
+
+  <browser:page
+      name="tools"
+      for="*"
+      class="plonetheme.nuplone.skin.tools.Tools"
+      permission="zope2.View"
+      layer=".client.IClientSkinLayer"
+      />
+
+  <browser:page
+      name="index_html"
+      for=".model.BaseObject"
+      class=".model.DefaultView"
+      permission="zope2.View"
+      layer=".interfaces.IClientSkinLayer"
+      />
+
+  <browser:page
+      name="oira_navigation_tree"
+      for="*"
+      class=".navigation.TreeDataCreator"
+      permission="zope2.View"
+      layer=".interfaces.IClientSkinLayer"
+      />
+
+  <genericsetup:registerProfile
+      name="default"
+      title="Euphorie online client"
+      description="The online risk assessment client interface for an Euphorie website"
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+      directory="profiles/default"
+      post_handler=".setuphandlers.setupVarious"
+      />
+
+  <include package="euphorie.upgrade.client" />
+
+</configure>

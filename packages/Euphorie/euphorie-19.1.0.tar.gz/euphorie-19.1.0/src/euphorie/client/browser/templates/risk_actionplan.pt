@@ -1,0 +1,179 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:meta="http://xml.zope.org/namespaces/meta"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      meta:interpolation="true"
+      metal:use-macro="context/@@shell/macros/shell"
+      tal:define="
+        client nocall:request/client;
+        webhelpers nocall:context/@@webhelpers;
+      "
+      i18n:domain="euphorie"
+>
+
+  <body>
+    <metal:slot fill-slot="content"
+                tal:define="
+                  risk nocall:view/risk|nothing;
+                  context view/context;
+                "
+    >
+      <tal:block replace="tile:statusmessages" />
+      <tal:def define="
+                 errors python:exists('actionplan/errors') and actionplan['errors'] or {};
+               ">
+
+        <form class="pat-validation pat-inject pat-scroll pat-form"
+              action="${context/absolute_url}/@@actionplan"
+              method="post"
+              data-pat-inject="history: record; source: #step-4-topics; target: #step-4-topics &amp;&amp; source: #content; target: #content"
+              data-pat-scroll="selector: #content; trigger: auto; offset: 0"
+              data-pat-validation="disable-selector: button[name='next'], .remove-clone;
+                                   ${webhelpers/pat_validation_messages};
+                                   message-min: ${view/message_positive_number};
+                                   "
+        >
+          <div class="pat-scroll-box"
+               id="content-pane"
+          >
+            <metal:call use-macro="webhelpers/macros/toolbar" />
+            <article class="rich pat-well warning"
+                     id="${view/risk_number}"
+            >
+              <tal:block condition="not:view/risk_present">
+                <h2 tal:content="risk/title"></h2>
+              </tal:block>
+              <tal:block define="
+                           use_problem_description view/use_problem_description;
+                         "
+                         condition="view/risk_present"
+              >
+                <h2 tal:condition="use_problem_description"
+                    tal:content="risk/problem_description"
+                >The fridges are checked daily.</h2>
+                <h2 tal:condition="not:use_problem_description"
+                    tal:content="risk/title"
+                >The fridges are checked daily.</h2>
+                <p tal:condition="risk/use_scaled_answer|nothing">
+                  <tal:chosen define="
+                                answer view/scaled_answer_chosen;
+                              ">
+                    <label i18n:translate="">Answer:</label>
+                    ${answer/text} (${answer/value})
+                  </tal:chosen>
+                </p>
+              </tal:block>
+              <tal:priority tal:define="
+                              show_statement python:True;
+                            ">
+                <fieldset disabled="${python:'disabled' if not webhelpers.can_edit_session else None}"
+                          tal:define="
+                            value context/priority;
+                            readonly python:context.risk_type in ['top5'];
+                            skip_evaluation view/skip_evaluation;
+                          "
+                          tal:condition="not:view/skip_evaluation"
+                >
+                  <input name="priority"
+                         type="hidden"
+                         value="${python:value}"
+                         tal:condition="python:readonly and not skip_evaluation"
+                  />
+                  <label tal:condition="python:not readonly and not skip_evaluation"
+                         i18n:translate="risk_priority"
+                  >This is a
+                    <select class="pat-select"
+                            name="priority"
+                            i18n:name="priority_value"
+                    >
+                      <option selected="${python:'selected' if value=='low' else None}"
+                              value="low"
+                              i18n:translate="risk_priority_low"
+                      >low</option>
+                      <option selected="${python:'selected' if value=='medium' else None}"
+                              value="medium"
+                              i18n:translate="risk_priority_medium"
+                      >medium</option>
+                      <option selected="${python:'selected' if value=='high' else None}"
+                              value="high"
+                              i18n:translate="risk_priority_high"
+                      >high</option>
+                    </select>
+                  priority risk.
+                  </label>
+
+                  <tal:readonly tal:condition="python:readonly and not skip_evaluation">
+                    <tal:switch switch="value">
+                      <tal:case case="string:low">
+                        <label i18n:translate="risk_priority">
+                  This is a
+                          <strong i18n:name="priority_value"
+                                  i18n:translate="risk_priority_low"
+                          >low</strong>
+                  priority risk.
+                        </label>
+                      </tal:case>
+                      <tal:case case="string:medium">
+                        <label i18n:translate="risk_priority">
+                  This is a
+                          <strong i18n:name="priority_value"
+                                  i18n:translate="risk_priority_medium"
+                          >medium</strong>
+                  priority risk.
+                        </label>
+                      </tal:case>
+                      <tal:case case="string:high">
+                        <label i18n:translate="risk_priority">
+                  This is a
+                          <strong i18n:name="priority_value"
+                                  i18n:translate="risk_priority_high"
+                          >high</strong>
+                  priority risk.
+                        </label>
+                      </tal:case>
+                    </tal:switch>
+                  </tal:readonly>
+
+                </fieldset>
+                <metal:call use-macro="here/risk_macros/macros/risk_info_actionplan" />
+              </tal:priority>
+            </article>
+
+            <metal:call use-macro="webhelpers/macros/action_plan" />
+
+            <metal:call use-macro="webhelpers/macros/rich_comments_inner" />
+
+          </div>
+          <p class="button-bar pat-bumper"
+             id="nav-bar"
+          >
+            <button class="pat-button back"
+                    name="next"
+                    type="submit"
+                    value="previous"
+                    i18n:translate="label_previous"
+            >Previous</button>
+            <button class="pat-button continue"
+                    name="next"
+                    type="submit"
+                    value="next"
+            >
+              <tal:save condition="webhelpers/can_edit_session"
+                        i18n:translate="label_save_and_continue"
+              >Save and continue
+              </tal:save>
+              <tal:continue condition="not:webhelpers/can_edit_session"
+                            i18n:translate="label_next"
+              >Next
+              </tal:continue>
+            </button>
+          </p>
+        </form>
+      </tal:def>
+    </metal:slot>
+  </body>
+</html>

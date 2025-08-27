@@ -1,0 +1,70 @@
+Copying content from another survey
+===================================
+
+Before we can start we must set up our test environment:
+
+>>> app = layer['portal']
+>>> portal = layer['portal']
+>>> from plone import api
+>>> from plone.testing.zope import Browser
+>>> browser = Browser(layer['app'])
+>>> browser.handleErrors=False
+>>> portal.error_log._ignored_exceptions=("Unauthorized")
+
+Lets create a sector with a minimal survey:
+
+>>> from euphorie.content.tests.utils import createSector
+>>> from euphorie.content.tests.utils import addSurvey
+>>> sector1=createSector(portal, "one", title=u"Sector one")
+>>> with api.env.adopt_user("admin"):
+...     _ = addSurvey(sector1)
+
+And a second sector with an empty survey:
+
+>>> sector2=createSector(portal, "two", title=u"Sector two", login="two", password="two")
+>>> from euphorie.content.tests.utils import EMPTY_SURVEY
+>>> with api.env.adopt_user("admin"):
+...     _ = addSurvey(sector2, EMPTY_SURVEY)
+>>> from transaction import commit
+>>> commit()
+
+We can now login using the second survey:
+
+>>> browser.open("%s/@@login" % portal.absolute_url())
+>>> browser.getControl(name="__ac_name").value="two"
+>>> browser.getControl(name="__ac_password").value="two"
+>>> browser.getForm(id="loginForm").submit()
+>>> browser.contents
+'...You have been logged in...'
+
+
+Copy module from other sector
+-----------------------------
+
+Before we can copy content from another sector we first have to find it.
+
+>>> browser.getLink("OiRA Tools").click()
+>>> browser.getLink("Netherlands").click()
+>>> browser.getLink("Sector one").click()
+>>> browser.getLink("Standard version").click()
+
+We've found the survey. Lets look at the module and copy it:
+
+>>> browser.getLink("Module one").click()
+>>> browser.open("%s/@@copy" % browser.url)
+>>> browser.contents
+'...Copied...'
+
+
+Paste module in own survey
+--------------------------
+
+Lets go back to our own survey now:
+
+>>> browser.getLink("OiRA", index=2).click()
+>>> browser.getLink("Standard version").click()
+>>> authenticator = browser.getControl(name='_authenticator', index=0).value
+>>> browser.open("%s/@@paste?_authenticator=%s" % (browser.url, authenticator))
+>>> browser.contents
+'...Pasted...
+...Module one...'
