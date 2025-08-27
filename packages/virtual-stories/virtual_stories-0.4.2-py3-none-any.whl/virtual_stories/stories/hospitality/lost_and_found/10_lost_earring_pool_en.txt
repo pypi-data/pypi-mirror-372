@@ -1,0 +1,73 @@
+"""
+Guest reports losing an earring near the pool area.
+ROLES: user (guest seeking a lost earring), assistant (lost-and-found agent checking records and arranging return)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "search_lost_and_found",
+    "description": "Search the lost-and-found log for an item description and stay details.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "item_description": { "type": "string" },
+        "check_out_date": { "type": "string", "format": "date" }
+      },
+      "required": ["item_description","check_out_date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "arrange_item_return",
+    "description": "Arrange shipping of a recovered item back to the guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "item_id": { "type": "string" },
+        "shipping_address": { "type": "string" },
+        "guest_name": { "type": "string" }
+      },
+      "required": ["item_id","shipping_address","guest_name"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a lost-and-found agent at Coral Reef Resort Honolulu (hotel_id: coral_reef_hnl). Address: 700 Ala Moana Blvd, Honolulu, HI 96813. Timezone: Pacific/Honolulu. Check-in 4:00 PM, check-out 11:00 AM. Amenities: oceanfront pool, spa, free Wi‑Fi. Currency: USD; taxes 14.96% + resort fee $30/night. Be clear and only use tools to search logs and arrange returns.
+
+user:
+Aloha! The pool was amazing. I lost a small pearl earring by the pool yesterday before checkout. Any luck finding it?
+
+assistant channel=analysis:
+Search lost-and-found for pearl earring; arrange return if found.
+
+assistant channel=commentary to=tool.search_lost_and_found:
+{"item_description":"small pearl earring","check_out_date":"2025-11-02"}
+
+tool.search_lost_and_found channel=commentary to=assistant:
+{"found":true,"item_id":"LF-512","storage_location":"Security Office"}
+
+assistant channel=final:
+We have a small pearl earring logged as item LF-512 in our Security Office. Please provide your name and mailing address so we can send it back.
+
+user:
+Mahalo! I'm Lily Park, please send it to 456 Ocean Dr, San Diego, CA 92101.
+
+assistant channel=analysis:
+Arrange return shipment.
+
+assistant channel=commentary to=tool.arrange_item_return:
+{"item_id":"LF-512","shipping_address":"456 Ocean Dr, San Diego, CA 92101","guest_name":"Lily Park"}
+
+tool.arrange_item_return channel=commentary to=assistant:
+{"status":"shipped","tracking_number":"1Z999AA10123456786"}
+
+assistant channel=final:
+Your earring is on its way to 456 Ocean Dr in San Diego (tracking 1Z999AA10123456786). Enjoy the rest of your day!

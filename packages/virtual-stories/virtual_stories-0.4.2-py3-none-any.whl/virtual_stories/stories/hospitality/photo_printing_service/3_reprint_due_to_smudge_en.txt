@@ -1,0 +1,48 @@
+"""
+Guest requests a quick reprint due to a smudge on one photo.
+
+ROLES: user (guest reporting minor print defect), assistant (business center attendant reprinting promptly)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "print_photos",
+    "description": "Print digital photos for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "quantity": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "finish_type": { "type": "string", "enum": ["glossy", "matte"] }
+      },
+      "required": ["reservation_id", "quantity", "finish_type"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the business center clerk at Bayfront Conference Hotel (hotel_id: bayfront_sfo). Address: 1 Embarcadero Blvd, San Francisco, CA 94111. Timezone: America/Los_Angeles. We can reprint smudged or misfed pages immediately.
+
+user:
+Hi—quick favor. One of my glossy prints has a smudge. Could you reprint just that one?
+
+assistant channel=analysis:
+Apologize and offer quick reprint for reservation RSV13131; quantity 1, finish glossy.
+
+assistant channel=commentary to=tool.print_photos:
+{"reservation_id":"RSV13131","quantity":1,"finish_type":"glossy"}
+
+tool.print_photos channel=commentary to=assistant:
+{"status":"printed","pickup_location":"business_center_front_desk"}
+
+assistant channel=analysis:
+Confirm reprint and pickup.
+
+assistant channel=final:
+Sorry about the smudge—we’ve reprinted your glossy photo. You can pick it up at the business center front desk.
+

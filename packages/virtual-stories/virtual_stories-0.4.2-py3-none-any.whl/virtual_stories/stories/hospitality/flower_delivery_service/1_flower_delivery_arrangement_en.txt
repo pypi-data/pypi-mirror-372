@@ -1,0 +1,62 @@
+"""
+Guest requests a bouquet delivery to their room.
+
+ROLES: user (guest wanting flowers delivered), assistant (concierge arranging floral delivery)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_flower_delivery",
+    "description": "Schedule a flower bouquet delivery to a guest room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "delivery_time": {"type": "string", "format": "date-time"},
+        "message": {"type": "string"}
+      },
+      "required": ["reservation_id", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Blooming Heights Hotel (hotel_id: blooming_heights_portland).
+Address: 455 Rose Ave, Portland, OR 97205. Phone: (503) 555-0144.
+The boutique hotel has 90 rooms, an in-house florist open 8 AM - 6 PM, a rooftop garden,
+a tea lounge on the mezzanine, and complimentary Wi-Fi throughout.
+Check-in 2 PM, check-out 11 AM. Timezone: America/Los_Angeles.
+
+user:
+Hello! The lobby flowers are gorgeous. Could I get a bouquet delivered to my room later today?
+
+assistant channel=analysis:
+Respond warmly and ask for reservation ID, delivery time, and optional note.
+
+assistant channel=final:
+We're glad you like them! I'd be happy to help.
+May I have your reservation ID, desired delivery time, and any message for the card?
+
+user:
+Thanks! My reservation ID is RSV33333. Could you have them sent at 6 PM with a note that says "Happy Anniversary, love Tom"?
+
+assistant channel=analysis:
+Arrange flower delivery for 2025-08-20 at 18:00 with message.
+
+assistant channel=commentary to=tool.arrange_flower_delivery:
+{"reservation_id":"RSV33333","delivery_time":"2025-08-20T18:00:00","message":"Happy Anniversary, love Tom"}
+
+tool.arrange_flower_delivery channel=commentary to=assistant:
+{"status":"scheduled","order_id":"FLOW-55"}
+
+assistant channel=analysis:
+Confirm the scheduled delivery with order ID.
+
+assistant channel=final:
+Your bouquet will arrive at your room at 6 PM with your message attached.
+Order ID FLOW-55 is all set. We hope the anniversary is wonderful!

@@ -1,0 +1,62 @@
+"""
+Guest arranges grooming service for their pet.
+
+ROLES: user (guest traveling with a pet needing grooming), assistant (concierge coordinating pet grooming appointment)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "schedule_pet_grooming",
+    "description": "Book a grooming appointment for a guest's pet.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "pet_name": {"type": "string"},
+        "service_type": {"type": "string", "enum": ["bath", "full_groom"]},
+        "appointment_time": {"type": "string", "format": "date-time"}
+      },
+      "required": ["reservation_id", "pet_name", "service_type", "appointment_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a concierge at Paws & Relax Lodge (hotel_id: paws_relax_seattle).
+Address: 77 Tail Wag Way, Seattle, WA 98101. Phone: (206) 555-0177.
+The lodge has 120 pet-friendly rooms, an onsite grooming salon open 9 AM - 5 PM,
+a dog park on the second floor, and complimentary pet treats at check-in.
+Check-in 3 PM, check-out 12 PM. Timezone: America/Los_Angeles.
+
+user:
+Hi! My dog looks a bit scruffy after the road trip. Could we schedule a grooming appointment?
+
+assistant channel=analysis:
+Respond kindly, ask for reservation ID, pet name, desired service type, and preferred time.
+
+assistant channel=final:
+We'd love to pamper your pup! May I have your reservation ID, your dog's name, what service you prefer, and when you'd like the appointment?
+
+user:
+Great, thanks. Reservation RSV66666. His name is Max, and we'd like a full_groom tomorrow at 11 AM.
+
+assistant channel=analysis:
+Schedule grooming for Max with full_groom on 2025-08-20 at 11:00.
+
+assistant channel=commentary to=tool.schedule_pet_grooming:
+{"reservation_id":"RSV66666","pet_name":"Max","service_type":"full_groom","appointment_time":"2025-08-20T11:00:00"}
+
+tool.schedule_pet_grooming channel=commentary to=assistant:
+{"status":"scheduled","appointment_id":"GROOM-9"}
+
+assistant channel=analysis:
+Confirm appointment with ID.
+
+assistant channel=final:
+Max's full grooming is scheduled for tomorrow at 11 AM.
+Your appointment ID is GROOM-9. We'll have him looking dapper in no time!

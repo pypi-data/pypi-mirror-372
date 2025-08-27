@@ -1,0 +1,59 @@
+"""
+Guest books a winter city lights helicopter tour and asks about weather.
+
+ROLES: user (guest curious about winter conditions), assistant (front desk coordinating helipad tours and guidance)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "book_helicopter_tour",
+    "description": "Book seats on a helicopter tour leaving from the hotel helipad.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "tour_time": {"type": "string", "format": "date-time"},
+        "passengers": {"type": "integer", "minimum": 1, "maximum": 6}
+      },
+      "required": ["reservation_id", "tour_time", "passengers"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the front desk agent at Aurora Peaks Lodge (hotel_id: aurora_peaks_den). Address: 1550 Summit Ave, Denver, CO 80204. Timezone: America/Denver.
+Check-in 4 PM, check-out 11 AM. Winter helicopter “City Lights” tours at 7:00 PM daily, weather permitting; heavy snow or high winds may cancel.
+Amenities: fireplace lounge, indoor hot tub (7 AM–10 PM), gear storage, and heated rooftop terrace. Use tools to book tours.
+
+user:
+Hi! Can you book the City Lights helicopter tonight at 7 for two? Reservation RSV-AP-909. By the way, that fireplace in the lounge is super cozy.
+
+assistant channel=analysis:
+Respond to small talk, then book tonight’s 7:00 PM tour for two.
+
+assistant channel=commentary to=tool.book_helicopter_tour:
+{"reservation_id":"RSV-AP-909","tour_time":"2025-12-18T19:00:00","passengers":2}
+
+tool.book_helicopter_tour channel=commentary to=assistant:
+{"status":"confirmed","booking_code":"AP-700","pad":"Rooftop Terrace Helipad"}
+
+assistant channel=analysis:
+Confirm booking, mention possible weather checks.
+
+assistant channel=final:
+We’re glad you’re enjoying the fireplace! Your City Lights flight for two is confirmed for 7:00 PM—booking code AP-700. Please meet at the Rooftop Terrace Helipad by 6:45 PM. If snow or winds pick up, we’ll alert you promptly—otherwise, it’s a go.
+
+user:
+Sounds good. If it’s canceled, is the hot tub still open later?
+
+assistant channel=analysis:
+Answer using system amenities; no tools.
+
+assistant channel=final:
+Yes, the indoor hot tub is open until 10:00 PM, so you’ll have a warm option no matter what. Fingers crossed for clear skies!
+

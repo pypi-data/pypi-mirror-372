@@ -1,0 +1,61 @@
+"""
+Guest requests to join a rooftop yoga session.
+
+ROLES: user (guest interested in rooftop yoga), assistant (wellness coordinator booking yoga sessions)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "book_rooftop_yoga",
+    "description": "Reserve a spot for a rooftop yoga class.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "session_time": {"type": "string", "format": "date-time"},
+        "participants": {"type": "integer", "minimum": 1, "maximum": 15}
+      },
+      "required": ["reservation_id", "session_time", "participants"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the wellness coordinator at Skyline Zen Hotel (hotel_id: skyline_zen_denver).
+Address: 800 Peak Blvd, Denver, CO 80202. Phone: (303) 555-0128.
+The hotel offers 180 rooms, a rooftop yoga deck open sunrise to sunset, an indoor saltwater pool,
+a spa on the 5th floor, and complimentary evening tea service.
+Check-in 3 PM, check-out 11 AM. Timezone: America/Denver.
+
+user:
+Hi there! The view from the roof is amazing. Do you have any yoga sessions I can join tomorrow morning?
+
+assistant channel=analysis:
+Respond positively, ask for reservation ID, desired session time, and number of participants.
+
+assistant channel=final:
+We do! To book a spot, could you share your reservation ID, the time you'd like tomorrow morning, and how many will participate?
+
+user:
+Thanks! Reservation RSV88888. I'd like a spot for one person at the 7 AM session on August 21.
+
+assistant channel=analysis:
+Book rooftop yoga session for 2025-08-21 at 07:00 for 1 participant.
+
+assistant channel=commentary to=tool.book_rooftop_yoga:
+{"reservation_id":"RSV88888","session_time":"2025-08-21T07:00:00","participants":1}
+
+tool.book_rooftop_yoga channel=commentary to=assistant:
+{"status":"booked","yoga_id":"YOGA-12"}
+
+assistant channel=analysis:
+Confirm booking with yoga_id.
+
+assistant channel=final:
+Your rooftop yoga spot for August 21 at 7 AM is confirmed under RSV88888.
+Your class ID is YOGA-12. We look forward to a peaceful sunrise session!

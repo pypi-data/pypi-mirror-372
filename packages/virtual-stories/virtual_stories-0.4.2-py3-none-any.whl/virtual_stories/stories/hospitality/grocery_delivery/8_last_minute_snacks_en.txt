@@ -1,0 +1,58 @@
+"""
+Guest asks for last-minute snacks before a tour.
+
+ROLES: user (guest in a rush), assistant (front desk arranging quick delivery and lobby pickup)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "arrange_grocery_delivery",
+    "description": "Schedule grocery delivery for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string" },
+        "store_name": { "type": "string" },
+        "delivery_time": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["reservation_id", "store_name", "delivery_time"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the lobby host at Crescent Bay Inn (hotel_id: crescent_bay_sd). Address: 410 Harbor Dr, San Diego, CA 92101. Timezone: America/Los_Angeles. Partner: Coastal Cart. We can arrange lobby pickup if the guest is departing.
+
+user:
+Hey! Energy is great here. I’m darting out for a harbor tour—can I get a quick snack order to grab from the lobby?
+
+assistant channel=analysis:
+Acknowledge the vibe; ask for reservation ID, target time, and snack preferences; set lobby pickup.
+
+assistant channel=final:
+The harbor buzz is contagious! Share your reservation ID, a target time (e.g., 2025-09-07T09:50:00), and any snack preferences. I’ll set it for lobby pickup so you can dash.
+
+user:
+RSV90909. Let’s do 2025-09-07T09:50:00. Trail mix and granola bars, please.
+
+assistant channel=analysis:
+Schedule with Coastal Cart for lobby pickup.
+
+assistant channel=commentary to=tool.arrange_grocery_delivery:
+{"reservation_id":"RSV90909","store_name":"Coastal Cart","delivery_time":"2025-09-07T09:50:00","notes":"Lobby pickup; trail mix and granola bars"}
+
+tool.arrange_grocery_delivery channel=commentary to=assistant:
+{"status":"scheduled","order_id":"CC-577"}
+
+assistant channel=analysis:
+Confirm and encourage.
+
+assistant channel=final:
+All set—your snacks will be at the lobby desk at 9:50 AM (Order CC-577). Enjoy the harbor tour!
+

@@ -1,0 +1,96 @@
+"""
+Accessibility features setup (screen reader, high contrast, captions) at the Riverfront Inn.
+
+Inn facts (authoritative for this dialogue only):
+- Property: Riverfront Inn
+- Address: 77 Canal Street, New Orleans, LA 70130, USA
+- Time zone: America/Chicago
+- Front desk: +1-504-555-0160
+- Wi‑Fi SSID: "Riverfront_Guest"; password: "Canal0825#"
+- Check-in 3:00 PM; Check-out 11:00 AM
+- Amenities: Courtyard 8:00–22:00; Jazz lounge Thu–Sat 19:00–22:00
+- Room 306 devices: Android tablet 10", Vizio TV 50", Bose soundbar
+- Accessibility: Screen reader, high-contrast UI, closed captions
+
+ROLES: user (guest in 306 requesting accessibility features), assistant (inn virtual concierge configuring accessibility)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "enable_screen_reader",
+    "description": "Enable tablet screen reader and adjust reading speed.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "speed_wpm": {"type": "integer"}
+      },
+      "required": ["room_number", "speed_wpm"]
+    },
+    "strict": true
+  },
+  {
+    "name": "set_high_contrast",
+    "description": "Enable high-contrast theme on tablet UI.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "enabled": {"type": "boolean"}
+      },
+      "required": ["room_number", "enabled"]
+    },
+    "strict": true
+  },
+  {
+    "name": "enable_captions",
+    "description": "Enable closed captions on the room TV.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": {"type": "string"},
+        "caption_language": {"type": "string"}
+      },
+      "required": ["room_number", "caption_language"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the virtual concierge at Riverfront Inn. Use only the listed facts and tool outputs. Keep tone considerate and concise. Confirm accessibility changes.
+
+user:
+Hi—306 here. Please turn on the screen reader at a moderate speed, high contrast on the tablet, and captions on the TV in English.
+
+assistant channel=analysis:
+Enable screen reader around ~170 wpm; enable high contrast; enable captions English. Small talk about jazz lounge.
+
+assistant channel=commentary to=tool.enable_screen_reader:
+{"room_number":"306","speed_wpm":170}
+
+tool.enable_screen_reader channel=commentary to=assistant:
+{"status":"ok","room":"306","speed_wpm":170}
+
+assistant channel=commentary to=tool.set_high_contrast:
+{"room_number":"306","enabled":true}
+
+tool.set_high_contrast channel=commentary to=assistant:
+{"status":"ok","room":"306","enabled":true}
+
+assistant channel=commentary to=tool.enable_captions:
+{"room_number":"306","caption_language":"English"}
+
+tool.enable_captions channel=commentary to=assistant:
+{"status":"ok","room":"306","caption_language":"English"}
+
+assistant channel=final:
+Done: screen reader set to 170 wpm, high-contrast is on, and TV captions are in English. If you’re around later, the jazz lounge runs 19:00–22:00 Thu–Sat.
+

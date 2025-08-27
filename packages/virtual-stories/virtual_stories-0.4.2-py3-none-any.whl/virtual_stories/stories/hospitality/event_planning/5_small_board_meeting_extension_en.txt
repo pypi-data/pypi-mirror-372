@@ -1,0 +1,90 @@
+"""
+Organizer needs to extend a small board meeting by two hours.
+ROLES: user (event organizer), assistant (events coordinator assisting bookings)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "search_event_space_availability",
+    "description": "Check availability of event spaces for a given date and attendance size.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event_date": { "type": "string", "format": "date", "description": "Requested event date." },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500, "description": "Expected number of attendees." }
+      },
+      "required": ["event_date","attendees"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_event_quote",
+    "description": "Get a pricing quote for a specific event space and duration.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string", "description": "Event space identifier." },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer", "minimum": 1, "maximum": 500 },
+        "hours": { "type": "integer", "minimum": 1, "maximum": 12 }
+      },
+      "required": ["room_name","event_date","attendees","hours"]
+    },
+    "strict": true
+  },
+  {
+    "name": "hold_event_space",
+    "description": "Place a temporary hold on an event space.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "attendees": { "type": "integer" },
+        "organizer_name": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["room_name","event_date","attendees","organizer_name","email"]
+    },
+    "strict": true
+  },
+  {
+    "name": "confirm_event_booking",
+    "description": "Confirm a held event space reservation with payment.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hold_id": { "type": "string" },
+        "payment_token": { "type": "string", "minLength": 8 }
+      },
+      "required": ["hold_id","payment_token"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are an events coordinator at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Check-in 3:00 PM, check-out 11:00 AM. Amenities: free Wi‑Fi, gym, pool, on-site restaurant. Currency: USD; taxes 14.75% + occupancy tax $3.50/night. Be clear and only use tools to check space availability, quote pricing, and manage bookings.
+
+user:
+Our board meeting on April 9 might run two hours longer—can we extend the Empire Boardroom hold?
+assistant channel=analysis:
+Check availability, quote additional hours, confirm extension.
+assistant channel=commentary to=tool.search_event_space_availability:
+{"event_date":"2026-04-09","attendees":12}
+tool.search_event_space_availability channel=commentary to=assistant:
+{"available_spaces":[{"room_name":"Empire Boardroom","capacity":50}]}
+assistant channel=commentary to=tool.get_event_quote:
+{"room_name":"Empire Boardroom","event_date":"2026-04-09","attendees":12,"hours":2}
+tool.get_event_quote channel=commentary to=assistant:
+{"room_name":"Empire Boardroom","base_rate":400.00,"service_charge":80.00,"total":480.00}
+assistant channel=final:
+The Empire Boardroom is free for two extra hours on April 9; the additional cost is $480. Should I update your hold?

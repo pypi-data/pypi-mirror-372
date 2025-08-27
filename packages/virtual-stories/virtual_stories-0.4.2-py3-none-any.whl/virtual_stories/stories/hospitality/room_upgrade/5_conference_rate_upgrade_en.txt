@@ -1,0 +1,48 @@
+"""
+Guest on a conference rate asks about upgrading and keeping benefits.
+
+ROLES: user (conference attendee), assistant (front desk agent handling upgrades and rate notes)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"check_room_upgrade_options","description":"Get upgrade options for a reservation.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"}},"required":["reservation_id"]},"strict":true},
+  {"name":"process_room_upgrade","description":"Confirm upgrade with rate preservation note.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"room_type":{"type":"string"}},"required":["reservation_id","room_type"]},"strict":true}
+]
+```
+"""
+
+system:
+You are at Skyline City Hotel (hotel_id: skyline_city_hotel_nyc). Address: 350 7th Ave, New York, NY 10001. Timezone: America/New_York. Amenities: complimentary Wi‑Fi, 24‑hour fitness center, indoor pool 6:00 AM–10:00 PM, spa 9:00 AM–8:00 PM, rooftop bar, garage parking $30/night. Breakfast buffet 6:30–10:30 AM. Upgrades can be combined with conference rates; rate code remains on folio.
+
+user:
+Hi, I’m here for the Expo on a conference rate. Can I upgrade and keep my breakfast included? Reservation ID RSV55009.
+
+assistant channel=analysis:
+Check upgrade options; then reassure breakfast inclusion per system.
+
+assistant channel=commentary to=tool.check_room_upgrade_options:
+{"reservation_id":"RSV55009"}
+
+tool.check_room_upgrade_options channel=commentary to=assistant:
+{"available":["executive_king","corner_king"],"rates":{"executive_king":60.0,"corner_king":85.0}}
+
+assistant channel=final:
+We can upgrade you to an executive king for $60/night or a corner king for $85/night—and your conference breakfast benefit remains on your folio either way. Which sounds best?
+
+user:
+Corner king, please. Also, that rooftop bar looks tempting.
+
+assistant channel=analysis:
+Process corner_king; mention rooftop bar hours per system.
+
+assistant channel=commentary to=tool.process_room_upgrade:
+{"reservation_id":"RSV55009","room_type":"corner_king"}
+
+tool.process_room_upgrade channel=commentary to=assistant:
+{"status":"confirmed","new_room_type":"corner_king"}
+
+assistant channel=final:
+Confirmed—corner king it is. The rooftop bar is perfect after sessions; enjoy!
+

@@ -1,0 +1,92 @@
+"""
+Guest needs an HDMI cable to connect a laptop to the in-room TV.
+ROLES: user (guest requesting HDMI cable), assistant (tech support coordinating delivery and follow-up)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_wifi_credentials",
+    "description": "Provide current Wi‑Fi SSID and password for the guest floor.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string" },
+        "room_number": { "type": "string" }
+      },
+      "required": ["hotel_id", "room_number"]
+    },
+    "strict": true
+  },
+  {
+    "name": "run_wifi_diagnostics",
+    "description": "Run diagnostics for the room access point and return status.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "test_duration_sec": { "type": "integer", "minimum": 5, "maximum": 120 }
+      },
+      "required": ["room_number"]
+    },
+    "strict": true
+  },
+  {
+    "name": "create_it_ticket",
+    "description": "Create an onsite IT ticket for a technician visit.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_number": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "normal", "high"] },
+        "issue_summary": { "type": "string" }
+      },
+      "required": ["room_number", "priority", "issue_summary"]
+    },
+    "strict": true
+  },
+  {
+    "name": "send_followup_sms",
+    "description": "Send a follow-up SMS with troubleshooting tips or ETA.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "phone_e164": { "type": "string", "pattern": "^\\+?[1-9]\\d{1,14}$" },
+        "message": { "type": "string" }
+      },
+      "required": ["phone_e164", "message"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are tech support for City Center Hotel Madrid (hotel_id: city_center_mad). Address: 10 Gran Via, Madrid 28013, Spain. Timezone: Europe/Madrid. Check-in 2:00 PM, check-out 12:00 PM. Amenities: rooftop tapas bar, fitness center, free Wi‑Fi. Provide clear steps and only use tools to share Wi‑Fi credentials, run diagnostics, dispatch a technician, and send follow-ups.
+
+user:
+Hola! The rooftop bar is lovely. I'm in room 305 and need an HDMI cable to connect my laptop. Can someone bring one up? My phone is +34600111222.
+
+assistant channel=analysis:
+Create IT ticket for HDMI cable delivery, send SMS with ETA. Wi-Fi credentials optional if requested? We'll not run diagnostics.
+
+assistant channel=commentary to=tool.create_it_ticket:
+{"room_number":"305","priority":"normal","issue_summary":"Deliver HDMI cable to guest"}
+
+tool.create_it_ticket channel=commentary to=assistant:
+{"ticket_id":"IT-305-441","eta_min":15}
+
+assistant channel=commentary to=tool.send_followup_sms:
+{"phone_e164":"+34600111222","message":"City Center Hotel: HDMI cable on its way, ETA 15 min. Tech ticket IT-305-441."}
+
+tool.send_followup_sms channel=commentary to=assistant:
+{"status":"sent"}
+
+assistant channel=final:
+We’ll deliver an HDMI cable to room 305 shortly—ETA about 15 minutes. I’ve texted you the details. Anything else I can assist with?

@@ -1,0 +1,115 @@
+"""
+Corporate client books a private dining with wine pairing in a river-view suite.
+
+ROLES: user (event coordinator for Acme Corp), assistant (hotel concierge managing private dining and logistics)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "check_private_room_availability",
+    "description": "Check private dining rooms availability for a date and time.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "start_time": { "type": "string" },
+        "duration_minutes": { "type": "integer", "minimum": 30 }
+      },
+      "required": ["room_id", "date", "start_time", "duration_minutes"]
+    },
+    "strict": true
+  },
+  {
+    "name": "get_pairing_menu",
+    "description": "Get seasonal tasting menu with wine pairings for a private dining room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "season": { "type": "string" },
+        "dietary_preferences": { "type": "array", "items": {"type": "string"} }
+      },
+      "required": ["season"]
+    },
+    "strict": true
+  },
+  {
+    "name": "create_private_dining_reservation",
+    "description": "Create a private dining reservation with attendee count and billing reference.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "start_time": { "type": "string" },
+        "duration_minutes": { "type": "integer" },
+        "guests": { "type": "integer", "minimum": 1 },
+        "billing_reference": { "type": "string" },
+        "contact_name": { "type": "string" },
+        "contact_email": { "type": "string" }
+      },
+      "required": ["room_id", "date", "start_time", "duration_minutes", "guests", "billing_reference", "contact_name", "contact_email"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the concierge for The Langley Wharf Hotel, 22 Mill Quay, London E14. Private Dining Room: "Thames Suite" (room_id: langley_thames_suite) seats 14, floor-to-ceiling river views, built-in 98" display, HDMI/USB-C, and a walnut boardroom table. Room hire includes still/sparkling water and linen. Service times: lunch 12:00–15:00, dinner 18:00–22:30. Minimum spend for dinner: £1,800. 10% discretionary service charge. Corkage not permitted; wine pairing available. Seasonal tasting menu changes quarterly; current season: Spring. Dietary support: vegetarian, vegan, gluten-free. Load-in via service lift S2. Wi‑Fi: "Langley-Guest". Parking: underground, height limit 2.1m. Invoices can be issued to companies with PO number.
+
+user:
+Hi there! I'm booking a private dinner for our leadership offsite—about 10 people next Thursday evening. Do you have the river-view suite free?
+
+assistant channel=analysis:
+Confirm date/time, check availability for dinner window, then share minimum spend and capacity. Offer wine pairing menu and ask about dietary needs. Add a friendly small talk line.
+
+assistant channel=final:
+Absolutely—we'd love to host your leadership team. To check the "Thames Suite" for next Thursday, could you confirm the date and preferred start time between 18:00–22:30? We seat up to 14 and dinner carries a £1,800 minimum spend. Also, would you like our Spring tasting menu with wine pairing, and do you have any dietary requirements?
+
+user:
+Next Thursday is the 21st, 18:30 start, 3 hours. We prefer a wine pairing. One guest is gluten-free.
+
+assistant channel=analysis:
+Run availability for 18:30, 180 minutes; then fetch Spring menu highlighting gluten-free accommodation. Then present results.
+
+assistant channel=commentary to=tool.check_private_room_availability:
+{"room_id":"langley_thames_suite","date":"2025-08-21","start_time":"18:30","duration_minutes":180}
+
+tool.check_private_room_availability channel=commentary to=assistant:
+{"status":"available","hold_id":"HOLD-THAMES-0821-1830","notes":"Access via service lift S2 from 17:45."}
+
+assistant channel=commentary to=tool.get_pairing_menu:
+{"season":"Spring","dietary_preferences":["gluten-free"]}
+
+tool.get_pairing_menu channel=commentary to=assistant:
+{"menu":"Spring Tasting: Asparagus velouté; Sea bream with fennel; Dry-aged beef with morels; Lemon posset. Wine Pairings: English sparkling; Sancerre; Rioja Reserva; Late-harvest Riesling.","can_accommodate_gluten_free":true}
+
+assistant channel=analysis:
+Confirm availability, summarize menu and pairing, state minimum spend and service charge, ask for billing reference and contact details. Add a small talk compliment about river views with no tool.
+
+assistant channel=final:
+Great news—the Thames Suite is available and on a soft hold (HOLD-THAMES-0821-1830). Our Spring tasting with wine pairings fits your request, and we can accommodate the gluten-free guest. Dinner has a £1,800 minimum plus a 10% discretionary service charge. Those river views at sunset are gorgeous—your team will love them. May I proceed to secure the booking? I’ll need a PO or billing reference, your contact name, and email.
+
+user:
+Use PO ACME-PO-4471. Contact is Jamie Park, jamie.park@acme.com.
+
+assistant channel=analysis:
+Create the reservation for 10 guests, 18:30–21:30, attach billing reference and contact details. Then confirm logistics.
+
+assistant channel=commentary to=tool.create_private_dining_reservation:
+{"room_id":"langley_thames_suite","date":"2025-08-21","start_time":"18:30","duration_minutes":180,"guests":10,"billing_reference":"ACME-PO-4471","contact_name":"Jamie Park","contact_email":"jamie.park@acme.com"}
+
+tool.create_private_dining_reservation channel=commentary to=assistant:
+{"reservation_id":"RES-PL-22931","status":"confirmed","arrival_instructions":"Please arrive via main lobby; service lift S2 available from 17:45 for materials."}
+
+assistant channel=analysis:
+Confirm reservation with ID, reiterate arrival and Wi‑Fi, and ask for any final AV needs.
+
+assistant channel=final:
+All set—your private dining is confirmed (RES-PL-22931) for 10 guests on 21 Aug, 18:30–21:30 in the Thames Suite. Arrival via the main lobby; if you’re bringing materials, the S2 service lift is available from 17:45. Wi‑Fi is Langley-Guest. Would you like the 98" display set for a welcome slide, or any special seating layout?

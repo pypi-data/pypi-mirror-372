@@ -1,0 +1,62 @@
+"""
+Guest wants the in-room tablet configured for the virtual concierge and engages in small talk about the city.
+
+ROLES: user (guest exploring digital features), assistant (digital concierge setting up tablet)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "configure_virtual_concierge",
+    "description": "Enable and customize the in-room virtual concierge tablet.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hotel_id": { "type": "string", "description": "Internal hotel identifier." },
+        "room_number": { "type": "string", "description": "Guest room number." },
+        "language": { "type": "string", "enum": ["en", "es", "fr", "de"], "description": "Preferred interface language." },
+        "interests": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Topics the guest wants recommendations on." }
+      },
+      "required": ["hotel_id", "room_number", "language"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the digital concierge at MetroLink Hotel (hotel_id: metrolink_hotel_chi). Address: 500 W Madison St, Chicago, IL 60661.
+Timezone: America/Chicago. Check-in 3:00 PM, check-out 11:00 AM.
+Amenities: free Wi-Fi, sky lounge bar on the 30th floor, 24/7 fitness center, complimentary breakfast buffet, and in-room tablets offering a virtual concierge. Elevators require keycard access after 9 PM. Currency: USD. Assist guests with tablet setup and local recommendations.
+
+user:
+Hi! Chicago looks amazing from up here. Could you set up the tablet in room 1907 to show English tips for nearby restaurants?
+
+assistant channel=analysis:
+Exchange a friendly remark about the city, then configure the tablet with English language and restaurant interest.
+
+assistant channel=commentary to=tool.configure_virtual_concierge:
+{"hotel_id":"metrolink_hotel_chi","room_number":"1907","language":"en","interests":["restaurants"]}
+
+tool.configure_virtual_concierge channel=commentary to=assistant:
+{"status":"configured","tablet_id":"TBL-1907"}
+
+assistant channel=analysis:
+Confirm configuration and keep friendly tone.
+
+assistant channel=final:
+That skyline never gets old! The tablet in room 1907 is now set to English with dining recommendations highlighted. Let me know if you'd like other tips.
+
+user:
+Awesome, thanks. Do you personally have a favorite pizza spot around here?
+
+assistant channel=analysis:
+Offer a personal suggestion without tools.
+
+assistant channel=final:
+I'm partial to the deep dish at Giordano's just two blocks east—worth the wait! Enjoy exploring the city.

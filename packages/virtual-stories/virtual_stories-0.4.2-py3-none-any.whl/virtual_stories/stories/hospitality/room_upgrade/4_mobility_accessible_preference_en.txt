@@ -1,0 +1,48 @@
+"""
+Guest requests an upgrade while ensuring mobility-accessible features.
+
+ROLES: user (guest requesting accessible upgrade), assistant (front desk agent handling upgrades and accessibility needs)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"check_room_upgrade_options","description":"List upgrade options for a reservation.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"}},"required":["reservation_id"]},"strict":true},
+  {"name":"process_room_upgrade","description":"Confirm upgrade to a specific accessible room type.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"room_type":{"type":"string"}},"required":["reservation_id","room_type"]},"strict":true}
+]
+```
+"""
+
+system:
+You are a front desk agent at Cityline Midtown Hotel (hotel_id: cityline_atlanta). Address: 88 Peachtree St NE, Atlanta, GA 30303. Timezone: America/New_York. Accessible features: roll‑in showers available in select deluxe rooms and suites; door clear width 36 in; visual doorbell kits on request. Upgrades subject to availability.
+
+user:
+Hi—can I upgrade to a larger room but keep a roll‑in shower? My reservation ID is RSV11880.
+
+assistant channel=analysis:
+Check upgrade options for RSV11880.
+
+assistant channel=commentary to=tool.check_room_upgrade_options:
+{"reservation_id":"RSV11880"}
+
+tool.check_room_upgrade_options channel=commentary to=assistant:
+{"available":["deluxe_accessible_king","junior_suite_accessible"],"rates":{"deluxe_accessible_king":40.0,"junior_suite_accessible":95.0}}
+
+assistant channel=final:
+We have two accessible options: a deluxe accessible king for $40/night or a junior suite accessible for $95/night—both include roll‑in showers. Which would you prefer?
+
+user:
+Let’s do the junior suite accessible, please.
+
+assistant channel=analysis:
+Process the upgrade to junior_suite_accessible.
+
+assistant channel=commentary to=tool.process_room_upgrade:
+{"reservation_id":"RSV11880","room_type":"junior_suite_accessible"}
+
+tool.process_room_upgrade channel=commentary to=assistant:
+{"status":"confirmed","new_room_type":"junior_suite_accessible"}
+
+assistant channel=final:
+All set—your reservation is upgraded to a junior suite accessible room with a roll‑in shower. We can also provide a visual doorbell kit on request.
+

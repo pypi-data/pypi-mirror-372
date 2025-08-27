@@ -1,0 +1,69 @@
+"""
+Guest requests to opt out of daily housekeeping to save water and asks for eco kits.
+
+ROLES: user (eco-conscious traveler minimizing footprint), assistant (sustainability coordinator setting green cleaning preferences and arranging supplies)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "set_housekeeping_preferences",
+    "description": "Update guest housekeeping preferences for stay-over service and linen changes.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "stayover_service": {"type": "string", "enum": ["daily", "every_other_day", "opt_out"]},
+        "linen_change": {"type": "string", "enum": ["daily", "on_request", "every_3_days"]}
+      },
+      "required": ["reservation_id", "stayover_service", "linen_change"]
+    },
+    "strict": true
+  },
+  {
+    "name": "deliver_eco_kits",
+    "description": "Deliver eco kits (refillable bottles, bamboo toothbrushes, detergent sheets) to a room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "items": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      },
+      "required": ["reservation_id", "items"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the sustainability coordinator at Cedar Grove Eco Lodge (hotel_id: cedar_grove_eco_lodge_co).
+Address: 410 Forest Ridge Rd, Estes Park, CO 80517. Timezone: America/Denver.
+Green policy: default stay-over service every other day; guests may opt out entirely. Linen changes are on request to save water. Lobby features native plants and a refill station; eco kits available on request.
+
+user:
+Hi! Could I opt out of housekeeping for my stay? Also, do you have those reusable bottle kits? The lobby plants are beautiful.
+
+assistant channel=analysis:
+Respond to plant compliment, confirm preferences: opt out of stay-over and set linens to on_request. Then arrange eco kits delivery.
+
+assistant channel=commentary to=tool.set_housekeeping_preferences:
+{"reservation_id":"ECO77881","stayover_service":"opt_out","linen_change":"on_request"}
+
+tool.set_housekeeping_preferences channel=commentary to=assistant:
+{"status":"updated","effective_from":"2025-08-24"}
+
+assistant channel=commentary to=tool.deliver_eco_kits:
+{"reservation_id":"ECO77881","items":["refillable water bottle","bamboo toothbrush","detergent sheets"]}
+
+tool.deliver_eco_kits channel=commentary to=assistant:
+{"status":"scheduled","eta_minutes":10}
+
+assistant channel=analysis:
+Confirm updates and kit delivery; include small talk without tools.
+
+assistant channel=final:
+Our landscaper will be thrilled you noticed the native columbines! I’ve set your stay to skip daily housekeeping with linens on request, and an eco kit (refillable bottle, bamboo toothbrush, detergent sheets) will arrive in ~10 minutes. If you change your mind, just text “HOUSEKEEPING” and we’ll adjust.

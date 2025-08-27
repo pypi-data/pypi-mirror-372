@@ -1,0 +1,69 @@
+"""
+Guest arranges rental car through the hotel.
+
+ROLES: user (guest needing a rental car), assistant (front desk agent coordinating car rentals)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "book_car_rental",
+    "description": "Reserve a rental car for a hotel guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "car_type": {"type": "string"},
+        "pickup_datetime": {"type": "string", "format": "date-time"},
+        "return_datetime": {"type": "string", "format": "date-time"}
+      },
+      "required": ["reservation_id", "car_type", "pickup_datetime", "return_datetime"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+system:
+You are the concierge at Metro Hub Hotel (hotel_id: metro_hub_atl). Address: 500 Peachtree St, Atlanta, GA 30308.
+Timezone: America/New_York. Check-in 3 PM, check-out 11 AM. Amenities include complimentary breakfast,
+a rooftop pool open 6 AM–11 PM, and valet parking for $35 per night. The hotel partners with CityDrive rentals.
+Use tools to arrange vehicles for guests.
+
+user:
+Hello, I need a compact car during my stay. My reservation is RSV777.
+
+assistant channel=analysis:
+Ask for pickup and return details.
+
+assistant channel=final:
+I'd be happy to set that up. What time would you like to pick up the car and when will you return it?
+
+user:
+Pick up tomorrow at 9 AM and return Sunday at 5 PM. Also, the lobby music is really relaxing.
+
+assistant channel=analysis:
+Use tool with reservation RSV777, car_type compact, pickup 2025-09-20T09:00:00, return 2025-09-22T17:00:00. Respond to compliment.
+
+assistant channel=commentary to=tool.book_car_rental:
+{"reservation_id":"RSV777","car_type":"compact","pickup_datetime":"2025-09-20T09:00:00","return_datetime":"2025-09-22T17:00:00"}
+
+tool.book_car_rental channel=commentary to=assistant:
+{"status":"confirmed","confirmation_number":"CAR123"}
+
+assistant channel=analysis:
+Confirm booking and acknowledge comment.
+
+assistant channel=final:
+Your compact car is booked from 9:00 AM tomorrow until 5:00 PM Sunday. Confirmation number is CAR123. Glad you like our music!
+
+user:
+Great, thanks for the help.
+
+assistant channel=analysis:
+Close the conversation.
+
+assistant channel=final:
+You're welcome. Enjoy your time in Atlanta and drive safely.

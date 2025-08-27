@@ -1,0 +1,66 @@
+"""
+Conference room Wi‑Fi dropouts; investigate channel congestion.
+ROLES: user (event organizer in meeting room), assistant (hotel IT monitoring APs)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "scan_meeting_ap",
+    "description": "Scan AP utilization and co‑channel interference for meeting room.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": {"type": "string"},
+        "as_of_utc": {"type": "string", "format": "date-time"}
+      },
+      "required": ["room_name", "as_of_utc"]
+    },
+    "strict": true
+  },
+  {
+    "name": "toggle_band_steering",
+    "description": "Adjust band steering to favor 5 GHz temporarily.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "room_name": {"type": "string"},
+        "mode": {"type": "string", "enum": ["favor_5g","balanced"]}
+      },
+      "required": ["room_name", "mode"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+Property: Skyline Convention Hotel
+Meeting space: "Orion A" (projector, 80 seats), adjacent to prefunction area
+Wi‑Fi: SSID "Skyline_Event" mapped to event VLAN 210; fallback SSID "Skyline_Guest"
+Policy: Event SSID active 08:00–18:00 with higher throughput
+
+user:
+We’re in Orion A and Wi‑Fi keeps dropping for attendees.
+
+assistant channel=analysis:
+Run scan; if high 2.4 GHz interference, steer clients to 5 GHz.
+
+assistant channel=commentary to=tool.scan_meeting_ap:
+{"room_name":"Orion A","as_of_utc":"2025-08-25T14:30:00Z"}
+
+tool.scan_meeting_ap channel=commentary to=assistant:
+{"band2g":{"cci":"high","util_pct":78},"band5g":{"cci":"low","util_pct":41}}
+
+assistant channel=commentary to=tool.toggle_band_steering:
+{"room_name":"Orion A","mode":"favor_5g"}
+
+tool.toggle_band_steering channel=commentary to=assistant:
+{"status":"ok"}
+
+assistant channel=final:
+I adjusted the network to favor 5 GHz on Skyline_Event. Please have attendees rejoin—stability should improve. The prefunction area is adjacent if anyone needs a quick break space.

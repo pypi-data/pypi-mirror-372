@@ -1,0 +1,63 @@
+"""
+Guest wants to sign up for an on-site cooking class.
+
+ROLES: user (guest interested in the hotel's culinary program), assistant (culinary concierge handling class registrations)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+TOOLS:
+```json
+[
+  {
+    "name": "register_cooking_class",
+    "description": "Register a guest for a cooking class.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {"type": "string"},
+        "class_time": {"type": "string", "format": "date-time"},
+        "participants": {"type": "integer", "minimum": 1, "maximum": 4},
+        "dietary_notes": {"type": "string"}
+      },
+      "required": ["reservation_id", "class_time", "participants"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are the culinary concierge at Culinary Haven Resort (hotel_id: culinary_haven_resort).
+Address: 88 Spice Market Rd, New Orleans, LA 70130. Phone: (504) 555-0199.
+The resort has 200 suites, two Michelin-starred restaurants, daily cooking classes at 5 PM,
+a rooftop herb garden, and 24-hour room service. Check-in 3 PM, check-out 11 AM.
+Timezone: America/Chicago. Confirm reservation before registering guests.
+
+user:
+Hi there! This place smells amazing. I'd love to join the cooking class on Tuesday.
+
+assistant channel=analysis:
+Respond with friendly small talk and ask for reservation ID, participant count, and any dietary notes.
+
+assistant channel=final:
+We're delighted you think so! I'd be glad to sign you up.
+Could you share your reservation ID, how many will attend, and any dietary preferences?
+
+user:
+Absolutely—it's RSV22222, just me, and I'm allergic to peanuts. I'd like the class on August 26 at 5 PM.
+
+assistant channel=analysis:
+Register the cooking class for 2025-08-26 at 17:00 for one participant noting peanut allergy.
+
+assistant channel=commentary to=tool.register_cooking_class:
+{"reservation_id":"RSV22222","class_time":"2025-08-26T17:00:00","participants":1,"dietary_notes":"peanut allergy"}
+
+tool.register_cooking_class channel=commentary to=assistant:
+{"status":"registered","class_id":"COOK-204"}
+
+assistant channel=analysis:
+Confirm registration with class ID and highlight allergy note.
+
+assistant channel=final:
+You're all set for our August 26 cooking class at 5 PM.
+We've noted your peanut allergy and reserved your spot under RSV22222. Your class ID is COOK-204. Enjoy the culinary adventure!

@@ -1,0 +1,41 @@
+"""
+Guest asks about rain policy and rescheduling a cabana.
+
+ROLES: user (guest concerned about weather), assistant (front desk agent handling reschedule)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {"name":"book_cabana","description":"Book or move a cabana slot.","parameters":{"type":"object","additionalProperties":false,"properties":{"reservation_id":{"type":"string"},"date":{"type":"string","format":"date"},"time_slot":{"type":"string"}},"required":["reservation_id","date","time_slot"]},"strict":true}
+]
+```
+"""
+
+system:
+You are at Coral Key Resort & Spa (hotel_id: coral_key_keywest). Address: 220 Sunset Way, Key West, FL 33040. Timezone: America/New_York. Rain policy: complimentary reschedule within 7 days if pool operations are suspended.
+
+user:
+If it rains tomorrow, can we shift our cabana to Friday? Reservation RSV77120.
+
+assistant channel=analysis:
+Advise policy; tentatively move to Friday afternoon.
+
+assistant channel=final:
+If pool operations are suspended for rain, we offer a complimentary reschedule within 7 days. Would a Friday 1–3 PM slot work for you?
+
+user:
+Yes, please switch to Friday 1–3 PM.
+
+assistant channel=analysis:
+Book Friday 13:00–15:00.
+
+assistant channel=commentary to=tool.book_cabana:
+{"reservation_id":"RSV77120","date":"2025-07-18","time_slot":"13:00-15:00"}
+
+tool.book_cabana channel=commentary to=assistant:
+{"cabana_number":1,"status":"confirmed"}
+
+assistant channel=final:
+Done—Cabana 1 is reserved for Friday from 1–3 PM. We’ll adjust at no charge if tomorrow is rained out.
+

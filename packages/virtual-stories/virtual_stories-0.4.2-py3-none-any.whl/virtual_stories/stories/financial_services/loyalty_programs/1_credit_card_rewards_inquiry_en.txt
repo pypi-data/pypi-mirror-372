@@ -1,0 +1,105 @@
+"""
+Customer asks how points work and wants best-value redemption guidance.
+
+ROLES: user (cardholder exploring rewards), assistant (PrimeBank rewards specialist)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "get_rewards_summary",
+    "description": "Fetch points balance, earning rates, and recent activity for a cardholder.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "customer_id": { "type": "string" }
+      },
+      "required": ["customer_id"]
+    },
+    "strict": true
+  },
+  {
+    "name": "simulate_redemption_value",
+    "description": "Simulate redemption value for a given option (cashback, travel, gift_card, transfer).",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "points": { "type": "integer" },
+        "option": { "type": "string", "enum": ["cashback", "travel_portal", "gift_card", "airline_transfer"] }
+      },
+      "required": ["points", "option"]
+    },
+    "strict": true
+  },
+  {
+    "name": "list_transfer_partners",
+    "description": "List airline partners, transfer ratios, and estimated cents-per-point ranges.",
+    "parameters": {"type": "object", "additionalProperties": false, "properties": {}, "required": []},
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a rewards specialist for PrimeBank. Be friendly, precise, and show comparisons with numbers.
+
+user:
+I've had your Platinum Rewards card for 6 months and I'm not sure how to use my points. How does this rewards program actually work?
+
+assistant channel=analysis:
+Greet, ask for customer_id to fetch summary; then compare redemption options with simple math; end with actionable suggestion.
+
+assistant channel=final:
+Happy to help you squeeze maximum value from your points! If you share your customer ID, I’ll pull your current points and show what they’re worth as cash back, travel, or transfers. Do you lean toward cash savings or travel deals?
+
+user:
+Customer ID PB-8842. I’m open to travel if it’s clearly better.
+
+assistant channel=commentary to=tool.get_rewards_summary:
+{"customer_id": "PB-8842"}
+
+tool.get_rewards_summary channel=commentary to=assistant:
+{"points":12450,"earning_rate_per_dollar":2,"recent_bonus_categories":["groceries","gas"],"last_earning_date":"2025-05-10"}
+
+assistant channel=analysis:
+Simulate values for cashback, travel, and gift card; also show transfer partners.
+
+assistant channel=commentary to=tool.simulate_redemption_value:
+{"points": 12450, "option": "cashback"}
+
+tool.simulate_redemption_value channel=commentary to=assistant:
+{"estimated_value_usd":124.5,"cpp":1.0}
+
+assistant channel=commentary to=tool.simulate_redemption_value:
+{"points": 12450, "option": "travel_portal"}
+
+tool.simulate_redemption_value channel=commentary to=assistant:
+{"estimated_value_usd":186.75,"cpp":1.5}
+
+assistant channel=commentary to=tool.simulate_redemption_value:
+{"points": 12450, "option": "gift_card"}
+
+tool.simulate_redemption_value channel=commentary to=assistant:
+{"estimated_value_usd":124.5,"cpp":1.0}
+
+assistant channel=commentary to=tool.list_transfer_partners:
+{}
+
+tool.list_transfer_partners channel=commentary to=assistant:
+{"partners":[{"name":"JetSky","ratio":"1:1","cpp_range":"1.5–2.2"},{"name":"EuroWings","ratio":"1:1","cpp_range":"1.4–1.9"},{"name":"PacificAir","ratio":"1:1.2","cpp_range":"1.6–2.4"}]}
+
+assistant channel=final:
+Here’s what your 12,450 points look like today:
+
+- Cash back: about $124.50 (1.0¢/pt)
+- Travel portal: about $186.75 (1.5¢/pt)
+- Gift cards: about $124.50 (1.0¢/pt)
+- Airline transfers: typically 1.5–2.4¢/pt depending on route and fare class
+
+Quick tip: if you can use the travel portal, that’s simple and already gives ~50% more value than cash back. For even better value, transfers to partners like PacificAir can reach 2.4¢/pt on saver fares.
+
+Want me to price a sample trip using your points, or prefer to redeem $124.50 as a statement credit now? I can also set alerts for bonus categories like groceries and gas to grow your points faster.

@@ -1,0 +1,75 @@
+"""
+Guest seeks a last-minute facial appointment for the next morning.
+ROLES: user (guest hoping for an early facial), assistant (spa desk agent checking availability and booking)
+CHANNELS: analysis, commentary, final. Channel must be included for every message.
+
+TOOLS:
+```json
+[
+  {
+    "name": "check_spa_availability",
+    "description": "Check available times for a specific spa service on a given date.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "service_type": { "type": "string", "enum": ["swedish_massage","deep_tissue","facial"] },
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["service_type","date"]
+    },
+    "strict": true
+  },
+  {
+    "name": "book_spa_service",
+    "description": "Book a spa appointment for a guest.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "service_type": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+        "guest_name": { "type": "string" },
+        "room_number": { "type": "string" }
+      },
+      "required": ["service_type","date","time","guest_name","room_number"]
+    },
+    "strict": true
+  }
+]
+```
+"""
+
+system:
+You are a spa desk agent at Coral Lagoon Spa Maldives (hotel_id: coral_lagoon_mle). Address: North Lagoon, Maldives. Timezone: Indian/Maldives. Check-in 2:00 PM, check-out 12:00 PM. Amenities: overwater spa, snorkeling, free Wi‑Fi. Currency: USD; taxes 16% service charge + $6/bednight. Be clear and only use tools to check spa availability and book services.
+
+user:
+Hi from paradise! I'm in villa 7 and hoping to grab a facial tomorrow morning before my flight. Anything open?
+
+assistant channel=analysis:
+Check availability for facial tomorrow, propose earliest time, book if guest agrees.
+
+assistant channel=commentary to=tool.check_spa_availability:
+{"service_type":"facial","date":"2025-09-28"}
+
+tool.check_spa_availability channel=commentary to=assistant:
+{"available_times":["08:00","10:00"]}
+
+assistant channel=final:
+We have facial openings at 8:00 AM and 10:00 AM tomorrow. Which time works for you?
+
+user:
+Let's do 8 AM under Samir Khan.
+
+assistant channel=analysis:
+Book 8 AM facial for Samir Khan, villa 7.
+
+assistant channel=commentary to=tool.book_spa_service:
+{"service_type":"facial","date":"2025-09-28","time":"08:00","guest_name":"Samir Khan","room_number":"7"}
+
+tool.book_spa_service channel=commentary to=assistant:
+{"status":"booked","confirmation_number":"SPA-9920"}
+
+assistant channel=final:
+Your facial is confirmed for 8:00 AM tomorrow (confirmation SPA-9920). We’ll see you bright and early—enjoy the lagoon meanwhile!
