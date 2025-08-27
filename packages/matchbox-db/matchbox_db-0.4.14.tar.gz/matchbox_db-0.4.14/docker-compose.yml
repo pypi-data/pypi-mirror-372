@@ -1,0 +1,75 @@
+services:
+  server-warehouse:
+    image: postgres:17
+    restart: always
+    ports:
+      - "${MB__DEV__WAREHOUSE_PORT:-7654}:5432"
+    volumes:
+      - warehouse_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=warehouse_user
+      - POSTGRES_PASSWORD=warehouse_password
+      - POSTGRES_DB=warehouse
+  server-filestorage:
+    image: minio/minio:latest
+    restart: always
+    volumes:
+      - matchbox_store:/data
+    command: server --console-address ":9001" /data
+    ports:
+      - "${MB__DEV__DATASTORE_PORT:-9000}:9000"
+      - "${MB__DEV__DATASTORE_CONSOLE_PORT-9001}:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      MINIO_ROOT_USER: ${MB__SERVER__DATASTORE__ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${MB__SERVER__DATASTORE__SECRET_ACCESS_KEY}
+  server-api:
+    build:
+      context: .
+      args:
+        ENV_FILE: server.env
+        MB_VERSION: ${MB_VERSION-0.0.0dev0}
+      dockerfile: src/matchbox/server/Dockerfile
+      target: dev
+    ports:
+      - "${MB__DEV__API_PORT-8000}:8000"
+    depends_on:
+      server-postgres:
+        condition: service_started
+        required: true
+      server-warehouse:
+        condition: service_started
+        required: true
+      server-filestorage:
+        condition: service_started
+        required: true
+    develop:
+      # https://docs.docker.com/compose/file-watch/#compose-watch-versus-bind-mounts
+      watch:
+        # Sync the working directory with the `/app` directory in the container
+        - action: sync
+          path: ./src/matchbox
+          target: /code/src/matchbox
+
+        # Rebuild the image on changes to the `pyproject.toml`
+        - action: rebuild
+          path: ./pyproject.toml
+  server-postgres:
+    image: postgres:17
+    restart: always
+    ports:
+      - "${MB__DEV__POSTGRES_BACKEND_PORT:-5432}:5432"
+    volumes:
+      - matchbox_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=matchbox
+      - POSTGRES_PASSWORD=matchbox_password
+      - POSTGRES_USER=matchbox_user
+volumes:
+  warehouse_data:
+  matchbox_data:
+  matchbox_store:
