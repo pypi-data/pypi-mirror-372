@@ -1,0 +1,159 @@
+<html lang="en">
+  <head>
+    <title>#title#</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Container to hold both divs */
+      .overlay-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Background layer */
+      #viewer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Overlay layer */
+      #login {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+        /* make content center */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* Overlay layer */
+      #loader {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="overlay-container">
+      <iframe src="#viewerUrl#" id="viewer" style="width: 100%; height: 100%; border: none" onerror="console.error('error')"></iframe>
+      <div id="login">
+        <div>
+          <h1>Sign in to view the app</h1>
+          <button onclick="openLogin()">Sign in</button>
+        </div>
+      </div>
+      <div id="loader">
+        <h1>Loading...</h1>
+      </div>
+    </div>
+  </body>
+  <script>
+    var dataReady = false;
+
+    function getProjectData() {
+      const projectStateEl = document.getElementById("projectState"),
+        projectStateStr = projectStateEl.textContent;
+      projectStateEl.remove();
+      const projectState = JSON.parse(projectStateStr);
+      return {
+        projectState,
+        signatureJwt: "#signatureJwt#",
+      };
+    }
+    const viewer = document.getElementById("viewer");
+    const login = document.getElementById("login");
+    const loader = document.getElementById("loader");
+    const preAuth = true; //#preAuth#;
+
+    function openLogin() {
+      const w = 420;
+      const h = 800;
+      const width = window.innerWidth
+        ? window.innerWidth
+        : document.documentElement.clientWidth
+          ? document.documentElement.clientWidth
+          : screen.width;
+      const height = window.innerHeight
+        ? window.innerHeight
+        : document.documentElement.clientHeight
+          ? document.documentElement.clientHeight
+          : screen.height;
+
+      const systemZoom = width / window.screen.availWidth;
+      const left = (width - w) / 2 / systemZoom;
+      const top = (height - h) / 2 / systemZoom;
+
+      // add a random string to the URL to avoid caching
+      // as long as we use response.headers["cache-control"] = "no-cache"
+      // this is not needed, but in case we don't, this will always force a reload
+      const random = Math.random().toString(36).substring(7);
+      const url = `#origin#/sign-in?p=${random}`;
+      window.open(url, "login", `width=${w},height=${h},top=${top},left=${left}`);
+    }
+
+    function sendState() {
+      viewer.contentWindow.postMessage({ type: "loadProject", projectData: getProjectData() }, "*");
+      document.body.classList.add("loaded");
+    }
+    // we let the viewer tell us when it's ready
+    window.onmessage = (event) => {
+      console.log("message received", event);
+      if (event.data?.type == "sign-in:loaded") {
+        // reload the iframe to the original iframe src
+        const url = "#viewerUrl#";
+        // a proxy server does not forward, so url will not change, so we set it
+        // first to about:blank to force a reload
+        viewer.src = "about:blank";
+        viewer.src = url;
+        login.style.display = "none";
+      }
+      if (event.data == "ready") {
+        login.style.display = "none";
+        function sendWhenReady() {
+          if (dataReady) {
+            sendState();
+          } else {
+            setTimeout(sendWhenReady, 1000);
+          }
+        }
+        sendWhenReady();
+      }
+    };
+
+    // hide loader after a timeout, to not always show the login button
+    setTimeout(() => {
+      loader.style.display = "none";
+    }, 700);
+    if (!preAuth) {
+      // if we don't require pre-auth, we do not need to login
+      login.style.display = "none";
+    }
+  </script>
+  <script type="application/json" id="projectState">
+    { "projectState": "" }
+  </script>
+  <script>
+    var dataReady = true;
+    if (window !== window.top) {
+      // can be used for 'opening' the project in the parent window, e.g. for editing
+      window.parent.postMessage({ type: "loadProject", projectData: getProjectData() }, "*");
+    }
+  </script>
+</html>
