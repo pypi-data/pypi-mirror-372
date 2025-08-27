@@ -1,0 +1,662 @@
+# Jajula Chunking Documentation
+
+Welcome to the comprehensive documentation for the Jajula Chunking library. This library provides various text chunking strategies optimized for RAG (Retrieval-Augmented Generation) applications.
+
+## Table of Contents
+
+1. [Installation](#installation)
+2. [Quick Start](#quick-start)
+3. [Core Concepts](#core-concepts)
+4. [Chunking Strategies](#chunking-strategies)
+5. [Utilities](#utilities)
+6. [Advanced Usage](#advanced-usage)
+7. [API Reference](#api-reference)
+8. [Examples](#examples)
+9. [Best Practices](#best-practices)
+10. [Troubleshooting](#troubleshooting)
+
+## Installation
+
+### Basic Installation
+
+```bash
+pip install jajula-chunking
+```
+
+### Installation with Optional Dependencies
+
+```bash
+# For development
+pip install jajula-chunking[dev]
+
+# For documentation
+pip install jajula-chunking[docs]
+
+# For semantic chunking (requires more resources)
+pip install jajula-chunking
+pip install torch sentence-transformers
+```
+
+### System Requirements
+
+- Python 3.8 or higher
+- 4GB+ RAM (8GB+ recommended for semantic chunking)
+- 2GB+ disk space for models
+
+## Quick Start
+
+### Basic Usage
+
+```python
+from jajula_chunking import FixedSizeChunker
+
+# Create a chunker
+chunker = FixedSizeChunker(chunk_size=500, overlap=50)
+
+# Chunk your text
+text = "Your long text here..."
+chunks = chunker.chunk(text)
+
+# Process chunks
+for chunk in chunks:
+    print(f"ID: {chunk.chunk_id}")
+    print(f"Content: {chunk.content}")
+    print(f"Metadata: {chunk.metadata}")
+    print("---")
+```
+
+### Multiple Strategies
+
+```python
+from jajula_chunking import (
+    SentenceBasedChunker,
+    ParagraphBasedChunker,
+    AdaptiveChunker
+)
+
+# Sentence-based chunking
+sentence_chunker = SentenceBasedChunker(max_sentences=3)
+sentence_chunks = sentence_chunker.chunk(text)
+
+# Paragraph-based chunking
+paragraph_chunker = ParagraphBasedChunker(max_paragraphs=2)
+paragraph_chunks = paragraph_chunker.chunk(text)
+
+# Adaptive chunking (automatically selects best strategy)
+adaptive_chunker = AdaptiveChunker()
+adaptive_chunks = adaptive_chunker.chunk(text)
+```
+
+## Core Concepts
+
+### Chunk Object
+
+Each chunk is represented by a `Chunk` object with the following attributes:
+
+- `content`: The actual text content
+- `chunk_id`: Unique identifier for the chunk
+- `start_index`: Starting position in original text
+- `end_index`: Ending position in original text
+- `metadata`: Additional information about the chunk
+
+### Base Chunker
+
+All chunkers inherit from `BaseChunker`, which provides:
+
+- Common configuration management
+- Input validation
+- Chunk ID generation
+- Error handling
+
+### Chunking Strategies
+
+The library offers 9 different chunking strategies, each optimized for different use cases:
+
+1. **Fixed Size**: Consistent chunk sizes
+2. **Sentence Based**: Semantic coherence
+3. **Paragraph Based**: Document structure
+4. **Semantic**: AI-powered similarity
+5. **Hierarchical**: Multi-level organization
+6. **Structure Based**: HTML/Markdown aware
+7. **Token Based**: LLM token counting
+8. **Recursive**: Multi-separator approach
+9. **Adaptive**: Automatic strategy selection
+
+## Chunking Strategies
+
+### 1. Fixed Size Chunker
+
+Best for: Consistent chunk sizes, simple text processing
+
+```python
+from jajula_chunking import FixedSizeChunker
+
+chunker = FixedSizeChunker(
+    chunk_size=1000,      # Characters per chunk
+    overlap=100,          # Overlapping characters
+    split_on_word=True    # Avoid breaking words
+)
+
+chunks = chunker.chunk(text)
+```
+
+**Parameters:**
+- `chunk_size`: Target chunk size in characters
+- `overlap`: Number of overlapping characters
+- `split_on_word`: Whether to respect word boundaries
+
+### 2. Sentence Based Chunker
+
+Best for: Maintaining semantic coherence, natural language text
+
+```python
+from jajula_chunking import SentenceBasedChunker
+
+chunker = SentenceBasedChunker(
+    max_sentences=5,        # Sentences per chunk
+    overlap_sentences=1,    # Overlapping sentences
+    language='english'      # Language for tokenization
+)
+
+chunks = chunker.chunk(text)
+```
+
+**Parameters:**
+- `max_sentences`: Maximum sentences per chunk
+- `overlap_sentences`: Number of overlapping sentences
+- `language`: Language for sentence tokenization
+
+### 3. Paragraph Based Chunker
+
+Best for: Document structure, articles, reports
+
+```python
+from jajula_chunking import ParagraphBasedChunker
+
+chunker = ParagraphBasedChunker(
+    max_paragraphs=3,           # Paragraphs per chunk
+    overlap_paragraphs=1,       # Overlapping paragraphs
+    paragraph_separators=None   # Custom separators
+)
+
+chunks = chunker.chunk(text)
+```
+
+**Parameters:**
+- `max_paragraphs`: Maximum paragraphs per chunk
+- `overlap_paragraphs`: Number of overlapping paragraphs
+- `paragraph_separators`: Custom paragraph separator patterns
+
+### 4. Semantic Chunker
+
+Best for: Technical documents, complex content, AI applications
+
+```python
+from jajula_chunking import SemanticChunker
+
+chunker = SemanticChunker(
+    model_name='all-MiniLM-L6-v2',  # Sentence transformer model
+    similarity_threshold=0.6,        # Similarity threshold
+    max_chunk_size=1000,            # Maximum chunk size
+    min_sentences_per_chunk=1       # Minimum sentences per chunk
+)
+
+chunks = chunker.chunk(text)
+```
+
+**Parameters:**
+- `model_name`: Sentence transformer model to use
+- `similarity_threshold`: Threshold for splitting chunks
+- `max_chunk_size`: Maximum chunk size in characters
+- `min_sentences_per_chunk`: Minimum sentences per chunk
+
+**Note:** Requires `sentence-transformers` and `torch` to be installed.
+
+### 5. Hierarchical Chunker
+
+Best for: Multi-level documents, complex organization
+
+```python
+from jajula_chunking import HierarchicalChunker
+
+# Custom hierarchical levels
+levels = [
+    {'name': 'document', 'max_size': 10000, 'chunker': 'paragraph'},
+    {'name': 'section', 'max_size': 3000, 'chunker': 'sentence'},
+    {'name': 'paragraph', 'max_size': 1000, 'chunker': 'fixed'},
+    {'name': 'sentence', 'max_size': 200, 'chunker': 'word'}
+]
+
+chunker = HierarchicalChunker(levels=levels, overlap=100)
+chunks = chunker.chunk(text)
+
+# Get hierarchy information
+tree = chunker.get_hierarchy_tree(chunks)
+root_chunks = chunker.get_root_chunks(chunks)
+leaf_chunks = chunker.get_leaf_chunks(chunks)
+```
+
+### 6. Structure Based Chunker
+
+Best for: HTML, Markdown, and structured documents
+
+```python
+from jajula_chunking import StructureBasedChunker
+
+chunker = StructureBasedChunker(
+    max_chunk_size=1000,      # Maximum chunk size
+    overlap=100,              # Overlapping characters
+    preserve_structure=True   # Maintain document structure
+)
+
+chunks = chunker.chunk(html_text)
+chunks = chunker.chunk(markdown_text)
+```
+
+**Features:**
+- Automatic HTML/Markdown detection
+- Structure-aware chunking
+- Element type preservation
+
+### 7. Token Based Chunker
+
+Best for: LLM applications, token counting
+
+```python
+from jajula_chunking import TokenBasedChunker
+
+chunker = TokenBasedChunker(
+    max_tokens=512,           # Maximum tokens per chunk
+    overlap_tokens=50,        # Overlapping tokens
+    model_name="gpt-3.5-turbo"  # OpenAI model for tokenizer
+)
+
+chunks = chunker.chunk(text)
+
+# Count tokens in text
+token_count = chunker.count_tokens(text)
+```
+
+**Note:** Requires `tiktoken` to be installed.
+
+### 8. Recursive Chunker
+
+Best for: Complex text with multiple separators
+
+```python
+from jajula_chunking import RecursiveChunker
+
+# Custom separators in order of preference
+separators = [
+    "\n\n",  # Double newline (paragraphs)
+    "\n",    # Single newline
+    ". ",    # Sentence endings
+    " ",     # Spaces
+    ""       # No separator (character-level)
+]
+
+chunker = RecursiveChunker(
+    separators=separators,
+    chunk_size=1000,
+    overlap=100
+)
+
+chunks = chunker.chunk(text)
+
+# Modify separators
+chunker.add_separator("; ", position=2)
+chunker.remove_separator("\n")
+```
+
+### 9. Adaptive Chunker
+
+Best for: Automatic strategy selection, mixed content
+
+```python
+from jajula_chunking import AdaptiveChunker
+
+chunker = AdaptiveChunker(
+    max_chunk_size=1000,
+    overlap=100,
+    enable_semantic=True
+)
+
+# Automatic chunking
+chunks = chunker.chunk(text)
+
+# Get strategy recommendation
+recommendation = chunker.get_strategy_recommendation(text)
+print(f"Recommended: {recommendation['recommended_strategy']}")
+print(f"Reasoning: {recommendation['reasoning']}")
+print(f"Alternatives: {recommendation['alternative_strategies']}")
+
+# Get available strategies
+strategies = chunker.get_available_strategies()
+```
+
+## Utilities
+
+### Text Processor
+
+```python
+from jajula_chunking import TextProcessor
+
+# Clean text
+cleaned_text = TextProcessor.clean_text(
+    text,
+    remove_html=True,
+    normalize_whitespace=True,
+    remove_special_chars=False
+)
+
+# Extract information
+sentences = TextProcessor.extract_sentences(text)
+paragraphs = TextProcessor.extract_paragraphs(text)
+words = TextProcessor.extract_words(text, min_length=3)
+keywords = TextProcessor.extract_keywords(text, max_keywords=10)
+
+# Get statistics
+stats = TextProcessor.get_text_statistics(text)
+print(f"Characters: {stats['characters']}")
+print(f"Words: {stats['words']}")
+print(f"Sentences: {stats['sentences']}")
+print(f"Paragraphs: {stats['paragraphs']}")
+
+# Language detection
+language = TextProcessor.detect_language(text)
+
+# Split into chunks
+chunks = TextProcessor.split_text_into_chunks(text, chunk_size=500, overlap=50)
+```
+
+### Chunk Validator
+
+```python
+from jajula_chunking import ChunkValidator
+
+# Validate single chunk
+validation = ChunkValidator.validate_chunk(
+    chunk,
+    min_length=10,
+    max_length=10000
+)
+
+print(f"Valid: {validation['is_valid']}")
+print(f"Score: {validation['score']}/100")
+print(f"Errors: {validation['errors']}")
+print(f"Warnings: {validation['warnings']}")
+
+# Validate multiple chunks
+validation_result = ChunkValidator.validate_chunks(chunks)
+print(f"Overall valid: {validation_result['is_valid']}")
+print(f"Overall score: {validation_result['overall_score']}/100")
+print(f"Valid chunks: {validation_result['summary']['valid_chunks']}")
+
+# Get improvement suggestions
+suggestions = ChunkValidator.suggest_improvements(validation_result)
+for suggestion in suggestions:
+    print(f"- {suggestion}")
+
+# Get chunk statistics
+stats = ChunkValidator.get_chunk_statistics(chunks)
+print(f"Total chunks: {stats['total_chunks']}")
+print(f"Average length: {stats['avg_chunk_length']:.1f}")
+print(f"Chunk types: {stats['chunk_types']}")
+```
+
+## Advanced Usage
+
+### Custom Chunking Strategy
+
+```python
+from jajula_chunking.chunkers.base import BaseChunker, Chunk
+
+class CustomChunker(BaseChunker):
+    def __init__(self, custom_param=100, **kwargs):
+        super().__init__(**kwargs)
+        self.custom_param = custom_param
+    
+    def chunk(self, text):
+        self._validate_input(text)
+        
+        # Custom chunking logic here
+        chunks = []
+        # ... implementation ...
+        
+        return chunks
+```
+
+### Batch Processing
+
+```python
+from jajula_chunking import AdaptiveChunker, ChunkValidator
+
+# Process multiple documents
+documents = [
+    {"id": "doc1", "content": "Content 1..."},
+    {"id": "doc2", "content": "Content 2..."},
+    {"id": "doc3", "content": "Content 3..."}
+]
+
+chunker = AdaptiveChunker()
+all_chunks = []
+
+for doc in documents:
+    chunks = chunker.chunk(doc["content"])
+    
+    # Add document metadata
+    for chunk in chunks:
+        chunk.metadata["document_id"] = doc["id"]
+    
+    all_chunks.extend(chunks)
+
+# Validate all chunks
+validation = ChunkValidator.validate_chunks(all_chunks)
+print(f"Batch processing complete: {validation['summary']['total_chunks']} chunks")
+```
+
+### Performance Optimization
+
+```python
+# For large documents, use streaming approach
+def stream_chunks(text, chunker, batch_size=1000):
+    """Stream chunks in batches to reduce memory usage."""
+    chunks = chunker.chunk(text)
+    
+    for i in range(0, len(chunks), batch_size):
+        batch = chunks[i:i + batch_size]
+        yield batch
+
+# Usage
+chunker = FixedSizeChunker(chunk_size=500)
+for batch in stream_chunks(large_text, chunker):
+    # Process batch
+    process_chunks(batch)
+```
+
+## API Reference
+
+### Base Classes
+
+#### BaseChunker
+
+**Methods:**
+- `chunk(text: str) -> List[Chunk]`: Abstract method for chunking
+- `_validate_input(text: str) -> None`: Validate input text
+- `_get_next_id() -> str`: Generate unique chunk ID
+- `get_config() -> Dict[str, Any]`: Get chunker configuration
+- `reset_counter() -> None`: Reset chunk counter
+
+#### Chunk
+
+**Attributes:**
+- `content: str`: Chunk text content
+- `chunk_id: str`: Unique identifier
+- `start_index: int`: Starting position
+- `end_index: int`: Ending position
+- `metadata: Dict[str, Any]`: Additional information
+
+### Configuration
+
+All chunkers support keyword arguments for configuration:
+
+```python
+chunker = SomeChunker(
+    param1=value1,
+    param2=value2,
+    custom_param="custom_value"
+)
+
+# Access configuration
+config = chunker.get_config()
+```
+
+## Examples
+
+### Basic Examples
+
+See `examples/basic_usage.py` for comprehensive basic examples.
+
+### Advanced Examples
+
+See `examples/advanced_examples.py` for advanced features and complex scenarios.
+
+### Running Examples
+
+```bash
+# Basic examples
+python examples/basic_usage.py
+
+# Advanced examples
+python examples/advanced_examples.py
+```
+
+## Best Practices
+
+### 1. Choose the Right Strategy
+
+- **Fixed Size**: For consistent chunk sizes and simple processing
+- **Sentence Based**: For maintaining semantic coherence
+- **Paragraph Based**: For document structure preservation
+- **Semantic**: For complex content and AI applications
+- **Adaptive**: For automatic strategy selection
+
+### 2. Optimize Chunk Sizes
+
+- **Too small**: May lose context and coherence
+- **Too large**: May reduce retrieval precision
+- **Optimal range**: 200-1000 characters for most RAG applications
+
+### 3. Handle Overlap Appropriately
+
+- **Low overlap**: Better for storage efficiency
+- **High overlap**: Better for retrieval continuity
+- **Recommended**: 10-20% of chunk size
+
+### 4. Validate Your Chunks
+
+```python
+# Always validate chunks
+validation = ChunkValidator.validate_chunks(chunks)
+if not validation['is_valid']:
+    print("Chunk validation failed!")
+    print(f"Errors: {validation['errors']}")
+```
+
+### 5. Use Text Preprocessing
+
+```python
+# Clean text before chunking
+cleaned_text = TextProcessor.clean_text(
+    text,
+    remove_html=True,
+    normalize_whitespace=True
+)
+```
+
+### 6. Monitor Performance
+
+```python
+import time
+
+start_time = time.time()
+chunks = chunker.chunk(text)
+processing_time = time.time() - start_time
+
+print(f"Processed {len(chunks)} chunks in {processing_time:.2f} seconds")
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Import Errors
+
+```bash
+# Install missing dependencies
+pip install nltk beautifulsoup4 numpy scikit-learn
+```
+
+#### 2. NLTK Data Missing
+
+```python
+import nltk
+nltk.download('punkt')
+```
+
+#### 3. Semantic Chunking Fails
+
+```bash
+# Install required packages
+pip install torch sentence-transformers
+```
+
+#### 4. Token Counting Errors
+
+```bash
+# Install tiktoken
+pip install tiktoken
+```
+
+#### 5. Memory Issues
+
+- Reduce chunk sizes
+- Process documents in batches
+- Use streaming approaches
+- Monitor memory usage
+
+### Performance Tips
+
+1. **Use appropriate chunk sizes** for your use case
+2. **Enable semantic chunking** only when needed
+3. **Process large documents** in batches
+4. **Cache chunkers** for repeated use
+5. **Monitor resource usage** during processing
+
+### Debug Mode
+
+```python
+import logging
+
+# Enable debug logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Chunkers will now provide detailed logging
+chunker = FixedSizeChunker(chunk_size=500)
+chunks = chunker.chunk(text)
+```
+
+## Contributing
+
+We welcome contributions! Please see our contributing guidelines for details.
+
+## Support
+
+- **Documentation**: [Link to docs]
+- **Issues**: [GitHub Issues]
+- **Discussions**: [GitHub Discussions]
+- **Email**: contact@jajula.com
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
