@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Upgrade build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade build twine hatchling
+      - name: Debug pyproject (safe)
+        run: |
+          pwd
+          ls -la
+          python - << 'PY'
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:     
+              data = tomllib.load(f)                  
+          print("project.name:", data.get("project", {}).get("name"))
+          print("dynamic:", data.get("project", {}).get("dynamic"))
+          print("optional-deps keys:", list(data.get("project", {}).get("optional-dependencies", {}).keys()))
+          hv = data.get("tool", {}).get("hatch", {}).get("version", {})
+          print("[tool.hatch.version].path:", hv.get("path"))
+          PY
+
+  editable-install-check:
+    name: Editable install check (PEP 660)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Upgrade build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade build twine hatchling
+      - name: Upgrade build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade build twine hatchling
+      - name: Editable install
+        run: |
+          pip install -e .[dev]
+      - name: Smoke import
+        run: |
+          python - << 'PY'
+          import airflow_provider_ibm_db2
+          print("Version:", getattr(airflow_provider_ibm_db2, "__version__", "n/a"))
+          PY
