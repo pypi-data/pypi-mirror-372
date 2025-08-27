@@ -1,0 +1,424 @@
+Metadata-Version: 2.4
+Name: creds-vault
+Version: 1.0.1
+Summary: Secure environment variable synchronization tool
+Author-email: Mudassir Mirza <hello.mudassirmirza@gmail.com>
+Maintainer-email: Mudassir Mirza <hello.mudassirmirza@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/mirzamudassir/secrets-cli
+Project-URL: Documentation, https://github.com/mirzamudassir/secrets-cli#readme
+Project-URL: Repository, https://github.com/mirzamudassir/secrets-cli
+Project-URL: Bug Reports, https://github.com/mirzamudassir/secrets-cli/issues
+Project-URL: Changelog, https://github.com/mirzamudassir/secrets-cli/blob/main/CHANGELOG.md
+Keywords: secrets-cli,environment,dotenv,encryption,cli,github,gist,security,devops
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Security :: Cryptography
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Systems Administration
+Classifier: Topic :: Utilities
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.25.0
+Requires-Dist: cryptography>=3.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.10; extra == "dev"
+Requires-Dist: black>=21.0; extra == "dev"
+Requires-Dist: flake8>=3.8; extra == "dev"
+Requires-Dist: mypy>=0.800; extra == "dev"
+Requires-Dist: twine>=3.0; extra == "dev"
+Requires-Dist: pip-audit>=2.0; extra == "dev"
+Requires-Dist: safety>=2.0; extra == "dev"
+Dynamic: license-file
+
+# Creds Vault 🔐
+
+[![PyPI version](https://badge.fury.io/py/creds-vault.svg)](https://badge.fury.io/py/creds-vault)
+[![Python Support](https://img.shields.io/pypi/pyversions/creds-vault.svg)](https://pypi.org/project/creds-vault/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A secure command-line utility for sharing `.env` files across development teams using GitHub Gists with client-side AES-256 encryption.
+
+## 🚀 Features
+
+- **🔒 Client-side Encryption**: AES-256 encryption with PBKDF2 key derivation
+- **🆓 Free Storage**: Uses GitHub Gists (no additional service costs)
+- **👥 Team-friendly**: Simple sharing via gist IDs
+- **🛡️ Zero-knowledge**: GitHub never sees your plaintext secrets
+- **📁 Project-aware**: Remembers vault configuration per project
+- **🔐 Secure by Default**: Restricted file permissions (600)
+
+## 🛡️ Security Architecture
+
+```
+┌─────────────────┐    AES-256     ┌──────────────────┐    HTTPS    ┌─────────────┐
+│   Local .env    │ ──────────────▶│  Encrypted Blob  │ ───────────▶│ GitHub Gist │
+│   (plaintext)   │   Client-side  │   (ciphertext)   │             │  (private)  │
+└─────────────────┘                └──────────────────┘             └─────────────┘
+```
+
+- **Your secrets never leave your machine in plaintext**
+- **Password-based encryption** with 100,000 PBKDF2 iterations
+- **Salt-based security** prevents rainbow table attacks
+- **Private GitHub Gists** for encrypted storage
+
+## 📦 Installation
+
+### Option 1: Install from PyPI (Recommended)
+```bash
+pip install creds-vault
+```
+
+### Option 2: Install from Source
+```bash
+git clone https://github.com/mirzamudassir/creds-vault.git
+cd creds-vault
+make install
+```
+
+### Option 3: Development Installation
+```bash
+git clone https://github.com/mirzamudassir/creds-vault.git
+cd creds-vault
+make install-dev
+```
+
+## ⚙️ Setup
+
+### 1. GitHub Token Setup
+Create a GitHub personal access token with `gist` scope:
+
+1. Go to [GitHub Settings → Tokens](https://github.com/settings/tokens)
+2. Click "Generate new token (classic)"
+3. Select **only** the `gist` scope
+4. Copy the token
+
+```bash
+# Set environment variable
+export GITHUB_TOKEN="ghp_your_token_here"
+
+# Make it permanent
+echo 'export GITHUB_TOKEN="ghp_your_token_here"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### 2. Verify Installation
+```bash
+secrets --version
+secrets --help
+```
+
+## 🔄 Usage
+
+### First-time Setup (Project Owner)
+
+```bash
+# Navigate to your project
+cd my-awesome-project
+
+# Create or edit your .env file
+cat > .env << EOF
+DATABASE_URL=postgresql://localhost:5432/myapp
+API_KEY=sk-1234567890abcdef
+STRIPE_SECRET=sk_test_xyz123
+JWT_SECRET=super-secret-jwt-key
+EOF
+
+# Initialize encrypted vault
+secrets init
+
+# Output:
+# ✅ Successfully initialized encrypted secrets vault
+# 🔒 Content encrypted with AES-256
+# 📝 Gist ID: xxxxxx
+# 
+# 📤 Share this command with your team:
+#    secrets pull --gist-id xxxxxx
+# 
+# ⚠️  Important: Share the vault password securely!
+```
+
+### Team Member Setup
+
+```bash
+# Navigate to project directory
+cd my-awesome-project
+
+# Pull secrets (replace with actual gist ID)
+secrets pull --gist-id xxxxxx
+# Enter vault password: ••••••••••
+
+# ✅ Successfully pulled and decrypted .env
+# 📝 Saved project configuration
+```
+
+### Daily Workflow
+
+```bash
+# Check project status
+secrets status
+
+# Pull latest changes
+secrets pull
+
+# Make local changes to .env
+echo "NEW_FEATURE_FLAG=true" >> .env
+
+# Push changes to vault
+secrets push
+
+# Check what's configured
+secrets status
+```
+
+## 📋 Command Reference
+
+### `secrets init`
+Initialize encrypted vault with current `.env` file.
+
+```bash
+secrets init [--filename .env.local]
+```
+
+**Options:**
+- `--filename`: Specify custom env file name (default: `.env`)
+
+### `secrets push`
+Push local env file to vault.
+
+```bash
+secrets push [--filename .env.local]
+```
+
+**Options:**
+- `--filename`: Specify custom env file name (default: `.env`)
+
+### `secrets pull`
+Pull env file from vault.
+
+```bash
+secrets pull [--gist-id ID] [--filename .env] [--force]
+```
+
+**Options:**
+- `--gist-id`: Gist ID (required for first-time setup)
+- `--filename`: Custom filename (default: auto-detect)
+- `--force`: Overwrite without confirmation
+
+### `secrets status`
+Show project status and configuration.
+
+```bash
+secrets status
+```
+
+## 🏗️ Project Structure
+
+After installation, your project will have:
+
+```
+your-project/
+├── .env                     # Your secrets file
+├── .gitignore              # Should include .env
+└── (other project files)
+
+~/.creds-vault/
+└── config.json             # Project → gist mappings
+```
+
+## 🔒 Security Best Practices
+
+### Password Security
+- **Use strong passwords**: Minimum 12 characters with mixed case, numbers, symbols
+- **Unique passwords**: Don't reuse passwords from other services
+- **Secure sharing**: Use password managers or secure channels to share vault passwords
+- **Regular rotation**: Consider rotating vault passwords periodically
+
+### GitHub Token Security
+- **Minimal permissions**: Only grant `gist` scope
+- **Regular rotation**: Rotate tokens every 3-6 months
+- **Secure storage**: Never commit tokens to code repositories
+- **Team vs individual**: Consider using team-specific tokens for organizations
+
+### File Security
+- **Gitignore**: Always add `.env*` to your `.gitignore`
+- **Permissions**: Tool automatically sets secure permissions (600)
+- **Cleanup**: Remove `.env` files when no longer needed
+
+## 🚨 Security Considerations
+
+### ✅ What's Protected
+- **Plaintext secrets**: Never transmitted or stored in the cloud
+- **Man-in-the-middle**: HTTPS protects data in transit
+- **GitHub breaches**: Encrypted data remains secure
+- **Token compromise**: Attackers only see encrypted blobs
+
+### ⚠️ Limitations
+- **Password security**: Vault security depends on password strength
+- **Local compromise**: If your machine is compromised, local files are at risk
+- **Social engineering**: Sharing passwords insecurely can compromise vaults
+- **GitHub availability**: Service depends on GitHub being accessible
+
+### 🏢 Compliance
+- **Development environments**: Suitable for dev/staging secrets
+- **Production secrets**: Consider dedicated secret management for production
+- **Audit requirements**: Tool doesn't provide audit logs (GitHub does)
+- **Regulatory compliance**: Evaluate against your specific requirements
+
+## 🛠️ Development
+
+### Setup Development Environment
+```bash
+git clone https://github.com/mirzamudassir/creds-vault.git
+cd creds-vault
+make install-dev
+```
+
+### Run Tests
+```bash
+make test
+```
+
+### Code Quality
+```bash
+make lint          # Run linting
+make format        # Format code
+make check         # Lint + test
+```
+
+### Build and Release
+```bash
+make build         # Build distribution
+make publish       # Publish to PyPI
+```
+
+## 🔧 Advanced Usage
+
+### Custom Filenames
+```bash
+# Initialize with custom filename
+secrets init --filename .env.production
+
+# Push/pull custom files
+secrets push --filename .env.local
+secrets pull --filename .env.staging
+```
+
+### Multiple Projects
+The tool automatically manages different vaults per project:
+
+```bash
+cd project-a
+secrets init        # Creates vault A
+
+cd ../project-b  
+secrets init        # Creates vault B
+
+secrets status      # Shows project B config
+cd ../project-a
+secrets status      # Shows project A config
+```
+
+### CI/CD Integration
+```bash
+# In CI/CD pipeline
+export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+secrets pull --gist-id $VAULT_ID --force
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"Invalid GitHub token"**
+```bash
+# Check token is set
+echo $GITHUB_TOKEN
+
+# Verify token has gist scope
+curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
+```
+
+**"Project not initialized"**
+```bash
+# Initialize new vault
+secrets init
+
+# Or link to existing vault
+secrets pull --gist-id your-gist-id
+```
+
+**"Decryption failed"**
+```bash
+# Wrong password - try again
+secrets pull
+
+# Vault corrupted - contact vault creator
+```
+
+**"File permission denied"**
+```bash
+# Fix file permissions
+chmod 600 .env
+```
+
+### Debug Mode
+```bash
+# Enable verbose logging
+export DEBUG=1
+secrets status
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Quick Start
+```bash
+git clone https://github.com/mirzamudassir/creds-vault.git
+cd creds-vault
+make install-dev
+make test
+```
+
+### Reporting Issues
+- [Bug Reports](https://github.com/mirzamudassir/creds-vault/issues)
+- [Feature Requests](https://github.com/mirzamudassir/creds-vault/issues)
+- [Security Issues](mailto:security@example.com)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **cryptography**: For robust encryption primitives
+- **requests**: For HTTP client functionality  
+- **GitHub**: For providing free Gist storage
+- **Python community**: For excellent tooling and libraries
+
+## 📚 Resources
+
+- [GitHub Gists Documentation](https://docs.github.com/en/github/writing-on-github/editing-and-sharing-content-with-gists)
+- [OWASP Cryptographic Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)
+- [NIST Password Guidelines](https://pages.nist.gov/800-63-3/sp800-63b.html)
+
+---
+
+<div align="center">
+
+**[⭐ Star us on GitHub](https://github.com/mirzamudassir/creds-vault)** | **[📖 Read the Docs](https://github.com/mirzamudassir/creds-vault#readme)** | **[🐛 Report Issues](https://github.com/mirzamudassir/creds-vault/issues)**
+
+Made with ❤️ for developers who care about security
+
+</div>
