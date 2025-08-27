@@ -1,0 +1,87 @@
+Metadata-Version: 2.4
+Name: websight
+Version: 0.1.1
+Summary: A Vision-First Architecture for Robust Web Agents
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: colorama>=0.4.6
+Requires-Dist: datasets>=3.6.0
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: huggingface-hub>=0.30.2
+Requires-Dist: matplotlib>=3.10.1
+Requires-Dist: openai>=1.82.0
+Requires-Dist: peft>=0.15.2
+Requires-Dist: pillow>=11.2.1
+Requires-Dist: playwright>=1.52.0
+Requires-Dist: pydantic>=2.10.5
+Requires-Dist: python-dotenv>=1.1.0
+Requires-Dist: pyyaml>=6.0.2
+Requires-Dist: rich>=14.0.0
+Requires-Dist: torchvision>=0.22.0
+Requires-Dist: tqdm>=4.67.1
+Requires-Dist: transformers>=4.52.4
+Requires-Dist: webdriver-manager>=4.0.2
+
+# Websight
+
+Vision first browser agents based on Websight-7B, a custom 7B parameter model.
+
+## Installation
+
+```bash
+pip install websight
+# or
+uv add websight
+```
+
+## Quickstart
+
+Call the model directly on an image:
+
+```python
+from websight import websight_call
+
+action = websight_call(
+    prompt="Click the Login button",
+    history=[],  # prior (reasoning, action) pairs if you have them
+    image_base64="data:image/png;base64,<...>",
+)
+print(action.action)  # e.g., "click"
+print(action.args)    # e.g., {"x": "175", "y": "514"}
+```
+
+## Reference
+
+- websight.websight_call
+
+```python
+def websight_call(
+    prompt: str,
+    history: list[tuple[str, str]],
+    image_base64: str,
+    console: rich.console.Console | None = None,
+    max_new_tokens: int = 1000,
+) -> Action
+```
+
+Calls the Websight VLM with a screenshot and instruction, returning a structured `Action`.
+
+- websight.Action
+
+```python
+class Action(BaseModel):
+    action: str                # e.g. "click", "drag", "type", "scroll", ...
+    args: dict[str, str]       # e.g. {"x": "175", "y": "514"}
+    reasoning: str             # model rationale
+```
+
+- websight.Agent
+
+```python
+from websight.agent import Agent
+
+agent = Agent(show_browser=False)
+result = agent.run("Open https://example.com and search for 'websight'", max_iterations=10)
+```
+
+Basic Agent loop using Playwright: takes a screenshot, calls `websight_call`, parses and executes the predicted action, and repeats until it sees `finished(...)`.
