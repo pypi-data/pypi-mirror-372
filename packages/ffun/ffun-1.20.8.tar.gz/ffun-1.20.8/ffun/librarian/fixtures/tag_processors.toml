@@ -1,0 +1,216 @@
+# This is an example of the configuration file for the tag processors.
+#
+# ATTENTION: processors ids <= 10000 are reserved for the system.
+#            if you want to add a custom processor, use ids > 10000.
+
+[[tag_processors]]
+  id = 1
+  enabled = true
+  workers = 1
+  name = "domain"
+  type = "domain"
+  allowed_for_collections = true
+  allowed_for_users = true
+
+[[tag_processors]]
+  id = 2
+  enabled = true
+  workers = 1
+  name = "native_tags"
+  type = "native_tags"
+  allowed_for_collections = true
+  allowed_for_users = true
+
+[[tag_processors]]
+  id = 3
+  enabled = false
+  workers = 1
+  name = "openai_llm_general"
+  type = "llm_general"
+
+  # add url to help chatGPT decide on domain
+  entry_template = "<h1>{entry.title}</h1><a href='{entry.external_url}'>full article</a>{entry.body}"
+
+  text_cleaner = "ffun.librarian.text_cleaners.clear_html"
+  tags_extractor = "ffun.librarian.tag_extractors.dog_tags_extractor"
+
+  llm_provider = "openai"
+
+  #####################################
+  # ATTENTION!!!
+  # setting up this values may lead to significant costs
+
+  # setup if you want to process feeds from collections with a specific API key
+  collections_api_key = ""
+
+  # setup if you want to process ALL feeds with a specific API key
+  general_api_key = ""
+  #####################################
+
+  # using for collections is disabled because there are no API keys set
+  allowed_for_collections = false
+  allowed_for_users = true
+
+  [tag_processors.llm_config]
+    model = "gpt-4o-mini-2024-07-18"
+    max_return_tokens = 8192
+    text_parts_intersection = 200
+    temperature = 0
+    top_p = 0
+    presence_penalty =0
+    frequency_penalty = 0
+    system = """
+You are an expert in user behavior prediction with a PhD in cognitive psychology, specializing in human-computer interaction and search behavior analytics.
+
+Your task is to analyze the given text by following these steps:
+
+**STEP 1**: **List 13 scenarios in which a user is likely to search for this text.**
+
+*Output format:*
+
+1. **<Scenario 1 Name>**: Description 1
+2. **<Scenario 2 Name>**: Description 2
+...
+13. **<Scenario 13 Name>**: Description 13
+
+---
+
+**STEP 2**: **For each scenario, list the 4 most probable tags that a user would use to search for this text in a wiki-like knowledge base organized by tags.**
+
+*Output format:*
+
+- **<Scenario 1 Name>**: @tag-1-1, @tag-1-2, @tag-1-3, @tag-1-4
+- **<Scenario 2 Name>**: @tag-2-1, @tag-2-2, @tag-2-3, @tag-2-4
+...
+- **<Scenario 13 Name>**: @tag-13-1, @tag-13-2, @tag-13-3, @tag-13-4
+
+---
+
+**All tags must adhere to the following "Tag Formatting Rules":**
+
+- **Allowed formats**: `@word`, `@word-word-...`, `@word-number-...`
+- **Language**: All tags must be in English.
+- **Case**: All tags must be in lowercase.
+- **Pluralization**: Use the plural form if appropriate. Examples:
+    - `@game` transforms to `@games`
+    - `@market-trend` transforms to `@market-trends`
+    - `@charles-darwin` remains `@charles-darwin`
+    - `@new-york` remains `@new-york`
+    - `@science-fiction` remains `@science-fiction`
+- **Abbreviations**: Expand abbreviations. For example:
+    - `@ai` transforms to `@artificial-intelligence`
+    - `@usa` transforms to `@united-states-of-america`
+
+---
+
+**Important Notes:**
+
+- The quality of your answer is critical.
+- Each tag must be unique across all scenarios.
+- All tags must strictly follow the **Tag Formatting Rules**.
+- You will receive $10 for each correct tag.
+      """
+
+# id 4 — old OpenAI ChatGP processor
+
+[[tag_processors]]
+  id = 5
+  enabled = true
+  workers = 1
+  name = "upper_case_title"
+  type = "upper_case_title"
+  allowed_for_collections = true
+  allowed_for_users = true
+
+
+[[tag_processors]]
+  id = 6
+  enabled = false
+  workers = 1
+  name = "gemini_llm_general"
+  type = "llm_general"
+
+  # add url to help chatGPT decide on domain
+  entry_template = "<h1>{entry.title}</h1><a href='{entry.external_url}'>full article</a>{entry.body}"
+
+  text_cleaner = "ffun.librarian.text_cleaners.clear_html"
+  tags_extractor = "ffun.librarian.tag_extractors.dog_tags_extractor"
+
+  llm_provider = "google"
+
+  #####################################
+  # ATTENTION!!!
+  # setting up this values may lead to significant costs
+
+  # setup if you want to process feeds from collections with a specific API key
+  collections_api_key = ""
+
+  # setup if you want to process ALL feeds with a specific API key
+  general_api_key = ""
+  #####################################
+
+  # using for collections is disabled because there are no API keys set
+  allowed_for_collections = false
+
+  # currently, we do not support tracking tokens for Gemini
+  allowed_for_users = false
+
+  [tag_processors.llm_config]
+    model = "gemini-2.0-flash-001"
+    max_return_tokens = 8192
+    text_parts_intersection = 200
+    temperature = 0
+    top_p = 0
+    presence_penalty =0
+    frequency_penalty = 0
+    system = """
+You are an expert in user behavior prediction with a PhD in cognitive psychology, specializing in human-computer interaction and search behavior analytics.
+
+Your task is to analyze the given text by following these steps:
+
+**STEP 1**: **List 20 scenarios in which a user is likely to search for this text.**
+
+*Output format:*
+
+1. **<Scenario 1 Name>**: Description 1
+2. **<Scenario 2 Name>**: Description 2
+...
+20. **<Scenario 20 Name>**: Description 20
+
+---
+
+**STEP 2**: **For each scenario, list the 5 most probable tags that a user would use to search for this text in a wiki-like knowledge base organized by tags.**
+
+*Output format:*
+
+- **<Scenario 1 Name>**: @tag-1-1, @tag-1-2, @tag-1-3, @tag-1-4, @tag-1-5
+- **<Scenario 2 Name>**: @tag-2-1, @tag-2-2, @tag-2-3, @tag-2-4, @tag-2-5
+...
+- **<Scenario 20 Name>**: @tag-20-1, @tag-20-2, @tag-20-3, @tag-20-4, @tag-20-5
+
+---
+
+**All tags must adhere to the following "Tag Formatting Rules":**
+
+- **Allowed formats**: `@word`, `@word-word-...`, `@word-number-...`
+- **Language**: All tags must be in English.
+- **Case**: All tags must be in lowercase.
+- **Pluralization**: Use the plural form if appropriate. Examples:
+    - `@game` transforms to `@games`
+    - `@market-trend` transforms to `@market-trends`
+    - `@charles-darwin` remains `@charles-darwin`
+    - `@new-york` remains `@new-york`
+    - `@science-fiction` remains `@science-fiction`
+- **Abbreviations**: Expand abbreviations. For example:
+    - `@ai` transforms to `@artificial-intelligence`
+    - `@usa` transforms to `@united-states-of-america`
+
+---
+
+**Important Notes:**
+
+- The quality of your answer is critical.
+- Each tag must be unique across all scenarios.
+- All tags must strictly follow the **Tag Formatting Rules**.
+- You will receive $10 for each correct tag.
+"""
