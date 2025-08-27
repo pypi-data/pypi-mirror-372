@@ -1,0 +1,199 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        if [ -f "requirements-dev.txt" ]; then
+          pip install -r requirements-dev.txt
+        fi
+    
+    - name: Lint with flake8 (if available)
+      run: |
+        if pip show flake8 >/dev/null 2>&1; then
+          flake8 nage/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 nage/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        else
+          echo "flake8 not installed, skipping linting"
+        fi
+    
+    - name: Test with pytest (if available)
+      run: |
+        if pip show pytest >/dev/null 2>&1; then
+          pytest
+        else
+          echo "pytest not installed, running basic import test"
+          python -c "import nage; print('Import test passed')"
+        fi
+
+  build-test:
+    name: Test Build on ${{ matrix.os }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false  # 不要因为一个平台失败就取消其他平台
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-13  # 固定使用 macOS 13 避免迁移问题
+            platform: macos
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'  # 使用稳定版本进行构建测试
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Install timeout command (macOS)
+      if: matrix.platform == 'macos'
+      run: |
+        brew install coreutils
+    
+    - name: Install dependencies with build extras
+      run: |
+        uv sync --extra build
+    
+    - name: Create PyInstaller spec file
+      shell: bash
+      run: |
+        cat > nage.spec << 'EOF'
+        # -*- mode: python ; coding: utf-8 -*-
+        
+        block_cipher = None
+        
+        a = Analysis(
+            ['nage/__main__.py'],
+            pathex=[],
+            binaries=[],
+            datas=[],
+            hiddenimports=['click', 'openai', 'pyperclip', 'nage.ai_client', 'nage.setting', 'nage.parse'],
+            hookspath=[],
+            hooksconfig={},
+            runtime_hooks=[],
+            excludes=[],
+            win_no_prefer_redirects=False,
+            win_private_assemblies=False,
+            cipher=block_cipher,
+            noarchive=False,
+        )
+        
+        pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+        
+        exe = EXE(
+            pyz,
+            a.scripts,
+            a.binaries,
+            a.zipfiles,
+            a.datas,
+            [],
+            name='nage',
+            debug=False,
+            bootloader_ignore_signals=False,
+            strip=False,
+            upx=False,
+            upx_exclude=[],
+            runtime_tmpdir=None,
+            console=True,
+            disable_windowed_traceback=False,
+            argv_emulation=False,
+            target_arch=None,
+            codesign_identity=None,
+            entitlements_file=None,
+        )
+        EOF
+    
+    - name: Test build with PyInstaller
+      timeout-minutes: 10
+      shell: bash
+      run: |
+        uv run --extra build pyinstaller --clean nage.spec
+    
+    - name: Test executable (Linux/macOS)
+      if: matrix.platform != 'windows'
+      shell: bash
+      run: |
+        chmod +x ./dist/nage
+        # Test that the binary exists and is executable
+        if [ ! -f "./dist/nage" ]; then
+          echo "Error: Binary not found"
+          exit 1
+        fi
+        # Test that binary starts correctly - we expect first time setup prompt
+        echo "Testing binary execution..."
+        output=$(timeout 5s ./dist/nage 2>&1 || true)
+        echo "Binary output:"
+        echo "$output"
+        
+        # Check if binary started correctly (look for first time setup prompt)
+        if echo "$output" | grep -q "First time setup"; then
+          echo "✅ Binary test passed - program started correctly"
+        else
+          echo "❌ Binary test failed - expected 'First time setup' prompt not found"
+          exit 1
+        fi
+        ls -la dist/
+    
+    - name: Test executable (Windows)
+      if: matrix.platform == 'windows'
+      shell: bash
+      run: |
+        chmod +x ./dist/nage.exe
+        # Test that the binary exists and is executable  
+        if [ ! -f "./dist/nage.exe" ]; then
+          echo "Error: Binary not found"
+          exit 1
+        fi
+        # Test that binary starts correctly - we expect first time setup prompt
+        echo "Testing binary execution..."
+        output=$(timeout 5s ./dist/nage.exe 2>&1 || true)
+        echo "Binary output:"
+        echo "$output"
+        
+        # Check if binary started correctly (look for first time setup prompt)
+        if echo "$output" | grep -q "First time setup"; then
+          echo "✅ Binary test passed - program started correctly"
+        else
+          echo "❌ Binary test failed - expected 'First time setup' prompt not found"
+          exit 1
+        fi
+        ls -la dist/
+    
+    - name: Upload test binary as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-binary-${{ matrix.platform }}
+        path: dist/nage*
+        retention-days: 1
