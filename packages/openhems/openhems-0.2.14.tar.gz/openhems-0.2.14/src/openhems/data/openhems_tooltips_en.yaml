@@ -1,0 +1,128 @@
+api:
+  url: "HTTP url for Home-Assistant API. usually it should be http://127.0.0.1:8123/api"
+  long_lived_token: "It's a Home-Assistant token (a long password) to generate on Home-Assistant web pagei : Home-Assistant => User profile / Security / long lived token / Create token."
+  ssl_certificate: "A file path to the SSL certificate. For the moment it's not corectly managed"
+localization:
+  latitude: "The home lattitude (usefull for solar-panel and wether predictions)"
+  longitude: "The home longitude (usefull for solar-panel and wether predictions)"
+  altitude: "The home altitude (usefull for solar-panel)"
+  timeZone: "Time-Zone : TZ identifier in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List"
+  language: "Language abbreviation ('fr' for french, 'en' to english)"
+server:
+  htmlRoot: "Root location of web server."
+  inDocker: "True if OpenHEMS run in docker."
+  port: "Web server port for listening."
+  logformat: "Format for log on OpenHEMS # for custom configuration see https://docs.python.org/3/library/logging.html#logrecord-attributes"
+  logfile: "Log file path"
+  loglevel: "Log level, (critical, error, warning, info, debug)"
+  loopDelay: "Interval between two OpenHEMS loops. The shorter it is, the better the responsiveness but the higher the power consumption of Home-Assistant. Caution: Set it to a frequency higher than that of your sensors, especially that of the PublicPowerGrid."
+  network: "The way OpenHEMS access your home network. (availables are homeassistant and fake)".
+  strategies: "Define the algorithms used to control the home energy (offpeak, emhass, solarnosell)."
+network:
+  nodes: "Configure your home nodes"
+default:
+  strategy:
+    emhass:
+      freq: "Frequency for AI study of optimal network. Should be greater than server.loopDelay"
+      days_to_retrieve: "History in days analyzed to understand habits"
+      method_ts_round: ""
+      delta_forecast: ""
+      weather_forecast_method: ""
+      set_total_pv_sell: False
+      lp_solver: default
+      lp_solver_path: empty
+      set_nocharge_from_grid: False
+      set_nodischarge_to_grid: True
+      set_battery_dynamic: False
+      battery_dynamic_max: 0.9
+      battery_dynamic_min: -0.9
+    offpeak:
+      improvedSecurity: true
+    switchoff:
+      reverse: False
+      offhours: []
+      offconditions: False
+    annealing:
+      freq: "Frequency for launch study of optimal network. Should be greater than server.loopDelay"
+      max_iteration_number: "Max number of algorithm iteration during one launch."
+      initial_temp: "Initial temperature."
+      cooling_factor: "Factor for cooling for ."
+      min_temp: "Lowest temperature."
+      max_no_improve: "Maximum number of improvement."
+    nosell:
+      ratio: "An abstract number witch should be between -1 and 1 (outside works). -1 = Should nether sell elextricity. 1 = Should never buy (if possible)"
+      margin: "An margin in Kwh to avoid sell/buy (for safety beetwen 2 loop)."
+      cycleDuration: "Number of cycle during witch the ratio/margin must occured to switch on/off devices. It's to avoid yo-yo effect."
+      refCoefficient: "An abstract number above witch we switch on devices even if cycleDuration doesn't occure. To know how to set, check the logs after a short use."
+    nobuy:
+      ratio: "Like for 'nosell' strategy"
+      margin: "Like for 'nosell' strategy"
+    ratiosellbuy:
+      ratio: "Like for 'nosell' strategy"
+      margin: "Like for 'nosell' strategy"
+  node:
+    publicpowergrid:
+      currentPower: null
+      maxPower: "Maximum power, in Lwh the grid can deliver before black-out."
+      minPower: "Minimum power, in Lwh the grid can deliver (0 if no sell possibility, -maxPower other wise? )."
+      marginPower: "An acceptable security margin of power in Kwh."
+      contract:
+        rtetempo:
+          color: "A sensor id witch give color if available (else we use an API)"
+          nextcolor: ""
+          offpeakhoursranges: "List off-peak hours."
+          peakprice:
+            bleu: ""
+            blanc: ""
+            rouge: ""
+          offpeakprice:
+            bleu: ""
+            blanc: ""
+            rouge: ""
+        rteheurescreuses:
+          offpeakhoursranges: ""
+          peakprice: ""
+          offpeakprice: ""
+        rtetarifbleu:
+          price: ""
+        generic:
+          offpeakhoursranges: ""
+          defaultPrice: ""
+          outRangePrice: ""
+          sellprice: ""
+    solarpanel:
+      currentPower: "The HA identifier to get power, in Kw produced by the panel"
+      maxPower: "The maximum power, in Kw, the panel could deliver. (It's used to determin margin power - security. And it's used to predict production.)."
+      moduleModel: ""
+      inverterModel: ""
+      tilt: "Angle in degree"
+      azimuth: "Agnle in degree from the north."
+      modulesPerString: ""
+      stringsPerInverter: ""
+      marginPower: "An acceptable security margin of power in Kwh (like in publicpowergrid)."
+    battery:
+      currentPower: "The HA identifier to get power, in Kw, delivered (positiv) by the battery or charging (if negativ)"
+      maxPowerIn: "Maximum power, in Kw, we can push to the battery when charging battery."
+      maxPowerOut: "Maximum power, in Kw, we can pull from the battery when discharging battery."
+      efficiencyIn: "Efficiency rate in % when charging the battery"
+      efficiencyOut: "Efficiency rate in % when discharging the battery"
+      capacity: "Capacity of the battery in Kwh"
+      currentLevel: "The HA identifier to get battery level in %"
+      lowLevel: "The level in % of battery under witch we don't want to go above to preserve battery"
+      highLevel: "The level in % of battery above witch we don't want to go above to preserve battery"
+      targetLevel: "The charge level, in %, we expect for the battery (at end of the day, a little under highLevel). It can be interresting to set a dynamic value."
+    switch:
+      currentPower: "The HA identifier to get power, in Kw consumed by the switch"
+      maxPower: "The maximum power, in Kw, we expect the devices behind the switch will pull. (It's used to determin margin power : security)."
+      isOn: "The HA identifier to know if device is on or off and to switch it. (if None, the node is only for security on black-out)."
+      strategy: "The strategy id used for this device (useless if no 'isOn' attribute)."
+      priority: "A number between 0 and 100 to determine if this device is important. Higher it is, more it is important (useless if no 'isOn' attribute)."
+      sensor: "If one, the HA identifier of a sensor for feedback : auto-switch on/off."
+      target: "Sensor target if one. Can configure variable value during the day. Configured like offhours."
+      constraint:
+        minPower: "If set: if the device's consumption falls below this value, the device is turned off."
+        maxPower: "If set: if the device's consumption rise upper this value, the device is turned off."
+        minDurationOn: "Duration, in seconds: do not switch off device before it has been on during that duration."
+        minDurationOff: "Duration, in seconds: do not switch on device before it has been off during that duration."
+        maxDurationOn: "Duration, in seconds: switch off device if it has been on during that duration."
+        maxDurationOff: "Duration, in seconds: switch on device if it has been off during that duration."
