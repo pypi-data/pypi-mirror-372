@@ -1,0 +1,96 @@
+Metadata-Version: 2.4
+Name: nerdd-link
+Version: 0.5.2
+Summary: Run a NERDD module as a service
+Author-email: Steffen Hirte <steffen.hirte@univie.ac.at>
+Maintainer-email: Steffen Hirte <steffen.hirte@univie.ac.at>
+License-Expression: BSD-3-Clause
+Project-URL: Repository, https://github.com/molinfo-vienna/nerdd-link
+Keywords: science,research,development,nerdd
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python
+Classifier: Topic :: Software Development
+Classifier: Topic :: Scientific/Engineering
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: Unix
+Classifier: Operating System :: MacOS
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: nerdd-module>=0.3.44
+Requires-Dist: pandas>=1.2.1
+Requires-Dist: pyyaml~=6.0
+Requires-Dist: filetype~=1.2.0
+Requires-Dist: rich-click>=1.7.1
+Requires-Dist: stringcase~=1.2.0
+Requires-Dist: numpy
+Requires-Dist: simplejson>=3
+Requires-Dist: pydantic>=2
+Requires-Dist: aiokafka>=0.12.0
+Requires-Dist: importlib-metadata>=4.6; python_version < "3.10"
+Requires-Dist: typing_extensions>=4.0.1; python_version < "3.8"
+Provides-Extra: dev
+Requires-Dist: mypy; extra == "dev"
+Requires-Dist: ruff==0.8.0; extra == "dev"
+Requires-Dist: pre-commit>=2; extra == "dev"
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+Requires-Dist: pytest-sugar; extra == "test"
+Requires-Dist: pytest-cov; extra == "test"
+Requires-Dist: pytest-asyncio~=0.21.1; extra == "test"
+Requires-Dist: pytest-bdd==7.3.0; extra == "test"
+Requires-Dist: pytest-mock; extra == "test"
+Requires-Dist: pytest-watcher; extra == "test"
+Requires-Dist: hypothesis; extra == "test"
+Requires-Dist: hypothesis-rdkit; extra == "test"
+Provides-Extra: docs
+Requires-Dist: mkdocs; extra == "docs"
+Requires-Dist: mkdocs-material; extra == "docs"
+Requires-Dist: mkdocstrings; extra == "docs"
+Dynamic: license-file
+
+# NERDD-Link
+
+Run a [NERDD module](https://github.com/molinfo-vienna/nerdd-module) as a  
+service that consumes input molecules and produces prediction tuples.
+
+
+## Installation
+
+```bash
+pip install -U nerdd-link
+```
+  
+## Usage
+
+When a class inherits from ```nerdd_module.AbstractModel``` (see 
+[NERDD Module Github page](https://github.com/molinfo-vienna/nerdd-module)), it can be 
+used to create a Kafka service. 
+
+```bash 
+# run a Kafka service for NerddModel on localhost:9092
+run_nerdd_server package.path.to.NerddModel
+
+# modify broker url, input topic and batch size
+run_nerdd_server package.path.to.NerddModel \
+  --broker-url my-cluster-kafka-bootstrap.kafka:9092 \
+  --input-topic examples \
+  --batch-size 10
+
+# more information via --help
+run_nerdd_server --help
+```
+
+If the model class is called ```ExamplePredictionModel```, the server will read input 
+tuples from the input topic ```example-prediction-inputs``` in batches of size 100
+and write results to the ```results``` topic. The batch size specifies the number
+of input tuples that are given to the model at once.
+
+## Communication
+
