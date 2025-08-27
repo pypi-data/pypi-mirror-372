@@ -1,0 +1,129 @@
+Metadata-Version: 2.4
+Name: eripotter-common
+Version: 0.1.4
+Summary: Common utilities for EriPotter microservices
+Project-URL: Homepage, https://eripotter.com
+Project-URL: Repository, https://github.com/eripotter/eripotter-common
+Author: EriPotter Team
+License-Expression: MIT
+License-File: LICENSE
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.9
+Requires-Dist: asyncpg>=0.28.0
+Requires-Dist: bcrypt>=4.0.1
+Requires-Dist: fastapi>=0.100.0
+Requires-Dist: httpx>=0.24.0
+Requires-Dist: passlib>=1.7.4
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: pyjwt>=2.8.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: sqlalchemy>=2.0.0
+Provides-Extra: test
+Requires-Dist: pytest-asyncio>=0.21.0; extra == 'test'
+Requires-Dist: pytest-cov>=4.1.0; extra == 'test'
+Requires-Dist: pytest>=7.0.0; extra == 'test'
+Description-Content-Type: text/markdown
+
+# EriPotter Common
+
+Common utilities for EriPotter microservices.
+
+## Features
+
+- Database management with SQLAlchemy
+  - Railway PostgreSQL support
+  - Sync/Async database support
+  - Session management
+  - Connection pooling
+- Security utilities
+  - Password hashing with bcrypt
+  - JWT token management
+- Environment variables and API keys
+  - Centralized configuration
+  - API key management
+
+## Installation
+
+```bash
+pip install eripotter-common
+```
+
+## Usage
+
+### Database
+
+```python
+from eripotter_common.database import get_db_engine, get_session
+from eripotter_common.www import DATABASE_URL
+
+# Use default engine (configured in www.env)
+with get_session() as session:
+    result = session.query(YourModel).all()
+
+# Or create custom engine
+engine = get_db_engine("your-database-url")
+
+# Async support
+from eripotter_common.database import get_async_db_engine, get_async_session
+
+async with get_async_session() as session:
+    result = await session.query(YourModel).all()
+```
+
+### Security
+
+```python
+from eripotter_common.security import hash_password, verify_password
+
+# Hash password
+hashed = hash_password("mypassword")
+
+# Verify password
+is_valid = verify_password("mypassword", hashed)
+
+# JWT tokens
+from eripotter_common.security import create_access_token
+
+token = create_access_token(
+    data={"sub": "user@example.com"},
+    secret_key="your-secret-key"
+)
+```
+
+### Environment Variables & API Keys
+
+```python
+from eripotter_common.www import (
+    OPENAI_API_KEY,
+    DATABASE_URL,
+    ASYNC_DATABASE_URL,
+)
+
+# Use API keys
+openai.api_key = OPENAI_API_KEY
+
+# Use database URLs
+engine = get_db_engine(DATABASE_URL)
+```
+
+## Development
+
+1. Clone the repository
+2. Install development dependencies:
+   ```bash
+   pip install -e ".[test]"
+   ```
+3. Run tests:
+   ```bash
+   pytest
+   ```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
