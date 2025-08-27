@@ -1,0 +1,134 @@
+Metadata-Version: 2.3
+Name: mhsa
+Version: 1.1.0
+Summary: MHSA - Metaheuristics Similarity Analyzer
+License: MIT
+Author: hozjan
+Requires-Python: >=3.10,<3.14
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Dist: cloudpickle (>=3.0.0,<4.0.0)
+Requires-Dist: graphviz (>=0.20.3,<0.21.0)
+Requires-Dist: matplotlib (>=3.10.5,<4.0.0)
+Requires-Dist: niapy (>=2.5.2,<3.0.0)
+Requires-Dist: numba (>=0.60.0,<0.61.0)
+Requires-Dist: numpy (>=1.26.1,<2.0.0)
+Requires-Dist: pandas (>=2.2.1,<3.0.0)
+Requires-Dist: pygad (>=3.5.0,<4.0.0)
+Requires-Dist: pylatex (>=1.4.2,<2.0.0)
+Requires-Dist: pyqt6 (>=6.9.1,<7.0.0)
+Requires-Dist: scikit-learn (>=1.4.1.post1,<2.0.0)
+Requires-Dist: seaborn (>=0.13.2,<0.14.0)
+Description-Content-Type: text/markdown
+
+# MHSA - Metaheuristics Similarity Analyzer
+
+This repository contains the source code of the experiments in the paper ***Measuring the similarity of metaheuristic search strategies with machine learning models***. MHSA provides an alternative way to compare and analyze metaheuristic-search strategies with the help of machine learning.
+
+## Usage
+To use MHSA for similarity analysis we first have to define the gene spaces which will be used by the genetic algorithm. First key of the gene space dictionary must correspond with the class name of the the algorithm which must be implemented in the [NiaPy](https://github.com/NiaOrg/NiaPy?tab=readme-ov-file) micro-framework. In this case we chose `BatAlgorithm` and `ParticleSwarmAlgorithm`.
+
+```python
+PSA_gene_spaces = {
+    "ParticleSwarmAlgorithm": {
+        "c1": {"low": 0.01, "high": 2.5, "step": 0.01},
+        "c2": {"low": 0.01, "high": 2.5, "step": 0.01},
+        "w": {"low": 0.0, "high": 1.0, "step": 0.01},
+    }
+}
+BA_gene_spaces = {
+    "BatAlgorithm": {
+        "loudness": {"low": 0.01, "high": 1.0, "step": 0.01},
+        "pulse_rate": {"low": 0.01, "high": 1.0, "step": 0.01},
+        "alpha": {"low": 0.9, "high": 1.0, "step": 0.001},
+        "gamma": {"low": 0.0, "high": 1.0, "step": 0.01},
+    }
+}
+```
+We also have to chose diversity metrics which will be used as the basis of the analysis and the optimization problem the metaheuristics are going to solve.
+
+```python
+from mhsa.diversity_metrics.population_diversity.dpc import DPC
+from mhsa.diversity_metrics.population_diversity.fdc import FDC
+from mhsa.diversity_metrics.population_diversity.pfsd import PFSD
+from mhsa.diversity_metrics.population_diversity.pfm import PFM
+from mhsa.diversity_metrics.individual_diversity.idt import IDT
+from mhsa.diversity_metrics.individual_diversity.isi import ISI
+from mhsa.diversity_metrics.individual_diversity.ifm import IFM
+from mhsa.diversity_metrics.individual_diversity.ifiqr import IFIQR
+from mhsa.problems.schwefel import Schwefel
+
+OPTIMIZATION_PROBLEM = Schwefel(dimension=20)
+
+POP_DIVERSITY_METRICS = [
+    DPC(OPTIMIZATION_PROBLEM),
+    FDC(OPTIMIZATION_PROBLEM, [420.968746], True),
+    PFSD(),
+    PFM(),
+]
+INDIV_DIVERSITY_METRICS = [
+    IDT(),
+    ISI(),
+    IFM(),
+    IFIQR(),
+]
+```
+
+In the next step we have to instantiate the `MetaGA` class which uses the `GA` class from the [PyGAD](https://github.com/ahmedfgad/GeneticAlgorithmPython) library. At this point we decide which of the algorithms will be analyzed and which will be the "reference" or "target" algorithm. The gene space of the analyzed algorithm gets assigned to the `gene_spaces` argument of the `MetaGA`.
+
+```python
+from mhsa.tools.meta_ga import MetaGA, MetaGAFitnessFunction
+
+meta_ga = MetaGA(
+    fitness_function_type=MetaGAFitnessFunction.TARGET_PERFORMANCE_SIMILARITY,
+    ga_generations=20,
+    ga_solutions_per_pop=15,
+    ga_percent_parents_mating=60,
+    ga_parent_selection_type="tournament",
+    ga_k_tournament=2,
+    ga_crossover_type="uniform",
+    ga_mutation_type="random",
+    ga_crossover_probability=0.9,
+    ga_mutation_num_genes=1,
+    ga_keep_elitism=1,
+    gene_spaces=BA_gene_spaces,
+    pop_size=30,
+    max_evals=10000,
+    num_runs=30,
+    problem=OPTIMIZATION_PROBLEM,
+    pop_diversity_metrics=POP_DIVERSITY_METRICS,
+    indiv_diversity_metrics=INDIV_DIVERSITY_METRICS,
+)
+```
+
+In the last step we have to instantiate the `MetaheuristicSimilarityAnalyzer` class and pass it the configured `MetaGA` instance and the gene space of the target algorithm. Then we simply call the `run_similarity_analysis` method to start the analysis.
+
+```python
+from mhsa.tools.metaheuristics_similarity_analyzer import MetaheuristicsSimilarityAnalyzer
+
+mhsa = MetaheuristicsSimilarityAnalyzer(meta_ga=meta_ga, target_gene_space=PSA_gene_spaces)
+
+mhsa.run_similarity_analysis(
+    num_comparisons=10
+    get_info=True,
+    generate_dataset=True,
+    calculate_similarity_metrics=True,
+    export=True,
+)
+```
+
+After the analysis we can choose to export results of the analysis as a .pdf and/or .tex file with `export_results_to_latex` method or access them trough the `MetaheuristicsSimilarityAnalyzer` class instance.
+
+```python
+mhsa.export_results_to_latex(generate_pdf=True)
+```
+For more information check out [examples](/examples).
+
+## This project depends on
+### [NiaPy](https://github.com/NiaOrg/NiaPy?tab=readme-ov-file) Python microframework
+### [PyGAD](https://github.com/ahmedfgad/GeneticAlgorithmPython) Python library
+
