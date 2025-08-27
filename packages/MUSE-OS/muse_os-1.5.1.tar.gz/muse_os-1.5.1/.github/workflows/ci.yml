@@ -1,0 +1,76 @@
+name: Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: main
+  workflow_call:
+
+jobs:
+  unit-tests:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Test with the earliest and the latest python versions supported
+        python-version: ["3.9", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e .[all]
+
+      # The unit tests, with coverage under linux
+      - name: Unit tests (linux)
+        if: (runner.os == 'Linux')
+        run: |
+          pip install pytest-cov
+          pytest -m "not regression and not notebook" --junitxml=junit/pytest.xml \
+              --cov=muse \
+              --cov-branch \
+              --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        if: success() && (github.event_name == 'push' && runner.os == 'Linux' && matrix.python-version == 3.9)
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+
+      - name: Unit tests (not linux)
+        if: (runner.os != 'Linux')
+        run: pytest -m "not regression and not notebook"
+
+  regression-tests:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Test with the earliest and the latest python versions supported
+        python-version: ["3.9", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install -e .[all]
+
+      # The regression tests (with non coverage)
+      - name: Regression tests
+        run: pytest tests/test_fullsim_regression.py

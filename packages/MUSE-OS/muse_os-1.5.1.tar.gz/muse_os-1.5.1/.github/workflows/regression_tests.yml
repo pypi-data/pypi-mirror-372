@@ -1,0 +1,28 @@
+on:
+  schedule:
+    - cron: 0 0 * * 0 # At 12:00 AM, only on Sunday
+
+jobs:
+  regression-tests:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Test with the earliest and the latest python versions supported
+        python-version: ["3.9", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install -e .[all]
+
+      # The regression tests (with non coverage)
+      - name: Regression tests
+        run: pytest tests/test_fullsim_regression.py
