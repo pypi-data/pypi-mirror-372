@@ -1,0 +1,163 @@
+[tool.poetry]
+name = "mergify_cli"
+version = "2025.8.27.2"
+description = "Mergify CLI is a tool that automates the creation and management of stacked pull requests on GitHub"
+authors = ["Mehdi Abaakouk <sileht@mergify.com>"]
+readme = "README.md"
+license = "Apache License"
+
+[build-system]
+requires = ["poetry-core", "poetry-dynamic-versioning"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry-dynamic-versioning]
+enable = false
+vcs = "git"
+dirty = true
+pattern = "default-unprefixed"
+
+[tool.poetry.dependencies]
+python = ">=3.10"
+httpx = ">=0.20.0"
+rich = ">=10.11.0"
+aiofiles = ">=23.2.1,<25.0.0"
+click = "^8.1.7"
+click-default-group = "^1.2.4"
+opentelemetry-exporter-otlp-proto-http = "^1.29.0"
+opentelemetry-sdk = "^1.29.0"
+tenacity = "^9.1.2"
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = {version = ">=0.930"}
+mypy-extensions = "^1.0.0"
+ruff = "0.12.10"
+pytest = {version = ">=6.2.5"}
+poethepoet = ">=0.21,<0.38"
+pytest-asyncio = ">=0.23.2,<1.2.0"
+respx = ">=0.20.2,<0.23.0"
+types-aiofiles = ">=23.2.0.20240106,<25.0.0.0"
+types-click = "^7.1.8"
+types-click-default-group = "^1.2.0.0"
+anys = "^0.3.1"
+responses = "^0.25.6"
+
+[tool.poetry.scripts]
+mergify = 'mergify_cli.cli:main'
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.poe]
+include = ["poe.toml"]
+
+[tool.mypy]
+strict = true
+warn_unreachable = true
+exclude = [".venv"]
+files = ["mergify_cli"]
+show_error_codes = true
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py311"
+
+[tool.ruff.lint]
+preview = true
+select = [
+    "F",
+    "E",
+    "W",
+    "I",
+    "N",
+    "UP",
+    "YTT",
+    "ANN",
+    "ASYNC",
+    "S",
+    "BLE",
+    "FBT",
+    "B",
+    "A",
+    "COM",
+    "C4",
+    "DTZ",
+    "T10",
+    "EM",
+    "FA",
+    "ISC",
+    "ICN",
+    "G",
+    "INP",
+    "PIE",
+    "T20",
+    "PYI",
+    "PT",
+    "Q",
+    "RSE",
+    "RET",
+    "SLF",
+    "SLOT",
+    "SIM",
+    "TID",
+    "TCH",
+    "INT",
+    "ARG",
+    "PTH",
+    "TD",
+    "ERA",
+    "PGH",
+    "PL",
+    "TRY",
+    "FLY",
+    "NPY",
+    "PERF",
+    "FURB",
+    "LOG",
+    "RUF",
+]
+
+ignore = [
+    # NOTE(charly): line-length is up to the formatter
+    "E501",
+    # NOTE(charly): `subprocess` module is possibly insecure
+    "S404",
+    # NOTE(jd): likely a false positive https://github.com/PyCQA/bandit/issues/333
+    "S603",
+    # NOTE(charly): Starting a process with a partial executable path
+    "S607",
+    # NOTE(charly): Boolean-typed positional argument in function definition.
+    # Interesting, but require some work.
+    "FBT001",
+    # NOTE(charly): Boolean default positional argument in function definition.
+    # Interesting, but require some work.
+    "FBT002",
+    # NOTE(charly): Missing issue link on the line following this TODO
+    "TD003",
+    # NOTE(charly): Magic value used in comparison
+    "PLR2004",
+    # List comprehensions are most efficient in most cases now
+    "PLR1702",
+    # We use mock.patch.object, which automatically pass the mock as an
+    # argument to the test if no `new` is specified, without needing the mock
+    # itself.
+    "PT019",
+    # We don't want to enforce the number of statements
+    "PLR0914", "PLR0912", "PLR0915",
+    "B904",
+    # Unnecessary parenthesis on raised exceptions, this breaks `isinstance` on exceptions
+    "RSE102",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"mergify_cli/tests/**/*.py" = ["S101", "SLF001"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+force-sort-within-sections = true
+lines-after-imports = 2
+known-first-party = ["mergify_cli"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
