@@ -1,0 +1,343 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  # Force colored output
+  FORCE_COLOR: 1
+  # Python version
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  # Code quality checks
+  lint:
+    name: Code quality checks
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy pre-commit
+        pip install flake8-docstrings flake8-import-order flake8-bugbear flake8-comprehensions flake8-simplify
+
+    - name: Run pre-commit checks
+      run: |
+        pre-commit install
+        pre-commit run --all-files
+
+  # Unit tests
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          git \
+          libpoco-dev \
+          libeigen3-dev \
+          libfmt-dev \
+          pkg-config
+
+    - name: Install pinocchio
+      run: |
+        sudo apt-get install -y lsb-release curl
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL http://robotpkg.openrobots.org/packages/debian/robotpkg.asc | sudo tee /etc/apt/keyrings/robotpkg.asc
+        echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" | sudo tee /etc/apt/sources.list.d/robotpkg.list
+        sudo apt-get update
+        sudo apt-get install -y robotpkg-pinocchio
+
+    - name: Cache libfranka
+      id: cache-libfranka
+      uses: actions/cache@v3
+      with:
+        path: /opt/libfranka
+        key: libfranka-0.15.0-${{ runner.os }}
+
+    - name: Build and install libfranka
+      if: steps.cache-libfranka.outputs.cache-hit != 'true'
+      run: |
+        git clone --recurse-submodules https://github.com/frankarobotics/libfranka.git
+        cd libfranka
+        git checkout 0.15.0
+        git submodule update
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_PREFIX_PATH=/opt/openrobots/lib/cmake \
+              -DCMAKE_INSTALL_PREFIX=/opt/libfranka \
+              -DBUILD_TESTS=OFF \
+              -DBUILD_EXAMPLES=OFF ..
+        make -j$(nproc)
+        sudo make install
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov pytest-mock coverage[toml]
+
+    - name: Build extensions
+      run: |
+        export CMAKE_PREFIX_PATH="/opt/libfranka:/opt/openrobots/lib/cmake:$CMAKE_PREFIX_PATH"
+        pip install -e .
+
+    - name: Run tests
+      run: |
+        pytest tests/ \
+          --cov=libfrankapy \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          -v \
+          -m "not integration"
+
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  # Build test
+  build:
+    name: Build test
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          git \
+          libpoco-dev \
+          libeigen3-dev \
+          libfmt-dev
+
+    - name: Install pinocchio
+      run: |
+        sudo apt-get install -y lsb-release curl
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL http://robotpkg.openrobots.org/packages/debian/robotpkg.asc | sudo tee /etc/apt/keyrings/robotpkg.asc
+        echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" | sudo tee /etc/apt/sources.list.d/robotpkg.list
+        sudo apt-get update
+        sudo apt-get install -y robotpkg-pinocchio
+
+    - name: Build and install libfranka
+      run: |
+        git clone --recurse-submodules https://github.com/frankarobotics/libfranka.git
+        cd libfranka
+        git checkout 0.15.0
+        git submodule update
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_PREFIX_PATH=/opt/openrobots/lib/cmake \
+              -DCMAKE_INSTALL_PREFIX=/opt/libfranka \
+              -DBUILD_TESTS=OFF \
+              -DBUILD_EXAMPLES=OFF ..
+        make -j$(nproc)
+        sudo make install
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine wheel
+
+    - name: Build source distribution
+      run: |
+        export CMAKE_PREFIX_PATH="/opt/libfranka:/opt/openrobots/lib/cmake:$CMAKE_PREFIX_PATH"
+        python -m build --sdist
+
+    - name: Build wheel package
+      run: |
+        export CMAKE_PREFIX_PATH="/opt/libfranka:/opt/openrobots/lib/cmake:$CMAKE_PREFIX_PATH"
+        python -m build --wheel
+
+    - name: Check distribution packages
+      run: |
+        twine check dist/*
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-packages
+        path: dist/
+
+  # Documentation build (for PRs and other branches)
+  docs-build:
+    name: Build documentation
+    runs-on: ubuntu-22.04
+    # Run for all branches except main pushes
+    if: github.ref != 'refs/heads/main' || github.event_name != 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: docs/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd docs
+        npm ci
+
+    - name: Build documentation
+      run: |
+        cd docs
+        npm run docs:build
+
+    - name: Upload documentation artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: docs/.vitepress/dist/
+
+  # Documentation build and deploy to GitHub Pages
+  docs-deploy:
+    name: Build and deploy documentation
+    runs-on: ubuntu-22.04
+    # Only deploy on main branch pushes
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: docs/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd docs
+        npm ci
+
+    - name: Build documentation
+      run: |
+        cd docs
+        npm run docs:build
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/.vitepress/dist/
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+    - name: Upload documentation artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: docs/.vitepress/dist/
+
+  # Security scan
+  security:
+    name: Security scan
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety
+
+    - name: Run bandit security scan
+      run: |
+        bandit -r libfrankapy/ -f json -o bandit-report.json || true
+        bandit -r libfrankapy/
+
+    - name: Check dependency security
+      run: |
+        pip freeze | safety check --stdin
+
+    - name: Upload security report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: bandit-report.json

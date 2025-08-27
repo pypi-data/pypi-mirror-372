@@ -1,0 +1,413 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  release:
+    types: [published]
+
+env:
+  FORCE_COLOR: 1
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  # Build distribution packages
+  build:
+    name: Build Python ${{ matrix.python-version }} packages
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0  # Get full history for version tags
+
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          git \
+          libpoco-dev \
+          libeigen3-dev \
+          libfmt-dev
+
+    - name: Install pinocchio
+      run: |
+        sudo apt-get install -y lsb-release curl
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL http://robotpkg.openrobots.org/packages/debian/robotpkg.asc | sudo tee /etc/apt/keyrings/robotpkg.asc
+        echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" | sudo tee /etc/apt/sources.list.d/robotpkg.list
+        sudo apt-get update
+        sudo apt-get install -y robotpkg-pinocchio
+
+    - name: Build and install libfranka
+      run: |
+        git clone --recurse-submodules https://github.com/frankarobotics/libfranka.git
+        cd libfranka
+        git checkout 0.15.0
+        git submodule update
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_PREFIX_PATH=/opt/openrobots/lib/cmake \
+              -DCMAKE_INSTALL_PREFIX=/opt/libfranka \
+              -DBUILD_TESTS=OFF \
+              -DBUILD_EXAMPLES=OFF ..
+        make -j$(nproc)
+        sudo make install
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine wheel setuptools-scm pybind11
+
+    - name: Verify version tag
+      run: |
+        # Extract version number
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "Release version: $VERSION"
+
+        # Verify version format
+        if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Invalid version format: $VERSION"
+          exit 1
+        fi
+
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Update version in project files
+      run: |
+        # Update version in pyproject.toml
+        sed -i "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+
+        # Update version in __init__.py
+        sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" libfrankapy/__init__.py
+
+        # Verify changes
+        echo "Updated pyproject.toml:"
+        grep "^version = " pyproject.toml
+        echo "Updated __init__.py:"
+        grep "__version__ = " libfrankapy/__init__.py
+
+    - name: Build distribution packages
+      run: |
+        export CMAKE_PREFIX_PATH="/opt/libfranka:/opt/openrobots/lib/cmake:$CMAKE_PREFIX_PATH"
+        # Build source distribution
+        python setup.py sdist
+        # Build wheel with explicit platform tag
+        python setup.py bdist_wheel --plat-name manylinux1_x86_64
+
+    - name: List distribution packages
+      run: |
+        # List built wheel files
+        echo "Built distribution packages:"
+        ls -la dist/
+
+        # Note: Skipping auditwheel repair because libfranka is a system dependency
+        # that users need to install separately. The wheel uses platform tags from pyproject.toml
+
+    - name: Check distribution packages
+      run: |
+        twine check dist/*
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-packages-${{ env.VERSION }}-py${{ matrix.python-version }}
+        path: dist/
+        retention-days: 30
+
+  # Run tests
+  test:
+    name: Test Python ${{ matrix.python-version }} packages
+    runs-on: ubuntu-22.04
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Extract version from tag
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Update version in project files
+      run: |
+        # Update version in pyproject.toml
+        sed -i "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+
+        # Update version in __init__.py
+        sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" libfrankapy/__init__.py
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          git \
+          libpoco-dev \
+          libeigen3-dev \
+          libfmt-dev
+
+    - name: Install pinocchio
+      run: |
+        sudo apt-get install -y lsb-release curl
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL http://robotpkg.openrobots.org/packages/debian/robotpkg.asc | sudo tee /etc/apt/keyrings/robotpkg.asc
+        echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" | sudo tee /etc/apt/sources.list.d/robotpkg.list
+        sudo apt-get update
+        sudo apt-get install -y robotpkg-pinocchio
+
+    - name: Build and install libfranka
+      run: |
+        git clone --recurse-submodules https://github.com/frankarobotics/libfranka.git
+        cd libfranka
+        git checkout 0.15.0
+        git submodule update
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_PREFIX_PATH=/opt/openrobots/lib/cmake \
+              -DCMAKE_INSTALL_PREFIX=/opt/libfranka \
+              -DBUILD_TESTS=OFF \
+              -DBUILD_EXAMPLES=OFF ..
+        make -j$(nproc)
+        sudo make install
+
+    - name: Download build artifacts for Python ${{ matrix.python-version }}
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-packages-${{ env.VERSION }}-py${{ matrix.python-version }}
+        path: dist/
+
+    - name: Install package and test
+      run: |
+        # Install wheel package for current Python version
+        pip install dist/*.whl
+
+        # Run basic import test
+        python -c "import libfrankapy; print(f'libfrankapy version: {libfrankapy.__version__}')"
+
+        # Run unit tests
+        pip install pytest pytest-mock
+        pytest tests/ -v -m "not integration"
+
+  # Publish to PyPI
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-22.04
+    needs: [build, test]
+    environment: release
+    permissions:
+      id-token: write  # Required for Trusted Publishing
+      contents: read   # Required to read repository contents
+
+    steps:
+    - name: Extract version from tag
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: dist-packages-${{ env.VERSION }}-py*
+        path: dist/
+        merge-multiple: true
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        attestations: true  # Enable attestations for Trusted Publishing
+
+  # Create GitHub Release
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-22.04
+    needs: [build, test]
+    permissions:
+      contents: write  # Required for creating GitHub releases
+      actions: read    # Required to read workflow artifacts
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Extract version from tag
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: dist-packages-${{ env.VERSION }}-py*
+        path: dist/
+        merge-multiple: true
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get previous tag
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "Generating changelog from $PREVIOUS_TAG to ${{ github.ref_name }}"
+          CHANGELOG=$(git log --pretty=format:"- %s" $PREVIOUS_TAG..HEAD)
+        else
+          echo "Generating changelog for first release"
+          CHANGELOG="First release of libfrankapy"
+        fi
+
+        # Save to file
+        echo "$CHANGELOG" > CHANGELOG_RELEASE.md
+
+        # Set output
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        body: |
+          ## 🎉 libfrankapy ${{ github.ref_name }}
+
+          ### 📦 Installation
+
+          ```bash
+          pip install libfrankapy==${{ env.VERSION }}
+          ```
+
+          ### 🔄 Changes
+
+          ${{ steps.changelog.outputs.changelog }}
+
+          ### 📁 Downloads
+
+          - [Source package (.tar.gz)](https://github.com/${{ github.repository }}/archive/${{ github.ref_name }}.tar.gz)
+          - [Wheel package (.whl)](https://pypi.org/project/libfrankapy/${{ env.VERSION }}/#files)
+
+          ### 🔗 Related Links
+
+          - [PyPI page](https://pypi.org/project/libfrankapy/${{ env.VERSION }}/)
+          - [Documentation](https://libfrankapy.readthedocs.io/)
+          - [Changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
+        files: |
+          dist/*
+        draft: false
+        prerelease: false
+
+  # Update documentation
+  update-docs:
+    name: Update documentation
+    runs-on: ubuntu-22.04
+    needs: [publish-pypi]
+    permissions:
+      contents: read   # Required to read repository contents
+      pages: write     # Required for GitHub Pages deployment
+      id-token: write  # Required for GitHub Pages deployment
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Extract version from tag
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: docs/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd docs
+        npm ci
+
+    - name: Build documentation
+      run: |
+        cd docs
+        npm run docs:build
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/.vitepress/dist/
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+    - name: Upload documentation artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: docs/.vitepress/dist/
+
+  # Notification
+  notify:
+    name: Release notification
+    runs-on: ubuntu-22.04
+    needs: [publish-pypi, github-release]
+    if: always()
+
+    steps:
+    - name: Extract version from tag
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Release success notification
+      if: needs.publish-pypi.result == 'success' && needs.github-release.result == 'success'
+      run: |
+        echo "🎉 libfrankapy ${{ github.ref_name }} released successfully!"
+        echo "📦 PyPI: https://pypi.org/project/libfrankapy/${{ env.VERSION }}/"
+        echo "🏷️ GitHub: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+
+    - name: Release failure notification
+      if: needs.publish-pypi.result == 'failure' || needs.github-release.result == 'failure'
+      run: |
+        echo "❌ libfrankapy ${{ github.ref_name }} release failed!"
+        echo "Please check the workflow logs for detailed information."
