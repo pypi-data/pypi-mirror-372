@@ -1,0 +1,145 @@
+include:
+  - project: ki/templates/gitlab-ci-cd-templates
+    file: python.yml
+
+variables:
+  PYTHON_VERSION: "3.12"
+
+stages:
+  - Formatting
+  - Static Code Analysis
+  - Testing
+  - Release
+
+# ---------------------------
+# Run Formatter
+# ---------------------------
+black:
+  stage: Formatting
+  extends: .black
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH
+
+# ---------------------------
+# Run Static Code Analysis
+# ---------------------------
+flake8:
+  stage: Static Code Analysis
+  extends: .flake8
+  needs: [ ]
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH
+
+mypy:
+  stage: Static Code Analysis
+  extends: .mypy
+  needs: [ ]
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH
+
+pylint:
+  stage: Static Code Analysis
+  extends: .pylint
+  needs: [ ]
+  rules:
+    - if: $CI_COMMIT_TAG
+      variables:
+        PYLINT_THRESHOLD: 9
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      variables:
+        PYLINT_THRESHOLD: 9
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      variables:
+        PYLINT_THRESHOLD: 9
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      variables:
+        PYLINT_THRESHOLD: 0
+
+sonarqube:
+  stage: Static Code Analysis
+  needs: [ ]
+  image:
+    name: sonarsource/sonar-scanner-cli:11
+    entrypoint: [ "" ]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+    GIT_DEPTH: "0"
+  cache:
+    policy: pull-push
+    key: "sonar-cache-$CI_COMMIT_REF_SLUG"
+    paths:
+      - "${SONAR_USER_HOME}/cache"
+      - sonar-scanner/
+  script:
+    - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}" -Dsonar.python.version="${PYTHON_VERSION}"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_TAG
+
+# ---------------------------
+# Run Tests
+# ---------------------------
+pytest:
+  stage: Testing
+  extends: .pytest
+  needs: [ ]
+  rules:
+    - if: $CI_COMMIT_TAG
+      allow_failure: false
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      allow_failure: false
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      allow_failure: false
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      allow_failure: true
+
+# ---------------------------
+# Release on tag -> PyPI
+# ---------------------------
+build_pypi:
+  stage: Release
+  image: python:${PYTHON_VERSION}-slim
+  variables:
+    GIT_DEPTH: "0"
+    GIT_STRATEGY: fetch
+    GIT_FETCH_EXTRA_FLAGS: "--tags --prune"
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git
+    - python -m pip install --upgrade pip
+    - pip install build twine
+    - export SETUPTOOLS_SCM_PRETEND_VERSION="0.0.0.dev${CI_PIPELINE_IID}+g${CI_COMMIT_SHORT_SHA}"
+  script:
+    - python -m build
+    - twine check dist/*
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+publish_pypi:
+  stage: Release
+  image: python:${PYTHON_VERSION}-slim
+  variables:
+    TWINE_USERNAME: "__token__"
+    TWINE_PASSWORD: "${PYPI_API_TOKEN}"
+    GIT_DEPTH: "0"
+    GIT_STRATEGY: fetch
+    GIT_FETCH_EXTRA_FLAGS: "--tags --prune"
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git
+    - python -m pip install --upgrade pip
+    - pip install build twine
+    - CLEAN_TAG="${CI_COMMIT_TAG#v}"
+    - export SETUPTOOLS_SCM_PRETEND_VERSION="${CLEAN_TAG}"
+  script:
+    - python -m build
+    - twine check dist/*
+    - twine upload dist/*
+  rules:
+    - if: $CI_COMMIT_TAG
