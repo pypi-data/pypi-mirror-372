@@ -1,0 +1,1 @@
+from plover_casecat.dict import CaseCATalystDictionary
