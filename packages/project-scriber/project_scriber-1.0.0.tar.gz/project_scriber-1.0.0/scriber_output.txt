@@ -1,0 +1,1049 @@
+===
+ Mapped Folder Structure
+===
+
+ProjectScriber
+├── LICENSE
+├── README.md
+├── pyproject.toml
+├── src
+│   ├── run.py
+│   └── scriber
+│       ├── __init__.py
+│       ├── cli.py
+│       └── core.py
+└── tests
+    └── test_suite.py
+
+---
+File: LICENSE
+Size: 1111 bytes
+---
+```text
+MIT License
+
+Copyright (c) 2025 SunneV (Wojciech Mariusz Cichoń)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+```
+
+---
+File: pyproject.toml
+Size: 1224 bytes
+---
+```toml
+[project]
+name = "project-scriber"
+version = "1.0.0"
+authors = [
+  { name="SunneV (Wojciech Mariusz Cichoń)", email="wojciech.m.cichon@gmail.com" },
+]
+description = "An intelligent tool to map, analyze, and compile project source code for LLM context."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file="LICENSE" }
+keywords = ["llm", "code-analysis", "developer-tools", "context-builder", "source-code"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "pathspec",
+    "python-dotenv",
+    "rich",
+    "tiktoken",
+    "pyperclip",
+    "tomlkit",
+    "tomli; python_version < '3.11'",
+]
+
+[project.urls]
+Homepage = "https://github.com/SunneV/ProjectScriber"
+Issues = "https://github.com/SunneV/ProjectScriber/issues"
+
+[project.scripts]
+scriber = "scriber.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+
+```
+
+---
+File: README.md
+Size: 4607 bytes
+---
+```markdown
+# ProjectScriber
+
+[](https://www.python.org/downloads/)
+
+A command-line tool to intelligently map and compile your entire project's source code into a single, context-optimized
+text file for Large Language Models (LLMs).
+
+ProjectScriber scans your project directory, respects `.gitignore` rules, applies custom filters, and bundles all
+relevant code into a clean, readable format. It's the perfect way to provide a complete codebase to an AI for analysis,
+documentation, or refactoring.
+
+-----
+
+## Key Features
+
+- **🌳 Smart Project Mapping:** Generates a clear and intuitive tree view of your project's structure.
+- **⚙️ Intelligent Filtering:** Automatically respects `.gitignore` rules and supports custom `include` and `exclude`
+  patterns via a `.scriber.json` file for fine-grained control.
+- **📊 In-depth Code Analysis:** Provides a summary with total file size, estimated token count (using `cl100k_base`),
+  and a language breakdown for a quick overview of your codebase.
+- **✨ Interactive Setup:** A simple `scriber init` command walks you through creating a configuration file tailored to
+  your project.
+- **📋 Clipboard Integration:** Use the `--copy` flag to automatically copy the entire consolidated output to your
+  clipboard, ready to be pasted into any application.
+- **🔧 Flexible Configuration:** Manage your settings globally in a `pyproject.toml` file or per-project with a
+  `.scriber.json` file.
+
+-----
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10 or higher.
+
+### Installation
+
+Install the package from the source using pip. For development, include the optional dependencies.
+
+```shell
+# Navigate to the project root directory
+pip install .[dev]
+```
+
+This will install `ProjectScriber` and make the `scriber` command available in your terminal.
+
+-----
+
+## Usage
+
+### 1\. Basic Scan
+
+To run ProjectScriber on the current directory, simply execute the `scriber` command. This will generate a
+`scriber_output.txt` file in the same directory.
+
+```shell
+scriber
+```
+
+To target a different project directory:
+
+```shell
+scriber /path/to/your/project
+```
+
+### 2\. First-Time Configuration
+
+For a new project, run the interactive `init` command to create a `.scriber.json` configuration file. This will guide
+you through setting up rules for ignoring files and respecting `.gitignore`.
+
+```shell
+scriber init
+```
+
+### 3\. Advanced Example
+
+Scan a different project, specify a custom output file, and copy the result to the clipboard all in one command.
+
+```shell
+scriber ../my-other-project --output custom_map.txt --copy
+```
+
+-----
+
+## Commands and Options
+
+You can customize ProjectScriber's behavior with the following commands and options.
+
+| Command/Option        | Alias | Description                                                                    |
+|:----------------------|:-----:|:-------------------------------------------------------------------------------|
+| `scriber [path]`      |       | Targets a specific directory. Defaults to the current working directory.       |
+| `init`                |       | Starts the interactive process to create a `.scriber.json` configuration file. |
+| `--output [filename]` | `-o`  | Specifies a custom name for the output file.                                   |
+| `--copy`              | `-c`  | Copies the final output directly to the clipboard.                             |
+| `--tree-only`         |       | Generates only the folder structure map, excluding all file contents.          |
+| `--config [path]`     |       | Specifies the path to a custom configuration file.                             |
+
+-----
+
+## Configuration
+
+You can control ProjectScriber's behavior by placing a `.scriber.json` file in your project's root, which can be easily
+created with the `scriber init` command.
+
+**Example `.scriber.json`:**
+
+```json
+{
+  "use_gitignore": true,
+  "exclude": [
+    "__pycache__",
+    "node_modules",
+    "*.log"
+  ],
+  "include": [
+    "*.py",
+    "*.js"
+  ]
+}
+```
+
+- **`use_gitignore`**: If `true`, all patterns in your `.gitignore` file will be used for exclusion.
+- **`exclude`**: A list of file or folder name patterns to explicitly ignore.
+- **`include`**: If provided, *only* files matching these patterns will be included in the output, overriding other
+  rules.
+
+Settings can also be placed in your `pyproject.toml` file under the `[tool.scriber]` section. If a `.scriber.json` file
+is present, it will take precedence over the `pyproject.toml` configuration.
+```
+
+---
+File: src/run.py
+Size: 95 bytes
+---
+```python
+import os
+from scriber.cli import main
+
+os.environ['SCRIBER_EXEC_MODE'] = 'RUN_PY'
+
+main()
+```
+
+---
+File: src/scriber/__init__.py
+Size: 0 bytes
+---
+```python
+
+```
+
+---
+File: src/scriber/cli.py
+Size: 9933 bytes
+---
+```python
+import argparse
+import json
+import os
+import sys
+from importlib import metadata
+from pathlib import Path
+from typing import Any
+
+import pyperclip
+import rich.box
+import tomlkit
+from dotenv import load_dotenv
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
+from rich.prompt import Confirm, Prompt
+from rich.table import Table
+from rich.text import Text
+
+from .core import DEFAULT_CONFIG, Scriber
+
+load_dotenv()
+
+
+def format_bytes(byte_count: int) -> str:
+    """Formats a byte count into a human-readable string (KB, MB)."""
+    if byte_count > 1024 * 1024:
+        return f"{byte_count / (1024 * 1024):.2f} MB"
+    if byte_count > 1024:
+        return f"{byte_count / 1024:.2f} KB"
+    return f"{byte_count} Bytes"
+
+
+def save_to_json(console: Console, config: dict[str, Any]):
+    """Saves configuration to a .scriber.json file."""
+    config_path = Path.cwd() / ".scriber.json"
+    try:
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2)
+        console.print(f"\n✅ [bold green]Configuration saved to:[/] {config_path}")
+    except IOError as e:
+        console.print(f"\n❌ [bold red]Error saving config file:[/] {e}")
+
+
+def save_to_toml(console: Console, config: dict[str, Any]):
+    """Saves configuration to the pyproject.toml file."""
+    toml_path = Path.cwd() / "pyproject.toml"
+    if not toml_path.exists():
+        console.print(f"\n❌ [bold red]Error: `pyproject.toml` not found in the current directory.[/]")
+        return
+
+    try:
+        with open(toml_path, "r+", encoding="utf-8") as f:
+            doc = tomlkit.parse(f.read())
+
+            tool_table = doc.setdefault("tool", tomlkit.table())
+            scriber_table = tool_table.setdefault("scriber", tomlkit.table())
+            scriber_table.update(config)
+
+            f.seek(0)
+            f.truncate()
+            f.write(tomlkit.dumps(doc))
+
+        console.print(f"\n✅ [bold green]Configuration saved to:[/] {toml_path}")
+    except Exception as e:
+        console.print(f"\n❌ [bold red]Error updating `pyproject.toml`:[/] {e}")
+
+
+def handle_init(console: Console):
+    """Handles the interactive initialization of a config file."""
+    console.print(Panel("[bold cyan]Scriber Configuration Setup[/]", expand=False))
+    console.print("This utility will help you create a configuration file.\n")
+
+    config: dict[str, Any] = {}
+
+    config["use_gitignore"] = Confirm.ask(
+        "✨ Would you like to respect `.gitignore` rules?", default=True
+    )
+
+    default_exclude = ", ".join(DEFAULT_CONFIG.get("exclude", []))
+    exclude_str = Prompt.ask(
+        "📂 Enter patterns to exclude (comma-separated)", default=default_exclude
+    )
+    config["exclude"] = [item.strip() for item in exclude_str.split(',') if item.strip()]
+
+    include_str = Prompt.ask(
+        "📄 Enter patterns to include (optional, comma-separated)", default=""
+    )
+    include_patterns = [item.strip() for item in include_str.split(',') if item.strip()]
+    if include_patterns:
+        config["include"] = include_patterns
+
+    console.print("\n[bold]Choose a save location:[/bold]")
+    console.print("  [cyan]1[/]: Save to `.scriber.json` (project-specific override)")
+    console.print("  [cyan]2[/]: Save to `pyproject.toml` (project default)")
+
+    save_target = Prompt.ask(
+        "Enter your choice",
+        choices=["1", "2"],
+        default="1"
+    )
+
+    if save_target == '1':
+        save_to_json(console, config)
+    elif save_target == '2':
+        save_to_toml(console, config)
+
+
+def run_scriber(args: argparse.Namespace, console: Console):
+    """Handles the main logic of mapping and generating the project output."""
+    try:
+        version = metadata.version("project-scriber")
+    except metadata.PackageNotFoundError:
+        version = "1.0.0 (local)"
+
+    title_text = Text(f"Scriber v{version}", justify="center", style="bold magenta")
+    subtitle_text = Text("An intelligent tool to map, analyze, and compile project source code for LLM context.", justify="center", style="cyan")
+    console.print(Panel(Text.assemble(title_text, "\n", subtitle_text), expand=False, border_style="blue"))
+
+    scriber = Scriber(args.root_path.resolve(), config_path=args.config)
+    output_filename = args.output or scriber.config.get("output", "project_structure.txt")
+
+    scriber.map_project()
+
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            console=console,
+            transient=True
+    ) as progress:
+        total_files = scriber.get_file_count()
+        if total_files > 0 and not args.tree_only:
+            task_id = progress.add_task("[green]Processing files...", total=total_files)
+            scriber.generate_output_file(output_filename, tree_only=args.tree_only, progress=progress, task_id=task_id)
+        else:
+            scriber.generate_output_file(output_filename, tree_only=args.tree_only)
+
+    stats = scriber.get_stats()
+
+    config_file_display = str(scriber.config_path_used) if scriber.config_path_used else "Defaults"
+    summary_table = Table(box=rich.box.ROUNDED, show_header=False, title="[bold]Run Summary[/]", title_justify="left")
+    summary_table.add_column("Parameter", style="cyan", no_wrap=True)
+    summary_table.add_column("Value", style="magenta")
+    summary_table.add_row("Project Path", str(args.root_path.resolve()))
+    summary_table.add_row("Config File", config_file_display)
+    summary_table.add_row("Output File", output_filename)
+    console.print(summary_table)
+
+    if stats['total_files'] > 0:
+        results_table = Table(box=rich.box.ROUNDED, show_header=False, title="[bold]📊 Analysis Results[/]",
+                              title_justify="left")
+        results_table.add_column("Metric", style="cyan", no_wrap=True)
+        results_table.add_column("Value", style="magenta", justify="right")
+
+        results_table.add_row("Files Mapped", str(stats['total_files']))
+        if stats.get('skipped_binary') > 0:
+            results_table.add_row("Binary Skipped", str(stats['skipped_binary']))
+        results_table.add_section()
+        results_table.add_row("Total Size", format_bytes(stats['total_size_bytes']))
+        results_table.add_row("Est. Tokens (cl100k)", f"{stats['total_tokens']:,}")
+        results_table.add_section()
+        results_table.add_row("[bold]Language Breakdown[/]", "")
+        for lang, count in stats['language_counts'].most_common():
+            results_table.add_row(f"  {lang.capitalize()}", str(count))
+
+        console.print(results_table)
+    else:
+        console.print(Panel("[yellow]No files were mapped based on the current configuration.[/]", expand=False))
+
+    output_location = args.root_path.resolve() / output_filename
+
+    console.print("\n✅ [green]Success! Output saved to:[/green]")
+    try:
+        uri = output_location.as_uri()
+        console.print(Text(str(output_location), style=f"bold cyan underline link {uri}"))
+    except Exception:
+        console.print(Text(str(output_location), style="bold cyan underline"))
+
+    if args.copy:
+        try:
+            with open(output_location, 'r', encoding='utf-8') as f:
+                content = f.read()
+                pyperclip.copy(content)
+            console.print("📋 [green]Content copied to clipboard.[/green]")
+        except Exception as e:
+            console.print(f"❌ [bold red]Could not copy to clipboard: {e}[/bold red]")
+
+
+def main() -> None:
+    """Parses arguments and runs the appropriate command."""
+    console = Console()
+    parser = argparse.ArgumentParser(
+        description="Scriber: An intelligent tool to map, analyze, and compile project source code for LLM context."
+    )
+    subparsers = parser.add_subparsers(dest="command", title="Commands")
+
+    init_parser = subparsers.add_parser("init", help="Create a new .scriber.json configuration file interactively.")
+    init_parser.set_defaults(func=lambda args: handle_init(console))
+
+    run_parser = argparse.ArgumentParser(add_help=False)
+
+    exec_mode = os.environ.get('SCRIBER_EXEC_MODE')
+    if exec_mode == 'RUN_PY':
+        default_path = Path.cwd().parent
+        del os.environ['SCRIBER_EXEC_MODE']
+    else:
+        default_path = Path.cwd()
+
+    run_parser.add_argument(
+        "root_path",
+        nargs="?",
+        default=os.environ.get("PROJECT_SCRIBER_ROOT", default_path),
+        type=Path,
+        help="The root directory of the project to map.",
+    )
+    run_parser.add_argument(
+        "-o",
+        "--output",
+        help="The name of the output file. Overrides config file settings.",
+    )
+    run_parser.add_argument(
+        "--config",
+        default=os.environ.get("PROJECT_SCRIBER_CONFIG"),
+        type=Path,
+        help="Path to a custom configuration file. Overrides default .scriber.json"
+    )
+    run_parser.add_argument(
+        "--copy",
+        "-c",
+        action="store_true",
+        help="Copy the final output to the clipboard.",
+    )
+    run_parser.add_argument(
+        "--tree-only",
+        action="store_true",
+        help="Generate only the file tree structure without file content.",
+    )
+    run_parser.set_defaults(func=lambda args: run_scriber(args, console))
+
+    # Make the 'run' command the default action if no subcommand is provided.
+    if len(sys.argv) == 1 or sys.argv[1] not in subparsers.choices:
+        args = run_parser.parse_args()
+    else:
+        args = parser.parse_args()
+
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+File: src/scriber/core.py
+Size: 12736 bytes
+---
+```python
+import fnmatch
+import json
+import os
+from collections import Counter
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, TextIO
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
+import tiktoken
+from rich.console import Console
+
+_DEFAULT_OUTPUT_FILENAME = "scriber_output.txt"
+_CONFIG_FILE_NAME = ".scriber.json"
+DEFAULT_CONFIG = {
+    "use_gitignore": True,
+    "exclude": [
+        # Common
+        "LICENSE"
+        
+        # Version Control
+        ".git",
+
+        # IDE / Editor Config
+        ".idea", ".vscode", ".project", ".settings", ".classpath",
+
+        # Python
+        "__pycache__", "*.pyc", ".venv", "venv", ".pytest_cache", "uv.lock",
+
+        # Node.js
+        "node_modules", "npm-debug.log*", "yarn-error.log",
+
+        # Build Artifacts
+        "build", "dist", "target", "bin", "obj", "out",
+
+        # Dependencies
+        "vendor", "bower_components",
+
+        # Logs & Temp Files
+        "*.log", "*.lock", "*.tmp", "temp", "tmp",
+
+        # OS-specific
+        ".DS_Store", "Thumbs.db", "*~", "*.swp", "*.swo",
+
+        # Scriber's own files
+        _DEFAULT_OUTPUT_FILENAME, _CONFIG_FILE_NAME
+    ],
+    "include": [],
+    "output": _DEFAULT_OUTPUT_FILENAME,
+}
+
+
+class Scriber:
+    _CONFIG_FILE_NAME = _CONFIG_FILE_NAME
+    _LANGUAGE_MAP = {
+        ".asm": "asm", ".s": "asm", ".html": "html", ".htm": "html", ".css": "css",
+        ".scss": "scss", ".sass": "sass", ".less": "less", ".js": "javascript",
+        ".mjs": "javascript", ".cjs": "javascript", ".jsx": "jsx", ".ts": "typescript",
+        ".tsx": "tsx", ".vue": "vue", ".svelte": "svelte", ".py": "python", ".pyw": "python",
+        ".rb": "ruby", ".java": "java", ".kt": "kotlin", ".kts": "kotlin", ".scala": "scala",
+        ".go": "go", ".php": "php", ".c": "c", ".h": "c", ".cpp": "cpp", ".hpp": "cpp",
+        ".cs": "csharp", ".rs": "rust", ".swift": "swift", ".dart": "dart", ".pl": "perl",
+        ".pm": "perl", ".hs": "haskell", ".lua": "lua", ".erl": "erlang", ".ex": "elixir",
+        ".exs": "elixir", ".clj": "clojure", ".lisp": "lisp", ".f": "fortran",
+        ".f90": "fortran", ".zig": "zig", ".d": "d", ".v": "v", ".cr": "crystal",
+        ".nim": "nim", ".pas": "pascal", ".ml": "ocaml", ".sh": "bash", ".bash": "bash",
+        ".zsh": "zsh", ".fish": "fish", ".ps1": "powershell", ".bat": "batch",
+        ".json": "json", ".jsonc": "jsonc", ".xml": "xml", ".yaml": "yaml", ".yml": "yaml",
+        ".toml": "toml", ".ini": "ini", ".properties": "properties", ".env": "dotenv",
+        "Dockerfile": "dockerfile", ".tf": "terraform", ".hcl": "hcl", ".groovy": "groovy",
+        ".gradle": "groovy", ".cmake": "cmake", "CMakeLists.txt": "cmake", ".md": "markdown",
+        ".mdx": "mdx", ".rst": "rst", ".tex": "latex", "LICENSE": "text", ".sql": "sql",
+        ".graphql": "graphql", ".proto": "protobuf", ".glsl": "glsl", ".frag": "glsl",
+        ".vert": "glsl", ".vb": "vbnet", ".vbs": "vbscript",
+    }
+
+    def __init__(self, root_path: Path, config_path: Optional[Path] = None):
+        self.root_path = root_path.resolve()
+        self.mapped_files: List[Path] = []
+        self._user_config_path = config_path
+        self._console = Console(stderr=True, style="bold red")
+        self.config: Dict[str, Any] = {}
+        self.config_path_used: Optional[Path] = None
+        self.gitignore_spec: Optional[Any] = None
+
+        self.stats = {
+            "total_files": 0,
+            "total_size_bytes": 0,
+            "total_tokens": 0,
+            "language_counts": Counter(),
+            "skipped_binary": 0,
+        }
+
+        self._load_config()
+        try:
+            self._tokenizer = tiktoken.get_encoding("cl100k_base")
+        except Exception:
+            self._tokenizer = None
+
+    def _create_default_config_file(self) -> None:
+        """Creates a default .scriber.json config file if no other config is found."""
+        config_path = self.root_path / self._CONFIG_FILE_NAME
+        self._console.print(f"✨ [yellow]No config found. Creating default configuration at:[/] {config_path}")
+
+        file_config = {
+            "use_gitignore": DEFAULT_CONFIG.get("use_gitignore", True),
+            "exclude": DEFAULT_CONFIG.get("exclude", []),
+            "include": DEFAULT_CONFIG.get("include", [])
+        }
+        try:
+            with config_path.open("w", encoding="utf-8") as f:
+                json.dump(file_config, f, indent=2)
+        except IOError as e:
+            self._console.print(f"❌ [bold red]Could not create default config file:[/] {e}")
+
+    def _load_config(self) -> None:
+        config = DEFAULT_CONFIG.copy()
+        toml_config_found = False
+        toml_path = self.root_path / "pyproject.toml"
+
+        if toml_path.is_file():
+            try:
+                with toml_path.open("rb") as f:
+                    toml_data = tomllib.load(f)
+                    if "tool" in toml_data and "scriber" in toml_data["tool"]:
+                        config.update(toml_data["tool"]["scriber"])
+                        toml_config_found = True
+            except tomllib.TOMLDecodeError:
+                self._console.print(f"Warning: Invalid pyproject.toml format in {toml_path}")
+
+        config_path_to_use = self._user_config_path or (self.root_path / self._CONFIG_FILE_NAME)
+
+        if not toml_config_found and not config_path_to_use.is_file() and not self._user_config_path:
+            self._create_default_config_file()
+
+        if config_path_to_use.is_file():
+            self.config_path_used = config_path_to_use
+            try:
+                with config_path_to_use.open("r", encoding="utf-8") as f:
+                    config.update(json.load(f))
+            except json.JSONDecodeError as e:
+                self._console.print(f"Error: Invalid JSON in {config_path_to_use}. Details: {e}")
+            except IOError:
+                pass
+
+        self.config = config
+        self.include_patterns: List[str] = self.config.get("include", [])
+        self.exclude_patterns: Set[str] = set(self.config.get("exclude", []))
+        self._load_gitignore(self.config.get("use_gitignore", True))
+
+    def _load_gitignore(self, use_gitignore: bool) -> None:
+        try:
+            import pathspec
+        except ImportError:
+            self._console.print("Warning: 'pathspec' not installed. .gitignore files will be ignored.")
+            self.gitignore_spec = None
+            return
+
+        self.gitignore_spec: Optional[pathspec.PathSpec] = None
+        if not use_gitignore: return
+        gitignore_path = self.root_path / ".gitignore"
+        if gitignore_path.is_file():
+            try:
+                with gitignore_path.open("r", encoding="utf-8") as f:
+                    self.gitignore_spec = pathspec.PathSpec.from_lines("gitwildmatch", f)
+            except IOError:
+                pass
+
+    def _is_binary(self, path: Path) -> bool:
+        try:
+            with path.open('rb') as f:
+                return b'\0' in f.read(1024)
+        except IOError:
+            return True
+
+    def _is_excluded(self, path: Path) -> bool:
+        try:
+            relative_path = path.relative_to(self.root_path)
+            check_set = set(relative_path.parts)
+        except ValueError:
+            return True
+
+        if not self.exclude_patterns.isdisjoint(check_set): return True
+
+        relative_path_str = relative_path.as_posix()
+        if self.gitignore_spec and self.gitignore_spec.match_file(relative_path_str): return True
+        if any(fnmatch.fnmatch(part, pattern) for pattern in self.exclude_patterns for part in check_set): return True
+        if path.is_file() and self.include_patterns:
+            return not any(fnmatch.fnmatch(relative_path_str, pattern) for pattern in self.include_patterns)
+        return False
+
+    def _collect_files(self) -> None:
+        collected = set()
+        for root, dirs, files in os.walk(self.root_path, topdown=True):
+            current_root = Path(root)
+            dirs[:] = [d for d in dirs if not self._is_excluded(current_root / d)]
+            for file in files:
+                file_path = current_root / file
+                if not self._is_excluded(file_path):
+                    if self._is_binary(file_path):
+                        self.stats['skipped_binary'] += 1
+                        continue
+                    collected.add(file_path)
+        self.mapped_files = sorted(list(collected))
+
+    def map_project(self) -> None:
+        """Maps all relevant project files and gathers statistics."""
+        self._collect_files()
+        self._gather_stats()
+
+    def _gather_stats(self) -> None:
+        if not self.mapped_files: return
+
+        self.stats['total_files'] = len(self.mapped_files)
+        total_size = 0
+        total_tokens = 0
+
+        for file_path in self.mapped_files:
+            total_size += file_path.stat().st_size
+            lang = self._get_language(file_path) or "other"
+            self.stats['language_counts'][lang] += 1
+            if self._tokenizer:
+                try:
+                    content = file_path.read_text(encoding="utf-8", errors="ignore")
+                    total_tokens += len(self._tokenizer.encode(content))
+                except Exception:
+                    pass
+
+        self.stats['total_size_bytes'] = total_size
+        self.stats['total_tokens'] = total_tokens
+
+    def get_stats(self) -> Dict:
+        """Returns the raw project statistics."""
+        return self.stats
+
+    def get_file_count(self) -> int:
+        """Returns the number of files that will be mapped."""
+        return len(self.mapped_files)
+
+    def generate_output_file(self, output_filename: str, tree_only: bool = False, progress=None, task_id=None) -> None:
+        """Generates the consolidated project structure output file."""
+        output_filepath = self.root_path / output_filename
+        with output_filepath.open("w", encoding="utf-8") as f:
+            self._write_output(f, tree_only, progress, task_id)
+
+    def _write_output(self, f: TextIO, tree_only: bool, progress, task_id) -> None:
+        f.write("=" * 3 + "\n Mapped Folder Structure\n" + "=" * 3 + "\n\n")
+        f.write(self._get_tree_representation() + "\n")
+
+        if tree_only: return
+
+        for file_path in self.mapped_files:
+            self._write_file_content(f, file_path)
+            if progress and task_id is not None:
+                progress.update(task_id, advance=1)
+
+    def _write_file_content(self, f: TextIO, file_path: Path) -> None:
+        try:
+            relative_path = file_path.relative_to(self.root_path).as_posix()
+            file_size = file_path.stat().st_size
+            lang = self._get_language(file_path)
+            content = file_path.read_text(encoding="utf-8", errors="ignore")
+        except (OSError, ValueError):
+            return
+
+        f.write("\n" + "-" * 3 + "\n")
+        f.write(f"File: {relative_path}\nSize: {file_size} bytes\n" + "-" * 3 + "\n")
+        f.write(f"```{lang}\n{content}\n```\n")
+
+    def _get_language(self, file_path: Path) -> str:
+        return self._LANGUAGE_MAP.get(file_path.suffix, self._LANGUAGE_MAP.get(file_path.name, ""))
+
+    def _get_tree_representation(self) -> str:
+        tree = self._build_file_tree()
+        if not tree: return "No files or folders to map."
+
+        def format_tree(d: Dict, prefix: str = "") -> List[str]:
+            lines = []
+            items = sorted(d.keys())
+            for i, key in enumerate(items):
+                is_last = i == len(items) - 1
+                connector = "└── " if is_last else "├── "
+                lines.append(f"{prefix}{connector}{key}")
+                if d[key]:
+                    new_prefix = prefix + ("    " if is_last else "│   ")
+                    lines.extend(format_tree(d[key], new_prefix))
+            return lines
+
+        root_name = list(tree.keys())[0]
+        output_lines = [root_name]
+        output_lines.extend(format_tree(tree[root_name]))
+        return "\n".join(output_lines)
+
+    def _build_file_tree(self) -> Dict[str, Any]:
+        if not self.mapped_files: return {}
+        tree = {self.root_path.name: {}}
+        project_level = tree[self.root_path.name]
+        for path in self.mapped_files:
+            parts = path.relative_to(self.root_path).parts
+            current_level = project_level
+            for part in parts:
+                current_level = current_level.setdefault(part, {})
+        return tree
+```
+
+---
+File: tests/test_suite.py
+Size: 8143 bytes
+---
+```python
+import json
+from collections import Counter
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
+from src.scriber.cli import format_bytes
+from src.scriber.cli import main as cli_main
+from src.scriber.core import Scriber
+
+
+# --- Test Core Scriber Functionality ---
+
+class TestCore:
+    """Groups tests for the Scriber core logic found in `src.scriber.core`."""
+
+    def test_default_exclusion(self, tmp_path: Path):
+        """Tests that default patterns like .git and __pycache__ are always excluded."""
+        (tmp_path / ".git").mkdir()
+        (tmp_path / "main.py").touch()
+        (tmp_path / "__pycache__").mkdir()
+        (tmp_path / "__pycache__" / "cache.pyc").touch()
+
+        scriber = Scriber(root_path=tmp_path)
+        scriber.map_project()
+
+        paths = {p.name for p in scriber.mapped_files}
+        assert "main.py" in paths
+        assert ".git" not in paths
+        assert "__pycache__" not in paths
+
+    def test_gitignore_handling(self, tmp_path: Path):
+        """Ensures .gitignore rules are correctly applied when enabled."""
+        (tmp_path / "main.py").touch()
+        (tmp_path / "ignored.log").touch()
+        (tmp_path / ".gitignore").write_text("*.log")
+
+        scriber = Scriber(root_path=tmp_path)
+        scriber.map_project()
+
+        paths = {p.name for p in scriber.mapped_files}
+        assert "main.py" in paths
+        assert "ignored.log" not in paths
+
+    def test_disable_gitignore(self, tmp_path: Path):
+        """Ensures .gitignore is ignored when `use_gitignore` is false in the config."""
+        (tmp_path / "main.py").touch()
+        (tmp_path / "not_ignored.log").touch()
+        (tmp_path / ".gitignore").write_text("*.log")
+        config = {"use_gitignore": False, "exclude": []}
+        (tmp_path / ".scriber.json").write_text(json.dumps(config))
+
+        scriber = Scriber(root_path=tmp_path)
+        scriber.map_project()
+
+        paths = {p.name for p in scriber.mapped_files}
+        assert "main.py" in paths
+        assert "not_ignored.log" in paths
+
+    def test_binary_file_skipping(self, tmp_path: Path):
+        """Tests that binary files are detected and correctly skipped."""
+        (tmp_path / "app.exe").write_bytes(b"\x4d\x5a\x90\x00\x03\x00\x00\x00")
+
+        scriber = Scriber(root_path=tmp_path)
+        scriber.map_project()
+
+        assert len(scriber.mapped_files) == 0
+        assert scriber.get_stats()['skipped_binary'] == 1
+
+    def test_include_patterns(self, tmp_path: Path):
+        """Tests that 'include' patterns correctly filter files when provided."""
+        (tmp_path / "main.py").touch()
+        (tmp_path / "script.js").touch()
+        (tmp_path / "style.css").touch()
+        (tmp_path / ".scriber.json").write_text(json.dumps({"include": ["*.py", "*.js"]}))
+
+        scriber = Scriber(root_path=tmp_path)
+        scriber.map_project()
+
+        paths = {p.name for p in scriber.mapped_files}
+        assert paths == {"main.py", "script.js"}
+
+    def test_tree_representation(self, tmp_path: Path):
+        """Checks if the folder tree string is formatted correctly."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "main.py").touch()
+        (tmp_path / "README.md").touch()
+
+        scriber = Scriber(root_path=tmp_path)
+        scriber.map_project()
+        tree_str = scriber._get_tree_representation()
+
+        expected_lines = [
+            tmp_path.name,
+            "├── README.md",
+            "└── src",
+            "    └── main.py",
+        ]
+        actual_lines = tree_str.split('\n')
+        assert actual_lines == expected_lines
+
+    @pytest.mark.parametrize("filename, expected_lang", [
+        ("test.py", "python"),
+        ("script.js", "javascript"),
+        ("style.css", "css"),
+        ("Dockerfile", "dockerfile"),
+        ("unknown.xyz", ""),
+    ])
+    def test_language_detection(self, tmp_path: Path, filename: str, expected_lang: str):
+        """Tests the language mapping utility for various file types."""
+        scriber = Scriber(root_path=tmp_path)
+        lang = scriber._get_language(Path(filename))
+        assert lang == expected_lang
+
+
+# --- Test CLI Functionality ---
+
+class TestCli:
+    """Groups tests for the command-line interface in `src.scriber.cli`."""
+
+    @patch('src.scriber.cli.run_scriber')
+    def test_cli_run_command_is_default(self, mock_run_scriber, mocker):
+        """Tests that the 'run' command is triggered by default with no subcommand."""
+        mocker.patch('sys.argv', ['scriber'])
+        cli_main()
+        mock_run_scriber.assert_called_once()
+
+    @patch('src.scriber.cli.Scriber')
+    def test_cli_arguments_are_passed_correctly(self, mock_scriber, mocker):
+        """Tests if CLI arguments are correctly parsed and passed to the Scriber class."""
+        mock_instance = MagicMock()
+        mock_instance.get_stats.return_value = {'total_files': 0, 'language_counts': Counter()}
+        mock_instance.get_file_count.return_value = 0
+        mock_scriber.return_value = mock_instance
+        mocker.patch('pyperclip.copy')
+
+        test_path = "/tmp/project"
+        test_output = "output.txt"
+        test_config = "/tmp/config.json"
+
+        mocker.patch('sys.argv', [
+            'scriber', test_path, '--output', test_output, '--config', test_config, '--tree-only'
+        ])
+
+        cli_main()
+
+        mock_scriber.assert_called_with(Path(test_path).resolve(), config_path=Path(test_config))
+
+        call = mock_instance.generate_output_file.call_args
+        assert call.args[0] == test_output
+        assert call.kwargs['tree_only'] is True
+
+    @patch('src.scriber.cli.Confirm.ask')
+    @patch('src.scriber.cli.Prompt.ask')
+    def test_cli_init_command_creates_config(self, mock_prompt, mock_confirm, tmp_path: Path, mocker):
+        """Tests the interactive 'init' command for config file creation."""
+        mocker.patch('pathlib.Path.cwd', return_value=tmp_path)
+        mock_confirm.return_value = False
+        mock_prompt.side_effect = ["*.tmp, *.log", "*.py", "1"]
+
+        mocker.patch('sys.argv', ['scriber', 'init'])
+        cli_main()
+
+        config_path = tmp_path / ".scriber.json"
+        assert config_path.exists()
+
+        with open(config_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        assert not data['use_gitignore']
+        assert data['exclude'] == ['*.tmp', '*.log']
+        assert data['include'] == ['*.py']
+
+    @patch('src.scriber.cli.Confirm.ask')
+    @patch('src.scriber.cli.Prompt.ask')
+    def test_cli_init_command_creates_config_in_toml(self, mock_prompt, mock_confirm, tmp_path: Path, mocker):
+        """Tests the interactive 'init' command for saving config to pyproject.toml."""
+        mocker.patch('pathlib.Path.cwd', return_value=tmp_path)
+
+        pyproject_path = tmp_path / "pyproject.toml"
+        pyproject_path.write_text("[project]\nname = 'test-project'")
+
+        mock_confirm.return_value = True
+        mock_prompt.side_effect = ["*.log, .env", "*.py", "2"]
+
+        mocker.patch('sys.argv', ['scriber', 'init'])
+        cli_main()
+
+        assert pyproject_path.exists()
+
+        with open(pyproject_path, "rb") as f:
+            data = tomllib.load(f)
+
+        assert "tool" in data
+        assert "scriber" in data["tool"]
+        scriber_config = data["tool"]["scriber"]
+        assert scriber_config['use_gitignore'] is True
+        assert scriber_config['exclude'] == ['*.log', '.env']
+        assert scriber_config['include'] == ['*.py']
+
+    @pytest.mark.parametrize("bytes_val, expected_str", [
+        (500, "500 Bytes"),
+        (2048, "2.00 KB"),
+        (1500000, "1.43 MB"),
+        (2 * 1024 * 1024, "2.00 MB"),
+    ])
+    def test_format_bytes_utility(self, bytes_val: int, expected_str: str):
+        """Tests the byte formatting utility function."""
+        assert format_bytes(bytes_val) == expected_str
+```
