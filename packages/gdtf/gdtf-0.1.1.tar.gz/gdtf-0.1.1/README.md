@@ -1,0 +1,1 @@
+gdtf (game data transfer format) is a light-weight binary format for transfer of 3d game assets to game engines (designed with the Unreal Engine in mind). gdtf only supports the bare essentials: meshes, LODs, skeletons, animations - no scenes, curves, scripts, animation layers etc.
