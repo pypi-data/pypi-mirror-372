@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Sync project (dev)
+      run: |
+        uv --version
+        uv sync --locked --group dev
+
+    - name: Lint with ruff
+      run: |
+        uv run ruff check src/ tests/
+
+    # Formatting is handled by ruff; mypy/black checks removed per project policy
+
+    - name: Test with pytest
+      run: |
+        uv run pytest
+
+    - name: Upload HTML coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-html
+        path: htmlcov/
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        files: ./coverage.xml
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: javamaker-python/pygnosis
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Sync project (dev+docs)
+      run: |
+        uv sync --locked --group dev --group docs
+
+    - name: Build package
+      run: uv build
+
+    - name: Build docs (Sphinx)
+      run: |
+        uv run sphinx-build -b html docs docs/_build/html
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
+
+    - name: Upload docs artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: docs-html
+        path: docs/_build/html/

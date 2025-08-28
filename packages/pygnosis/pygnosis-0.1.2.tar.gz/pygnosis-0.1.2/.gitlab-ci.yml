@@ -1,0 +1,125 @@
+stages:
+  - test
+  - build
+  - deploy
+  - publish
+
+variables:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  UV_CACHE_DIR: "/tmp/uv-cache"
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .uv-cache/
+    - .venv/
+
+.uv_setup: &uv_setup
+  image: python:3.11-slim
+  before_script:
+    - apt-get update -y && apt-get install -y --no-install-recommends curl ca-certificates git
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+
+.artifact_publisher: &artifact_publisher
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      allow_failure: true
+      when: always
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
+      allow_failure: true
+      when: always
+
+linting:ruff:
+  stage: test
+  <<: *uv_setup
+  variables:
+    RUFF_OUTPUT: ruff-output.json
+  script:
+    - uv --version
+    - uv sync --locked --group dev
+    - uv run ruff check --output-format=gitlab src/ tests/ | tee $RUFF_OUTPUT
+  artifacts:
+    reports:
+      codequality: $RUFF_OUTPUT
+    paths:
+      - $RUFF_OUTPUT
+    expire_in: 1 week
+
+testing:pytest:
+  stage: test
+  <<: *uv_setup
+  script:
+    - uv --version
+    - uv sync --locked --group dev
+    - uv run pytest
+  coverage: '/^TOTAL.*\s+(\d+\%)/'
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+    paths:
+      - htmlcov/
+
+build:
+  stage: build
+  needs: ["testing:pytest"]
+  <<: *uv_setup
+  script:
+    - uv sync --locked --group dev
+    - uv build
+  <<: *artifact_publisher
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+
+docs:sphinx:
+  stage: build
+  needs: ["linting:ruff"]
+  <<: *uv_setup
+  variables:
+    SPHINX_OUTPUT: api-docs
+  script:
+    - uv sync --locked --group docs
+    - uv run sphinx-build -E -b html docs $SPHINX_OUTPUT
+  <<: *artifact_publisher
+  artifacts:
+    paths:
+      - $SPHINX_OUTPUT
+    expire_in: 1 week
+
+pages:coverage:
+  stage: deploy
+  needs: ["testing:pytest"]
+  image: alpine:3.19
+  script:
+    - mv htmlcov/ public/
+    - 'echo "Coverage report is available at: https://${CI_PROJECT_NAMESPACE}.gitlab.io/${CI_PROJECT_NAME}/"'
+  <<: *artifact_publisher
+  artifacts:
+    paths:
+      - public
+
+publish:
+  stage: publish
+  <<: *uv_setup
+  variables:
+    TARGET_INDEX: testpypi
+  script:
+    - uv sync --locked --group dev
+    - uv build
+    - |
+      if [ "$TARGET_INDEX" = "testpypi" ]; then
+        uv publish --index testpypi --token "$TEST_PYPI_TOKEN"
+      else
+        uv publish --token "$PYPI_TOKEN"
+      fi
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
+      allow_failure: true
+      when: manual
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
