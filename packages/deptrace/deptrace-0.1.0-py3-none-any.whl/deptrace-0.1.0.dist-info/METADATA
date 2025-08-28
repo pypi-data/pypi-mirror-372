@@ -1,0 +1,136 @@
+Metadata-Version: 2.4
+Name: deptrace
+Version: 0.1.0
+Summary: Analyze dependencies in a Python project
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+
+# deptrace
+
+Analyze dependencies in a Python project.
+
+This project performs four main tasks:
+
+1. Analyze the (nested) scopes in a Python file.
+2. Analyze certain variable assignments in a Python file.
+3. Crawl the dependency graph of a Python file.
+4. Build call trees showing which functions call a target function.
+
+## Usage
+
+Basic usage:
+```bash
+python -m deptrace <file_path>
+```
+
+Examples:
+```bash
+# Analyze dependencies (default)
+python -m deptrace ./src/deptrace/processors/process_file.py
+
+# Analyze call tree for a function across entire project
+python -m deptrace src --action call-tree --target-function parse_file
+```
+
+### Options
+
+- `file_path`: Path to the Python file or directory to analyze
+- `--action`: Type of analysis to perform: `dependencies` (default) or `call-tree`
+- `--target-function`: Target function name for call tree analysis (required with `--action call-tree`)
+- `--depth`: Depth of the analysis (default: 4)
+- `--log-level`: Set logging level (DEBUG, INFO) (default: INFO)
+- `--scope-filter`: Filter output to a specific scope (e.g., '<module>.outer.Inner.method')
+- `--output-file`: Write results to specified file
+- `--output-format`: Format for output file (JSON) (default: JSON)
+
+Examples with options:
+```bash
+# Dependency analysis with options
+python -m deptrace ./src/deptrace/processors/process_file.py \
+  --depth 6 \
+  --log-level DEBUG \
+  --scope-filter "<module>.my_function"
+
+# Call tree analysis with output file
+python -m deptrace src \
+  --action call-tree \
+  --target-function parse_file \
+  --output-file ./call_tree.json \
+  --log-level INFO
+```
+
+### Example: Analyzing the `parse_file` Function
+
+The `parse_file` function is one of the most heavily used functions in the deptrace codebase itself. It's responsible for parsing Python files into AST (Abstract Syntax Tree) format and is used by multiple subsystems. Let's analyze its call tree to understand how different parts of the project depend on it:
+
+```bash
+# Analyze how parse_file is used throughout the deptrace project
+python -m deptrace src --action call-tree --target-function parse_file
+```
+
+This reveals that `parse_file` has:
+- **3 direct callers**: `process_file`, `build_graph`, and `analyze_project_call_tree`
+- **Multiple indirect callers** through several call chains:
+  - Processing pipeline: `run_analysis` → `analyze_file` → `process_file` → `parse_file`
+  - Import crawler: `crawl` → `build_graph` → `parse_file`
+  - Recursive imports: `process_imports` → `resolve_import` → `build_graph` → `parse_file`
+
+This demonstrates how call tree analysis helps you understand:
+- Which components depend on a critical function
+- The different code paths that lead to a function being called
+- The impact of changing a function's signature or behavior
+
+
+### Output File
+
+When using `--output-file`, the analysis results will be written to the specified file in JSON format. For dependency analysis, this includes:
+
+- Scope analysis
+- Assignment information  
+- Dependency graph information
+- Import relationships
+
+For call tree analysis, this includes:
+- Target function name
+- Direct callers with call sites and arguments
+- Recursive caller relationships
+
+Example with output file:
+
+```bash
+python -m deptrace ./src/deptrace/processors/process_file.py \
+  --log-level DEBUG \
+  --output-file ./deptrace.json
+```
+
+## Programmatic API
+
+### Call Tree Analysis
+
+Build call trees to understand which functions call a target function, both directly and indirectly:
+
+```python
+from deptrace import analyze_call_tree, analyze_project_call_tree
+
+# Analyze a single file
+source_code = '''
+def calculate_score(value, multiplier=1.0):
+    return value * multiplier * 100
+
+def process_data(data):
+    score = calculate_score(len(data), 1.5)
+    return score
+'''
+
+result = analyze_call_tree(source_code, "calculate_score")
+print(result["direct_callers"])  # Shows process_data calls calculate_score
+
+# Analyze an entire project
+result = analyze_project_call_tree("/path/to/project", "target_function")
+```
+
+The call tree analysis handles:
+- Cross-file function calls
+- Import aliases (`from utils import func as renamed_func`)
+- Module.function calls (`utils.func()`)
+- Recursive caller relationships (who calls the callers)
