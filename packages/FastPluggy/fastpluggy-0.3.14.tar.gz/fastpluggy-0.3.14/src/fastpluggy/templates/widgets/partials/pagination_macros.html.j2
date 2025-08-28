@@ -1,0 +1,119 @@
+{# templates/macros/pagination_macros.html #}
+<!-- templates/macros.html -->
+{% macro update_query_params(request, new_params) %}
+    {% set params = {} %}
+    {% for key, value in request.query_params.items() %}
+        {% if key not in new_params %}
+            {% set _ = params.update({key: value}) %}
+        {% endif %}
+    {% endfor %}
+    {% for key, value in new_params.items() %}
+        {% set _ = params.update({key: value}) %}
+    {% endfor %}
+    ?{{ params | urlencode }}
+{% endmacro %}
+
+{% macro render_pagination(pagination, request) %}
+    {% if pagination and pagination.error %}
+            <div class="alert alert-danger m-3">
+                    <i class="icon-alert-circle"></i>
+                    <strong>Error:</strong> {{ pagination.error }}
+                </div>
+    {% elif pagination and pagination.total_items > 0 %}
+
+        <!-- Form for Rows per Page Selector and Pagination Controls -->
+        <div class="d-flex justify-content-between align-items-center">
+            <!-- Rows per Page Selector -->
+            <div class="form-inline">
+                <form method="get" action="">
+                    <div class="input-group ">
+                        <label for="rows_per_page" class="btn btn-primary" type="button"
+                               onclick="document.getElementById('rows_per_page').form.submit()">Rows per page:</label>
+
+                        <select class="form-select" name="rows_per_page" id="rows_per_page"
+                                onchange="this.form.submit()">
+                            {% for option in pagination.rows_per_page_options %}
+                                <option value="{{ option }}"
+                                        {% if pagination.rows_per_page == option %}selected{% endif %}>
+                                    {{ option }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    {# Preserve other query parameters except 'rows_per_page' and 'current_page' #}
+                    {% for key, value in request.query_params.items() %}
+                        {% if key not in ['rows_per_page', 'current_page', 'page'] %}
+                            <input type="hidden" name="{{ key }}" value="{{ value }}">
+                        {% endif %}
+                    {% endfor %}
+                </form>
+            </div>
+
+            <span class="row-count">
+                Showing {{ pagination.total_items }} {{ 'item' if pagination.total_items == 1 else 'items' }}
+            </span>
+
+            <!-- Pagination Controls -->
+            <nav aria-label="Page navigation">
+                <ul class="pagination mb-0">
+                    {# Previous Page Button #}
+                    {% if pagination.current_page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="{{ update_query_params(request, {'current_page': pagination.current_page - 1, 'rows_per_page': pagination.rows_per_page}) }}"
+                               aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                                <span class="page-link" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </span>
+                        </li>
+                    {% endif %}
+
+
+
+                    {# Page Number Links #}
+                    {% for page_num in pagination.pages %}
+                        {% if page_num == '...' %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% else %}
+
+                            <li class="page-item {% if page_num == pagination.current_page %}active{% endif %}">
+                                <a class="page-link"
+                                   href="{{ update_query_params(request, {'current_page': page_num, 'rows_per_page': pagination.rows_per_page}) }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+
+                        {% endif %}
+                    {% endfor %}
+
+
+                    {# Next Page Button #}
+                    {% if pagination.current_page < pagination.total_pages %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="{{ update_query_params(request, {'current_page': pagination.current_page + 1, 'rows_per_page': pagination.rows_per_page}) }}"
+                               aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                                <span class="page-link" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+
+    {% endif %}
+{% endmacro %}
