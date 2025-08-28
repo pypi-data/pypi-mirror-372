@@ -1,0 +1,54 @@
+{% extends "tlcc_auth/base_auth.html" %}
+{% load tlcc_auth %}
+{% block title %}All sessions (admin){% endblock %}
+{% block content %}
+<h1>All sessions (admin)</h1>
+
+{% if messages %}
+  <section>
+  {% for message in messages %}
+    <div class="notice {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+  </section>
+{% endif %}
+
+<table>
+  <thead>
+    <tr>
+      <th>Session key</th>
+      <th>User id</th>
+      <th>Username</th>
+      <th>Expires</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td style="word-break:break-all; max-width:320px;">{{ r.session.session_key }}</td>
+      <td>{% if r.uid %}{{ r.uid }}{% else %}&mdash;{% endif %}</td>
+      <td>{% if r.username %}{{ r.username }}{% else %}Anonymous{% endif %}</td>
+      <td>{{ r.session.expire_date }}</td>
+      <td>
+        <form method="post" action="{% url 'tlcc_auth:revoke-session' %}" style="display:inline">
+          {% csrf_token %}
+          <input type="hidden" name="session_key" value="{{ r.session.session_key }}">
+          <button type="submit" onclick="return confirm('Revoke this session?')">Revoke</button>
+        </form>
+
+        {% if r.uid and request.user.is_staff %}
+        <form method="post" action="{% url 'tlcc_auth:revoke-all-user-sessions' r.uid %}" style="display:inline; margin-left:.5rem;">
+          {% csrf_token %}
+          <button type="submit" onclick="return confirm('Revoke ALL sessions for {{ r.username }} (id={{ r.uid }})?')">Revoke all</button>
+        </form>
+
+        <a href="{% url 'admin:auth_user_change' r.uid %}" style="margin-left:.5rem;">Open user (admin)</a>
+        {% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5">No sessions found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
