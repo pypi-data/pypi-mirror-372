@@ -1,0 +1,111 @@
+[project]
+name = "remotivelabs-topology"
+description = "RemotiveLabs RemotiveTopology framework allows developers to easily create and run ECU stubs and control their behavior"
+version = "0.9.2"
+readme = "README.md"
+license = { file = "../LICENSE" }
+authors = [{ name = "Remotivelabs", email = "support@remotivelabs.com" }]
+keywords = ["automotive", "autotech", "networking", "CAN"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Manufacturing",
+  "Intended Audience :: Science/Research",
+  "License :: Other/Proprietary License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Communications",
+  "Topic :: Internet",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+requires-python = ">=3.9,<4.0"
+
+dependencies = [
+  "remotivelabs-broker~=0.9.1b1",
+  "typing-extensions~=4.13.2",
+  "pyhamcrest~=2.1.0",
+  "tenacity~=9.0.0",
+]
+
+# TODO: replace with dependency-groups (PEP-735) when uv supports it
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.11.10",
+  "mypy>=1.14.1",
+  "pdoc>=15.0.1",
+  "loguru >=0.7.3",
+  "pytest >=8.3.3",
+  "pytest-cov >=5.0.0",
+  "pytest-docker-tools >=3.1.3",
+  "pytest-asyncio >=0.24.0",
+  "pytest-xdist[psutil] >=3.6.1",
+  "pytest-timeout >=2.3.1",
+  "pytest-flakefinder >=1.1.0",
+  "requests >=2.32.3",
+  "types-requests >=2.32.0.20241016",
+  "python-dotenv >=1.0.1",
+  "aiostream >=0.6.4",
+]
+fmu = [
+  "fmpy >= 0.3.22; python_version >= '3.10'",
+  "fmpy == 0.3.21; python_version < '3.10'",
+  "numpy >= 2.2.1; python_version >= '3.10'",
+  "numpy == 2.0.2; python_version < '3.10'",
+]
+
+[project.urls]
+Homepage = "https://remotivelabs.com/"
+Documentation = "https://docs.remotivelabs.com/apis/python/remotivelabs/topology"
+Examples = "https://github.com/remotivelabs/remotivelabs-topology-examples"
+
+[tool.poetry]
+packages = [{ include = "remotivelabs", from = "src" }]
+
+[tool.poetry.requires-plugins]
+poethepoet = ">=0.34.0"
+
+[tool.poe.tasks]
+docs = { cmd = """pdoc remotivelabs.topology \
+                       --docformat google \
+                       --favicon https://releases.remotivelabs.com/favicon.ico \
+                       --logo https://releases.remotivelabs.com/remotive-labs-logo-neg.png \
+                       -t docs/theme \
+                       -o dist/doc""" }
+format = [{ cmd = "ruff format ." }, { cmd = "ruff check --fix ." }]
+ruff = [{ cmd = "ruff check ." }, { cmd = "ruff format --check --diff ." }]
+mypy = [{ cmd = "mypy -p remotivelabs.topology" }, { cmd = "mypy -p tests" }]
+lint = ["ruff", "mypy"]
+test = { cmd = "pytest -n logical --dist=loadfile --cov --timeout 30" }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+consider_namespace_packages = true
+timeout_func_only = true
+testpaths = ["tests"]
+
+[tool.ruff]
+extend = "../pyproject.toml"
+
+[tool.mypy]
+python_version = "3.10"
+namespace_packages = true
+explicit_package_bases = true
+disallow_untyped_calls = false
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+hide_error_codes = false
+
+[[tool.mypy.overrides]]
+module = ["fmpy.*", "numpy.*", "pytest_docker_tools.*"]
+ignore_missing_imports = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
