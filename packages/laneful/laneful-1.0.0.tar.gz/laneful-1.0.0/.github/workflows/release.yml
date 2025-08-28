@@ -1,0 +1,158 @@
+name: Release
+
+on:
+  # Automatic TestPyPI release on pushes to main
+  # Manual PyPI release when a tag is created
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*.*.*'
+  
+  # Manual dispatch for testing
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
+
+jobs:
+  test:
+    name: Test Before Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+    
+    - name: Set up Python
+      run: uv python install 3.10
+    
+    - name: Install dependencies
+      run: |
+        uv sync --group dev
+    
+    - name: Run tests
+      run: |
+        uv run pytest tests/ -v
+    
+    - name: Run linting
+      run: |
+        uv run ruff check laneful/
+        uv run ruff format --check laneful/
+
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+    
+    - name: Set up Python
+      run: uv python install 3.10
+    
+    - name: Build package
+      run: |
+        uv build
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    runs-on: ubuntu-latest
+    needs: build
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testpypi')
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/laneful
+    permissions:
+      id-token: write  # For trusted publishing
+    
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    
+    - name: Publish to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        print-hash: true
+
+  publish-pypi:
+    name: Publish to PyPI (Production)
+    runs-on: ubuntu-latest
+    needs: build
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'pypi')
+    environment:
+      name: pypi
+      url: https://pypi.org/p/laneful
+    permissions:
+      id-token: write  # For trusted publishing
+    
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    
+    - name: Extract tag version
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+        echo "Publishing version: ${GITHUB_REF#refs/tags/v}"
+    
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        print-hash: true
+    
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ env.RELEASE_VERSION }}
+        body: |
+          ## Changes in ${{ env.RELEASE_VERSION }}
+          
+          Released to PyPI: https://pypi.org/project/laneful/${{ env.RELEASE_VERSION }}/
+          
+          ### Installation
+          ```bash
+          pip install laneful==${{ env.RELEASE_VERSION }}
+          ```
+          
+          ### What's Changed
+          - See commit history for detailed changes
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ env.PREVIOUS_VERSION }}...${{ github.ref_name }}
+        draft: false
+        prerelease: false

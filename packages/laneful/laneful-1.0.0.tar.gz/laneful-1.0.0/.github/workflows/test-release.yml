@@ -1,0 +1,73 @@
+name: Test Release Process
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_version:
+        description: 'Test version (e.g., 1.0.0-test)'
+        required: true
+        default: '1.0.0-test'
+
+jobs:
+  test-version-management:
+    name: Test Version Management
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+    
+    - name: Set up Python
+      run: uv python install 3.10
+    
+    - name: Test version script
+      run: |
+        echo "📋 Current version:"
+        python scripts/bump_version.py --show
+        
+        echo -e "\n🔧 Testing dev version:"
+        python scripts/bump_version.py --dev
+        python scripts/bump_version.py --show
+        
+        echo -e "\n🚀 Testing release version:"
+        python scripts/bump_version.py --release ${{ github.event.inputs.test_version }}
+        python scripts/bump_version.py --show
+        
+        echo -e "\n✅ Version management working correctly"
+    
+    - name: Test package build
+      run: |
+        uv sync
+        uv build
+        echo "📦 Package built successfully"
+        ls -la dist/
+    
+    - name: Test package install
+      run: |
+        pip install dist/*.whl
+        python -c "
+        import laneful
+        print(f'✓ Package imports: {laneful.__version__}')
+        print(f'Available clients: {laneful.get_available_clients()}')
+        "
+
+  test-installation-from-testpypi:
+    name: Test Installation from TestPyPI
+    runs-on: ubuntu-latest
+    if: false  # Only enable when TestPyPI package exists
+    
+    steps:
+    - name: Test install from TestPyPI
+      run: |
+        pip install --index-url https://test.pypi.org/simple/ \
+                   --extra-index-url https://pypi.org/simple/ \
+                   laneful
+        
+        python -c "
+        import laneful
+        print(f'✓ TestPyPI package works: {laneful.__version__}')
+        "
