@@ -1,0 +1,534 @@
+# Iron Book Python SDK
+
+A Python SDK for interacting with Iron Book by Identity Machines. This SDK provides seamless integration with Iron Book's agent registration, authentication, and policy decision APIs.
+
+## Features
+
+- **Agent Registration**: Register new agents and obtain Verifiable Credentials
+- **Authentication**: Get authentication tokens for agent operations
+- **Policy Decisions**: Evaluate policy decisions for agent actions
+- **Policy Upload**: Upload a new access control policy to enforce actions against
+- **Async Support**: Full async/await support for high-performance applications
+- **Type Safety**: Comprehensive type hints and dataclass definitions
+- **Modern HTTP Client**: Built on httpx for reliable HTTP operations
+
+## Installation
+
+```bash
+pip install ironbook-sdk
+```
+
+## Quick Start
+
+```python
+import asyncio
+from ironbook_sdk import IronBookClient, RegisterAgentOptions, GetAuthTokenOptions, PolicyInput
+
+async def main():
+    # Initialize the client (with optional timeout)
+    client = IronBookClient(api_key="your-api-key", base_url="https://api.ironbook.identitymachines.com", timeout=15.0)
+    
+    # Register a new agent
+    register_options = RegisterAgentOptions(
+        agent_name="my-agent",
+        capabilities=["query", "read"],
+        developer_did="did:web:example.com"  # Optional
+    )
+    
+    registered = await client.register_agent(register_options)
+    print(f"Agent registered: {registered}")
+    
+    # Get authentication token
+    auth_options = GetAuthTokenOptions(
+        agent_did=registered["agentDid"],
+        vc=registered["vc"],
+        audience="https://api.ironbook.identitymachines.com",
+        developer_did=registered["developerDid"]  # Optional
+    )
+    
+    token_data = await client.get_auth_token(auth_options)
+    print(f"Auth token: {token_data}")
+    
+    # Make a policy decision
+    policy_input = PolicyInput(
+        agent_did=registered["agentDid"],
+        policy_id="policy-123",
+        token=token_data["access_token"],
+        action="query",
+        resource="db://finance/tx"
+    )
+    
+    decision = await client.policy_decision(policy_input)
+    print(f"Policy decision: {decision.allow}")
+
+# Run the async function
+asyncio.run(main())
+```
+
+## API Reference
+
+### IronBookClient
+
+The main client class for interacting with Iron Book APIs.
+
+#### Constructor
+
+```python
+IronBookClient(api_key: str, base_url: str = "https://api.ironbook.identitymachines.com", timeout: float = 10.0)
+```
+
+**Parameters:**
+- `api_key` (str): Your Iron Book API key
+- `base_url` (str, optional): Base URL for the API. Defaults to hosted IronBook API.
+- `timeout` (float, optional): Total request timeout in seconds (default: 10.0)
+
+#### Methods
+
+##### register_agent(opts: RegisterAgentOptions) -> Dict[str, Any]
+
+Registers a new agent and returns `{ vc, agentDid, developerDid }`.
+
+```python
+result = await client.register_agent(RegisterAgentOptions(
+    agent_name="my-agent",
+    capabilities=["query", "read"],
+    developer_did="did:web:example.com"  # Optional
+))
+print(result["agentDid"], result["developerDid"])  # use for subsequent calls
+```
+
+##### get_auth_token(opts: GetAuthTokenOptions) -> Dict[str, Any]
+
+Gets an authentication token for an agent.
+
+```python
+token_data = await client.get_auth_token(GetAuthTokenOptions(
+    agent_did="did:web:agent.example.com",
+    vc=vc,
+    audience="https://api.identitymachines.com",
+    developer_did="did:web:example.com"  # Optional
+))
+```
+
+##### policy_decision(opts: PolicyInput) -> PolicyDecision
+
+Gets a policy decision for an agent action.
+
+```python
+decision = await client.policy_decision(PolicyInput(
+    agent_did="did:web:agent.example.com",
+    policy_id="policy-123",
+    token="jwt-token",
+    action="query",
+    resource="db://finance/tx",
+    context={"amount": 1000, "ticker": "AAPL"}
+))
+```
+
+##### update_agent(agent_did: str, opts: UpdateAgentOptions) -> UpdateAgentResponse
+
+Updates an agent's description and/or status.
+
+```python
+result = await client.update_agent(
+    agent_did="did:web:agents.identitymachines.com:myagent",
+    opts=UpdateAgentOptions(
+        description="Updated agent description",
+        status="inactive"  # 'active' or 'inactive'
+    )
+)
+print(f"Updated fields: {result.updated}")
+```
+
+##### get_agent(agent_did: str) -> AgentResponse
+
+Retrieve a single agent by DID.
+
+```python
+agent = await client.get_agent("did:web:agents.identitymachines.com:myagent")
+print(agent.did, agent.status)
+```
+
+##### list_agents(opts: ListAgentsOptions) -> ListAgentsResponse
+
+List agents with optional filters and pagination.
+
+```python
+from ironbook_sdk import ListAgentsOptions
+
+agents = await client.list_agents(ListAgentsOptions(status="active", limit=25))
+print(agents.count)
+for a in agents.items:
+    print(a.did, a.capabilities)
+```
+
+##### get_policy(policy_id: str) -> Policy
+
+Retrieve a single policy by its ID.
+
+```python
+policy = await client.get_policy("policy_abcdef123456")
+print(policy.policy_id, policy.content[:40])
+```
+
+##### list_policies(opts: ListPoliciesOptions) -> ListPoliciesResponse
+
+List policies with optional filters and pagination.
+
+```python
+from ironbook_sdk import ListPoliciesOptions
+
+pols = await client.list_policies(ListPoliciesOptions(limit=10))
+print(pols.count)
+for p in pols.items:
+    print(p.policy_id, p.is_active)
+```
+
+##### list_audit_logs(opts: ListAuditLogsOptions) -> ListAuditLogsResponse
+
+List audit logs with optional filters and pagination.
+
+```python
+from ironbook_sdk import ListAuditLogsOptions
+
+logs = await client.list_audit_logs(ListAuditLogsOptions(agent_did="did:web:agents.identitymachines.com:myagent", limit=20))
+print(logs.count)
+for entry in logs.items:
+    print(entry.timestamp, entry.event_type, entry.trust_score)
+```
+
+## Data Types
+
+### RegisterAgentOptions
+
+Options for registering a new agent.
+
+```python
+@dataclass
+class RegisterAgentOptions:
+    agent_name: str              # Name of the agent
+    capabilities: List[str]      # List of agent capabilities
+    developer_did: Optional[str] # Developer's DID (optional)
+```
+
+### GetAuthTokenOptions
+
+Options for getting an authentication token.
+
+```python
+@dataclass
+class GetAuthTokenOptions:
+    agent_did: str      # Agent's DID
+    vc: str            # Verifiable Credential
+    audience: str      # Token audience (e.g., API endpoint)
+    developer_did: Optional[str] # Developer's DID (optional)
+```
+
+### PolicyInput
+
+Input parameters for policy decision.
+
+```python
+@dataclass
+class PolicyInput:
+    did: str                      # Agent DID (subject)
+    token: str                    # Short-lived access token (JWT)
+    action: str                   # Action (e.g., "query")
+    resource: str                 # Resource (e.g., "db://finance/tx")
+    context: Optional[Dict[str, Any]] # Optional context (amount, ticker, etc.)
+```
+
+### PolicyDecision
+
+Result of a policy decision evaluation.
+
+```python
+@dataclass
+class PolicyDecision:
+    allow: bool                    # Whether the action is allowed
+    evaluation: Optional[List[Any]] # Policy evaluation details
+    reason: Optional[str]          # Reason for the decision
+```
+
+### PolicyDecisionResult
+
+Enumeration for policy decision results.
+
+```python
+class PolicyDecisionResult(str, Enum):
+    ALLOW = "allow"
+    DENY = "deny"
+```
+
+### UploadPolicyOptions
+
+Options for uploading a policy.
+
+```python
+@dataclass
+class UploadPolicyOptions:
+    agent_did: str                 # Agent's DID
+    config_type: str               # Configuration type
+    policy_content: str            # Policy content
+    metadata: Any                  # Policy metadata
+    developer_did: Optional[str]   # Developer's DID (optional)
+```
+
+### UpdateAgentOptions
+
+Options for updating an agent.
+
+```python
+@dataclass
+class UpdateAgentOptions:
+    description: Optional[str]     # New description for the agent
+    status: Optional[str]         # New status ('active' or 'inactive')
+```
+
+### UpdateAgentResponse
+
+Response from updating an agent.
+
+```python
+@dataclass
+class UpdateAgentResponse:
+    agent_did: str                # Agent's DID
+    developer_did: str            # Developer's DID
+    updated: List[str]           # List of updated field names
+```
+
+### AgentResponse
+
+```python
+@dataclass
+class AgentResponse:
+    did: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+    capabilities: Optional[List[str]] = None
+    trust_score: Optional[float] = None
+    status: Optional[str] = None
+    vc: Optional[str] = None
+    org_id: Optional[str] = None
+    developer_did: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+```
+
+### ListAgentsOptions / ListAgentsResponse
+
+```python
+@dataclass
+class ListAgentsOptions:
+    status: Optional[str] = None
+    capabilities: Optional[List[str]] = None
+    limit: Optional[int] = None
+    last_key: Optional[str] = None
+
+@dataclass
+class ListAgentsResponse:
+    items: List[AgentResponse]
+    count: int
+    last_key: Optional[str] = None
+```
+
+### Policy
+
+```python
+@dataclass
+class Policy:
+    policy_id: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = True
+    content: str = ""
+    org_id: str = ""
+    developer_did: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+```
+
+### ListPoliciesOptions / ListPoliciesResponse
+
+```python
+@dataclass
+class ListPoliciesOptions:
+    is_active: Optional[bool] = None
+    limit: Optional[int] = None
+    last_key: Optional[str] = None
+
+@dataclass
+class ListPoliciesResponse:
+    items: List[Policy]
+    count: int
+    last_key: Optional[str] = None
+```
+
+### AuditLog types
+
+```python
+@dataclass
+class ListAuditLogsOptions:
+    agent_did: Optional[str] = None
+    event_type: Optional[str] = None  # REGISTER | AUTH | POLICY | UPDATE
+    policy_id: Optional[str] = None
+    allow: Optional[bool] = None
+    since: Optional[str] = None
+    until: Optional[str] = None
+    limit: Optional[int] = None
+    last_key: Optional[str] = None
+
+@dataclass
+class AuditLogEntry:
+    agent_did: str
+    event_type: str
+    timestamp: str
+    trust_score: float
+    delta: float
+    policy_id: Optional[str] = None
+    action: Optional[str] = None
+    resource: Optional[str] = None
+    allow: Optional[bool] = None
+    input: Optional[Dict[str, Any]] = None
+    details: Optional[str] = None
+
+@dataclass
+class ListAuditLogsResponse:
+    items: List[AuditLogEntry]
+    count: int
+    last_key: Optional[str] = None
+```
+
+## Advanced Usage
+
+### Error Handling
+
+```python
+import asyncio
+from ironbook_sdk import IronBookClient
+
+async def safe_agent_operation():
+    client = IronBookClient(api_key="your-api-key")
+    try:
+        result = await client.register_agent(...)
+        return result
+    except Exception as e:
+        # For IronBookError, you can introspect e.status, e.code, e.request_id, e.details
+        print(f"Error: {e}")
+        return None
+
+asyncio.run(safe_agent_operation())
+```
+
+### Custom Base URL
+
+```python
+# Use hosted environment
+client = IronBookClient(api_key="your-api-key", base_url="https://api.ironbook.identitymachines.com")
+```
+
+### Policy Decision with Context
+
+```python
+# Make a policy decision with rich context
+decision = await client.policy_decision(PolicyInput(
+    did="did:web:agent.example.com",
+    token="jwt-token",
+    action="transfer",
+    resource="bank://account/123",
+    context={
+        "amount": 5000,
+        "currency": "USD",
+        "recipient": "alice@example.com",
+        "timestamp": "2024-01-15T10:30:00Z"
+    }
+))
+
+if decision.allow:
+    print("Transfer approved")
+    if decision.reason:
+        print(f"Reason: {decision.reason}")
+else:
+    print("Transfer denied")
+    if decision.reason:
+        print(f"Reason: {decision.reason}")
+```
+
+### Upload Policy
+
+```python
+# Upload a new access control policy
+upload_options = UploadPolicyOptions(
+    agent_did="did:web:agent.example.com",
+    config_type="opa",
+    policy_content="package policy\nallow { input.action == \"read\" }",
+    metadata={"version": "1.0", "description": "Read-only policy"},
+    developer_did="did:web:example.com"  # Optional
+)
+
+result = await client.upload_policy(upload_options)
+print(f"Policy uploaded: {result}")
+```
+
+### Update Agent
+
+```python
+# Update an agent's description and status
+update_options = UpdateAgentOptions(
+    description="Updated agent description for production use",
+    status="active"
+)
+
+result = await client.update_agent(
+    agent_did="did:web:agents.identitymachines.com:myagent",
+    opts=update_options
+)
+
+print(f"Agent updated successfully")
+print(f"Updated fields: {result.updated}")
+print(f"Agent DID: {result.agent_did}")
+print(f"Developer DID: {result.developer_did}")
+
+# Update only the description
+description_only = UpdateAgentOptions(description="New description only")
+result = await client.update_agent("did:web:agents.identitymachines.com:myagent", description_only)
+
+# Update only the status
+status_only = UpdateAgentOptions(status="inactive")
+result = await client.update_agent("did:web:agents.identitymachines.com:myagent", status_only)
+```
+
+## Support
+
+- **Documentation**: [https://docs.identitymachines.com](https://docs.identitymachines.com)
+- **Issues**: [GitHub Issues](https://github.com/your-org/ironbook-sdk-python/issues)
+- **Email**: devops@identitymachines.com
+
+## Changelog
+
+### 0.3.0
+- Added agent retrieval and listing:
+  - `get_agent(agent_did) -> AgentResponse`
+  - `list_agents(opts: ListAgentsOptions) -> ListAgentsResponse`
+- Added policy retrieval and listing:
+  - `get_policy(policy_id) -> Policy`
+  - `list_policies(opts: ListPoliciesOptions) -> ListPoliciesResponse`
+- Added audit logs listing:
+  - `list_audit_logs(opts: ListAuditLogsOptions) -> ListAuditLogsResponse`
+- New types exported: `AgentResponse`, `Policy`, `ListAgentsOptions/Response`, `ListPoliciesOptions/Response`, `ListAuditLogsOptions/Response`, `AuditLogEntry`
+- Updated docs and examples for new functions and types
+
+### 0.2.0
+- Added agent update functionality for editing description and status
+- Comprehensive error handling and responses
+
+### 0.1.0
+- Initial release
+- Agent registration functionality
+- Authentication token generation
+- Policy decision evaluation
+- Policy upload functionality
+- Async/await support
+- Comprehensive type hints
+- Context manager support for client lifecycle management
+- Convenience functions for simplified usage
