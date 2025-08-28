@@ -1,0 +1,48 @@
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">{{ scheduled_query.name }}</h3>
+    <div class="card-options">
+      {% if scheduled_query.enabled %}
+        <span class="badge bg-green">Enabled</span>
+      {% else %}
+        <span class="badge bg-red">Disabled</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card-body">
+    <p><strong>Cron Schedule:</strong> <code>{{ scheduled_query.cron_schedule }}</code></p>
+    <p><strong>Last Executed:</strong> {{ scheduled_query.last_executed or 'Never' }}</p>
+    <p><strong>Render Type:</strong> 
+      <span class="badge bg-primary">{{ scheduled_query.render_type or 'auto' }}</span>
+      {% if scheduled_query.render_type and scheduled_query.render_type != 'auto' %}
+        <small class="text-muted ms-1">(forced rendering)</small>
+      {% else %}
+        <small class="text-muted ms-1">(automatic detection)</small>
+      {% endif %}
+    </p>
+
+    {% if scheduled_query.last_result %}
+      <div class="mt-2">
+        <strong>Last Result:</strong>
+        <pre class="bg-light p-2 rounded border">{{ scheduled_query.last_result | truncate(1000) }}</pre>
+      </div>
+    {% else %}
+      <p class="text-muted">No result available yet.</p>
+    {% endif %}
+
+    {% if scheduled_query.grafana_metric_config %}
+      <div class="mt-2">
+        <strong>Grafana Export:</strong>
+        <pre class="bg-light p-2 rounded border">{{ scheduled_query.grafana_metric_config | tojson(indent=2) }}</pre>
+      </div>
+    {% endif %}
+  </div>
+  <div class="card-footer">
+    <a href="{{ url_for('edit_scheduled_query_form', query_id=scheduled_query.id) }}" class="btn btn-sm btn-primary">
+      Edit Query
+    </a>
+    <a href="{{ url_for('run_scheduled_query_now', query_id=scheduled_query.id) }}" class="btn btn-sm btn-success">
+      Run Now
+    </a>
+  </div>
+</div>
