@@ -1,0 +1,44 @@
+#compdef arxiv-update-cli
+# zsh completion for arxiv-update-cli
+
+_query() {
+
+    _arguments \
+        "--sort-by[sort results by]:what:->sort_by" \
+        "--sort-order[result order]:order:->orders" \
+        "--format[result formatting]:format:->formats" \
+        "--id-list[only results with given arXiv ids]:arXiv ids:" \
+        "--start-date[only results after YYYY-MM-DD]:date YYYY-MM-DD:" \
+        "--end-date[only results before YYYY-MM-DD]:date YYYY-MM-DD:" \
+        "--max-results[only first N results]:N:" \
+        "--output[write results into file]:file:->files" \
+        "--api-query-help[display help about API query]" \
+        "1:query:"
+
+    case $state in
+        sort_by)  _values what relevance lastUpdatedDate submittedDate;;
+        orders)  _values order ascending descending;;
+        formats)  _values format id title condensed full bibtex;;
+        files)  _files;;
+    esac
+}
+
+_arxiv-update-cli() { 
+     local curcontext="$curcontext" state line
+
+    _arguments -C \
+        '1:option:(query -h --help -c --config -d --download -e --email -f --format -i --interactive --log --max-trials --nb-results-per-query -o --output -s --since -v --version)' \
+        '*::arg:->args'
+
+    case $line[1] in
+        *(-c|--config|-o|--output)*) _files;; 
+        *(-d|--download)*) _dirs;; 
+        *(-f|--format)*) _values format id title condensed full bibtex;;
+        *(-s|--since)*) _message "date YYYY-MM-DD";;
+        *(--max-trials)*) _message "max number N";;
+        *(--nb-results-per-query)*) _message "number N";;
+        query) _query ;;
+    esac
+}
+ 
+_arxiv-update-cli "$@"

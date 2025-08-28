@@ -1,0 +1,33 @@
+# Maintainer: Juliette Monsel <j_4321 at protonmail dot com>
+pkgname=arxiv-update-cli
+_pkgname=arxiv_update_cli
+pkgver=1.2.1
+pkgrel=1
+pkgdesc="Fetch new articles on arXiv by keywords"
+url="https://gitlab.com/j_4321/arxivscript"
+arch=('any')
+license=('MIT')
+depends=('python-feedparser')
+makedepends=('python-setuptools' 'git')
+checkdepends=('python-pytest')
+optdepends=('python-keyring: Store password in system keyring',
+            'python-tqdm: Progressbar for file downloads',
+            'python-pyzotero: Import articles in Zotero Library')
+source=("${_pkgname}::git+https://gitlab.com/j_4321/arxivscript.git#tag=v${pkgver}")
+sha512sums=('36ca45907212b279f58267854cc00c7c8863114f66f010e8d0927dcd7e570d9fcbc6db21ce6fbe5d8e894c428e19232580e52f3c29cfe722e2c7615ff6cd453f')
+
+build() {
+    cd "$srcdir/${_pkgname}"
+    python -m build --wheel --no-isolation
+}
+
+check() {
+    cd "$srcdir/${_pkgname}"
+    python -m pytest tests.py
+}
+
+package() {
+    cd "$srcdir/${_pkgname}"
+    python -m installer --destdir="$pkgdir" dist/*.whl
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
