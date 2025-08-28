@@ -1,0 +1,1 @@
+IPAMD is a Python package designed to simulate biomolecules using CG methods.
