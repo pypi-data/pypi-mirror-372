@@ -1,0 +1,82 @@
+Metadata-Version: 2.4
+Name: tradejournal
+Version: 0.1.0
+Summary: Simple trade journal CLI
+Author-email: Your Name <you@example.com>
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: PyYAML>=5.0
+Requires-Dist: rich>=10.0
+Dynamic: license-file
+
+## TradeJournal
+
+**TradeJournal** is a tiny command‑line utility for tracking individual trades, their risk parameters and the result (up / down) once the position is closed.  All data is stored locally in a SQLite database under the user’s home directory (`~/.tradejournal/tradejournal.db`).
+
+### Features
+
+* **Add trades** with symbol, quantity, execution price and optional risk.
+* **List trades** – shows the most recent entries with derived columns (`Value`, `Downside`, `Upside`, etc.).
+* **Mark completions** – indicate whether a trade closed *up* or *down*.  The profit is automatically calculated:
+  * *up*: `profit = (price * (1 + risk*0.02) - price) * quantity`
+  * *down*: `profit = (price * (1 - risk*0.01) - price) * quantity`
+* **Completion list** – displays each completed trade together with its profit and a short summary showing **% Success** and **Net profit**.
+* **Deletion** – remove a trade before it is completed.
+* **Configuration** – a YAML file (`~/.tradejournal/config.yaml`) stores defaults such as `default_risk` and the column ordering used by the list view.
+* **Rich tables** – colour‑coded columns (`green` for upside, `red` for downside, `magenta` for direction, etc.) make the output easy to read.
+
+---
+
+### Installation
+
+1. Clone the repository and create a virtual environment (the project already ships a `venv311` but you can use any Python 3.11+ interpreter).
+   ```bash
+   git clone <repo-url>
+   cd tradejournal
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -e .
+   ```
+2. The console script defined in *pyproject.toml* installs a `trade` command.  Verify that it works:
+   ```bash
+   trade --help
+   ```
+
+---
+
+### Usage
+
+#### Add a trade
+```bash
+trade add -s AAPL -q 10 -p 150.0           # risk omitted → uses default_risk from config
+trade add -s TSLA -q 5 -p 720 -r 3        # explicit risk value
+```
+The command prints the generated 16‑character trade ID.
+
+#### List open trades
+```bash
+trade list               # shows all non‑completed trades
+trade list -l 5          # limit to the five most recent entries
+```
+The table includes derived columns such as **Value**, **Downside**, **Upside**, **DownPrice**, **UpPrice** and a net‑summary table at the bottom.
+
+#### Mark a trade as completed
+```bash
+trade complete up <trade_id>     # trade closed with profit
+trade complete down <trade_id>   # trade closed with loss
+```
+The profit is stored and later displayed in the completions view.
+
+#### View completions
+```bash
+trade complete list
+```
+The output shows each completed trade (ID, Symbol, Direction, Timestamp, Profit) and a two‑row summary containing:
+* **% Success** – proportion of *up* completions.
+* **Net profit** – sum of all profits (positive for up, negative for down).
+
+#### Delete a trade
+```bash
+trade delete <trade_id>
+```
