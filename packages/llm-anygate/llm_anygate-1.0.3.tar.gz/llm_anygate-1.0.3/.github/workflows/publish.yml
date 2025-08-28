@@ -1,0 +1,44 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-publish:
+    name: Build and publish to PyPI
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - uses: prefix-dev/setup-pixi@v0.8.0
+      with:
+        pixi-version: latest
+        cache: true
+    
+    - name: Build package
+      run: pixi run build
+    
+    - name: Check package
+      run: |
+        pip install twine
+        twine check dist/*
+    
+    - name: Publish to Test PyPI
+      if: github.event.release.prerelease == true
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+      run: |
+        twine upload --repository testpypi dist/*
+    
+    - name: Publish to PyPI
+      if: github.event.release.prerelease == false
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      run: |
+        twine upload dist/*
