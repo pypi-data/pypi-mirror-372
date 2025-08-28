@@ -1,0 +1,124 @@
+======
+README
+======
+
+For testing we provide a memcache implementation which doesn't need a running
+memcache daemon.
+
+  >>> import sys
+  >>> from p01.memcache import testing
+
+  >>> def toString(x):
+  ...     if isinstance(x, (bytes, bytearray)):
+  ...         return x.decode('ascii')
+  ...     if sys.version_info[0] < 3:
+  ...         try:
+  ...             unicode
+  ...         except NameError:
+  ...             return x
+  ...         if isinstance(x, unicode):
+  ...             return x.encode('ascii')
+  ...     return x
+
+  >>> cache = testing.FakeMemcacheClient(pickleProtocol=0)
+  >>> print(toString(cache.set(b'key', b'value')))
+  3c6e0b8a9c15224a8228b9a98ca1531d
+
+  >>> print(toString(cache.query(b'key')))
+  value
+
+  >>> cache.invalidate(key='key')
+  >>> cache.query('key') is None
+  True
+
+Also the lifetime is handled.
+
+  >>> print(toString(cache.set(b'key', b'value', 1)))
+  3c6e0b8a9c15224a8228b9a98ca1531d
+
+  >>> print(toString(cache.query(b'key')))
+  value
+
+  >>> from time import sleep
+  >>> sleep(1.2)
+  >>> cache.query('key') is None
+  True
+
+The testcache has also a get/set/hit/misses counter which is sometimes useful
+for testing.
+
+  >>> cache.gets
+  4
+  >>> cache.hits
+  2
+  >>> cache.misses
+  2
+  >>> cache.sets
+  2
+
+  >>> cache.query('key') is None
+  True
+
+  >>> cache.gets
+  5
+  >>> cache.hits
+  2
+  >>> cache.misses
+  3
+  >>> cache.sets
+  2
+
+  >>> print(toString(cache.set('key', 'value')))
+  3c6e0b8a9c15224a8228b9a98ca1531d
+
+  >>> cache.query('key')
+  'value'
+
+  >>> cache.gets
+  6
+  >>> cache.hits
+  3
+  >>> cache.misses
+  3
+  >>> cache.sets
+  3
+
+  >>> cache.resetCounts()
+  >>> cache.gets
+  0
+  >>> cache.hits
+  0
+  >>> cache.misses
+  0
+  >>> cache.sets
+  0
+
+The FakeMemcacheClient does it's best to simulate the behaviour of the
+original memcached implementation.
+
+  >>> client = testing.FakeMemcached()
+  >>> client.set(u'\xfckey', 'value', 1)
+  Traceback (most recent call last):
+  ... 
+  UnicodeEncodeError: ...
+
+  >>> client.set('key', u'\xfcvalue', 1)
+  Traceback (most recent call last):
+  ... 
+  UnicodeEncodeError: ...
+
+  >>> client.get(u'\xfckey')
+  Traceback (most recent call last):
+  ... 
+  UnicodeEncodeError: ...
+
+
+As you can see the fake memcache server is storing the data ina shared storage:
+
+  >>> '127.0.0.1:11211' in testing.storage
+  True
+
+
+let's tear down the test:
+
+  >>> testing.tearDownFakeMemcached()
