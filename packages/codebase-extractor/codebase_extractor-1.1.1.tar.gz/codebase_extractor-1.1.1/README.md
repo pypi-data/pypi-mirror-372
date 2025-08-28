@@ -1,0 +1,291 @@
+# Codebase Extractor
+
+<p align="center">
+  <strong>A user-friendly CLI tool to extract project source code into structured Markdown files.</strong>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/codebase-extractor/"><img src="https://badge.fury.io/py/codebase-extractor.svg" alt="PyPI version"></a>
+  <img src="https://img.shields.io/badge/python-3.9%2B-blue.svg" alt="Python Version">
+  <img src="https://img.shields.io/badge/License-MIT%20(Modified)-yellow.svg" alt="License: MIT (Modified)">
+</p>
+
+<p align="center">
+  💡 <b>Love this tool?</b> Found a bug or have an idea? Share it on <a href="https://github.com/lukaszlekowski/codebase-extractor">GitHub</a>! <br>
+  🤝 <b>Connect with me</b> on <a href="https://www.linkedin.com/in/lukasz-lekowski">LinkedIn</a>. <br>
+  ☕ <b>Enjoying it?</b> Support development with a <a href="https://www.buymeacoffee.com/lukaszlekowski">coffee</a>!
+</p>
+
+---
+
+## Table of Contents
+
+- [Codebase Extractor](#codebase-extractor)
+  - [Table of Contents](#table-of-contents)
+  - [🚀 Overview](#-overview)
+  - [✨ Key Features](#-key-features)
+  - [🖼️ Gallery](#️-gallery)
+  - [⚙️ Installation](#️-installation)
+    - [Step 1: Ensure Python is Installed](#step-1-ensure-python-is-installed)
+    - [Step 2: Install the Package](#step-2-install-the-package)
+      - [▶️ For macOS \& Linux Users](#️-for-macos--linux-users)
+      - [▶️ For Windows Users](#️-for-windows-users)
+      - [💡 Pro Tip: Using pipx](#-pro-tip-using-pipx)
+  - [▶️ Usage](#️-usage)
+    - [Basic Usage](#basic-usage)
+    - [The Process](#the-process)
+    - [Specific Selection (if chosen):](#specific-selection-if-chosen)
+    - [Output Details](#output-details)
+    - [⚡ CLI Command Reference](#-cli-command-reference)
+  - [Pracical Examples](#pracical-examples)
+  - [🔬 Filtering Logic](#-filtering-logic)
+  - [🤔 Troubleshooting](#-troubleshooting)
+  - [📜 License](#-license)
+
+---
+
+## 🚀 Overview
+
+Codebase Extractor is a command-line interface (CLI) tool designed to scan a project directory and consolidate all relevant source code into neatly organized Markdown files. It's perfect for creating a complete project snapshot for analysis, documentation, or providing context to Large Language Models (LLMs) like GPT-4, Gemini, or Claude.
+
+The tool is highly configurable, allowing you to select specific folders, exclude large files, and intelligently ignore common directories like `node_modules` and `.git`.
+
+---
+
+## ✨ Key Features
+
+- **Interactive & User-Friendly:** A guided, multi-step CLI experience that makes selecting options simple and clear.
+- **Quick Start by Default:** The tool starts without delay. Detailed instructions are available via an `--instructions` flag when you need a reminder.
+- **Smart Filtering:** Automatically excludes common dependency folders, build artifacts, version control directories, and IDE configuration files. The exact filters are configurable.
+- **Flexible Selection Modes:** Choose to extract the entire project with one command, or dive into a specific selection mode.
+- **🌳 Visual Tree Selection:** Interactively browse and select specific sub-folders from a clear, pipe-based tree structure.
+- **🔢 Configurable Scan Depth:** You decide how many levels deep the script should look for folders when building the selection tree.
+- **Rich YAML Metadata:** Each generated Markdown file is prepended with a YAML front matter block containing useful metadata like a unique run ID, timestamp, file count, character count, and word count.
+- **Safe & Robust:** Features graceful exit handling (`Ctrl+C`) and provides clear feedback during the extraction process.
+
+---
+
+## 🖼️ Gallery
+
+<details>
+  <summary>Show Screenshots</summary>
+<img src="images/welcome.png" width="330">
+  <img src="images/instructions.png" width="330">
+  <img src="images/file_tree.png" width="330">
+  <img src="images/extraction.png" width="330">
+
+</details>
+
+---
+
+## ⚙️ Installation
+
+This guide will walk you through installing the Codebase Extractor.
+
+### Step 1: Ensure Python is Installed
+
+Make sure you have Python 3.9 or newer installed. You can check your version by opening your terminal and running:
+
+```bash
+python3 --version
+```
+
+### Step 2: Install the Package
+
+The recommended way to install is directly from PyPI using pip, which comes with Python.
+
+#### ▶️ For macOS & Linux Users
+
+Open your terminal and run the following command:
+
+```bash
+pip3 install codebase-extractor
+```
+
+> **Note on `pip` vs `pip3`**: On most modern systems, you should use pip3 to ensure you are using a Python 3 version of pip. This avoids conflicts with older, system-installed Python 2. If you are using a virtual environment, pip is often sufficient as it will be linked to the environment's Python version.
+
+If you encounter a permission denied error, your system may require you to install it for your user account only:
+
+```bash
+pip3 install --user codebase-extractor
+```
+
+In this case, you may need to add the user script directory to your PATH. The installer will provide the necessary command if this is required.
+
+#### ▶️ For Windows Users
+
+Open Command Prompt or PowerShell and run the following command:
+
+```bash
+pip install codebase-extractor
+```
+
+> **Note on `pip`**: The standard Python installer for Windows typically configures the `pip` and `python` commands correctly, so you usually do not need to use `pip3` or `python3`.
+
+If the pip command is not found, you can try using the Python executable directly:
+
+```bash
+python -m pip install codebase-extractor
+```
+
+#### 💡 Pro Tip: Using pipx
+
+For a more advanced, isolated installation, we recommend using pipx. This ensures the tool's dependencies do not conflict with other Python projects on your system.
+
+```bash
+pipx install codebase-extractor
+```
+
+---
+
+## ▶️ Usage
+
+### Basic Usage
+
+Once installed, you can run the tool from any terminal window. Navigate to your project's root directory and run the command:
+
+```bash
+code-extractor
+```
+
+The script will launch immediately and guide you through the extraction process.
+
+For a detailed guide on how the script works, you can use the `--instructions` flag:
+
+```bash
+code-extractor --instructions
+```
+
+### The Process
+
+The tool will guide you through a series of prompts:
+
+- **Initial Setup [1/2]**: A yes/no question to skip files larger than 1MB.
+- **Extraction Mode [2/2]**: Choose whether to extract the entire project (`Everything`) or select (`Specific`) folders.
+
+### Specific Selection (if chosen):
+
+- **Scan Depth**: You'll be asked how many sub-folder levels to scan for the selection list (defaults to 3).
+- **Folder Tree**: You'll see a checklist of available folders and sub-folders to extract. The script handles selections intelligently:
+  - Selecting a parent folder automatically includes all its sub-folders, so you don’t need to select them individually.
+  - To extract only a sub-folder’s contents, select the sub-folder but not its parent.
+  - The special `root [...]` option extracts only the files in your project's main directory, ignoring all sub-folders.
+
+### Output Details
+
+All output files are saved in a `CODEBASE_EXTRACTS` directory within your project folder. Each generated Markdown file includes a YAML metadata header with a unique reference ID, timestamp, file count, character count, and word count for easy tracking and parsing.
+
+### ⚡ CLI Command Reference
+
+For non-interactive use and automation, you can control the script entirely with these arguments.
+
+| Argument                  | Description                                                                  | Default Value               |
+| :------------------------ | :--------------------------------------------------------------------------- | :-------------------------- |
+| `--instructions`          | Show the detailed instruction guide on startup.                              | `False`                     |
+| `--root <path>`           | The root directory of the project to extract.                                | The current directory       |
+| `--output-dir <name>`     | Custom name for the output directory.                                        | `CODEBASE_EXTRACTS`         |
+| `--dry-run`               | Simulate the extraction process without writing any files.                   | `False`                     |
+| `-v`, `--verbose`         | Enable verbose logging for debugging.                                        | `False`                     |
+| `--log-file <path>`       | Path to save the log file.                                                   | `None`                      |
+| `--exclude-large-files`   | Non-interactive: Exclude files larger than 1MB.                              | `False`                     |
+| `--mode <mode>`           | Non-interactive: Set the extraction mode. Choices: `everything`, `specific`. | `None` (Interactive prompt) |
+| `--depth <number>`        | Non-interactive: Set the folder scan depth for 'specific' mode.              | `3`                         |
+| `--select-folders <list>` | Non-interactive: A space-separated list of folders/sub-folders to extract.   | `[]`                        |
+| `--select-root`           | Non-interactive: Include files from the root directory in the extraction.    | `False`                     |
+
+---
+
+## Pracical Examples
+
+Here are a few practical examples of how to use the tool from your command line.
+
+- #### Extract an entire project, skipping the instructions
+
+  A common command for quick, automated runs.
+
+  ```bash
+  code-extractor --mode everything
+  ```
+
+- #### Extract specific sub-folders non-interactively
+
+  This command extracts only the `src/components` and `src/hooks` directories, plus any files in the root.
+
+  ```bash
+  code-extractor --mode specific --select-folders src/components src/hooks --select-root
+  ```
+
+- #### Perform a safe dry run
+
+  This will simulate a full extraction and print what it _would_ have done, without creating any files.
+
+  ```bash
+  code-extractor --dry-run --mode everything
+  ```
+
+- #### Run on a different project and save to a custom folder
+  This targets a completely different directory and specifies a custom output folder name.
+  ```bash
+  code-extractor --root /path/to/another/project --output-dir MyProject_Extraction
+  ```
+
+---
+
+## 🔬 Filtering Logic
+
+The tool uses a set of rules to determine which files and folders to include in the extraction. Here are the default settings found in the `config.py` file.
+
+<details>
+  <summary><strong>Click to view Excluded Directories</strong></summary>
+  
+  - `node_modules`, `vendor`, `__pycache__`, `dist`, `build`, `target`, `.next`
+  - `.git`, `.svn`, `.hg`, `.vscode`, `.idea`, `venv`, `.venv`
+  
+</details>
+
+<details>
+  <summary><strong>Click to view Excluded Filenames</strong></summary>
+
+- `package-lock.json`, `yarn.lock`, `composer.lock`, `.env`
+
+</details>
+
+<details>
+  <summary><strong>Click to view Allowed Filenames & Extensions</strong></summary>
+  
+  The script will process any file with one of the following extensions. It also explicitly allows common configuration files that may not have an extension.
+  
+  **Allowed Filenames:**
+  - `dockerfile`, `.gitignore`, `.htaccess`, `makefile`
+  
+  **Allowed Extensions:**
+  - `.php`, `.html`, `.css`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`
+  - `.py`, `.rb`, `.java`, `.c`, `.cpp`, `.cs`, `.go`, `.rs`
+  - `.json`, `.xml`, `.yaml`, `.yml`, `.toml`, `.ini`, `.conf`
+  - `.md`, `.txt`, `.rst`, `.twig`, `.blade`, `.handlebars`, `.mustache`, `.ejs`
+  - `.sql`, `.graphql`, `.gql`, `.tf`
+  
+</details>
+
+---
+
+## 🤔 Troubleshooting
+
+- **Problem:** After installation, I run `code-extractor` and my terminal says `command not found`.
+- **Solution:** This is usually a `PATH` issue. It means your system's shell doesn't know where to find the installed script. The `pip install --user` command sometimes requires you to add a local scripts directory to your `PATH`. Please refer to your operating system's documentation for instructions on how to modify your `PATH` environment variable.
+
+- **Problem:** The tool ran, but a specific folder or file I expected to see is missing from the output.
+- **Solution:** The file or folder was likely excluded by the tool's filtering rules. Please review the **[Filtering Logic](#-filtering-logic)** section above to see if its name or extension is on one of the exclusion lists.
+
+## 📜 License
+
+This project is licensed under a modified MIT License. Please see the [LICENSE](LICENSE) file for the full text.
+
+The standard MIT License has been amended with a single, important attribution requirement:
+
+If you use, copy, or modify any part of this software, you must include a clear and visible attribution to the original author and project in your derivative work.
+
+This attribution must include:
+
+- A link back to this original GitHub repository: [https://github.com/lukaszlekowski/codebase-extractor](https://github.com/lukaszlekowski/codebase-extractor)
+- A link to the author's LinkedIn profile: [https://www.linkedin.com/in/lukasz-lekowski](https://www.linkedin.com/in/lukasz-lekowski)
