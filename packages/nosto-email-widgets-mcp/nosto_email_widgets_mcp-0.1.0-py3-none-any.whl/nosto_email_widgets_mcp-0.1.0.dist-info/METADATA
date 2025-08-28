@@ -1,0 +1,235 @@
+Metadata-Version: 2.4
+Name: nosto-email-widgets-mcp
+Version: 0.1.0
+Summary: MCP Server for Nosto Email Widgets with FastMCP
+Author-email: Nosto Team <team@nosto.com>
+Requires-Python: >=3.10
+Requires-Dist: fastapi>=0.104.0
+Requires-Dist: fastmcp>=0.1.0
+Requires-Dist: jinja2>=3.1.0
+Requires-Dist: mcp>=1.0.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: starlette>=0.27.0
+Requires-Dist: uvicorn>=0.24.0
+Provides-Extra: dev
+Requires-Dist: black>=23.0.0; extra == 'dev'
+Requires-Dist: flake8>=6.0.0; extra == 'dev'
+Requires-Dist: isort>=5.12.0; extra == 'dev'
+Requires-Dist: mypy>=1.0.0; extra == 'dev'
+Requires-Dist: pytest-asyncio>=0.21.0; extra == 'dev'
+Requires-Dist: pytest>=7.0.0; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# Nosto Email Widgets MCP Server
+
+A Model Context Protocol (MCP) server built with FastMCP that provides tools for generating email templates and Nosto snippets.
+
+## Features
+
+- **Email Template Generator**: Create HTML email templates with customizable styling
+- **Nosto Snippet Generator**: Generate Nosto HTML snippets for email templates
+- **FastMCP Integration**: Built on top of FastMCP for easy MCP server development
+- **HTTP Transport**: Supports HTTP transport for MCP communication
+
+## Prerequisites
+
+- Python 3.10 or higher
+- [uv](https://docs.astral.sh/uv/) package manager
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd nosto_email_widgets_mcp
+```
+
+2. Install dependencies using uv:
+```bash
+uv sync
+```
+
+## Development Setup
+
+1. Install development dependencies:
+```bash
+uv sync --dev
+```
+
+2. Run the server:
+```bash
+uv run python main.py
+```
+
+The server will start on `http://localhost:8000` with the following endpoints:
+- `/health` - Health check endpoint
+- MCP endpoints for tool communication
+
+## Cursor MCP Client Configuration
+
+### Option 1: Production (Portable) Configuration
+
+For production use and to share with others, use the portable configuration that downloads the package from GitHub releases:
+
+```json
+{
+  "mcpServers": {
+    "nosto-email-widgets": {
+      "command": "uvx",
+      "args": ["nosto-email-widgets-mcp@latest"],
+      "env": {}
+    }
+  }
+}
+```
+
+**Benefits:**
+- ✅ Works on any machine
+- ✅ No local path dependencies
+- ✅ Automatically gets latest version
+- ✅ Easy to share with team members
+
+### Option 2: Local Development Configuration
+
+For local development, use the local configuration:
+
+**macOS**: `~/Library/Application Support/Cursor/User/globalStorage/ms-vscode.vscode-json/`
+**Windows**: `%APPDATA%\Cursor\User\globalStorage\ms-vscode.vscode-json\`
+**Linux**: `~/.config/Cursor/User/globalStorage/ms-vscode.vscode-json/`
+
+Or add the configuration to your Cursor settings:
+
+```json
+{
+  "mcpServers": {
+    "nosto-email-widgets": {
+      "command": "uv",
+      "args": ["run", "python", "main.py"],
+      "cwd": "/path/to/your/project",
+      "env": {
+        "PYTHONPATH": "/path/to/your/project"
+      }
+    }
+  }
+}
+```
+
+## Available Tools
+
+### Email Template Generator
+
+Generates HTML email templates with customizable styling:
+
+```python
+@mcp.tool()
+def email_template_generator(
+    template_type: str,
+    company_name: str,
+    primary_color: str = "#007bff",
+    logo_url: str = None,
+    content_sections: list[str] = None,
+    custom_message: str = None
+) -> str:
+```
+
+### Nosto Snippet Generator
+
+Generates Nosto HTML snippets for email templates:
+
+```python
+@mcp.tool()
+def nosto_snippet_generator() -> str:
+```
+
+## Project Structure
+
+```
+nosto_email_widgets_mcp/
+├── main.py                           # Main entry point
+├── src/
+│   ├── server.py                    # FastMCP server configuration
+│   └── tools/                       # MCP tool implementations
+├── pyproject.toml                   # Project configuration (uv)
+├── cursor-mcp-config.json           # Production Cursor MCP configuration
+├── cursor-mcp-config-local.json     # Local development configuration
+├── scripts/release.sh               # Release script
+├── .github/workflows/release.yml    # GitHub Actions release workflow
+└── README.md                        # This file
+```
+
+## Development
+
+### Code Style
+
+This project uses:
+- **Black** for code formatting (88 character line length)
+- **isort** for import sorting
+- **mypy** for type checking
+- **flake8** for linting
+
+### Running Tests
+
+```bash
+uv run pytest
+```
+
+### Formatting Code
+
+```bash
+uv run black .
+uv run isort .
+```
+
+### Type Checking
+
+```bash
+uv run mypy .
+```
+
+## Releases and Distribution
+
+### Creating a Release
+
+1. **Build the package:**
+   ```bash
+   ./scripts/release.sh
+   ```
+
+2. **Create a GitHub release:**
+   ```bash
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+   The GitHub Actions workflow will automatically build and release the package.
+
+3. **Users can then install with:**
+   ```bash
+   uvx nosto-email-widgets-mcp@latest
+   ```
+
+### Distribution Benefits
+
+- **Portable**: Works on any machine without local dependencies
+- **Versioned**: Users get specific versions or latest updates
+- **Automated**: GitHub Actions handles building and releasing
+- **Team-friendly**: Easy to share with team members
+
+## Docker
+
+For containerized deployment, use the provided Dockerfile:
+
+```bash
+docker build -t nosto-email-widgets-mcp .
+docker run -p 8000:8000 nosto-email-widgets-mcp
+```
+
+## Contributing
+
+1. Create a feature branch
+2. Make your changes
+3. Ensure code passes formatting and type checking
+4. Submit a pull request
+
+## License
+
+[Add your license information here]
