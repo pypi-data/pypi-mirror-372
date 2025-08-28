@@ -1,0 +1,33 @@
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+include:
+  - component: $CI_SERVER_FQDN/thht-ci-components/python/test@1.4.1
+    inputs:
+      job_name: lint
+      test_stage: lint
+      test_cmd: pixi run lint_ci
+
+  - component: $CI_SERVER_FQDN/thht-ci-components/python/test@1.4.1
+    inputs:
+      job_name: check_types
+      test_stage: lint
+      test_cmd: pixi run check_types
+
+  - component: $CI_SERVER_FQDN/thht-ci-components/python/test@1.4.1
+    inputs:
+      job_name: test
+      coverage_folder: "src"
+      run_before_script: |
+        apt-get update
+        apt-get install -y rclone
+        export COV_CORE_SOURCE=src
+        export COV_CORE_DATAFILE=.coverage.eager
+        export COV_CORE_CONFIG=.coveragerc
+      run_after_script: |
+        coveralls done
+
+  - component: $CI_SERVER_FQDN/thht-ci-components/python/build_distribute@1.4.1
