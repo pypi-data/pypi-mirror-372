@@ -1,0 +1,102 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      lang="en"
+      metal:use-macro="context/main_template/macros/master"
+      i18n:domain="PloneMeeting">
+<body class="meetingadvice-view">
+
+  <metal:title fill-slot="content-title">
+      <tal:header replace="structure context/@@header" />
+  </metal:title>
+
+  <metal:main fill-slot="content-core">
+    <metal:content-core define-macro="content-core">
+
+      <tal:comment replace="nothing">Force show of plone.belowcontenttitle viewlet while
+      the advice is displayed in an overlay because every vielwets are hidden in overlays...</tal:comment>
+      <tal:overlayViewlets condition="python: 'ajax_load' in context.REQUEST">
+          <div id="viewlet-below-content-title">
+              <div tal:replace="structure provider:plone.belowcontenttitle" />
+          </div>
+          <div id="viewlet-above-content-body">
+              <div tal:replace="structure provider:plone.abovecontentbody" />
+          </div>
+      </tal:overlayViewlets>
+      <div>
+        <tal:back_to_item condition="python: 'ajax_load' not in context.REQUEST">
+          <metal:backToItem use-macro='here/@@pm-macros/backToItem' />
+          <metal:global_actions use-macro="context/@@pm-macros/global_actions" />
+        </tal:back_to_item>
+
+        <table class="no-style-table" width="100%">
+            <tal:loop repeat="widget view/widgets/values">
+            <tr tal:condition="python: widget.mode != 'hidden'"
+                tal:define="is_rich python: widget.field.__class__.__name__ == 'RichText'"
+                tal:attributes="id string:row-${widget/id};
+                                class python: is_rich and 'no-border' or ''">
+              <tal:is_rich condition="is_rich">
+                <td colspan="2">
+                     <tal:render tal:content="structure widget/render">Value</tal:render>
+                </td>
+              </tal:is_rich>
+              <tal:not_is_rich condition="not:is_rich">
+                <td class="table_widget_label"><label tal:content="widget/label">Label</label></td>
+                <td class="table_widget_value">
+                    <tal:adviceType condition="python: widget.name == 'form.widgets.advice_type'">
+                        <img src="#"
+                             tal:define="adviceStyle python: view.advice_icons_infos.cfg.getAdviceStyle()"
+                             tal:attributes="src string:$portal_url/advice_${adviceStyle}_${context/advice_type}.png" />
+                    </tal:adviceType>
+                    <tal:render tal:content="structure widget/render">Value</tal:render>
+                    <tal:previousAdviceType condition="python: widget.name == 'form.widgets.advice_type' and context.advice_type == 'asked_again'">
+                      <metal:previousAdviceType use-macro="context/@@pm-macros/previousAdviceType" />
+                    </tal:previousAdviceType>
+                </td>
+              </tal:not_is_rich>
+            </tr>
+            </tal:loop>
+            <tr tal:condition="python:view.advice_icons_infos.mayViewProposingGroupComment()">
+                <td colspan="2"
+                    tal:define="proposing_group_comment python: view.parent.adviceIndex[context.advice_group]['proposing_group_comment'].replace('\n', '<br/>');">
+                    <a name="proposing_group_comment"></a>
+                    <fieldset class="advice_proposing_group_comment">
+                         <legend>
+                            <span i18n:translate="">Advice proposing group comment</span>
+                            <a href="advice_proposing_group_comment_form"
+                               tal:condition="python:'ajax_load' not in context.REQUEST and view.advice_icons_infos.mayEditProposingGroupComment()"
+                               class="link-overlay-pm"
+                               target='_parent'
+                               tal:attributes="href string:${context/absolute_url}/advice_proposing_group_comment_form?advice_id=${context/advice_group}">
+                              <img i18n:attributes="title" title="advice_proposing_group_comment_edit"
+                                   tal:attributes="src string:${view/portal_url}/edit.png;" />
+                            </a>
+                         </legend>
+                      <tal:comment tal:replace="structure python: proposing_group_comment" />
+                    </fieldset>
+                </td>
+            </tr>
+        </table>
+
+        <a name="adviceAndAnnexes"></a>
+        <div class="meeting-advice-view">
+          <tal:annexes replace="structure context/@@display-annexes" />
+        </div>
+
+        <tal:comment replace="nothing">Advice infos</tal:comment>
+        <tal:advice-infos replace="structure python: view.parent.unrestrictedTraverse('@@advice-infos')(context.advice_group, displayedReviewState=False, customMessageInfos=view.parent.adapted().getCustomAdviceMessageFor(view.parent.adviceIndex[context.advice_group]))" />
+
+        <tal:close_button condition="python: 'ajax_load' in context.REQUEST">
+          <div class="visualClear"></div>
+          <metal:closeButton use-macro="here/@@pm-macros/closeButtonMacro" />
+          <script>contentHistory();</script>
+        </tal:close_button>
+
+      </div>
+
+    </metal:content-core>
+  </metal:main>
+
+</body>
+</html>

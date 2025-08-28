@@ -1,0 +1,60 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      lang="en"
+      metal:use-macro="context/main_template/macros/master"
+      i18n:domain="PloneMeeting">
+
+<body>
+
+    <metal:main fill-slot="main">
+        <h2 i18n:translate="">
+            History of completeness changes
+        </h2>
+
+        <div id="content-core"
+             tal:define="events python: view.getHistory();">
+
+        <tal:comments replace="nothing">Table containing the history of completeness field changes</tal:comments>
+        <tal:history condition="events">
+        <table class="listing nosort" style="width: 100%">
+         <thead>
+          <tr i18n:domain="plone">
+            <th i18n:translate="listingheader_action" width="100px">Action</th>
+            <th i18n:translate="listingheader_performed_by" width="125px">Performed by</th>
+            <th i18n:translate="listingheader_date_and_time" width="125px">Date and time</th>
+            <th i18n:translate="listingheader_comment">Comments</th>
+          </tr>
+         </thead>
+         <tbody>
+          <tal:event repeat="event events">
+          <tr tal:define="odd repeat/event/odd;
+                          comments event/comments|nothing;"
+              tal:attributes="class python: odd and 'even' or 'odd'" valign="top">
+            <td class="#"
+                tal:define="actionTitle python: event['action']">
+                <span tal:content="actionTitle"
+                      i18n:translate=""
+                      tal:attributes="class string:item_${event/action};">Action</span>
+            </td>
+            <td tal:define="actorid python:event.get('actor');
+                            username python:view.get_user_fullname(actorid);"
+                tal:content="python:username"/>
+            <td tal:content="python:context.unrestrictedTraverse('@@plone').toLocalizedTime(event['time'],long_format=True)"/>
+            <td>
+              <tal:comments condition="comments" i18n:translate="" i18n:domain="PloneMeeting" tal:content="structure python:view.renderComments(comments)"/>
+              <span tal:condition="not:comments" i18n:domain="plone" i18n:translate="no_comments" class="discreet">No comments</span>
+            </td>
+          </tr>
+          </tal:event>
+         </tbody>
+        </table>
+        </tal:history>
+        <p tal:condition="not: events" i18n:translate="" class="discreet">
+            No history informations are available for now.
+        </p>
+        </div>
+    </metal:main>
+</body>
+</html>

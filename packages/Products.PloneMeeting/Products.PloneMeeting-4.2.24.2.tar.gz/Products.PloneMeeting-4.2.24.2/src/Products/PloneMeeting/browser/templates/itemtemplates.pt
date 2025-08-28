@@ -1,0 +1,64 @@
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xml:lang="en"
+      lang="en"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      metal:use-macro="here/main_template/macros/master"
+      i18n:domain="PloneMeeting">
+
+  <body>
+
+  <metal:fill fill-slot="main">
+
+    <h1 class="documentFirstHeading" i18n:translate="">Create an item from an item template</h1>
+
+    <script type="text/javascript">
+        var alreadyClickedOnTemplate = false;
+        $(function(){
+            $("#tree").fancytree({
+                click: function(event, data) {
+                    // on click on an element, if not a folder
+                    // redirect to given url
+                    if ( !data.node.isFolder() && !alreadyClickedOnTemplate) {
+                        alreadyClickedOnTemplate = true;
+                        window.location=data.node.data.href;}
+                },
+            });
+
+            $("#treeToggleExpand").click(function(e) {
+                e.preventDefault();
+                $("#tree").fancytree("getRootNode").visit(function(node) {
+                    node.setExpanded(true);
+                });
+            });
+            $("#treeToggleCollapse").click(function(e) {
+                e.preventDefault();
+                $("#tree").fancytree("getRootNode").visit(function(node) {
+                    node.setExpanded(false);
+                });
+            });
+
+        });
+    </script>
+    <tal:displayShowHideAllLinks condition="python: view.displayShowHideAllLinks()">
+        <a href="#" id="treeToggleExpand" i18n:translate="tree_show_all">Show all</a>&nbsp;/&nbsp;<a href="#" id="treeToggleCollapse" i18n:translate="tree_hide_all">Hide all</a>
+    </tal:displayShowHideAllLinks>
+    <div id="tree" tal:define="tree python: view.renderedTemplatesTree">
+      <ul tal:condition="tree">
+        <tal:block replace="structure tree" />
+      </ul>
+      <div tal:condition="not:tree" class="discreet" i18n:translate="no_item_templates">No item template.</div>
+    </div>
+
+    <form id="itemTemplatesForm" method="post"
+          tal:attributes="action python:context.absolute_url() + '/@@createitemfromtemplate'">
+        <div class="popupbuttons">
+          <input type="hidden" name="form.HTTP_REFERER" value="#" tal:attributes="value context/REQUEST/HTTP_REFERER" />
+          <input type="submit" name="form.buttons.cancel" class="apButton" value="Close" i18n:attributes="value" i18n:domain="plone" />
+        </div>
+    </form>
+
+  </metal:fill>
+  </body>
+</html>

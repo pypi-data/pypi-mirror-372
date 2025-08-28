@@ -1,0 +1,28 @@
+<tal:defines define="brains python: view.brains;
+                     cfg python: view.cfg;
+                     nbOfMeetings python:len(brains);
+                     maxShownMeetings python: cfg.getMaxShownMeetings();"
+             i18n:domain="PloneMeeting">
+
+    <tal:comment replace="nothing">A few number of meetings, show a link by meeting</tal:comment>
+    <ul class="fewMeetings" tal:condition="python: nbOfMeetings <= maxShownMeetings">
+        <li tal:repeat="brain brains">
+            <div tal:define="meeting python: brain.getObject();
+                             meeting_url python: brain.getURL();"
+                 tal:attributes="class python: meeting_url[meeting_url.index('Members'):] + '/' in view.request.getURL() and 'portletSelected' or ''">
+                <tal:meetingPrettyLink replace="structure python: meeting.get_pretty_link(prefixed=False)" />
+            </div>
+        </li>
+    </ul>
+
+    <tal:comment replace="nothing">Many meetings, show a combo box</tal:comment>
+    <div class="manyMeetings" tal:condition="python: nbOfMeetings > maxShownMeetings">
+      <tal:go_to_meeting_select_box replace="structure python: context.unrestrictedTraverse('@@go_to_meeting_img_select_box')(**{'brains': brains, 'select_box_name_suffix': view.collection_uid})" />
+    </div>
+
+    <tal:comment replace="nothing">No available meeting visible, show a help message</tal:comment>
+    <div class="noMeetings" tal:condition="python: view.collection.getId() in ['searchnotdecidedmeetings', 'searchlastdecisions'] and nbOfMeetings==0">
+      <p class="discreet" i18n:translate="no_meeting">No meetings.</p>
+    </div>
+
+</tal:defines>

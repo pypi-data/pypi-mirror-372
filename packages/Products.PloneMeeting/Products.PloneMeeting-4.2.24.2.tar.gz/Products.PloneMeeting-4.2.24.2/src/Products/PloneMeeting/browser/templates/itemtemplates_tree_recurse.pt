@@ -1,0 +1,28 @@
+<tal:master define="children options/children | nothing;
+                    expandRootLevel options/expandRootLevel | nothing"
+            i18n:domain="plone">
+    <metal:main define-macro="nav_main">
+        <tal:navitem repeat="node children">
+            <li tal:define="children    node/children;
+                            item        node/item;
+                            item_title  item/Title;
+                            itemUID     item/UID;
+                            isFolder    python: item.portal_type == 'Folder';
+                            expandedClass    python: expandRootLevel and ' expanded' or ''"
+                tal:attributes="class python: isFolder and 'folder' + expandedClass or expandedClass">
+
+                    <tal:comment replace="nothing">We compute the [baseUrl] so we can ram.cache the result,
+                    because if the full URL is cached, it contains the userId (.../userid/mymeetings/...)</tal:comment>
+                    <a href="#"
+                       class="expanded"
+                       tal:attributes="href string:[baseUrl]/@@createitemfromtemplate?templateUID=${itemUID};">
+                        <span tal:content="item_title">Item title</span>
+                    </a>
+                    <ul>
+                        <span tal:replace="structure python:view.recurse(children=children)" />
+                    </ul>
+
+            </li>
+        </tal:navitem>
+    </metal:main>
+</tal:master>
