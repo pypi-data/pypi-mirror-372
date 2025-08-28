@@ -1,0 +1,80 @@
+{% load i18n %}
+
+<form id="view_form"
+      method="post"
+      action="{{ content_context.config_url }}"
+      class="list-view-view-form max-sm:px-16 overflow-x-auto"
+>
+    {% csrf_token %}
+    <div class="flex">
+        <ul class="saved-filters">
+            {% for view in current_views %}
+                <li>
+                    <button type="button" class="relative js-view-button"
+                            onclick="window.SBAdminTable['{{ view_id }}'].moduleInstances.viewsModule.openView(event, this.dataset.params, this.dataset.viewId)"
+                            data-params="{{ view.url_params }}"
+                            data-view-id="{{ view.id }}"
+                    >
+                        <span>{{ view.name }}</span>
+                        {% if view.detail_url %}
+                            <svg hx-delete="{{ view.detail_url }}"
+                                 hx-trigger="confirmDeleteView{{ view.id }} from:body"
+                                 hx-swap="none"
+                                 class="ml-8 w-20 h-20"
+                                 data-show-confirm
+                                 data-submit-event="confirmDeleteView{{ view.id }}"
+                                 data-confirm-body="<h3 class='mb-8 font-semibold w-full text-18 text-center'>{% trans 'Remove View' %}</h3><p class='w-full text-center'>{% trans 'Do you want to remove table view?' %}</p>"
+                            >
+                                <use xlink:href="#Close-small"></use>
+                            </svg>
+                        {% endif %}
+                    </button>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <div id="save-view-modal" class="modal modal-small fade" tabindex="-1" aria-labelledby="save-view-modal-button"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="text-dark-900 text-18 font-semibold leading-28">{% trans 'Save view as' %}</h3>
+                        <svg data-bs-dismiss="modal" aria-label="Close"
+                             class="w-24 h-24 absolute top-16 right-16 cursor-pointer transition-transform hover:rotate-90">
+                            <use xlink:href="#Close-small"></use>
+                        </svg>
+                    </div>
+                    <div class="modal-body">
+                        <label for="{{ content_context.const.CONFIG_NAME }}" class="block mb-8">{% trans 'New view' %} <span class="text-negative">*</span></label>
+                        <input type="text" class="input" name="{{ content_context.const.CONFIG_NAME }}" form="view_form"
+                               placeholder="{% trans 'View name' %}">
+
+                        <div class="mb-8 mt-24">{% trans 'or save as' %}</div>
+                        <ul class="flex flex-wrap gap-8" data-bs-dismiss="modal">
+                            {% for view in current_views %}
+                                {% if not view.default %}
+                                    <li>
+                                        <div hx-post="{{ view.detail_url }}" href="#"
+                                             class="btn btn-small rounded-full cursor-pointer">
+                                            {{ view.name }}
+                                        </div>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn" type="button" data-bs-dismiss="modal">{% trans 'Cancel' %}</button>
+                        <button class="btn btn-primary" type="submit" form="view_form"
+                                data-bs-dismiss="modal">{% trans 'Save' %}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" name="{{ content_context.const.URL_PARAMS_NAME }}"
+           id="{{ content_context.const.URL_PARAMS_NAME }}" form="view_form">
+
+</form>
