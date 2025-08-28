@@ -1,0 +1,2 @@
+gcloud builds submit --config cloudbuild.yaml .
+gcloud run services update sensespace-did-mcp --image=us-central1-docker.pkg.dev/beta-testnet-20250403/sensespace-did/sensespace-did-mcp:latest --region=us-central1
