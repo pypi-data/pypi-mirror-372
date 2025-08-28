@@ -1,0 +1,58 @@
+CREATE {% if replace %}OR REPLACE {% endif %}{% if table.is_external %}EXTERNAL {% endif -%}
+TABLE {%- if not replace %} IF NOT EXISTS{% endif %} {{ table.escaped_identifier }} {% if table.columns %}( {% endif %}
+{%- for column in table.columns %}
+    {% if not loop.first %}, {% endif -%}
+    {{column.name}} {{column.data_type|upper}}
+    {%- if not column.nullable %} NOT NULL{% endif -%}
+    {%- if column.default_value %} DEFAULT {{column.default_value}}{% endif -%}
+    {%- if column.comment %} COMMENT '{{column.comment}}'{% endif -%}
+    {%- if column.generated %} GENERATED {{column.generated}}{% endif -%}
+{% endfor %}
+{% if table.columns %}) {% endif %}
+USING delta
+{% if table.storage_path %}
+LOCATION '{{ table.storage_path }}'
+{% endif %}
+{% if table.properties %}
+TBLPROPERTIES (
+    {%- for key, value in table.properties.items() %}
+        {%- if not loop.first %}, {% endif -%}
+        '{{key}}' = '{{value}}'
+    {%- endfor -%}
+)
+{% endif %}
+{% if table.partition_by -%}
+    {%- if table.liquid_clustering -%} CLUSTER {%- else -%} PARTITIONED {%- endif %} BY (
+        {%- for column in table.partition_by -%}
+            {%- if not loop.first %}, {% endif -%}
+            {{column}}
+        {%- endfor -%}
+    )
+{%- endif -%}
+;
+{%- for constraint in table.constraints %}
+ALTER TABLE {{ table.escaped_identifier }} ADD CONSTRAINT {{constraint.name}} CHECK ({{constraint.expression}});
+{%- endfor -%}
+
+{%- for fk in table.foreign_keys %}
+    ALTER TABLE {{ table.escaped_identifier }} ADD CONSTRAINT {{table.name}}__{{fk.parent_table|replace(".","_")}}__{{fk.foreign_key_columns|join("_")}} FOREIGN KEY ({{fk.foreign_key_columns|join(", ")}}) REFERENCES {{fk.parent_table}}({{fk.parent_columns|join(", ")}})
+    NOT ENFORCED NORELY;
+{%- endfor %}
+
+{%- if table.comment %}
+COMMENT ON TABLE {{ table.escaped_identifier }} IS '{{ table.comment }}';
+{%- endif %}
+{# Tags do not yet work in Databricks
+{%- if table.business_properties %}
+{%- for tag_key, tag_value in table.business_properties.items() %}
+SET TAG ON TABLE {{ table.escaped_identifier }} `{{ tag_key }}`{% if tag_value %} = `{{ tag_value }}`{% endif %};
+{%- endfor %}
+{%- endif %}
+
+{%- for column in table.columns %}
+{%- if column.business_properties %}
+{%- for tag_key, tag_value in column.business_properties.items() %}
+SET TAG ON COLUMN {{ table.escaped_identifier }}.`{{ column.name }}` `{{ tag_key }}`{% if tag_value %} = `{{ tag_value }}`{% endif %};
+{%- endfor %}
+{%- endif %}
+{%- endfor %} #}
