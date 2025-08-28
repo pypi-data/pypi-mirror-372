@@ -1,0 +1,124 @@
+Metadata-Version: 2.4
+Name: sadm-tools
+Version: 1.1.1
+Summary: A collection of tools useful for dealing with Serialized ADM as specified in Recommendation ITU-R BS.2125, ST 2116, ST 2127-2
+Author-email: James Cowdery <jtc@dolby.com>
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24.4
+Requires-Dist: soundfile>=0.12.1
+
+SADM Tools
+==========
+
+# Introduction
+
+This Python package provides several tools for manipulation of Serialized ADM tools. Serialized ADM is standardized in ITU-R BS 2125. These tools rely on a basic understanding of the following types of files:
+
+## ADM XML Files
+
+These are files that comply with ITU-R BS 2076 Audio Definition Model. These are not Serialized ADM files but can be used to create Serialized ADM files.
+
+## Serialized ADM XML Files
+
+These are similar to the above but contain some extra information to map the physical tracks of an audio stream to the logical objects in the ADM file.
+
+## Serialized ADM WAV files
+
+These files contain Serialized ADM XML but the text is placed inside packets framed as per SMPTE ST 2116. These files can be played out using a professional soundcard onto a AES3, MADI or SDI interface to create a stream that is compliant with SMPTE ST 337 and SMPT ST 2116.
+
+
+## Metadata Guided Audio (MGA) Files
+
+These are bitstream files consisting of frame wrapped audio and Serialized XML. MGA Files have a '.mga' suffix and consist of a sequence of MGA frames. The structure of an MGA frame is defined in the SMPTE ST 2127-1 and ST 2127-10 standards. The MGA file is an intermediate file for muxing into an MXF file. Tools directly operating on MXF files are not provided as part of this package.
+
+# Installing Tools
+
+Use the lastest wheel file found in the dist directory and install using pip like this
+
+`$ pip3 install dist/sadm_tools-1.0.5-py3-none-any.whl`
+
+# Running the tools
+
+Each of the tools provide help which details the command line options. Here is a quick description of what each tool does:
+
+### Serialized ADM XML to WAV conversion - sadm2wav
+
+This tool generates wav output in SADM format from a regular ADM XML file. Currently it support any frame rate but only
+support 20bit output, gzip compression and Serial ADM full-frame mode. 
+
+`usage: sadm2wav [-h] -i INPUT_SADM_XML -o OUTPUT_WAV [-f FRAME_RATE] [-t TIME] [-g GZIP] [-n NOZIP] [-b BIT_DEPTH] [-debug]`
+
+### MGA (Metadata Guided Audio) File multiplexing from SADM XML and audio files - mga_muxer
+
+This utility takes a Serialized ADM file in XML form and produces an MGA which is suitable for muxing into a Repository file according to SMPTE ST 2127-2
+
+`usage: mga_muxer.py [-h] [-is INPUT_SADM_XML] [-ia INPUT_AUDIO_WAV] [-om OUTPUT_MGA] [-os OUTPUT_XML] [-f FRAME_RATE] [--compress] [--debug]`
+
+Metadata Guided Audio (MGA) Muxer
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -is INPUT_SADM_XML, --input_sadm_xml INPUT_SADM_XML
+                        Serial ADM XML filename for input (default: input_sadm.xml)
+  -ia INPUT_AUDIO_WAV, --input_audio_wav INPUT_AUDIO_WAV
+                        Audio wav filename for input (default: input_audio.wav)
+  -om OUTPUT_MGA, --output_mga OUTPUT_MGA
+                        Output MGA file (default: mga_muxer_out.mga)
+  -os OUTPUT_XML, --output_xml OUTPUT_XML
+                        1st modified S-ADM XML frame (default: mag_muxer_out.xml)
+  -f FRAME_RATE, --frame_rate FRAME_RATE
+                        mga frame rate in frames per second (default: 25)
+  --compress            Applies gzip compression to XML before muxing (default: False)
+  --debug               Enables debug mode (default: False)
+
+
+The -compress flag makes the tool apply gzip compression to the XML before muxing. This reduces the size of the MGA file.
+
+A xml file is produced with the same stem as the MGA file but with a .audio_info.xml extension. This file conveys carries basic audio information and needs to be present during demuxing.
+
+### MGA File demultiplexing to SADM XML and audio files - mga_demuxer
+
+This tool is the opposite of the muxer. It takes an MGA file and extracts the XML and audio content to create output XML and audio files. A single audio file is created but multiple XML files may be created so a folder is taken as argument. Each time the XML changes a new file is created using the timecode as a filename. A file with the initial timecode is always created even if the SADM XML is static throughout the entire file i.e. it never changes. An audio info XML file needs to be present using the same stem as the input MGA file but with a .audio_info.xml extension. This needs to have three elements under the root element. An example is shown below.
+
+`usage: mga_demuxer.py [-h] [-im INPUT_MGA_FILE] [-oa OUTPUT_AUDIO_WAV] [-os OUTPUT_SADM_XML_FOLDER] [--debug]`
+
+Metadata Guided Audio (MGA) Demuxer
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -im INPUT_MGA_FILE, --input_mga_file INPUT_MGA_FILE
+                        MGA filename for input (default: input_mga.mga)
+  -oa OUTPUT_AUDIO_WAV, --output_audio_wav OUTPUT_AUDIO_WAV
+                        Audio wav filename for output (default: mga_demux_out.wav)
+  -os OUTPUT_SADM_XML_FOLDER, --output_sadm_xml_folder OUTPUT_SADM_XML_FOLDER
+                        Folder name to write SADM XML files (default: mga_demux_out)
+  --debug               Enables debug mode (default: False)
+
+#### Example audio information XML file
+
+<root>
+  <channels>10</channels>
+  <bitDepth>24</bitDepth>
+  <samplingRate>48000</samplingRate>
+</root>
+
+### Serialized ADM analyzer - sadm_analyzer
+
+This utility analyzes a wav file containing Serialized ADM burst according to SMPTE ST 337 and ST 2116. Serialized ADM is detected and information about the ST 2116 payload is displayed.
+
+`usage: sadm_analyzer [-h] -i INPUT_FILE`
+
+The -i flag specifies the input wav file to be analyzed
+
+## License & Warranty
+
+ SADM Tools
+ Copyright (c) 2024, Dolby Laboratories Inc.
+ All rights reserved.
+ 
+This program is protected under international and U.S. copyright laws as an unpublished work. This program is
+confidential and proprietary to the copyright owners. Reproduction or disclosure, in whole or in part, or the
+production of derivative works therefrom without the express permission of the copyright owners is prohibited.
