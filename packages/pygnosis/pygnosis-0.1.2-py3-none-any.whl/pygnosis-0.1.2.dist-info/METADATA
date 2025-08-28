@@ -1,0 +1,145 @@
+Metadata-Version: 2.4
+Name: pygnosis
+Version: 0.1.2
+Summary: A modern, composable health monitoring library for Python applications with hierarchical status aggregation, async support, and flexible configuration system.
+Project-URL: Homepage, https://github.com/javamaker-python/pygnosis
+Project-URL: Repository, https://github.com/javamaker-python/pygnosis.git
+Project-URL: Bug Tracker, https://github.com/javamaker-python/pygnosis/issues
+Project-URL: Changelog, https://github.com/javamaker-python/pygnosis/blob/main/CHANGELOG.md
+Author-email: Ilya Yushin <ilya.yushin@gmail.com>
+Maintainer-email: Ilya Yushin <ilya.yushin@gmail.com>
+License: MIT License
+        
+        Copyright (c) 2024 [Ваше Имя]
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Keywords: check,health,microservices,monitoring,status
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Monitoring
+Classifier: Typing :: Typed
+Requires-Python: >=3.11
+Requires-Dist: pydantic>=2.0.0
+Description-Content-Type: text/markdown
+
+# Pygnosis
+
+Asynchronous health checks for Python services.
+
+![CI](https://github.com/javamaker-python/pygnosis/actions/workflows/ci.yml/badge.svg?branch=main)
+[![codecov](https://codecov.io/gh/javamaker-python/pygnosis/branch/main/graph/badge.svg)](https://codecov.io/gh/javamaker-python/pygnosis)
+
+Features
+--------
+
+- Flexible health indicators (define your own checks)
+- Composable architecture (nest indicators into trees)
+- Full async/await support
+- Type hints throughout
+- Graceful error handling
+
+Installation
+------------
+
+```bash
+pip install pygnosis
+```
+
+Quick start
+-----------
+
+```python
+import asyncio
+from pygnosis import Health, HealthIndicator, Status, CompositeHealthIndicator
+
+
+class DatabaseHealthIndicator(HealthIndicator):
+    def get_name(self) -> str:
+        return "database"
+
+    async def get_health(self) -> Health:
+        try:
+            return Health.builder(Status.UP).with_detail("connections", 10).build()
+        except Exception as e:
+            return Health.builder(Status.DOWN).with_exception(e).build()
+
+
+class RedisHealthIndicator(HealthIndicator):
+    def get_name(self) -> str:
+        return "redis"
+
+    async def get_health(self) -> Health:
+        return Health.builder(Status.UP).build()
+
+
+async def main():
+    composite = CompositeHealthIndicator(
+        name="app",
+        indicators=[DatabaseHealthIndicator(), RedisHealthIndicator()],
+    )
+    health = await composite.get_health()
+    print(f"Status: {health.status}")
+    print(f"Components: {health.components}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+Development with uv
+-------------------
+
+```bash
+uv sync --group dev
+uv run ruff check src/ tests/
+uv run pytest
+```
+
+Building the package
+--------------------
+
+```bash
+uv build
+```
+
+Documentation
+-------------
+
+Sphinx docs are built in CI. Locally:
+
+```bash
+uv sync --group docs
+uv run sphinx-build -b html docs docs/_build/html
+```
+
+License
+-------
+
+MIT License — see [LICENSE](LICENSE)
+
+Contributing
+------------
+
+Contributions are welcome. See `CONTRIBUTING.md` for guidelines.
