@@ -1,0 +1,50 @@
+- remark: 版本构建
+  name: work.prepare_env
+  klass: bmcgo.tasks.task_prepare
+  subworks: []
+  wait: []
+- name: work.build.download
+  subworks:
+    - name: task_download_buildtools
+      klass: bmcgo.tasks.task_download_buildtools
+    - name: task_download_dependency
+      klass: bmcgo.tasks.task_download_dependency
+  wait:
+    - work.prepare_env
+- name: work.build.app
+  klass: bmcgo.tasks.task_build_conan
+  wait:
+    - work.build.download
+- name: work.build_wbd_up
+  klass: bmcgo.tasks.task_build_wbd_up
+  wait:
+    - work.build.app
+- name: work.task_build_rootfs_img
+  klass: bmcgo.tasks.task_build_rootfs_img
+  subworks:
+    - name: work.task_hpm_envir_prepare
+      klass: bmcgo.tasks.task_hpm_envir_prepare
+      subworks:
+        - name: work.task_buildgppbin
+          klass: bmcgo.tasks.task_buildgppbin
+          subworks:
+            - name: work.task_buildhpm_ext4
+              klass: bmcgo.tasks.task_buildhpm_ext4
+              subworks:
+                - name: work.task_sign_and_pack_hpm
+                  klass: bmcgo.tasks.task_sign_and_pack_hpm
+                  subworks:
+                    - name: work.task_packet_to_supporte
+                      klass: bmcgo.tasks.task_packet_to_supporte
+    - name: work.task_build_qemu_rootfs
+      klass: works.packet.work_build_qemu_rootfs.TaskClass
+      # 当类不存在时不执行
+      ignore_not_exist: true
+    - name: works.packet.work_run_qemu_bmc
+      klass: works.packet.work_run_qemu_bmc.TaskClass
+      wait:
+        - work.task_build_qemu_rootfs
+      ignore_not_exist: true
+  wait:
+    - work.build_wbd_up
+    - work.build.app

@@ -1,0 +1,114 @@
+DATAMODE_DIR = $(shell pwd)
+SCRIPT_DIR = $(DATAMODE_DIR)/script
+MAJOR_VERIONS_DIR = $(DATAMODE_DIR)/
+
+GEN_BIN = $(SCRIPT_DIR)/gen.py
+GEN_DATAS_BIN = $(SCRIPT_DIR)/gen_datas.py
+RESTAPI_DIRS = routes
+
+BUILD_DIR = ${DATAMODE_DIR}/temp
+PROTO_OUT_DIR = ${BUILD_DIR}/proto
+GENERATE_OUT_DIR = ${BUILD_DIR}/gen
+PROTO_DIR = ${DATAMODE_DIR}/proto
+JSON_DIR = ${PROJECT_DIR}/json
+MDS_DIR = ${PROJECT_DIR}/mds
+CONF_DIR = ${PROJECT_DIR}/conf
+TEMP_DIR = ${DATAMODE_DIR}/../../temp
+GEN_BAK_DIR = ${DATAMODE_DIR}/../../gen_bak
+MDB_INTF_DIR = ${TEMP_DIR}/opt/bmc/apps/mdb_interface/
+
+.PHONY: protos gen all dft_protos debug_protos
+default: all
+
+protos:
+	python3 ${SCRIPT_DIR}/check_intfs.py -d ${MDB_INTF_DIR} -n ${PROJECT_NAME} -m ${MDS_DIR} -o ${SCRIPT_DIR}/../temp/check_intfs.json
+	@mkdir -p ${PROTO_OUT_DIR}
+	@cd proto && make -j12 \
+		PROTO_OUT_DIR=${PROTO_OUT_DIR} \
+		SCRIPT_DIR=${SCRIPT_DIR} \
+		MAJOR_VERIONS_DIR=${MAJOR_VERIONS_DIR} \
+		PROTO_DIR=${PROTO_DIR} \
+		JSON_DIR=${JSON_DIR}\
+		PROJECT_NAME=${PROJECT_NAME}\
+		VERSION=${VERSION} \
+		MAJOR_VERSION=${MAJOR_VERSION} \
+
+DFT_SERVICE_JSON_EXISTS := $(wildcard ${MDS_DIR}/service.json)
+DFT_MODEL_JSON_EXISTS := $(wildcard ${MDS_DIR}/dft/model.json)
+ifneq ($(and $(DFT_SERVICE_JSON_EXISTS),$(DFT_MODEL_JSON_EXISTS)),)
+dft_protos:
+	@mkdir -p ${PROTO_OUT_DIR}/dft
+	@cd proto && make -j12 \
+		PROTO_OUT_DIR=${PROTO_OUT_DIR}/dft \
+		SCRIPT_DIR=${SCRIPT_DIR} \
+		MAJOR_VERIONS_DIR=${MAJOR_VERIONS_DIR} \
+		PROTO_DIR=${PROTO_DIR} \
+		JSON_DIR=${JSON_DIR}\
+		PROJECT_NAME=${PROJECT_NAME}\
+		VERSION=${VERSION} \
+		MAJOR_VERSION=${MAJOR_VERSION} \
+
+else
+dft_protos:
+endif
+
+DEBUG_SERVICE_JSON_EXISTS := $(wildcard ${MDS_DIR}/service.json)
+DEBUG_MODEL_JSON_EXISTS := $(wildcard ${MDS_DIR}/debug/model.json)
+ifneq ($(and $(DEBUG_SERVICE_JSON_EXISTS),$(DEBUG_MODEL_JSON_EXISTS)),)
+debug_protos:
+	@mkdir -p ${PROTO_OUT_DIR}/debug
+	@cd proto && make -j12 \
+		PROTO_OUT_DIR=${PROTO_OUT_DIR}/debug \
+		SCRIPT_DIR=${SCRIPT_DIR} \
+		MAJOR_VERIONS_DIR=${MAJOR_VERIONS_DIR} \
+		PROTO_DIR=${PROTO_DIR} \
+		JSON_DIR=${JSON_DIR}\
+		PROJECT_NAME=${PROJECT_NAME}\
+		VERSION=${VERSION} \
+		MAJOR_VERSION=${MAJOR_VERSION} \
+
+else
+debug_protos:
+endif
+
+gen: protos dft_protos debug_protos
+	@cd templates && make -j12 \
+		PROTO_OUT_DIR=${PROTO_OUT_DIR} \
+		GENERATE_OUT_DIR=${GENERATE_OUT_DIR} \
+		SCRIPT_DIR=${SCRIPT_DIR} \
+		MAJOR_VERIONS_DIR=${MAJOR_VERIONS_DIR} \
+		PROTO_DIR=${PROTO_DIR} \
+		PROJECT_NAME=${PROJECT_NAME} \
+		VERSION=${VERSION} \
+		MAJOR_VERSION=${MAJOR_VERSION} \
+		RESTAPI_DIRS="${RESTAPI_DIRS}" \
+		MDS_DIR=${MDS_DIR}\
+		CONF_DIR=${CONF_DIR}\
+		TEMP_DIR=${TEMP_DIR}\
+		GEN_BAK_DIR=${GEN_BAK_DIR}
+
+mdb: protos
+	@cd templates && make -j12 \
+		PROTO_OUT_DIR=${PROTO_OUT_DIR} \
+		GENERATE_OUT_DIR=${GENERATE_OUT_DIR} \
+		SCRIPT_DIR=${SCRIPT_DIR} \
+		MAJOR_VERIONS_DIR=${MAJOR_VERIONS_DIR} \
+		PROTO_DIR=${PROTO_DIR} \
+		PROJECT_NAME=${PROJECT_NAME} \
+		VERSION=${VERSION} \
+		MAJOR_VERSION=${MAJOR_VERSION} \
+		mdb
+
+messages: protos
+	@cd templates && make -j12 \
+		PROTO_OUT_DIR=${PROTO_OUT_DIR} \
+		GENERATE_OUT_DIR=${GENERATE_OUT_DIR} \
+		SCRIPT_DIR=${SCRIPT_DIR} \
+		MAJOR_VERIONS_DIR=${MAJOR_VERIONS_DIR} \
+		PROTO_DIR=${PROTO_DIR} \
+		PROJECT_NAME=${PROJECT_NAME} \
+		VERSION=${VERSION} \
+		MAJOR_VERSION=${MAJOR_VERSION} \
+		BUILD_DIR=${BUILD_DIR} \
+		messages
+

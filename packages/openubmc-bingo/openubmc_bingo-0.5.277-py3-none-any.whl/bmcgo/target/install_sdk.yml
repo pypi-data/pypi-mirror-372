@@ -1,0 +1,21 @@
+# remark: 环境准备，从产品目录读取配置并安装必要的构建工具，如RTOS/SDK/Bisheng CPU等
+target_config:
+  # 是否使用schema校验manifest.yml，默认true，个人构建禁用
+  schema_need_validate: false
+subworks:
+  - name: work.prepare_env
+    klass: bmcgo.tasks.task_prepare
+  - name: task_download_buildtools
+    klass: bmcgo.tasks.task_download_buildtools
+    wait:
+      - work.prepare_env
+  - name: task_download_dependency
+    klass: bmcgo.tasks.task_download_dependency
+    wait:
+      - work.prepare_env
+  - name: work.task_prepare_tools
+    klass: works.packet.work_prepare_tools.TaskClass
+    # 当类不存在时，不执行
+    ignore_not_exist: true
+    wait:
+      - work.prepare_env
