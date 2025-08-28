@@ -1,0 +1,504 @@
+# Configuration
+
+## Configuration File
+
+PySpelling requires a YAML configuration file. The file defines the various spelling tasks along with their individual
+filters and options.
+
+You can optionally specify the preferred spell checker as a global option (`aspell` is the default if not specified).
+This can be overridden on the command line.
+
+```yaml
+spellchecker: hunspell
+```
+
+You can specify the number of parallel jobs to use by setting the global option `jobs`. This create parallel jobs to
+process files in a given task.
+
+```yaml
+jobs: 4
+```
+
+/// new | New 2.10
+Parallel processing is new in 2.10.
+///
+
+All of the spelling tasks are contained under the keyword `matrix` and are organized in a list:
+
+```yaml
+matrix:
+- task1
+
+- task2
+```
+
+Each task requires, at the very least, a `name` and `sources` to search.
+
+Depending on your setup, you may need to set the dictionary to use as well. Each spell checker specifies their
+dictionary/language differently which is covered in more details in [Spell Checker Options](#spell-checker-options).
+
+```yaml
+matrix:
+- name: Python Source
+  aspell:
+    lang: en
+    d: en_US
+  sources:
+  - pyspelling/**/*.py
+```
+
+You can also define more complicated tasks which will run your text through various filters before performing the spell
+checking by providing a custom pipeline.  You can also add your own custom wordlists to extend the dictionary.
+
+```yaml
+matrix:
+- name: Python Source
+  sources:
+  - pyspelling/**/*.py
+  aspell:
+    lang: en
+    d: en_US
+  dictionary:
+    wordlists:
+    - docs/src/dictionary/en-custom.txt
+    output: build/dictionary/python.dic
+  pipeline:
+  - pyspelling.filters.python:
+  - pyspelling.filters.context:
+      context_visible_first: true
+      escapes: \\[\\`~]
+      delimiters:
+      # Ignore multiline content between fences (fences can have 3 or more back ticks)
+      # ```
+      # content
+      # ```
+      - open: '(?s)^(?P<open> *`{3,})$'
+        close: '^(?P=open)$'
+      # Ignore text between inline back ticks
+      - open: '(?P<open>`+)'
+        close: '(?P=open)'
+```
+
+### Name
+
+Each spelling tasks *should* have a unique name and is defined with the `name` key.
+
+When using the command line `--name` option, the task with the matching name will be run.
+
+```yaml
+matrix:
+- name: python
+```
+
+/// new | New Behavior 2.0
+In `1.0`, names doubled as identifiers and groups. It became apparent for certain features that a unique name is
+desirable for targeting different tasks, while a group specifier should be implemented separately. In `2.0`, if
+multiple tasks have the same name, the last defined one will be the targeted task when requesting a named task. Use
+groups to target multiple grouped tasks.
+///
+
+### Groups
+
+Each task can be assigned to a group. The group name can be shared with multiple tasks. All tasks in a group can be run
+by specifying the `--group` option with the name of the group on the command line. This option is only available in
+version `1.1` of the configuration file.
+
+```yaml
+matrix:
+- name: python
+  group: some_name
+```
+
+/// new | New 2.0
+`group` was added in version `2.0`.
+///
+
+### Hidden
+
+All tasks in a configuration file will be run if no `name` is specified. In version `1.1` of the configuration file, If
+a task enables the option `hidden` by setting it to `true`, that task will *not* be run automatically when no `name` is
+specified. `hidden` tasks will only be run if they are specifically mentioned by `name`.
+
+```yaml
+matrix:
+- name: python
+  hidden: true
+```
+
+/// new | New 2.0
+`group` was added in version `2.0`.
+///
+
+### Default Encoding
+
+When parsing a file, the encoding detection and translation of the data into Unicode is performed by the first filter in
+the pipeline. For instance, if HTML is the first, it may check for a BOM or look at the file's header to find the `meta`
+tag that specifies the file's encoding. If all encoding checks fail, the filter will usually apply an appropriate
+default encoding for the file content type (usually UTF-8, but check the specific filter's documentation to be sure). If
+needed, the filter's default encoding can be overridden in the task via the `default_encoding` key. After the first step
+in the pipeline, the text is passed around as Unicode which requires no Unicode detection.
+
+```yaml
+matrix:
+- name: markdown
+  pipeline:
+  - pyspelling.filters.text
+  sources:
+  - '**/*.md'
+  default_encoding: utf-8
+```
+
+Once all filtering is complete, the text will be passed to the spell checker as byte strings, usually with the
+originally detected encoding (unless a filter specifically alters the encoding). The supported spell checkers are
+limited to very specific encodings, so if your file is using an unsupported encoding, it will fail.
+
+UTF-16 and UTF-32 is not really supported by Aspell and Hunspell, so at the end of the spell check pipeline, Unicode
+strings that have the associated encoding of UTF-16 or UTF-32 will be encoded with the compatible UTF-8. This does not
+apply to files being processed with a the pipeline disabled. When the pipeline is disabled, files are sent directly to
+the spell checker with no modifications.
+
+/// tip | Unsupported Encodings
+If you are trying to spell check a file in an unsupported encoding, you can use the builtin text filter to convert
+the content to a more appropriate encoding. In general, it is recommended to work in, or convert to UTF-8.
+///
+
+### Sources
+
+Each spelling task must define a list of sources to search via the `sources` key. Each source should be a glob pattern
+that should match one or more files. PySpelling will perform a search with these patterns to determine which files
+should be spell checked.
+
+You can also have multiple patterns on one line separated with `|`. When multiple patterns are defined like this, they
+are evaluated simultaneously. This is useful if you'd like to provide an exclusion pattern along with your file pattern.
+For instance, if we wanted to scan all python files in our folder, but exclude any in the build folder, we could provide
+the following pattern: `**/*.py|!build/*`.
+
+PySpelling uses [Wildcard Match's `glob` library][glob] to perform the file globbing.  By default, it uses the `NEGATE`,
+`GLOBSTAR`, and `BRACE` flags, but you can override the flag options with the `glob_flags` option. You can specify the
+flags by either their long name `GLOBSTAR` or their short name `G`. See [Wildcard Match's documentation][glob] for more
+information on the available flags and what they do.
+
+```yaml
+matrix:
+- name: python
+  pipeline:
+  - pyspelling.filters.python:
+      comments: false
+  glob_flags: N|G|B
+  sources:
+  - pyspelling/**/*.py
+```
+
+By default, to protect against really large pattern sets, such as when using brace expansion: `{1..10000000}`, there is
+a pattern limit of `1000` by default. This can be changed by setting `glob_pattern_limit` to some other number. If you
+set it to `0`, it will disable the pattern limits entirely.
+
+/// new | New 2.6
+`glob_pattern_limit` is new in version `2.6` and only works with `wcmatch` version `6.0`.
+///
+
+### Expect Match
+
+When processing the sources field it is expected to find at least
+one matching file. If no files are located it can be helpful to raise an error
+and this is the default behavior. If it is not expected to always find a file
+then the `expect_match` configuration can be used to suppress the error.
+
+```yaml
+matrix:
+- name: markdown
+  pipeline:
+  - pyspelling.filters.text
+  sources:
+  - '**/*.md'
+  expect_match: false
+  default_encoding: utf-8
+```
+
+### Pipeline
+
+/// note
+PySpelling's `pipeline` is designed to provide advanced, custom filtering above and beyond what spell checker's normally
+provide, but it may often be the case that what the spell checker provides is more than sufficient. It should be noted
+that `pipeline` filters are processed before sending the buffer to Aspell or Hunspell. By default, we disable any
+special modes of the spell checkers.
+
+Spellcheckers like Aspell have builtin filtering. If all you need is the builtin filters from Aspell, the `pipeline`
+configuration can be omitted. For instance, to use Aspell's builtin Markdown mode, simply set the Aspell option directly
+and omit the pipeline.
+
+```yaml
+- name: markdown
+  group: docs
+  sources:
+  - README.md
+  aspell:
+    lang: en
+    d: en_US
+    mode: markdown
+  dictionary:
+    wordlists:
+    - .spell-dict
+    output: build/dictionary/markdown.dic
+```
+
+You can also use PySpelling `pipeline` filters and enable special modes of the underlying spell checker if desired.
+///
+
+PySpelling allows you to define tasks that outline what kind of files you want to spell check, and then sends them down
+a pipeline that filters the content returning chunks of text with some associated context. Each chunk is sent down each
+step of the pipeline until it reaches the final step, the spell check step. Between filter steps, you can also insert
+flow control steps that allow you to have certain text chunks skip specific steps. All of this is done with
+[pipeline plugins](./pipeline.md).
+
+Let's say you had some Markdown files and wanted to convert them to HTML, and then filter out specific tags. You could
+just use the Markdown filter to convert the file to HTML and then pass it through the HTML filter to extract the text
+from the HTML tags.
+
+```yaml
+matrix:
+- name: markdown
+  sources:
+  - README.md
+  pipeline:
+  - pyspelling.filters.markdown:
+  - pyspelling.filters.html:
+      comments: false
+      attributes:
+      - title
+      - alt
+      ignores:
+      - code
+      - pre
+```
+
+If needed, you can also insert flow control steps before certain filter steps. Each text chunk that is passed between
+filters has a category assigned to it from the previous filter. Flow control steps allow you to restrict the next filter
+to specific categories, or exclude specific categories from the next step. This is covered in more depth in
+[Flow Control](./pipeline.md#flow-control).
+
+If for some reason you need to send the file directly to the spell checker without using PySpelling's pipeline, simply
+set `pipeline` to `null`. This sends file directly to the spell checker without evaluating the encoding or passing
+through any filters. Specifically with Hunspell, it also sends the spell checker the filename instead of piping the
+content as Hunspell has certain features that don't work when piping the data, such as OpenOffice ODF input.
+
+Below is an example where we send an OpenOffice ODF file directly to Hunspell in order to use Hunspell's `-O` option to
+parse the ODF file. Keep in mind that when doing this, no encoding is sent to the spell checker unless you define
+`default_encoding`. If `default_encoding` is not defined, PySpelling will decode the returned content with the
+terminal's encoding (or what it thinks the terminal's encoding is).
+
+```yaml
+matrix:
+- name: openoffice_ODF
+  sources:
+  - file.odt
+  hunspell:
+    d: en_US
+    O: true
+  pipeline: null
+```
+
+### Languages
+
+Languages in both Aspell and Hunspell are controlled by the `-d` option. In the YAML configuration, we remove any
+leading `-`and just use `d`.
+
+For Aspell:
+
+```yaml
+matrix:
+- name: python
+  aspell:
+    lang: en
+    d: en_US
+```
+
+For Hunspell:
+
+```yaml
+matrix:
+- name: python
+  hunspell:
+    d: en_US
+```
+
+/// tip
+It can be noted above that Aspell is setting `lang` to `en`  and `d` to `en_US`, this isn't strictly necessary to
+just spell check, but is often needed to compile wordlists of words to ignore when spellchecking. `lang` points to
+the actual `.dat` file used to [compile wordlists](dictionaries-and-personal-wordlists) in Aspell and needs that
+information to work. There is usually one `.dat` file that covers a language and its variants. So `en_US` and
+`en_GB` will both build their wordlists against the `en.dat` file.
+///
+
+Since spell checker options vary between both Aspell and Hunspell, spell checker specific options are handled by under
+special keys named `aspell` and `hunspell`. To learn more, check out [Spell Checker Options](#spell-checker-options).
+
+By default, PySpelling sets your main dictionary to `en` for Aspell and `en_US` for Hunspell. If you do not desire an
+American English dictionary, or these dictionaries are not installed in their expected default locations, you will need
+to configure PySpelling so it can find your preferred dictionary. Since dictionary configuring varies for each spell
+checker, the main dictionary (and virtually any spell checker specific option) is performed via
+[Spell Checker Options](#spell-checker-options).
+
+/// tip | International Languages
+Some languages use special Unicode characters in them. The spell checker in use may be particular about how the
+Unicode characters are normalized. When PySpelling passes the content to be spellchecked you may want to normalize
+the Unicode content if it is having trouble. This can be done with the [`Text` filter](./filters/text.md).
+
+For instance, here is how to do so via Aspell with a Czech dictionary.
+
+```yaml
+matrix:
+- name: czechstuff
+  sources: *.txt
+  aspell:
+    lang: cs
+    d: cs
+  dictionary:
+    wordlist:
+    - .dictionary
+    output: build/czech.dict
+  pipeline:
+  - pyspelling.filters.text:
+      normalize: nfd
+```
+///
+
+### Dictionaries and Personal Wordlists
+
+While provided dictionaries cover a number of commonly used words, you may need to specify additional words that are not
+covered in the default dictionaries. Luckily, both Aspell and Hunspell allow for adding custom wordlists. You can have
+as many wordlists as you like, and they can be included in a list under the key `wordlists` which is also found under
+the key `dictionary`.
+
+All the wordlists are combined into one custom dictionary file whose output name and location is defined via the
+`output` key which is also found under the `dictionary` key.
+
+While Hunspell doesn't directly compile the wordlists, Aspell does, and it uses the `.dat` file for dictionary you are
+using. While you may be specifying a region specific versions of English with `en_US` or `en_GB`, both of these use the
+`en.dat` file. So in Aspell, it is recommended to specify both the `--lang` option (or the alias `-l`) as well as `-d`.
+If `lang` is not specified, the assumed data file will be `en`.
+
+```yaml
+matrix:
+- name: python
+  sources:
+  - pyspelling/**/*.py
+  aspell:
+    lang: en
+    d: en_US
+  dictionary:
+    wordlists:
+    - docs/src/dictionary/en-custom.txt
+    output: build/dictionary/python.dic
+  pipeline:
+  - pyspelling.filters.python:
+      comments: false
+```
+
+Hunspell, on the other hand, does not require an additional `lang` option as custom wordlists are handled differently
+than when under Aspell:
+
+```yaml
+matrix:
+- name: python
+  sources:
+  - pyspelling/**/*.py
+  hunspell:
+    d: en_US
+  dictionary:
+    wordlists:
+    - docs/src/dictionary/en-custom.txt
+    output: build/dictionary/python.dic
+  pipeline:
+  - pyspelling.filters.python:
+      comments: false
+```
+
+Lastly, you can set the encoding to be used during compilation via the `encoding` under `dictionary`. The encoding
+should generally match the encoding of your main dictionary. The default encoding is `utf-8`, and only Aspell uses this
+option.
+
+```yaml
+matrix:
+- name: python
+  sources:
+  - pyspelling/**/*.py
+  aspell:
+    lang: en
+    d: en_US
+  dictionary:
+    wordlists:
+    - docs/src/dictionary/en-custom.txt
+    output: build/dictionary/python.dic
+    encoding: utf-8
+  pipeline:
+  - pyspelling.filters.python:
+      comments: false
+```
+
+### Spell Checker Options
+
+Since PySpelling is a wrapper around both Aspell and Hunspell, there are a number of spell checker specific options.
+Spell checker specific options can be set under keywords: `aspell` and `hunspell` for Aspell and Hunspell respectively.
+Here you can set options like the default dictionary and search options.
+
+We will not list all available options here. In general we expose any and all options and only exclude those that we are
+aware of that could be problematic. For instance, we do not have an interface for interactive suggestions, so such
+options are not allowed with PySpelling.
+
+Spell checker specific options basically translate directly to the spell checker's command line options and only
+requires you to remove the leading `-`s you would normally specify on the command line. For instance, a short form
+option such as `-l` would simply be represented with the keyword `l`, and the long name form of the same option `--lang`
+would be represented as `lang`. Following the key, you would provide the appropriate value depending on it's
+requirement.
+
+Boolean flags would be set to `true`.
+
+```yaml
+matrix:
+- name: html
+  sources:
+  - docs/**/*.html
+  aspell:
+    H: true
+  pipeline:
+  - pyspelling.filters.html
+```
+
+Other options would be set to a string or an integer value.
+
+```yaml
+matrix:
+- name: python
+  sources:
+  - pyspelling/**/*.py
+  aspell:
+    lang: en
+    d: en_US
+  pipeline:
+  - pyspelling.filters.python:
+      strings: false
+      comments: false
+```
+
+Lastly, if you have an option that can be used multiple times, just set the value up as an array, and the option will
+be added for each value in the array. Assuming you had multiple pre-compiled dictionaries, you could add them under
+Aspell's `--add-extra-dicts` option:
+
+```yaml
+matrix:
+- name: Python Source
+  sources:
+  - pyspelling/**/*.py
+  aspell:
+    add-extra-dicts:
+    - my-dictionary.dic
+    - my-other-dictionary.dic
+  pipeline:
+```
+
+The above options would be equivalent to doing this from the command line:
+
+```shell-session
+$ aspell --add-extra-dicts my-dictionary.dic --add-extra-dicts my-other-dictionary.dic
+```
