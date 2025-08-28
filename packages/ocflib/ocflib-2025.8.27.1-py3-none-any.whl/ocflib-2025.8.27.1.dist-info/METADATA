@@ -1,0 +1,148 @@
+Metadata-Version: 2.3
+Name: ocflib
+Version: 2025.8.27.1
+Summary: libraries for account and server management
+Author: Open Computing Facility
+Author-email: help@ocf.berkeley.edu
+Requires-Python: >=3.7,<3.12
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Dist: attrs (>=22.2.0)
+Requires-Dist: cached-property (>=1.5.2,<2.0.0)
+Requires-Dist: cracklib (>=2.9.6,<3.0.0)
+Requires-Dist: dnspython (>=2.1.0,<3.0.0)
+Requires-Dist: jinja2 (>=3.0.3,<4.0.0)
+Requires-Dist: ldap3 (>=2.9.1,<3.0.0)
+Requires-Dist: pexpect (>=4.9.0,<5.0.0)
+Requires-Dist: pycryptodome (>=3.19.0,<4.0.0)
+Requires-Dist: pygithub (>=1.56)
+Requires-Dist: pymysql (>=1.0.2,<2.0.0)
+Requires-Dist: pysnmp (>=4.4.12,<5.0.0)
+Requires-Dist: pyyaml (>=6.0.1,<7.0.0)
+Requires-Dist: redis (>=4.3.6)
+Requires-Dist: requests (>=2.26.1,<3.0.0)
+Requires-Dist: sqlalchemy (>=1.4.52,<2.0.0)
+Description-Content-Type: text/markdown
+
+# ocflib
+
+[![Build Status](https://jenkins.ocf.berkeley.edu/buildStatus/icon?job=ocf/ocflib/master)](https://jenkins.ocf.berkeley.edu/job/ocf/job/ocflib/job/master)
+[![Coverage Status](https://coveralls.io/repos/github/ocf/ocflib/badge.svg?branch=master)](https://coveralls.io/github/ocf/ocflib?branch=master)
+[![PyPI version](https://badge.fury.io/py/ocflib.svg)](https://pypi.org/project/ocflib/)
+
+ocflib is a Python library for working with [Open Computing Facility][ocf]
+services (in particular, accounts and server management).
+
+The library targets Python 3.5.3 and 3.7 (the versions available in Debian
+stretch and buster).
+
+The goal of the library is to make it easier to re-use OCF python code. In the
+past, code was split between approve, atool, create, chpass, sorry, signat,
+etc., which made it difficult to do things like share common password
+requirements.
+
+## What belongs here
+
+In general, code which can be re-used should be here, but standalone
+applications or binaries shouldn't. For example, [ocfweb][ocfweb] uses ocflib
+code to change passwords and create accounts, but the Django web app doesn't
+belong here.
+
+## Using on OCF
+
+ocflib is installed by [Puppet][puppet] on the OCF, so you can simply do things
+like `import ocflib.lab.stats` from the system python3 installation. We _don't_
+install it to python2 site-packages.
+
+We build [a Debian package][debian-pkg] which is installed by Puppet. We also
+publish new versions to [PyPI][pypi], which is useful because it allows easy
+installation into virtualenvs.
+
+## Note about lockfiles
+
+This repository includes a `poetry.lock` file. Lockfiles are usually used to
+ensure that the exact same versions of dependencies are installed across
+different machines. However, as this is a library, we don't want to force
+downstream users to use the exact same versions of dependencies as us, and
+indeed, the lockfile is ignored when distributing. We still include it in the
+repository to make it easier to develop, test, and debug ocflib.
+
+## Installing locally
+
+### For Testing Changes
+
+Development of ocflib uses [Poetry](https://python-poetry.org/). The easiest way
+to test changes to ocflib is to let Poetry manage the virtual environment for
+you:
+
+    poetry install
+    poetry shell
+
+Now, if you import something from ocflib, you'll be using the version from your
+working copy.
+
+### Testing and linting
+
+We use pytest to test our code, and pre-commit to lint it. You should run
+`make test` before pushing to run both.
+
+The `tests` directory contains automated tests which you're encouraged to add to
+(and not break). The `tests-manual` directory contains scripts intended for
+testing.
+
+#### Using pre-commit
+
+We use [pre-commit][pre-commit] to lint our code before commiting. While some of
+the rules might seem a little arbitrary, it helps keep the style consistent, and
+ensure annoying things like trailing whitespace don't creep in.
+
+You can simply run `make install-hooks` to install the necessary git hooks; once
+installed, pre-commit will run every time you commit.
+
+Alternatively, if you'd rather not install any hooks, you can simply use
+`make test` as usual, which will also run the hooks.
+
+### Troubleshooting: Cracklib Error
+
+If you're trying to run make install-hooks on ocfweb (or related repos) and get
+this error:
+
+```
+./_cracklib.c:40:10: fatal error: 'crack.h' file not found
+  #include <crack.h>
+           ^~~~~~~~~
+  1 error generated.
+```
+
+The issue relates to the cracklib package not finding the necessary header files
+to install. Make sure cracklib is installed on your machine
+(https://github.com/cracklib/cracklib, if you're on Mac,
+`brew install cracklib`).
+
+## Deploying changes
+
+Deploying changes involves:
+
+- Running tests and linters
+- Pushing a new version to [PyPI][pypi]
+- Building a Debian package
+- Pushing the Debian package to our internal [apt][apt]
+
+[Jenkins][jenkins] will automatically perform all of these steps for you on
+every push, including automatically generating a new version number. As long as
+`make test` passes, your code will be automatically deployed. You can monitor
+the progress of your deploy [here][jenkins].
+
+[ocf]: https://www.ocf.berkeley.edu/
+[ocfweb]: https://github.com/ocf/ocfweb/
+[puppet]: https://github.com/ocf/puppet/
+[pypi]: https://pypi.python.org/pypi/ocflib
+[apt]: http://apt.ocf.berkeley.edu/
+[jenkins]: https://jenkins.ocf.berkeley.edu/view/ocflib-deploy/
+[debian-pkg]: http://apt.ocf.berkeley.edu/pool/main/p/python-ocflib/
+[pre-commit]: http://pre-commit.com/
+
