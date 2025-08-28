@@ -1,0 +1,47 @@
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: uv sync
+      - name: Run formatting, linting and type checking
+        if: inputs.run-linting
+        run: |
+          uv run black --check examples src tests
+          uv run ruff check examples src tests
+          uv run mypy src
+      - name: Run tests without coverage
+        if: '!inputs.run-coverage'
+        run: uv run pytest
+      - name: Run tests with coverage
+        if: inputs.run-coverage
+        run: uv run pytest --cov
+      - if: inputs.run-coverage && matrix.python-version == '3.8'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJson(inputs.python-versions) }}
+name: Reusable Test Workflow
+on:
+  workflow_call:
+    inputs:
+      python-versions:
+        type: string
+        default: '["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]'
+      run-coverage:
+        type: boolean
+        default: true
+      run-linting:
+        type: boolean
+        default: true
+    secrets:
+      CODECOV_TOKEN:
+        required: false
