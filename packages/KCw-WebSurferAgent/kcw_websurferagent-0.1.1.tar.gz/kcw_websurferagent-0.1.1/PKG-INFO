@@ -1,0 +1,76 @@
+Metadata-Version: 2.4
+Name: KCw-WebSurferAgent
+Version: 0.1.1
+Summary: This is an agent package to automate KCw workflows.
+Project-URL: Homepage, https://github.com/kpmg-nl-emu/dani-agent.git
+Author-email: Richter van Emmerik <vanemmerik.richter@kpmg.nl>
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.10
+Requires-Dist: aiofiles>=24.1.0
+Requires-Dist: aiohttp>=3.12.15
+Requires-Dist: autogen-agentchat>=0.7.1
+Requires-Dist: autogen-core>=0.7.1
+Requires-Dist: autogen-ext>=0.7.1
+Requires-Dist: azure-ai-inference>=1.0.0b9
+Requires-Dist: azure-core>=1.35.0
+Requires-Dist: azure-identity>=1.23.1
+Requires-Dist: playwright>=1.54.0
+Requires-Dist: python-dotenv>=1.1.1
+Requires-Dist: requests>=2.32.4
+Description-Content-Type: text/markdown
+
+# Dani-agent
+
+*Automates KPMG Clara workflows by using AI agents to perform browser actions such as login, clicking, input, and navigation.
+
+**Install via pip**
+- Install this package directly. It is that easy!
+  - `pip install KCw-WebSurferAgent`
+
+**Browser Automation Quickstart**
+- Purpose: Run `browser_automation.py` to automate the KPMG Clara workflow using a Planner + WebSurfer agent pair.
+- Outcome: The script performs automated web actions (such as login, clicking, input) on the engagement dashboard in headless mode. All actions are executed without opening a visible browser window; progress and results are logged to the console and saved as screenshots and debug logs.
+
+**Configure .env**
+- Create a `.env` in the repo root with:
+  - `AZURE_OPENAI_ENDPOINT=https://<your-endpoint>.openai.azure.com/`
+  - `AZURE_OPENAI_KEY=<your-azure-openai-key>`
+  - `USER_NAME=<your-kpmg-username>`
+  - `USER_PASSWORD=<your-kpmg-password>`
+
+**Run**
+- Start automation: `python examples/browser_automation.py`
+- Headless mode is enabled by default. You can not watch the browser currently, `headless=False` does not work.
+
+**What the script does**
+- Builds a small “team” of two agents:
+  - `Planner` (AssistantAgent): Breaks the task into concrete web actions (one step at a time).
+  - `WebSurfer` (KCWMultimodalWebSurfer): Executes those actions in Playwright (visit, click, input, scroll, uploads, deterministic menu actions, etc.).
+- The two agents alternate via `SelectorGroupChat` until termination.
+- Termination is controlled by `TextMentionTermination("[]")`: when the Planner decides the task is complete, it emits `[]`, and the run ends.
+
+**Customize the task**
+- Edit `USER_TASK` inside `browser_automation.py` to describe the workflow in natural language.
+- Keep steps clear and ordered (the Planner will break them down and call WebSurfer tools):
+  - Supported tools include:
+    - Navigation: `visit_url`, `web_search`, `history_back`, `sleep`
+    - Interaction: `click`, `input_text`, `hover`, `scroll_down`, `scroll_up`, `scroll_element_up`, `scroll_element_down`
+    - KCW-specific: `menu_tab(tab_name)`, `stacked_windows`, `upload_files(files, to)`, `fill_upload_grid_cell(column, value)`
+    - Reading: `answer_question`, `summarize_page`
+
+**Debugging and artifacts**
+- Screenshots: Controlled by `to_save_screenshots=True` and `debug_dir` on `MultimodalWebSurfer`.
+  - Update `debug_dir` to a writable path on your machine.
+- Step-by-step trace: The agent runs via the command line and logs each step it takes. In
+parallel, screenshots for each step are saved to `websurfer_images` (or your configured `debug_dir`). Use the console logs to see the sequence and the screenshots to get visual cues of where the agent goes at each step.
+- Prompt/rects dumps: Some debug info is written during runs (e.g., rect maps, prompts). If you don’t see files, verify the paths in `KCw_WebSurferAgent/kcw_multimodal_web_surfer.py` and `KCw_WebSurferAgent/kcw_playwright_controller.py` and adjust if needed.
+- Logs: The script sets `TRACE_LOGGER_NAME` to DEBUG; you’ll see detailed agent/tool logs in the console.
+
+**Troubleshooting**
+- Login problems:
+  - Double‑check `USER_NAME`/`USER_PASSWORD` in `.env` and that the `start_page` is correct for your environment.
+
+**Disclaimer**
+- Not 100% accurate: The Planner/WebSurfer uses AI to plan and act. It can misread UI, for example choose the wrong selector. Keep a human in the loop.
