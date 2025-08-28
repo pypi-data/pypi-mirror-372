@@ -1,0 +1,115 @@
+name: Publish Docker image
+
+on:
+  workflow_dispatch:
+  push:
+  workflow_call:
+
+env:
+  TEST_TAG: user/app:test
+
+jobs:
+  test-build:
+    name: Test and build Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free up disk space
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet || true
+
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Build test Docker image
+        id: push
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: ${{ env.TEST_TAG }}
+
+      - name: Docker smoke test
+        run: ./tests/docker-smoke.sh
+
+  push_to_registry:
+    name: Push Docker image to registry
+    runs-on: ubuntu-latest
+    environment:
+      name: docker
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    needs: test-build
+    # Only run on main branch or when explicitly triggered
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      matrix:
+        python-version: ["3.12.8", "3.13.5"]
+    steps:
+      - name: Free up disk space
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet || true
+
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+        with:
+          registry: ${{ vars.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set short Python version
+        id: pyver
+        run: |
+          echo "SHORT_PY=$(echo '${{ matrix.python-version }}' | cut -d. -f1,2)" >> $GITHUB_OUTPUT
+          echo "ENABLE_DEFAULT=$([ \"$(echo '${{ matrix.python-version }}' | cut -d. -f1,2)\" = \"3.13\" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_ORG }}/${{ github.event.repository.name }}
+          tags: |
+            type=semver,pattern={{version}},enable=${{ steps.pyver.outputs.ENABLE_DEFAULT }}
+            type=semver,pattern={{version}},suffix=-py${{ steps.pyver.outputs.SHORT_PY }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ steps.pyver.outputs.ENABLE_DEFAULT }}
+            type=semver,pattern={{major}}.{{minor}},suffix=-py${{ steps.pyver.outputs.SHORT_PY }}
+            type=ref,event=branch,enable=${{ steps.pyver.outputs.ENABLE_DEFAULT }}
+            type=ref,event=branch,suffix=-py${{ steps.pyver.outputs.SHORT_PY }}
+            type=ref,event=pr,enable=${{ steps.pyver.outputs.ENABLE_DEFAULT }}
+            type=ref,event=pr,suffix=-py${{ steps.pyver.outputs.SHORT_PY }}
+            type=sha,enable=${{ steps.pyver.outputs.ENABLE_DEFAULT }}
+            type=sha,suffix=-py${{ steps.pyver.outputs.SHORT_PY }}
+            type=raw,value=latest,enable=${{ steps.pyver.outputs.ENABLE_DEFAULT && startsWith(github.ref, 'refs/tags/') }}
+          flavor: |
+            latest=false
+
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        with:
+          platforms: linux/amd64,linux/arm64
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            PYTHON_VERSION=${{ matrix.python-version }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_ORG }}/${{ github.event.repository.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
