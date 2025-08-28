@@ -1,0 +1,98 @@
+# -*- coding:utf-8 -*-
+from __future__ import unicode_literals, print_function
+from django.dispatch import receiver
+from django.db.models.signals import post_save
+from xyz_auth.signals import to_get_user_profile
+from xyz_saas.signals import to_get_party_settings
+from xyz_verify.models import Verify
+from . import models, helper, serializers, choices
+from django.conf import settings
+from xyz_util.datautils import access
+import logging
+
+log = logging.getLogger("django")
+
+
+# from xyz_tenant.models import App
+
+
+# @receiver(post_save, sender=App)
+# def init_grade(sender, **kwargs):
+#     app = kwargs['instance']
+#     if app.name != 'school':
+#         return
+#     from tenant_schemas.utils import tenant_context
+#     with tenant_context(app.tenant):
+#         try:
+#             if models.Grade.objects.count() == 0:
+#                 helper.gen_default_grades(app.settings.get('type', choices.SCHOOL_TYPE_UNIVERSITY))
+#         except Exception as e:
+#             log.error("init_grade error: %s" % e)
+
+
+@receiver(post_save, sender=models.Grade)
+def init_session(sender, **kwargs):
+    try:
+        grade = kwargs['instance']
+        if grade.number == choices.GRADE_GRADUATE:
+            return
+        helper.gen_default_session(grade.number - 1)
+    except Exception as e:
+        import traceback
+        log.error("init_session error: %s", traceback.format_exc())
+
+
+@receiver(post_save, sender=models.Student)
+def student_change_name(sender, **kwargs):
+    created = kwargs.get('created')
+    if created:
+        return
+    student = kwargs['instance']
+    user = student.user
+    if user.get_full_name() == student.name:
+        return
+    user.first_name = student.name
+    user.last_name = ''
+    user.save()
+
+
+@receiver(to_get_user_profile)
+def get_school_profile(sender, **kwargs):
+    user = kwargs['user']
+    rs = []
+    if hasattr(user, 'as_school_student'):
+        rs.append(serializers.CurrentStudentSerializer(user.as_school_student, context=dict(request=kwargs['request'])))
+    if hasattr(user, 'as_school_teacher'):
+        rs.append(serializers.CurrentTeacherSerializer(user.as_school_teacher, context=dict(request=kwargs['request'])))
+    return rs
+
+
+@receiver(to_get_party_settings)
+def get_school_settings(sender, **kwargs):
+    return {'school': {'student': {'unregistered': access(settings, 'SCHOOL.STUDENT.UNREGISTERED')}}}
+
+
+@receiver(post_save, sender=Verify)
+def create_student_after_verify(sender, **kwargs):
+    created = kwargs.get('created')
+    if created:
+        return
+    helper.create_student_after_verify(kwargs.get('instance'))
+
+
+def create_student_for_wechat_user(sender, **kwargs):
+    wuser = kwargs['instance']
+    helper.create_informal_student(wuser.user)
+
+
+def bind_create_student_for_wechat_user_receiver():
+    b = access(settings, 'SCHOOL.STUDENT.UNREGISTERED')
+    if not b or b.lower() != 'create_from_wechat':
+        return
+    from xyz_wechat.models import User
+    from django.db.models.signals import post_save
+    print('bind_create_student_for_wechat_user_receiver')
+    post_save.connect(create_student_for_wechat_user, sender=User)
+
+
+bind_create_student_for_wechat_user_receiver()
