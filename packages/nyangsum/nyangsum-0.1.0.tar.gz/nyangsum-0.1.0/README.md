@@ -1,0 +1,121 @@
+Nyangsum
+
+[English](README.md) | [한국어](README.ko.md)
+
+Korean cat-sound lorem ipsum generator. Produces text composed of “냥/냐옹/나앙/냐아앙 …” variants.
+
+Key properties:
+- Tokens: 냥, 냐옹, 나앙(요청 반영), 늘임형 “냐” + “아”*k + (“앙”|“옹”)
+- Default distribution: 냥 0.45, 냐옹 0.30, 나앙 0.15, 늘임형 0.10
+- Punctuation: sentences can include commas, inner !/?/..., end with [., !, ?, ...], quotes occasionally
+- Deterministic mode via seed()
+
+Install (local dev)
+
+python -m pip install -e .
+
+Quickstart
+
+Python:
+
+from nyangsum import nyang
+
+print(nyang.words(5))                     # e.g., "냥 냐옹 냥 냥 냐옹"
+print(nyang.sentence(words=8))            # one phrase with exactly 8 words
+print("\n\n".join(nyang.paragraphs(2)))   # two paragraphs
+
+CLI:
+
+# Exactly N phrases of M words
+python3 -m nyangsum --phrases 2 --words 6
+
+# N sentences (word count sampled in [min, max])
+python3 -m nyangsum --sentences 3 --min-words 5 --max-words 10
+
+# N paragraphs, optionally HTML-wrapped
+python3 -m nyangsum --paragraphs 2 --html
+
+# Deterministic output with seed
+python3 -m nyangsum --phrases 1 --words 10 --seed 42
+
+Examples
+
+$ python3 -m nyangsum --phrases 1 --words 6
+냥 냐옹 냥, 냐옹 나앙 냥.
+
+$ python3 -m nyangsum --paragraphs 1 --html
+<p>냐옹 냥 냥 냥? 냥 냐옹 냐옹 냥 냥 냥. 냥 냥 냥...</p>
+
+API
+
+The public API mirrors common lorem-ipsum ergonomics but outputs Korean cat sounds.
+
+- nyang.seed(value: int | None) -> None
+  Seed the internal RNG for reproducible output.
+
+- nyang.word(max_len=6, capitalize=False, weights: dict | None = None, elong_min_a=1, elong_max_a=4, tail_weights=None) -> str
+  Generate one token:
+  - Base tokens favored: "냥", "냐옹", "나앙"
+  - Elongated variants: "냐" + "아"*k + ("앙" | "옹") with k in [elong_min_a, elong_max_a]
+  - weights override example: {"냥":0.5, "냐옹":0.3, "나앙":0.15, "elongated":0.05}
+
+- nyang.words(n=1, as_list=False, sep=" ") -> str | list[str]
+  Generate n words (joined by sep unless as_list=True).
+
+- nyang.phrase(words_count: int, punctuation=True) -> str
+  Exactly words_count tokens, internal punctuation possible, ends with [., !, ?, ...], may wrap in quotes.
+
+- nyang.phrases(n: int, words_count: int, as_list=False, punctuation=True) -> str | list[str]
+  Generate n phrases, each with words_count words. Joined by newline unless as_list=True.
+
+- nyang.sentence(words: int | None = None, word_range=(4, 12), punctuation=True) -> str
+  Convenience alias for a single phrase. If words is None, samples uniformly from word_range.
+
+- nyang.sentences(n=1, words: int | None = None, word_range=(4, 12), as_list=False, punctuation=True) -> str | list[str]
+  Multiple sentences. Joined by space unless as_list=True.
+
+- nyang.paragraph(sentence_range=(3, 7)) -> str
+  Paragraph with a sampled number of sentences.
+
+- nyang.paragraphs(n=1, sentence_range=(3, 7), as_list=False) -> str | list[str]
+  Multiple paragraphs (double-newline separated unless as_list=True).
+
+- nyang.text(paragraphs_count=3, sentence_range=(3, 7), html=False) -> str
+  Produce multiple paragraphs; html=True wraps each as <p>...</p>.
+
+CLI
+
+Console module: python3 -m nyangsum
+
+- Selection
+  - --phrases N --words M       Generate N phrases, each with exactly M words
+  - --sentences N               Generate N sentences (pair with --words or use --min-words/--max-words)
+  - --paragraphs N              Generate N paragraphs (pair with --html optionally)
+  - --words M                   Generate exactly M words (standalone)
+
+- Ranges
+  - --min-words X --max-words Y
+  - --min-sentences A --max-sentences B
+
+- Formatting
+  - --html                      Wrap paragraphs in <p>...</p> (only with --paragraphs)
+  - --no-punct                  Disable punctuation for phrases/sentences
+
+- Reproducibility / tuning
+  - --seed INT
+  - --weights JSON              Override base/elongated weights
+                                e.g., --weights '{"냥":0.5,"냐옹":0.3,"나앙":0.15,"elongated":0.05}'
+
+Notes:
+- Default behavior: prints a single paragraph of 500 words (one long phrase).
+- Base tokens “냥/냐옹/나앙” are most frequent by default; elongated variants appear occasionally.
+- Length caps (max_len) keep visual width reasonable.
+
+Rationale
+
+- Follows the reference “meowsum” structure and UX in Python.
+- Korean-specific tokens with adjustable weights to favor 냥/냐옹/나앙.
+
+License
+
+MIT
