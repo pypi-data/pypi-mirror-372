@@ -1,0 +1,68 @@
+Metadata-Version: 2.4
+Name: moto-testkit
+Version: 0.1.1
+Summary: An extended testkit for AWS services using moto, with sync/async helpers and examples.
+Home-page: https://github.com/RafaeldaSilvaa/moto-testkit
+Author: Rafael da Silva
+Author-email: Rafael da Silva <rafaeldasilva.98@hotmail.com>
+Keywords: aws,testing,moto,pytest,unittest,dynamodb,s3,asyncio
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Testing
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: Utilities
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: boto3>=1.34.0
+Requires-Dist: aioboto3>=12.0.0
+Requires-Dist: pytest>=7.0.0
+Dynamic: author
+Dynamic: home-page
+
+# moto-testkit
+
+**moto-testkit** is an enhanced testing toolkit built on top of [moto](https://github.com/getmoto/moto), providing:
+- Easy setup for **unit tests** (Pytest + Unittest).
+- Support for **sync and async workflows**.
+- Ready-to-use **helpers** for AWS services.
+- A full **examples/** directory with practical test cases.
+
+---
+
+## 🚀 Benefits over `moto`
+- ✅ Simplified setup for both sync & async tests.
+- ✅ Preconfigured decorators and fixtures for Pytest & Unittest.
+- ✅ Rich **examples** for DynamoDB, S3, and other AWS services.
+- ✅ Helpers for repetitive patterns (table creation, sessions, contexts).
+
+---
+
+## 📂 Examples
+Check the [examples/](examples) folder for:
+- **Pytest usage** with async/sync.
+- **Unittest usage** with decorators.
+- **Service-specific helpers**.
+
+```python
+import unittest
+from moto_testkit import use_moto_testkit
+
+@use_moto_testkit(auto_start=True)
+class TestDynamoDB(unittest.TestCase):
+    def setUp(self):
+        self.repo.create_table(
+            table_name="Users",
+            key_schema=[{"AttributeName": "id", "KeyType": "HASH"}],
+            attribute_definitions=[{"AttributeName": "id", "AttributeType": "S"}]
+        )
+
+    def test_insert_user(self):
+        self.repo.put_item(table_name="Users", item={"id": "123", "name": "Alice"})
+        result = self.repo.get_item(table_name="Users", key={"id": "123"})
+        assert result["Item"]["name"] == "Alice"
+
