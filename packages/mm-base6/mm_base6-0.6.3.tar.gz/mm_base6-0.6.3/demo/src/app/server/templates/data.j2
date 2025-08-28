@@ -1,0 +1,66 @@
+{% extends "inc/base.j2" %}
+{% block content %}
+
+<div class="page-header">
+  <h2>data</h2>
+  <sl-divider vertical></sl-divider>
+  <form class="inline">
+    <sl-select name="status" placeholder="status" clearable value="{{ form.status }}">
+      {% for status in statuses %}
+      <sl-option value="{{ status.value }}">{{ status.value }}</sl-option>
+      {% endfor %}
+    </sl-select>
+    <sl-input type="number" placeholder="limit" name="limit" value="{{ form.limit }}"></sl-input>
+    <sl-button type="submit">filter</sl-button>
+  </form>
+  <sl-divider vertical></sl-divider>
+  <sl-button-group>
+    <sl-button href="/api-post/data/generate-one">generate one</sl-button>
+    <sl-button href="/api-post/data/generate-many">generate many</sl-button>
+  </sl-button-group>
+</div>
+
+<table class="sortable">
+  <thead>
+    <tr class="sticky-top">
+      <th>created_at</th>
+      <th>status</th>
+      <th>value</th>
+      <th>inc</th>
+      <th>actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in data_list %}
+    <tr>
+      <td>{{ d.created_at | dt }}</td>
+      <td>{{ d.status | data_status }}</td>
+      <td>{{ d.value | n }}</td>
+      <td>
+        <sl-button onclick="document.querySelector('#dialog-inc-{{d.id}}').show()">inc</sl-button>
+        <sl-dialog label="inc data id={{d.id}}" id="dialog-inc-{{d.id}}">
+          <form method="post" action="/data/{{ d.id }}/inc" class="inline">
+            <sl-input type="number" name="value" value="1" placeholder="value to inc"></sl-input>
+            <sl-button type="submit" variant="primary">inc</sl-button>
+          </form>
+        </sl-dialog>
+      </td>
+      <td>
+        <sl-dropdown>
+          <sl-button slot="trigger" caret>actions</sl-button>
+          <sl-menu>
+            <sl-menu-item><a href="/api-post/data/{{ d.id }}/inc?value=2">inc</a></sl-menu-item>
+            <sl-menu-item><a href="/api-delete/data/{{ d.id }}"
+                onclick="return confirm('sure?')">delete</a></sl-menu-item>
+            <sl-menu-item><a href="/api/data/{{ d.id }}">view</a></sl-menu-item>
+          </sl-menu>
+        </sl-dropdown>
+
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+{% endblock %}
