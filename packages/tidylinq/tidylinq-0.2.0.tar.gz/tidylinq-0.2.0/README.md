@@ -1,0 +1,46 @@
+# tidylinq
+
+A set of utilities I've found useful when developing LLM tooling.
+
+Usage:
+
+```python
+from pydantic import BaseModel, Field
+from textwrap import dedent
+from tidylinq import from_iterable, completion_with_schema, retry
+
+class Translation(BaseModel):
+    term_source: str = Field(description="The source language term")
+    term_target: str = Field(description="The term translated to the target language.")
+    example_source: str = Field(description="Example of using the term in the source language.")
+    example_target: str = Field(description="Example sentence target to the target language.")
+
+messages = [
+    {
+        "role": "system",
+        "content": dedent("""
+            You are an expert translator. Output a structured Japanese response in JSON format for the provided English words.
+        """).strip(),
+    },
+]
+
+translations = (
+    from_iterable(["cat", "dog", "hyena"])
+    .select(
+        lambda w: retry(completion_with_schema, backoff=1.0)(
+            model="gemini/gemini-2.5-flash",
+            messages=messages + [{"role": "user", "content": w}],
+            response_schema=Translation,
+        ),
+        parallelism=4,
+    )
+    .with_progress("Translating words")
+)
+
+results = translations.to_list()
+for translation in results:
+    print(f"English: {translation.term_source}")
+    print(f"Japanese: {translation.term_target}")
+    print(f"Example (EN): {translation.example_source}")
+    print(f"Example (JP): {translation.example_target}")
+```
