@@ -1,0 +1,139 @@
+# How to write ReplKit2 apps
+
+## Create a basic app
+
+```python
+from replkit2 import App
+from dataclasses import dataclass, field
+
+@dataclass
+class State:
+    items: list = field(default_factory=list)
+    count: int = 0
+
+app = App("myapp", State)
+
+@app.command(display="table", headers=["ID", "Name", "Status"])
+def list_items(state):
+    return [{"ID": i, "Name": item["name"], "Status": item["status"]} 
+            for i, item in enumerate(state.items)]
+
+@app.command()
+def add_item(state, name: str, status: str = "active"):
+    state.items.append({"name": name, "status": status})
+    state.count += 1
+    return f"Added {name}"
+
+# Run as REPL: app.run()
+# Run as MCP: app.mcp.run()
+# Run as CLI: app.cli()
+```
+
+## Use display types
+
+- `display="table"` with list of dicts
+- `display="box"` with string
+- `display="tree"` with nested dict
+- `display="list"` with list of strings
+- `display="progress"` with {"value": n, "total": m}
+- `display="markdown"` with {"elements": [...]}
+
+## Add MCP support
+
+```python
+@app.command(fastmcp={"type": "tool"})
+def process(state, text: str, count: int = 10):
+    # Tool: callable action
+    return f"Processed {text} {count} times"
+
+@app.command(fastmcp={"type": "resource"})
+def get_data(state, id: int):
+    # Resource: readable data at test://get_data/{id}
+    return {"id": id, "data": state.items.get(id)}
+
+@app.command(fastmcp={"type": "prompt"})
+def generate(state, topic: str = "general"):
+    # Prompt: template for LLMs
+    return f"Write about {topic} based on: {state.items}"
+```
+
+## Handle types correctly for MCP
+
+```python
+# GOOD - works with MCP
+def command(state,
+    required: str,                    # Required param
+    optional: str = None,             # Optional (use = None)
+    items: List[str] = None,         # Lists work
+    config: Dict[str, int] = None,   # Dicts work
+):
+    pass
+
+# BAD - causes "unknown" in MCP
+def command(state,
+    param,                           # No type annotation
+    optional: Optional[str] = None,  # Don't use Optional[T]
+    either: Union[str, int] = "",    # Don't use Union
+):
+    pass
+```
+
+## Resource parameter rules
+
+Resources parse from URIs, so parameters have constraints:
+
+```python
+# Required params first, then optional, dict must be last
+@app.command(fastmcp={"type": "resource"})
+def search(state, 
+    category: str,                    # Required: /search/{category}/...
+    tags: str = None,                 # Optional: parsed from comma-separated
+    filters: dict = None,             # Dict last: consumes remaining segments
+):
+    tag_list = tags.split(",") if tags else []
+    # URI: app://search/books/fiction,mystery/status/active/priority/high
+    # Result: category="books", tags="fiction,mystery", filters={"status": "active", "priority": "high"}
+```
+
+## Add CLI support
+
+```python
+@app.command(typer={"help": "Add a new task"})
+def add(state, text: str, priority: str = "normal"):
+    # Available in CLI as: myapp add "text" --priority high
+    return f"Added: {text}"
+
+@app.command(typer={"enabled": False})
+def debug(state):
+    # Only in REPL, not CLI
+    return vars(state)
+```
+
+## Custom display
+
+```python
+@app.formatter.register("custom")
+def custom_display(data, meta, formatter):
+    from replkit2.textkit import box, compose
+    return compose(
+        box(data["summary"], title="Overview"),
+        formatter.format(data["details"], meta),  # Reuse formatter
+    )
+
+@app.command(display="custom")
+def dashboard(state):
+    return {"summary": "Active: 5", "details": state.items}
+```
+
+## Run the app
+
+```python
+if __name__ == "__main__":
+    import sys
+    if "--mcp" in sys.argv:
+        app.mcp.run()        # MCP server mode
+    elif "--cli" in sys.argv:
+        app.cli()            # CLI mode  
+    else:
+        app.run()            # REPL mode (default)
+```
