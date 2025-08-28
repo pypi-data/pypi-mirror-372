@@ -1,0 +1,183 @@
+{% from "widgets/data/traceback.html.j2" import render_traceback %}
+<style>
+    .log-box {
+        max-height: 300px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        padding: 1em;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-family: monospace;
+    }
+</style>
+
+<div class="container-xl">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Task: <code>{{ widget.task_context.task_name }}</code></h2>
+        <div>
+            {% if widget.task_report.status == 'success' %}
+                <span class="badge bg-success badge-status">✅ Success</span>
+            {% elif widget.task_report.status == 'failed' %}
+                <span class="badge bg-danger badge-status">❌ Failed</span>
+            {% elif widget.task_report.status == 'running' %}
+                <span class="badge bg-warning badge-status">⏳ Running</span>
+            {% elif widget.task_report.status == 'skipped' %}
+                <span class="badge bg-secondary badge-status">⛔ Skipped</span>
+            {% else %}
+                <span class="badge bg-secondary badge-status">{{ widget.task_report.status }}</span>
+            {% endif %}
+            <button id="retry-task-btn" class="btn btn-outline-primary ms-2">🔁 Retry Task</button>
+        </div>
+    </div>
+
+    <!-- Task Summary -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">Task Context</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6"><strong>Task ID:</strong> {{ widget.task_context.task_id }}</div>
+                <div class="col-md-6">
+                    <strong>Parent Task ID:</strong>
+                    {% if widget.task_context.parent_task_id %}
+                        {{ widget.task_context.parent_task_id }}
+                      <a href="{{ url_for('task_details', task_id=widget.task_context.parent_task_id) }}">
+                        [ Parent Details ]
+                      </a>
+                      <a href="{{ url_for('tasks_graph', task_id=widget.task_context.parent_task_id) }}">
+                        [ Graph ]
+                      </a>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6"><strong>Function:</strong> <code>{{ widget.task_context.func_name }}</code>
+                </div>
+                <div class="col-md-6"><strong>Max Retries:</strong> {{ widget.task_context.max_retries }}</div>
+                <div class="col-md-6"><strong>Retry Delay:</strong> {{ widget.task_context.retry_delay }}</div>
+                <div class="col-md-6"><strong>Allow
+                    Concurrent:</strong> {{ '✅ Yes' if widget.task_context.allow_concurrent else '❌ No' }}</div>
+                <div class="col-md-6"><strong>Origin:</strong> {{ widget.task_context.task_origin }}</div>
+                <div class="col-md-6"><strong>Args:</strong> <code>{{ widget.task_context.args }}</code></div>
+                <div class="col-md-6"><strong>Kwargs:</strong> <code>{{ widget.task_context.kwargs }}</code></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Execution Report -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">Execution Report</div>
+        <div class="card-body row">
+            <div class="col-md-6"><strong>Start Time:</strong> {{ widget.task_report.start_time }}</div>
+            <div class="col-md-6"><strong>End Time:</strong> {{ widget.task_report.end_time }}</div>
+            <div class="col-md-6"><strong>Duration:</strong> {{ widget.task_report.duration or 0 }}</div>
+            <div class="col-md-6"><strong>Attempts:</strong> {{ widget.task_report.attempts }}</div>
+        </div>
+        <div class="card-body">
+
+            <p><strong>Result:</strong> <code>{{ widget.task_report.result or "None" }}</code></p>
+            <div class="log-box">
+                <strong>Logs:</strong>
+                <pre id="log-output">{{ widget.task_report.logs|safe or "No logs" }}</pre>
+            </div>
+
+            {% if widget.task_report.tracebacks %}
+                <!-- Collapsible Traceback -->
+                <button class="btn btn-sm btn-outline-secondary mt-3" data-bs-toggle="collapse"
+                        data-bs-target="#tracebackCollapse" id="tracebackButton">
+                    Show Traceback
+                </button>
+                <div class="collapse mt-2" id="tracebackCollapse">
+                    {{ render_traceback({"list_traceback": widget.task_report.tracebacks}) }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Notification Configuration -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">Notification Config</div>
+        <div class="card-body">
+            <p>Notifier Configuration:</p>
+
+            {% if widget.task_context.notifier_config %}
+                <ul>
+                    {% for notif in widget.task_context.notifier_config %}
+                        <li><strong>Type:</strong> {{ notif.name }} | <strong>Event:</strong> {{ notif.events }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">No notification config defined.</p>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <p>Resolved Notifier:</p>
+            {% if widget.task_context.resolved_notifiers %}
+                <ul>
+                    {% for notif in widget.task_context.resolved_notifiers %}
+                        <li>
+                            <strong>Name:</strong> {{ notif.name }} | <strong>Event:</strong> {{ notif.events }} |
+                            <strong>Config:</strong> {{ notif.config }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">No resolved notifications config.</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Footer: Thread & Timestamps -->
+    <div class="card mb-4">
+        <div class="card-header">Metadata</div>
+        <div class="card-body row">
+            <div class="col-md-6"><strong>Thread ID:</strong> {{ widget.task_report.thread_ident }}</div>
+            <div class="col-md-6"><strong>Native ID:</strong> {{ widget.task_report.thread_native_id }}</div>
+        </div>
+    </div>
+</div>
+
+<script src="/app_static/tasks_worker/js/logs-handler.js"></script>
+<script>
+    setupLogStreamHandler('{{ widget.task_context.task_id }}');
+
+    // scrollable logs
+    const logOutput = document.getElementById('log-output');
+    const observer = new MutationObserver(() => {
+        logOutput.scrollTop = logOutput.scrollHeight;
+    });
+    observer.observe(logOutput, {childList: true, subtree: true});
+
+    // traceback button toggle text
+    const tracebackButton = document.getElementById('tracebackButton');
+    const tracebackCollapse = document.getElementById('tracebackCollapse');
+    if (tracebackButton && tracebackCollapse) {
+        tracebackCollapse.addEventListener('shown.bs.collapse', function () {
+            tracebackButton.textContent = 'Hide Traceback';
+        });
+        tracebackCollapse.addEventListener('hidden.bs.collapse', function () {
+            tracebackButton.textContent = 'Show Traceback';
+        });
+    }
+
+    // retry button
+    document.getElementById('retry-task-btn')?.addEventListener('click', async () => {
+        const confirmed = confirm('Are you sure you want to retry this task?');
+        if (!confirmed) return;
+        const res = await fetch(`{{ widget.url_retry_task }}`, {
+            method: 'POST',
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.task_id) {
+                window.location.href = "{{ widget.url_detail_task }}".replace("TASK_ID_REPLACE", data.task_id);
+            } else {
+                // TODO: flash notification
+            }
+        } else {
+            alert('Failed to retry task.');
+        }
+    });
+</script>
