@@ -1,0 +1,17 @@
+from setuptools import setup, find_packages
+
+
+setup(
+    name='mappy_json-object-mapper',
+    version='1.0.1',
+    license='MIT',
+    author="Zoltan Pazsit",
+    author_email='pazsitz@pazsitz.hu',
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
+    url='https://github.com/PazsitZ/mappy-json-object-mapper',
+    keywords='python json object mapper',
+    install_requires=[ ],
+    description = "MapPy Json - Object Mapper",
+    long_description = "file: README.md, CHANGELOG.md",
+)
