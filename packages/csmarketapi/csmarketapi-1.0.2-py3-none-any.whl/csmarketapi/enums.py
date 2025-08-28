@@ -1,0 +1,22 @@
+from enum import Enum
+
+
+class Market(Enum):
+    STEAMCOMMUNITY = "STEAMCOMMUNITY"
+    SKINPORT = "SKINPORT"
+    MARKETCSGO = "MARKETCSGO"
+    DMARKET = "DMARKET"
+    GAMERPAYGG = "GAMERPAYGG"
+    CSDEALS = "CSDEALS"
+    SKINBARON = "SKINBARON"
+    CSFLOAT = "CSFLOAT"
+    CSMONEY = "CSMONEY"
+    WHITEMARKET = "WHITEMARKET"
+
+
+class Currency(Enum):
+    EUR = "EUR"
+    USD = "USD"
+    CNY = "CNY"
+    RUB = "RUB"
+    INR = "INR"
