@@ -1,0 +1,324 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.setuptools.package-data]
+"edwh" = ["py.typed"]
+
+[project]
+name = "edwh"
+dynamic = ["version"]
+description = 'Education Warehouse maintenance tools'
+readme = "README.md"
+requires-python = ">=3.12"
+license-expression = "MIT"
+keywords = []
+authors = [
+    { name = "Remco Boerma", email = "remco.b@educationwarehouse.nl" },
+    { name = "Robin van der Noord", email = "robin.vdn@educationwarehouse.nl" },
+    { name = "Romy Schöller", email = "romy.s@educationwarehouse.nl" },
+    { name = "Sven Keimpema", email = "sven.k@educationwarehouse.nl" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+dependencies = [
+    # versions pinned at major to prevent accidentally updating into breaking changes
+    "anyio < 5", # for async log reading
+    "click < 9", # for interactive select box (e.g. in `ew setup`)
+    "diceware < 2", # for generating random, safe passhprases
+    "ewok >= 0.4.5, < 2", # base cli tool based on invoke and fabric
+    "humanize < 5", # for making raw sizes huam nreadable
+    "more-itertools < 11", # improved 'flatten' function (among others)
+    "docstring_parser < 1", # better help
+    "packaging < 25", # parsing package versions (for plugin subcommand)
+    "plumbum < 2", # running bash commands more nicely than with invoke
+    "python-dateutil < 3", # improved date parsing
+    "python-dotenv < 2", # for .env
+    "pyyaml < 7", # yaml parser (for docker-compose.yml)
+    "rapidfuzz < 4",  # levenshtein my beloved
+    "requests < 3", # better than urllib no?
+    "ruff==0.12.10", # For `edwh fmt`, `edwh lint`
+    "tabulate < 1", # for nice cli tables
+    "termcolor < 3", # improved ansi colored print (v3 removes Color type)
+    "threadful >= 0.5, < 1", # running things in different threads easily, with animations
+    "tomlkit < 1", # for toml reading and writing
+    "tqdm < 5", # nice progress bars
+    "typing-extensions < 5", # using modern typing features in older python versions
+    "uv < 1", # faster pip
+    "yayarl < 3", # like yarl (Pathlib style URL builder) but with requests built in
+]
+
+[project.optional-dependencies]
+dev = [
+    "hatch",
+    "python-semantic-release<8",
+    "types-requests",
+    "types-python-dateutil",
+    "types-redis",
+    "types-tabulate"
+]
+
+omgeving = [
+    # no extra dependencies anymore !
+    # don't remove me, because then pip install edwh[omgeving] might complain
+]
+
+plugins = [
+    'edwh-b2-plugin',
+    'edwh-bundler-plugin',
+    'edwh-demo-plugin',
+    'edwh-files-plugin',
+    'edwh-locust-plugin',
+    'edwh-multipass-plugin',
+    'edwh-pipcompile-plugin',
+    'edwh-restic-plugin',
+    'edwh-server-provisioning-plugin',
+    'edwh-sshfs-plugin',
+    'edwh-sshkey-plugin',
+    'edwh-uptime-plugin',
+    'edwh-whitelabel-plugin',
+    'edwh-devdb-plugin',
+]
+
+# plugins that are useful on a (production) server:
+server-plugins = [
+    'edwh-b2-plugin',
+    'edwh-bundler-plugin',
+    'edwh-files-plugin',
+    'edwh-pipcompile-plugin',
+    'edwh-restic-plugin',
+    'edwh-uptime-plugin',
+    'edwh-devdb-plugin',
+]
+
+server-provisioning = [
+    "edwh-server-provisioning-plugin"
+]
+
+sshkey = [
+    "edwh-sshkey-plugin"
+]
+
+restic = [
+    'edwh-restic-plugin',
+]
+
+multipass = [
+    'edwh-multipass-plugin',
+]
+
+pip = [
+    'edwh-pipcompile-plugin',
+]
+
+pip-compile = [
+    'edwh-pipcompile-plugin',
+]
+
+bundler = [
+    "edwh-bundler-plugin"
+]
+
+bundle = [
+    "edwh-bundler-plugin"
+]
+
+b2 = [
+    "edwh-b2-plugin"
+]
+
+locust = [
+    "edwh-locust-plugin"
+]
+
+sshfs = [
+    "edwh-sshfs-plugin"
+]
+
+files = [
+    'edwh-files-plugin'
+]
+
+whitelabel = [
+    'edwh-whitelabel-plugin'
+]
+
+uptime = [
+    'edwh-uptime-plugin'
+]
+
+devdb = [
+    'edwh-devdb-plugin'
+]
+
+[project.scripts]
+edwh = "edwh.cli:program.run"
+ew = "edwh.cli:program.run"
+ew-fmt = "edwh.cli:program.run_fmt"
+
+[project.urls]
+Documentation = "https://github.com/educationwarehouse/edwh#readme"
+Issues = "https://github.com/educationwarehouse/edwh/issues"
+Source = "https://github.com/educationwarehouse/edwh"
+
+[tool.semantic_release]
+branch = "main"
+version_variable = "src/edwh/__about__.py:__version__"
+change_log = "CHANGELOG.md"
+upload_to_repository = false
+upload_to_release = false
+build_command = "hatch build"
+
+[tool.hatch.version]
+path = "src/edwh/__about__.py"
+
+# note: don't run `hatch run publish` right now,
+# because semantic release v7 (stable) is not compatible with invoke 2 (which is required for python3.11+)
+# and semantic release v8 (alpha) is not compatible with the tool.semantic_release config in this file!
+publish = [
+    'semantic-release publish',
+    'hatch build -c',
+    'hatch publish',
+]
+# pytest/cov
+test = "pytest {args:tests}"
+test-cov = "coverage run -m pytest {args:tests}"
+cov-report = [
+    "- coverage combine",
+    "coverage report",
+]
+cov = [
+    "test-cov",
+    "cov-report",
+]
+
+[tool.black]
+target-version = ["py312"]
+line-length = 120
+skip-string-normalization = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+
+select = [
+    "F", # pyflake error
+    "E", # pycodestyle error
+    "W", # pycodestyle warning
+    "Q", # quotes
+    "A", # builtins
+    # "C4", # comprehensions
+    # "RET", # return
+    "SIM", # simplify
+    "ARG", # unused arguments
+    # "COM", # comma's
+    "PTH", # use pathlib
+    "RUF", # ruff rules
+    "C90", # mccabe (complexity)
+    #    "I", # isort
+    "N", # pep-8 naming
+    # "D", # pydocstyle
+    # "UP", # pyupgrade
+    "YTT", # flake8-2020 (version hardcoding)
+    # "ANN", # annotations - werkt niet goed samen met invoke
+    # "ASYNC", # async - gebruiken we hier niet
+    # "S", # bandit (security)
+    # "BLE", # blind except
+    # "FBT", # boolean trap
+    # "B", # bugbear
+    # "DTZ", # datetimes
+    # "T10", # debugger
+    # "DJ", # django
+    # "ISC", # implicit string concat (handig voor als je een , mist in een lijst bijv.)
+    "SIM", # simplify
+]
+
+ignore = [
+    # Allow non-abstract empty methods in abstract base classes
+    "B027",
+    # Allow boolean positional values in function calls, like `dict.get(... True)`
+    "FBT003",
+    # Ignore checks for possible passwords
+    "S105", "S106", "S107",
+    # Ignore complexity
+    "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+]
+unfixable = [
+    # Don't touch unused imports
+    "F401",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["edwh"]
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.coverage.run]
+source_pkgs = ["edwh", "tests"]
+branch = true
+parallel = true
+omit = [
+    "src/edwh/__about__.py",
+]
+
+[tool.coverage.paths]
+edwh = ["src/edwh", "*/edwh/src/edwh"]
+tests = ["tests", "*/edwh/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "no cov",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.mypy]
+strict = true
+
+[[tool.mypy.overrides]]
+module = "yaml"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tasks"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "fabric"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "fabric.connection"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "fabric.main"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "ansi.color.fx"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "diceware"
+ignore_missing_imports = true
+
+[tool.su6]
+directory = "src"
+include = []
+exclude = []
+stop-after-first-failure = true
