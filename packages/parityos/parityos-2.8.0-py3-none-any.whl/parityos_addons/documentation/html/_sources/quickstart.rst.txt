@@ -1,0 +1,199 @@
+Quickstart
+===================
+
+Let's walk through the steps needed in order to compile an optimization problem in the
+Parity Architecture via ParityOS. We will first need to initialize a ``parityos.CompilerClient``
+object. Then, in order to make a submission to the ParityQC API, we will need
+an optimization problem to compile and a target device on which we want to compile the problem.
+Finally, we will show how to access the results.
+
+.. note::
+    For an easy to copy-paste version of the code snippets discussed just below, see the
+    :ref:`quickstart:examples` at the end of this section.
+
+Initializing the Client
+-----------------------
+
+After you have successfully installed ParityOS, it is possible to submit problems
+for compilation. For this you need a ``username`` and ``password``, which we will provide.
+
+There are three ways you can provide your ``username`` and ``password`` to the Client.
+
+    1. Pass the username directly to the constructor of ``CompilerClient``::
+
+          compiler_client = CompilerClient(username)
+
+       For security reasons, avoid storing ``username`` and ``password`` in plain text in your codebase.
+
+    2. Set the variables ``PARITYOS_USER`` and ``PARITYOS_PASS`` in your environment; the ``CompilerClient``
+       will use them as ``username`` and ``password``. Therefore, you can initialize it as follows::
+
+          compiler_client = CompilerClient()
+
+    3. If the credentials cannot be found by the ``CompilerClient`` with the methods above,
+       it will prompt you to enter the credentials manually.
+
+
+Defining an optimization problem
+--------------------------------
+There are multiple ways to define an optimization problem to submit; for example, the
+``ProblemRepresentation`` class in ParityOS has a class method that allows you to initialize it from
+a ``networkx.Graph``.
+
+Here we will instead use default initialization, which is uses the ``ProblemRepresentation`` class.
+The ``ProblemRepresentation`` describes the interactions in the problem. The
+``ProblemRepresentation`` can be made in the following way::
+
+    optimization_problem = ProblemRepresentation(
+        interactions=[{Qubit(0), Qubit(1)},
+                      {Qubit(1), Qubit(2)},
+                      {Qubit(2), Qubit(0)}],
+        coefficients=[1, 0.5, -0.7],
+    )
+
+where each term is a collection of qubits and a strength.
+
+.. note::
+    This problem representation is equivalent to :math:`H = s_0 s_1 + 0.5 s_1 s_2 - 0.7 s_0 s_2`.
+
+.. note::
+    The Hamiltonian may also include single-qubit terms.
+    For example, for :math:`H = s_0 + 0.5 s_0 s_1` ::
+
+        optimization_problem = ProblemRepresentation(
+            interactions=[{Qubit(0)}, {Qubit(0), Qubit(1)}],
+            coefficients=[1, 0.5],
+        )
+
+Defining a Target Device
+------------------------
+A ``DeviceModel`` object represents the target device of the compilation process; that is,
+the compiler will try to map a given optimization problem, with possibly non-quadratic
+interactions and constraints, to a quantum computer with a specific topology of interactions
+that most probably does not coincide with the interaction graph of the optimization problem.
+
+The target device is defined by the qubits and connections which are available on it.
+There are a few standard device models available for use. For analog quantum computing,
+there is an easy way to initialize a rectangular device which has, aside from local fields,
+a three- or four-body coupler for every plaquette of nearest-neighbor qubits::
+
+   x, y = 2, 2   # the dimensions of the device
+   device_model = RectangularAnalogDevice(x, y)
+
+Similarly, for digital (gate-based) quantum computing, you can easily create a rectangular
+device that has, aside from single-body gates, CNOT connections between all vertical
+and horizontal nearest neighbor qubits::
+
+   x, y = 2, 2   # the dimensions of the device
+   device_model = RectangularDigitalDevice(x, y)
+
+.. note::
+    It is also possible to define a custom device with specific qubit sites
+    and qubit connections (see :ref:`custom_device_models:Making a custom device model`).
+    In that case, it is important to define all connections on the device, including
+    the local fields.
+
+Submitting a Job to the Compiler
+----------------------------------
+Now we have all the information we need to try to compile the optimization problem.
+We can submit the optimization problem to the compiler as follows::
+
+   parityos_output = compiler_client.compile(optimization_problem, device_model)
+
+This command will connect to the ParityOS server over the internet in order to compile
+the optimization problem to the a Parity Architecture for the device model.
+If the compilation was successful, the ``CompilerClient.compile`` method will return
+a ``ParityOSOutput`` object that contains all the information about the compiled problem.
+
+.. note::
+    The default compiler presets defined in the ``RectangularAnalogDevice`` or
+    ``RectangularDigitalDevice`` do not always result in optimal results. It is possible
+    to receive from ParityQC a personalized preset, which is optimized for the problems
+    and devices you are interested in. Contact us to know more.
+
+.. note::
+   The ``CompilerClient.compile`` method is a synchronous call, which blocks the execution
+   of code until the compilation process is finished. There is an asynchronous method
+   for submitting problems and retrieving the output of the compiler; see
+   :ref:`asynchronous_submission:Asynchronous submissions`.
+
+.. note::
+    In case of a connection time-out or server-side problem, a ``ParityOSException`` will be raised.
+
+
+The ParityOS output
+-------------------
+
+If the compilation was successful, the returned ``ParityOSOutput`` object will
+contain all the information about the compiled problem as attributes:
+
+* ``compiled_problem``:
+  contains the interactions and constraints in the Parity
+  Architecture layout, in the form of a ``ProblemRepresentation`` object just like the
+  original optimization problem.
+
+* ``mappings``:
+  provides the mapping between the optimization problem (logical qubits)
+  and the compiled problem (physical qubits):
+
+  * ``mappings.logical_degeneracies``: lists how logical degeneracies are fixed;
+
+  * ``mappings.encoding_map``: details how physical qubits map onto the logical qubits;
+
+  * ``mappings.decoding_map``: maps each logical qubit to the set of physical qubits whose
+    product of spin components results in the spin of the logical qubit.
+
+For digital devices, the ParityOS output object also contains the details of optimized
+gate sequences:
+
+* ``constraint_circuit``: provides an optimized circuit that decomposes the propagators
+  that implement the parity constraints (of the form
+  :math:`e^{-i \frac{\theta}{2} Z_1 Z_2 Z_3}` or
+  :math:`e^{-i \frac{\theta}{2} Z_1 Z_2 Z_3 Z_4}`) into native gate sequences for
+  the quantum device;
+
+* ``driver_circuit``: provides an optimized circuit to implement driver terms for the
+  QAOA algorithm on the quantum device.
+
+* ``initial_state_preparation_circuit``: provides a circuit that initializes the quantum
+  state in a suitable starting state for the QAOA algorithm, starting from a state
+  where all qubits are in the 0 state.
+
+
+Examples
+--------
+.. note::
+    When running the following code, make sure that the ``PARITYOS_USER`` and ``PARITYOS_PASS``
+    variables are loaded into the environment.
+
+This is the full code needed to run the discussed analog example::
+
+    from parityos import CompilerClient, ProblemRepresentation, Qubit, RectangularAnalogDevice
+
+
+    compiler_client = CompilerClient()
+    optimization_problem = ProblemRepresentation(
+        interactions=[{Qubit(0), Qubit(1)}, {Qubit(1), Qubit(2)}, {Qubit(2), Qubit(0)}],
+        coefficients=[1, 0.5, -0.7],
+    )
+    x, y = 2, 2  # the dimensions of the device
+    device_model = RectangularAnalogDevice(x, y)
+    parityos_output = compiler_client.compile(optimization_problem, device_model)
+    print(parityos_output.compiled_problem)
+
+
+And for the digital example::
+
+    from parityos import CompilerClient, ProblemRepresentation, Qubit, RectangularDigitalDevice
+
+
+    compiler_client = CompilerClient()
+    optimization_problem = ProblemRepresentation(
+        interactions=[{Qubit(0), Qubit(1)}, {Qubit(1), Qubit(2)}, {Qubit(2), Qubit(0)}],
+        coefficients=[1, 0.5, -0.7],
+    )
+    x, y = 2, 2  # the dimensions of the device
+    device_model = RectangularDigitalDevice(x, y)
+    parityos_output = compiler_client.compile(optimization_problem, device_model)
+    print(parityos_output.compiled_problem)
+

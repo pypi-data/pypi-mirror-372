@@ -1,0 +1,532 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solving Optimization Problems &mdash; ParityOS 2.1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=841abef3"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Benchmarking addon" href="benchmarking.html" />
+    <link rel="prev" title="The Parity Decoder" href="parity_decoder.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            ParityOS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_device_models.html">Making a custom device model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asynchronous_submission.html">Asynchronous submissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parity_decoder.html">The Parity Decoder</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Solving Optimization Problems</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#problem-formulation">Problem Formulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#parity-mapping-and-compilation">Parity Mapping and Compilation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#qaoa-optimization-and-simulation">QAOA Optimization and Simulation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#the-qaoa-circuit">The QAOA circuit</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#classical-optimization">Classical Optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#solutions-of-the-qaoa-algorithm-and-decoding">Solutions of the QAOA algorithm and decoding</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarking.html">Benchmarking addon</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analog_computation.html">Analog computation addon</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rydberg_layout.html">Rydberg Layout addon</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ParityOS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Solving Optimization Problems</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/tutorial.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="solving-optimization-problems">
+<h1>Solving Optimization Problems<a class="headerlink" href="#solving-optimization-problems" title="Link to this heading"></a></h1>
+<p>In this tutorial we will demonstrate how to solve an
+optimization problem on quantum devices with the help
+of ParityOS. We will cover the entire workflow; first
+the problem is reformulated by encoding it as the ground
+state of a Spin-Hamiltonian. By using the Parity mapping
+and the compiler, the logical qubits in the Hamiltonian are
+mapped to a physical device where the respective
+quantum optimization algorithms can be run. From the output
+we then map back to the logical qubit configuration
+corresponding to the solution.</p>
+<section id="problem-formulation">
+<h2>Problem Formulation<a class="headerlink" href="#problem-formulation" title="Link to this heading"></a></h2>
+<p>The problem we are going to tackle is an instance of
+MaxCut on hypergraphs which has many important applications,
+e.g. in circuit design. We are given a hypergraph
+<span class="math notranslate nohighlight">\(G(V,E)\)</span> (a generalization of a graph where more
+than two nodes <span class="math notranslate nohighlight">\(i \in V\)</span> per edge <span class="math notranslate nohighlight">\(e \in E\)</span>
+are allowed) and the goal is to split the nodes
+into two sets such that as many edges as possible are cut
+(edges are cut if they contain at least one node from both
+sets). Since it is NP-hard to
+even approximate the solution to this problem to arbitrary
+precision, it may be advantageous to solve it with the help of
+heuristic quantum algorithms.</p>
+<p>Our hypergraph with 5 nodes and 7 edges connecting them
+looks as follows:</p>
+<figure class="align-default" id="id8">
+<a class="reference internal image-reference" href="_images/hypergraph_tutorial.png"><img alt="_images/hypergraph_tutorial.png" src="_images/hypergraph_tutorial.png" style="width: 400.8px; height: 354.40000000000003px;" />
+</a>
+<figcaption>
+<p><span class="caption-text">A hypergraph where the nodes are labeled by the numbers in green circles and the (hyper) edges by the numbers in the circle with color of the edge.</span><a class="headerlink" href="#id8" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>We now construct a Hamiltonian for solving the MaxCut problem on this
+hypergraph so that the solution is encoded in the ground state. We assign a
+spin variable (qubit) <span class="math notranslate nohighlight">\(s_i, i=1, ..., 5\)</span> to every node which takes the
+value <span class="math notranslate nohighlight">\(+1\)</span> if the node belongs to the first set and <span class="math notranslate nohighlight">\(-1\)</span> if it
+belongs to the second set. Since we want the solution to maximise the number of
+cut edges we use terms <span class="math notranslate nohighlight">\(H_e\)</span> that give a reward of <span class="math notranslate nohighlight">\(-1\)</span> if the edge
+<span class="math notranslate nohighlight">\(e\)</span> is cut and a penalty <span class="math notranslate nohighlight">\(+1\)</span> if not.</p>
+<p>For “ordinary” edges <span class="math notranslate nohighlight">\(e\)</span> with just two nodes <span class="math notranslate nohighlight">\(i\)</span>, <span class="math notranslate nohighlight">\(j\)</span> there
+is a simple expression <span class="math notranslate nohighlight">\(H_e=s_is_j\)</span> which accomplishes that. In the
+general case (hyper-)edges can contain more nodes and hence we need a more
+involved expression like the following</p>
+<div class="math notranslate nohighlight">
+\[H_e = -1 + 2 \prod_{i, j \in e} \frac{1}{2} (1 + s_i s_j)\]</div>
+<p>Naively, one could let the product run over all pairs of distinct nodes in
+<span class="math notranslate nohighlight">\(e\)</span>. But we can reduce the number of terms by noting that it suffices to
+let the product run over a subset of pairs</p>
+<div class="math notranslate nohighlight">
+\[\{(i_1,i_2), (i_2,i_3), (i_3,i_4), \ldots\} \subseteq e \times e\]</div>
+<p>which forms a chain that covers all nodes in <span class="math notranslate nohighlight">\(e\)</span>. In our example we only
+have one “proper” hyperedge (with more than two nodes). For this one (edge 6)
+we can e.g. choose the chain</p>
+<div class="math notranslate nohighlight">
+\[\{(3,1), (1,5), (5,2)\} .\]</div>
+<p>The total Hamiltonian is then given by
+<span class="math notranslate nohighlight">\(H = \sum_{e \in E} H_e\)</span>. In our specific example
+this results in (neglecting the irrelevant constant term)</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align} H = &amp; \frac{5}{4}s_1 s_5 + s_2s_4 + s_3s_4 + \frac{5}{4} s_1s_3 + \frac{5}{4}s_2s_3 \\
+    &amp;+ \frac{5}{4}s_2s_5 + \frac{1}{4}s_1s_2 + \frac{1}{4} s_3s_5 + \frac{1}{4} s_1s_2s_3s_5 ,
+\end{align}\end{split}\]</div>
+<p>which we use to create an instance of the ProblemRepresentation class
+in ParityOS in the following format (see also <a class="reference internal" href="quickstart.html#defining-an-optimization-problem"><span class="std std-ref">Defining an optimization problem</span></a>):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">parityos</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProblemRepresentation</span><span class="p">,</span> <span class="n">Qubit</span>
+
+<span class="n">optimization_problem</span> <span class="o">=</span> <span class="n">ProblemRepresentation</span><span class="p">(</span>
+    <span class="n">interactions</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">5</span><span class="p">)},</span>
+        <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">4</span><span class="p">)},</span>
+        <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">4</span><span class="p">)},</span>
+        <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">)},</span>
+        <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">)},</span>
+        <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">5</span><span class="p">)},</span>
+        <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">2</span><span class="p">)},</span>
+        <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">5</span><span class="p">)},</span>
+        <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">5</span><span class="p">)},</span>
+    <span class="p">],</span>
+    <span class="n">coefficients</span><span class="o">=</span><span class="p">[</span><span class="mf">1.25</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.25</span><span class="p">,</span> <span class="mf">1.25</span><span class="p">,</span> <span class="mf">1.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that because of the edge with higher rank the problem representation also contains
+interaction terms of higher order.</p>
+</section>
+<section id="parity-mapping-and-compilation">
+<h2>Parity Mapping and Compilation<a class="headerlink" href="#parity-mapping-and-compilation" title="Link to this heading"></a></h2>
+<p>Next we use ParityOS to map the problem to physical
+parity qubits, i.e., each term <span class="math notranslate nohighlight">\(J_{i,j,k\dots} s_is_js_k\dots\)</span>
+(a product of spin variables with real coefficients
+<span class="math notranslate nohighlight">\(J_{i,j,k\dots}\)</span>) in the logical Hamiltonian
+gets mapped to a parity qubit that takes the value of that
+spin product <span class="math notranslate nohighlight">\(s_{i,j,k,\dots} = s_i s_j s_k \dots\)</span>.
+These parity qubits are not completely independent but
+satisfy constraints. The physical Hamiltonian, containing
+the single body terms <span class="math notranslate nohighlight">\(J_{i,j,k\dots} s_{i,j,k,\dots}\)</span>
+for the parity qubits and the constraint terms, has all the
+information of the initial logical Hamiltonian. ParityOS
+additionally generates a two dimensional layout such that
+these constraints can be enforced by local interactions
+(gates)between physical qubits. An important advantage of
+this mapping is that also the higher order terms in the
+logical Hamiltonian can be handled in the same way as two
+body interactions, removing the need to reduce the problem
+to a quadratic unconstrained binary optimization (QUBO)
+form which might cause a qubit overhead. For a more in
+depth explanation see also <a class="reference internal" href="#lechner15" id="id1"><span>[Lechner15]</span></a>, <a class="reference internal" href="#fellner21" id="id2"><span>[Fellner21]</span></a>.</p>
+<p>In order to implement the steps described above
+we first have to provide your <code class="docutils literal notranslate"><span class="pre">username</span></code> and <code class="docutils literal notranslate"><span class="pre">password</span></code>
+to the compiler (see <a class="reference internal" href="quickstart.html#initializing-the-client"><span class="std std-ref">Initializing the Client</span></a>)
+e.g. with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">parityos</span><span class="w"> </span><span class="kn">import</span> <span class="n">CompilerClient</span>
+
+<span class="n">username</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>  <span class="c1"># Put here your ParityOS username or set the PARITYOS_USER environment variable.</span>
+<span class="n">compiler_client</span> <span class="o">=</span> <span class="n">CompilerClient</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>and then select a device. Currently, there are a few
+options to choose from (see also <a class="reference internal" href="quickstart.html#defining-a-target-device"><span class="std std-ref">Defining a Target Device</span></a>)
+and here we first pick a device suited to analog quantum
+computing, namely a 5x5 <code class="docutils literal notranslate"><span class="pre">RectangularAnalogDevice</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">parityos</span><span class="w"> </span><span class="kn">import</span> <span class="n">RectangularAnalogDevice</span>
+
+<span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span>  <span class="c1"># the dimensions of the device</span>
+<span class="c1"># select an analog device</span>
+<span class="n">device_model</span> <span class="o">=</span> <span class="n">RectangularAnalogDevice</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To compile the problem we can submit the problem to the compiler via:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">parityos_output</span> <span class="o">=</span> <span class="n">compiler_client</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimization_problem</span><span class="p">,</span> <span class="n">device_model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The output contains the compiled problem representation in terms of the physical qubits
+which are located on the device.</p>
+<p>Additionally, we will compile the same problem on a digital device
+where gate-based quantum computing can be performed. We can select it by
+running:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">parityos</span><span class="w"> </span><span class="kn">import</span> <span class="n">RectangularDigitalDevice</span>
+
+
+<span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span>  <span class="c1"># the dimensions of the device</span>
+<span class="c1"># select a digital device</span>
+<span class="n">device_model</span> <span class="o">=</span> <span class="n">RectangularDigitalDevice</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>and the compilation works exactly as before :</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">parityos_output</span> <span class="o">=</span> <span class="n">compiler_client</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimization_problem</span><span class="p">,</span> <span class="n">device_model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Since we picked a digital device we also obtain the constraint and
+driver circuits from the output (see <a class="reference internal" href="quickstart.html#the-parityos-output"><span class="std std-ref">The ParityOS output</span></a>)
+and ParityOS enables us to combine them into an optimization algorithm
+(cf. next section) and the resulting circuit is then ready to be run
+on suitable hardware. It is also possible to express the circuit
+in the <code class="docutils literal notranslate"><span class="pre">Qiskit</span></code> or <code class="docutils literal notranslate"><span class="pre">Cirq</span></code> frameworks.
+In order to show the entire workflow in the next section we will
+also simulate this step with the <code class="docutils literal notranslate"><span class="pre">Qiskit</span></code> framework <a class="reference internal" href="#qiskit" id="id3"><span>[Qiskit]</span></a>.</p>
+</section>
+<section id="qaoa-optimization-and-simulation">
+<h2>QAOA Optimization and Simulation<a class="headerlink" href="#qaoa-optimization-and-simulation" title="Link to this heading"></a></h2>
+<p>Now that the problem has been converted to finding the
+ground state of a Hamiltonian we can apply a variety of
+quantum algorithms to solve the latter task. In any case
+the Parity layout eases the implementation as only local
+interactions remain which also benefits parallelizability
+and scalability. Here we choose to employ the quantum
+approximate optimization algorithm (QAOA).</p>
+<p>The QAOA is a hybrid quantum/classical
+heuristic algorithm (i.e., there are no performance guarantees for
+general case) that can be run on digital quantum computers
+<a class="reference internal" href="#farhi14" id="id4"><span>[Farhi14]</span></a>. The main idea for approximating the ground state
+of a Hamiltonian <span class="math notranslate nohighlight">\(H_{\mathrm{phys}}\)</span> is to find the
+minimal expectation value of <span class="math notranslate nohighlight">\(H_{\mathrm{phys}}\)</span>
+in parameterized trial states, i.e., to minimize</p>
+<div class="math notranslate nohighlight">
+\[F(\vec \gamma, \vec \beta) = \langle \Psi(\vec \gamma, \vec \beta) | H_{\mathrm{phys}} | \Psi(\vec \gamma, \vec \beta) \rangle.\]</div>
+<p>The trial states are constructed from the evolution
+of some initial state under <span class="math notranslate nohighlight">\(p\)</span> alternating rounds of the
+problem Hamiltonian and a mixing or driver Hamiltonian <span class="math notranslate nohighlight">\(H_M\)</span></p>
+<div class="math notranslate nohighlight">
+\[| \Psi(\vec \gamma, \vec \beta) \rangle = \exp (-i \beta_p H_M) \exp (-i \gamma_p H_{\mathrm{phys}})...\exp (-i \beta_1 H_M) \exp (-i \gamma_1 H_{\mathrm{phys}}) | \Psi_0 \rangle\]</div>
+<p>QAOA was motivated by adiabatic quantum computing and this formula
+might be viewed as an finite expansion of the adiabatic evolution.
+It is useful to pick an eigenstate of the mixing Hamiltonian as
+starting state <span class="math notranslate nohighlight">\(| \Psi_0 \rangle\)</span>.</p>
+<p>Let us now implement a basic version <a class="footnote-reference brackets" href="#id7" id="id5" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> of this QAOA algorithm
+applied to our problem.</p>
+<section id="the-qaoa-circuit">
+<h3>The QAOA circuit<a class="headerlink" href="#the-qaoa-circuit" title="Link to this heading"></a></h3>
+<p>We can obtain the circuit and the bounds for the parameters by calling:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">parityos_addons.qaoa</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_qaoa</span>
+
+<span class="n">qaoa_circuit</span><span class="p">,</span> <span class="n">parameter_bounds</span> <span class="o">=</span> <span class="n">generate_qaoa</span><span class="p">(</span><span class="n">parityos_output</span><span class="o">=</span><span class="n">parityos_output</span><span class="p">,</span>
+                                               <span class="n">unitary_pattern</span><span class="o">=</span><span class="s1">&#39;ZCX&#39;</span> <span class="o">*</span> <span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default the QAOA circuit starts in the all zeros state.
+The unitary pattern defines the order in which the evolution
+is performed; <code class="docutils literal notranslate"><span class="pre">Z,</span> <span class="pre">C,</span> <span class="pre">X</span></code> denote steps of the single-body terms,
+constraints and mixing terms which we repeat for four rounds.
+This splitting of the physical Hamiltonian into the
+(mutually commuting) single-body terms and constraints
+<code class="docutils literal notranslate"><span class="pre">Z,</span> <span class="pre">C</span></code> is always possible in the Parity formulation
+(see also <a class="reference internal" href="#fellner21" id="id6"><span>[Fellner21]</span></a>).</p>
+<p>In order to map the physical qubits to the <code class="docutils literal notranslate"><span class="pre">Qiskit</span></code> or <code class="docutils literal notranslate"><span class="pre">Cirq</span></code> framework
+we need to specify a <code class="docutils literal notranslate"><span class="pre">qubit_map</span></code>. Here we simply set it
+according to:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">qubit_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">qubit</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">parityos_output</span><span class="o">.</span><span class="n">constraint_circuit</span><span class="o">.</span><span class="n">qubits</span><span class="p">)}</span>
+</pre></div>
+</div>
+<p>and the parameters are available via :</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">qiskit.circuit</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parameter</span>
+
+<span class="n">parameter_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">Parameter</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">))</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">parameter_bounds</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
+</pre></div>
+</div>
+<p>With this information we can convert the circuit to a <code class="docutils literal notranslate"><span class="pre">Qiskit</span></code> circuit :</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">parityos_addons.interfaces</span><span class="w"> </span><span class="kn">import</span> <span class="n">QiskitExporter</span>
+
+<span class="c1"># instantiate exporter</span>
+<span class="n">qiskit_exporter</span> <span class="o">=</span> <span class="n">QiskitExporter</span><span class="p">(</span><span class="n">parameter_map</span><span class="o">=</span><span class="n">parameter_map</span><span class="p">,</span> <span class="n">qubit_map</span><span class="o">=</span><span class="n">qubit_map</span><span class="p">)</span>
+<span class="c1"># convert to qiskit circuit</span>
+<span class="n">qaoa_circuit_qiskit</span> <span class="o">=</span> <span class="n">qiskit_exporter</span><span class="o">.</span><span class="n">to_qiskit</span><span class="p">(</span><span class="n">qaoa_circuit</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Finally, we have to perform the measurement on all qubits:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># add final measurement</span>
+<span class="n">qaoa_circuit_qiskit</span><span class="o">.</span><span class="n">measure_all</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="classical-optimization">
+<h3>Classical Optimization<a class="headerlink" href="#classical-optimization" title="Link to this heading"></a></h3>
+<p>Next we set up the classical optimization for which it is
+convenient to first define a helper function to compute the
+expectation value that is to be optimized from the <code class="docutils literal notranslate"><span class="pre">counts</span></code>,
+i.e., the output of our simulated circuit.
+Note that <code class="docutils literal notranslate"><span class="pre">counts</span></code> is a dictionary containing the number of
+runs (values) in which the physical bitstring (keys) in binary
+variables was measured. We need to convert this physical
+bitstring to spin variables and associate it to our qubits
+for which we employ the function:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">get_physical_configuration</span><span class="p">(</span><span class="n">bitstring</span><span class="p">):</span>
+    <span class="c1"># Map the bits in the bitstring to +1 or -1 values for the physical qubits.</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">qubit</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">bit</span><span class="p">))</span> <span class="k">for</span> <span class="n">bit</span><span class="p">,</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">bitstring</span><span class="p">,</span> <span class="n">qubit_map</span><span class="o">.</span><span class="n">keys</span><span class="p">())}</span>
+</pre></div>
+</div>
+<p>The helper function for the expectation value is defined as:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">cost_expectation</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="n">parityos_output</span><span class="p">,</span> <span class="n">constraint_strength</span><span class="o">=</span><span class="mf">1.5</span><span class="p">):</span>
+    <span class="n">expectation_sum</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">bitstring</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">counts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">physical_configuration</span> <span class="o">=</span> <span class="n">get_physical_configuration</span><span class="p">(</span><span class="n">bitstring</span><span class="p">)</span>
+        <span class="c1"># evaluate physical bitstring on physical Hamiltonian</span>
+        <span class="n">cost</span> <span class="o">=</span> <span class="n">parityos_output</span><span class="o">.</span><span class="n">compiled_problem</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">physical_configuration</span><span class="p">,</span>
+                                                         <span class="n">constraint_strength</span><span class="p">)</span>
+        <span class="n">expectation_sum</span> <span class="o">+=</span> <span class="n">cost</span> <span class="o">*</span> <span class="n">count</span>
+
+    <span class="k">return</span> <span class="n">expectation_sum</span> <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">counts</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>The crucial part is the method <code class="docutils literal notranslate"><span class="pre">evaluate</span></code> which  we call
+on the compiled problem in order to compute the expectation
+value of the physical Hamiltonian for a certain spin
+configuration. Setting the <code class="docutils literal notranslate"><span class="pre">constraint_strength</span></code>, which
+determines the coefficient in front of the constraint terms
+in the Hamiltonian, can be quite tricky. A large value of the
+<code class="docutils literal notranslate"><span class="pre">constraint_strength</span></code> will increase the energy gap between the
+ground state and highest energy state so the normalized energy gap
+between ground state and first excited state decreases. On
+the other hand a small value might lead to a violation
+of constraints in favor of the other terms in the Hamiltonian.</p>
+<p>Now we are able to execute the parametrized circuit
+with a simulator from <code class="docutils literal notranslate"><span class="pre">Qiskit</span></code>. For this we will construct a
+function that can be passed to a classical optimizer:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">qiskit_aer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Aer</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">execute_circuit</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="n">parityos_output</span><span class="o">=</span><span class="n">parityos_output</span><span class="p">):</span>
+    <span class="n">backend</span> <span class="o">=</span> <span class="n">Aer</span><span class="o">.</span><span class="n">get_backend</span><span class="p">(</span><span class="s1">&#39;qasm_simulator&#39;</span><span class="p">)</span>
+    <span class="c1"># assign parameters to parametrized qaoa circuit</span>
+    <span class="n">circuit</span> <span class="o">=</span> <span class="n">qaoa_circuit_qiskit</span><span class="o">.</span><span class="n">assign_parameters</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+    <span class="c1"># run the circuit on the chosen simulator 512 times with a seed to</span>
+    <span class="c1"># ensure reproducibility and save resources</span>
+    <span class="n">counts</span> <span class="o">=</span> <span class="n">backend</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">circuit</span><span class="p">,</span> <span class="n">seed_simulator</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">shots</span><span class="o">=</span><span class="mi">512</span><span class="p">)</span><span class="o">.</span><span class="n">result</span><span class="p">()</span><span class="o">.</span><span class="n">get_counts</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">cost_expectation</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="n">parityos_output</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Starting the optimization multiple times from random initial
+values for the QAOA parameters, which we create via:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">n_starting_points</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">initial_parameter_list</span> <span class="o">=</span> <span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                          <span class="k">for</span> <span class="n">bound</span> <span class="ow">in</span> <span class="n">parameter_bounds</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+                          <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_starting_points</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>improves the performance, where we used the parameter bounds
+that were obtained from the <code class="docutils literal notranslate"><span class="pre">generate_qaoa</span></code> function.
+With these initial values the classical optimization is
+invoked with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">minimize</span>
+
+<span class="n">cost</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="k">for</span> <span class="n">initial_parameters</span> <span class="ow">in</span> <span class="n">initial_parameter_list</span><span class="p">:</span>
+    <span class="c1"># call classical optimization method</span>
+    <span class="n">optimized_parameters</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span><span class="n">execute_circuit</span><span class="p">,</span> <span class="n">initial_parameters</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;Nelder-Mead&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">cost</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">optimized_parameters</span><span class="o">.</span><span class="n">fun</span> <span class="o">&lt;</span> <span class="n">cost</span><span class="p">):</span>
+        <span class="c1"># update parameters when associated cost is lower than previous best</span>
+        <span class="n">cost</span> <span class="o">=</span> <span class="n">optimized_parameters</span><span class="o">.</span><span class="n">fun</span>
+        <span class="n">optimal_parameters</span> <span class="o">=</span> <span class="n">optimized_parameters</span><span class="o">.</span><span class="n">x</span>
+</pre></div>
+</div>
+<p>Here we employed the <code class="docutils literal notranslate"><span class="pre">Nelder-Mead</span></code> optimizer from <code class="docutils literal notranslate"><span class="pre">scipy</span></code> but you can of
+course try different methods.</p>
+</section>
+<section id="solutions-of-the-qaoa-algorithm-and-decoding">
+<h3>Solutions of the QAOA algorithm and decoding<a class="headerlink" href="#solutions-of-the-qaoa-algorithm-and-decoding" title="Link to this heading"></a></h3>
+<p>So far we obtained the optimized parameters for our QAOA circuit.
+We now run it one more time with these parameters:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># assign optimized parameters to circuit</span>
+<span class="n">optimal_qaoa_circuit</span> <span class="o">=</span> <span class="n">qaoa_circuit_qiskit</span><span class="o">.</span><span class="n">assign_parameters</span><span class="p">(</span><span class="n">optimal_parameters</span><span class="p">)</span>
+
+<span class="c1"># select simulator</span>
+<span class="n">backend</span> <span class="o">=</span> <span class="n">Aer</span><span class="o">.</span><span class="n">get_backend</span><span class="p">(</span><span class="s1">&#39;aer_simulator&#39;</span><span class="p">)</span>
+<span class="n">backend</span><span class="o">.</span><span class="n">shots</span> <span class="o">=</span> <span class="mi">512</span>
+<span class="c1"># run qaoa circuit</span>
+<span class="n">counts</span> <span class="o">=</span> <span class="n">backend</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">optimal_qaoa_circuit</span><span class="p">,</span> <span class="n">seed_simulator</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">result</span><span class="p">()</span><span class="o">.</span><span class="n">get_counts</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>We select a number of physical bitstrings which were the most
+frequent outcomes of the circuit:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">n_best_solutions</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">best_physical_bitstrings</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">counts</span><span class="o">.</span><span class="n">get</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)[:</span><span class="n">n_best_solutions</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>From these we get the candidates for the solution to the logical
+problem by decoding (see also <a class="reference internal" href="parity_decoder.html#the-parity-decoder"><span class="std std-ref">The Parity Decoder</span></a>) via:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">best_physical_configurations</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">get_physical_configuration</span><span class="p">(</span><span class="n">physical_bitstring</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">physical_bitstring</span> <span class="ow">in</span> <span class="n">best_physical_bitstrings</span>
+<span class="p">]</span>
+<span class="c1"># decode physical configuration to logical bistring</span>
+<span class="n">best_logical_bitstrings</span> <span class="o">=</span> <span class="p">[</span><span class="n">parityos_output</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">configuration</span><span class="p">)</span>
+                           <span class="k">for</span> <span class="n">configuration</span> <span class="ow">in</span> <span class="n">best_physical_configurations</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Finally, the candidate solutions are evaluated on the logical
+Hamiltonian and we pick the best solution:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">chain</span>
+
+<span class="n">cost</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="k">for</span> <span class="n">logical_bitstring</span> <span class="ow">in</span> <span class="n">chain</span><span class="p">(</span><span class="o">*</span><span class="n">best_logical_bitstrings</span><span class="p">):</span>
+    <span class="c1"># evaluate logical bitstring on logical Hamiltonian</span>
+    <span class="n">cost_of_bitstring</span> <span class="o">=</span> <span class="n">optimization_problem</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">configuration</span><span class="o">=</span><span class="n">logical_bitstring</span><span class="p">)</span>
+    <span class="c1"># update logical solution if associated cost is lower than previous best</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">cost</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">cost_of_bitstring</span> <span class="o">&lt;</span> <span class="n">cost</span><span class="p">):</span>
+        <span class="n">logical_solution</span> <span class="o">=</span> <span class="n">logical_bitstring</span>
+        <span class="n">cost</span> <span class="o">=</span> <span class="n">cost_of_bitstring</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;solution: &quot;</span><span class="p">,</span> <span class="n">logical_solution</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>From the solution we can readily read off which nodes
+(represented by qubits) of the graph belong to which subset of
+the partition, e.g.</p>
+<figure class="align-default" id="id9">
+<a class="reference internal image-reference" href="_images/hypergraph_solution_tutorial.png"><img alt="_images/hypergraph_solution_tutorial.png" src="_images/hypergraph_solution_tutorial.png" style="width: 400.8px; height: 354.40000000000003px;" />
+</a>
+<figcaption>
+<p><span class="caption-text">A two-partition of a hypergraph representing a solution to the MaxCut problem. Nodes belonging to the first (second) subset are colored in turquoise (yellow), (cut) edges in light green (red).</span><a class="headerlink" href="#id9" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>This problem instance is degenerate, meaning that there is more than one
+optimal solution. Therefore running the code you might get a different result.</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id7" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id5">1</a><span class="fn-bracket">]</span></span>
+<p>In the future there will also be advanced QAOA functionality native to ParityOS.</p>
+</aside>
+</aside>
+<div role="list" class="citation-list">
+<div class="citation" id="lechner15" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">Lechner15</a><span class="fn-bracket">]</span></span>
+<p>Lechner, Wolfgang, Philipp Hauke, and Peter Zoller. “A quantum annealing architecture with all-to-all connectivity from local interactions.” Science advances 1.9 (2015): e1500838.</p>
+</div>
+<div class="citation" id="fellner21" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>Fellner21<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id2">1</a>,<a role="doc-backlink" href="#id6">2</a>)</span>
+<p>Fellner, Michael, et al. “Parity Quantum Optimization: Benchmarks.” arXiv preprint arXiv:2105.06240 (2021).</p>
+</div>
+<div class="citation" id="qiskit" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">Qiskit</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://qiskit.org">https://qiskit.org</a></p>
+</div>
+<div class="citation" id="farhi14" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id4">Farhi14</a><span class="fn-bracket">]</span></span>
+<p>Farhi, Edward, Jeffrey Goldstone, and Sam Gutmann. “A quantum approximate optimization algorithm.” arXiv preprint arXiv:1411.4028 (2014).</p>
+</div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="parity_decoder.html" class="btn btn-neutral float-left" title="The Parity Decoder" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="benchmarking.html" class="btn btn-neutral float-right" title="Benchmarking addon" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Parity Quantum Computing GmbH.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+The Parity Decoder
+==================
+
+After obtaining a ``ParityOSOutput`` object and running the compiled problem on a quantum
+computer or simulator, an important step is the decoding. The read-out of the physical
+system results in a physical configuration where each qubit has the value ``+1`` or ``-1``.
+This physical configuration has to then be decoded to a logical configuration, in order
+to find the solution of the optimization problem that was submitted to ParityOS.
+The ``ParityOSOutput`` can make this transformation from the physical configuration
+to the logical configuration.
+
+Basic example
+-------------
+Here is an example of how to use the ``ParityDecoder`` to decode a compiled problem
+with qubits at the coordinates ``(0, 0)``,  ``(0, 1)`` and ``(1, 0)``, which form a single
+triangle constraint::
+
+    (0, 1)
+      |   \
+      |      \
+    (0, 0) -- (1, 0)
+
+We assume that the ``ParityOSOutput`` containing this compiled problem is stored in a variable
+called ``parityos_output``. The decoding of a physical configuration, as a dictionary going
+from a qubit to it's read-out value can then be done as follows::
+
+    physical_configuration = {Qubit((0, 0)): 1, Qubit((0, 1)) : -1, Qubit((1, 0)): -1}
+    logical_configuration = parityos_output.decode(physical_configuration)
+
+The resulting ``logical_configuration`` will also be a dictionary going from qubit to ``+1`` or
+``-1``, but using the qubits from the optimization problem.
+
+Error correction
+----------------
+If the physical configuration that is given to the ``decode`` method does not satisfy the
+physical constraints, classical error correction will be applied to find the closest physical
+state that does satisfy all constraints. This corrected physical configuration will then
+be decoded into a logical configuration and returned.
+
+.. note::
+    The method that does error correction can also be accessed independently
+    from the decode method, by calling ``error_correct(...)`` on a physical
+    configuration.
+
+Reduced read-out
+----------------
+The decoder can also handle an incomplete physical configuration, as long as enough qubit
+values are given to recover the full physical configuration using the physical constraints.
+For example, if in the basic example only two out of the three qubits are specified, the
+decoder will assume that the constraint is satisfied and use it to find the value of the
+third qubit. To try this out, pass the following physical configuration to the ``decode``
+method::
+
+    physical_configuration = {Qubit((0, 0)): 1, Qubit((0, 1)) : -1}
+    logical_configuration = parityos_output.decode(physical_configuration)
+
+When passing to the decoder a physical configuration that does not contain all qubit values,
+it will still try to do error correction using the information it has. However, the fewer
+qubits values are supplied, the fewer errors can be corrected.
+
+Selecting qubits for read-out
+-----------------------------
+Because read-out is an expensive resource, you may want to read out as few qubits as possible
+while still being able to decode the resulting configuration. The parityOS output is able to
+construct such a minimal read-out set of qubits using the method
+``select_reduced_readout_qubits``. The result will be a list of qubits that can directly be
+passed to the ``decode`` method after read-out and result in a logical configuration.
+Note that in this case, the decoder cannot apply any error correction, as there is no
+redundancy in the read-out.

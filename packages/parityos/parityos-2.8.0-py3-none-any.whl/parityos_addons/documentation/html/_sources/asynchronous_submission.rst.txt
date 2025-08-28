@@ -1,0 +1,67 @@
+Asynchronous submissions
+========================
+The default ``compile`` function in the client makes a synchronous call to the API.
+This blocks the python console until the results of the run have been sent back,
+which means that you cannot use it in the meantime.
+It is also possible to make an asynchronous submission using ParityOS. In that case,
+after submitting a problem, you do not need to wait for the results. In this
+file we will explain how this asynchronous process works.
+
+Submission
+----------
+
+Similar to the example in the quickstart section, you will need a optimization problem
+and device model to make an asynchronous submission.
+Then a submission can be made using an initialized client (see the quickstart section)::
+
+    submission_id = compiler_client.submit(optimization_problem, device_model)
+
+At this point the only important information to store is the ``submission_id``.
+The ``submission_id`` can be used at any point to request the results of that
+submission.
+
+Obtaining results
+-----------------
+
+After some time, you can then request the solutions as follows::
+
+    compiler_runs = compiler_client.get_compiler_runs(submission_id)
+
+For now the API will only return one compiler run per submission, so the
+list of ``compiler_runs`` will only have a single ``CompilerRun`` inside.
+
+.. note::
+    The ``CompilerRun`` object holds all information about how the run went,
+    including any exceptions that were raised in case of a failure.
+
+The ``CompilerRun`` object can then be used to get the ``ParityOSOutput`` object,
+which is exactly the same data that ``CompilerClient.compile`` would return, like this::
+
+    parityos_outputs = compiler_client.get_solutions(compiler_run)
+
+Where parityos_outputs is a list of ``ParityOSOutput`` objects. However, for now
+the API will only return a single solution per request, so this list will
+have a single element.
+
+Examples
+---------
+Here is an example of the code that can be used to make an asyncronous submission
+using an analog device::
+
+    from parityos import CompilerClient, ProblemRepresentation, Qubit, RectangularAnalogDevice
+
+
+    compiler_client = CompilerClient()
+    optimization_problem = ProblemRepresentation(
+        interactions=[{Qubit(0), Qubit(1)}, {Qubit(1), Qubit(2)}, {Qubit(2), Qubit(0)}],
+        coefficients=[1, 0.5, -0.7],
+    )
+    x, y = 2, 2  # the dimensions of the device
+    device_model = RectangularAnalogDevice(x, y)
+    submission_id = compiler_client.submit(optimization_problem, device_model)
+
+At this point there should be a break, after which the results can be
+obtained using::
+
+    compiler_runs = compiler_client.get_compiler_runs(submission_id)
+    parityos_outputs = compiler_client.get_solutions(compiler_runs[0])

@@ -1,0 +1,339 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Making a custom device model &mdash; ParityOS 2.1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=841abef3"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Asynchronous submissions" href="asynchronous_submission.html" />
+    <link rel="prev" title="Quickstart" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            ParityOS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Making a custom device model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#device-models">Device models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#analog-device-model">Analog device model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#digital-device-model">Digital device model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="asynchronous_submission.html">Asynchronous submissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parity_decoder.html">The Parity Decoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Solving Optimization Problems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarking.html">Benchmarking addon</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analog_computation.html">Analog computation addon</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rydberg_layout.html">Rydberg Layout addon</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ParityOS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Making a custom device model</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/custom_device_models.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="making-a-custom-device-model">
+<h1>Making a custom device model<a class="headerlink" href="#making-a-custom-device-model" title="Link to this heading"></a></h1>
+<p>In the quickstart section, we have discussed the default devices for both
+analog and digital quantum computing. In this document, we will show
+how to define a device from scratch.</p>
+<p>Nevertheless, we strongly recommend to contact ParityQC first, so that we can
+provide a customized device model for your hardware that takes maximum advantage
+of the hardware-specific features of the ParityOS compiler.</p>
+<section id="device-models">
+<h2>Device models<a class="headerlink" href="#device-models" title="Link to this heading"></a></h2>
+<p>Custom device models can be defined by creating a new device model class,
+derived from the <code class="docutils literal notranslate"><span class="pre">DeviceModelBase</span></code> class:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MyDeviceModel</span><span class="p">(</span><span class="n">DeviceModelBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Describes my splendid quantum computing device.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt>The relevant attributes of such a class are:</dt><dd><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">qubit_connections</span></code></dt><dd><p>A list of connections of qubits that are implemented as direct interactions on the device.
+All qubits should be labeled with two-dimensional coordinates, as in <code class="docutils literal notranslate"><span class="pre">Qubit((i,</span> <span class="pre">j))</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">device_type</span></code></dt><dd><p>The type of this device, can either be <code class="docutils literal notranslate"><span class="pre">'cnot'</span></code> or <code class="docutils literal notranslate"><span class="pre">'plaquette'</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">preset</span></code></dt><dd><p>Determines the parameters that are passed on to the compiler in order to optimize the code
+for the device. Standard values are <code class="docutils literal notranslate"><span class="pre">'analog_default'</span></code> and <code class="docutils literal notranslate"><span class="pre">'digital_default'</span></code>.
+Customer-specific presets can be provided upon request.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+<section id="analog-device-model">
+<h2>Analog device model<a class="headerlink" href="#analog-device-model" title="Link to this heading"></a></h2>
+<p>In this example we will define a custom device which has 5 qubits in
+the following layout:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">--</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">--</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="o">|</span>          <span class="o">|</span>     <span class="o">/</span>
+  <span class="o">|</span>          <span class="o">|</span>   <span class="o">/</span>
+<span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">--</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Where on the square we can have a 4-body constraint as well as all 4 possible
+3-body constraints. On the triangle on the left, only a 3-body constraint is
+possible. All qubits have the ability to get a local field in the <code class="docutils literal notranslate"><span class="pre">Z</span></code> direction.</p>
+<p>We start by labeling all the qubit sites. We just have to assign a unique label to each qubit.
+This can be a string, an integer or a coordinate as in the above example.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">qubit_sites</span> <span class="o">=</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Then for the <code class="docutils literal notranslate"><span class="pre">qubit_connections</span></code> we have to specify that each qubit
+can get a local field, which is a single-qubit collection. For example,
+a local field on qubit <code class="docutils literal notranslate"><span class="pre">Qubit((0,</span> <span class="pre">0))</span></code> would become <code class="docutils literal notranslate"><span class="pre">{Qubit((0,</span> <span class="pre">0))}</span></code>.
+In the above example, the local fields are:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">local_fields</span> <span class="o">=</span> <span class="p">[{</span><span class="n">qubit</span><span class="p">}</span> <span class="k">for</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="n">qubit_sites</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The next step is to define all possible constraints that are possible on
+the device, where each constraint is a collection of 3 or 4 qubits. The
+order of the qubits in the constraint, as well as the order of the constraints
+does not matter:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">constraint_connections</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>Where the first element is the 4-body constraint, after which the 4
+possible 3-body constraints on the left plaquette are listed. Finally, there
+is the 3-body constraint on the right plaquette.</p>
+<p>Now we have all the information we need to define the device model, where
+it is important that we set  <code class="docutils literal notranslate"><span class="pre">device_type</span> <span class="pre">=</span> <span class="pre">'plaquette'</span></code>.
+We can also specify a preset for the compiler, e.g. <code class="docutils literal notranslate"><span class="pre">preset</span> <span class="pre">=</span> <span class="pre">'default_analog'</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">parityos.device_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceModelBase</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyDeviceModel</span><span class="p">(</span><span class="n">DeviceModelBase</span><span class="p">):</span>
+    <span class="n">qubit_connections</span> <span class="o">=</span> <span class="n">local_fields</span> <span class="o">+</span> <span class="n">constraint_connections</span>
+    <span class="n">device_type</span> <span class="o">=</span> <span class="s1">&#39;plaquette&#39;</span>
+    <span class="n">preset</span> <span class="o">=</span> <span class="s1">&#39;analog_default&#39;</span>
+</pre></div>
+</div>
+<p>So to define the custom device, you can run the following code:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">parityos</span><span class="w"> </span><span class="kn">import</span> <span class="n">Qubit</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">parityos.device_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceModelBase</span>
+
+<span class="n">qubit_sites</span> <span class="o">=</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">local_fields</span> <span class="o">=</span> <span class="p">[{</span><span class="n">qubit</span><span class="p">}</span> <span class="k">for</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="n">qubit_sites</span><span class="p">]</span>
+
+<span class="n">constraint_connections</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+<span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyDeviceModel</span><span class="p">(</span><span class="n">DeviceModelBase</span><span class="p">):</span>
+    <span class="n">qubit_connections</span> <span class="o">=</span> <span class="n">local_fields</span> <span class="o">+</span> <span class="n">constraint_connections</span>
+    <span class="n">device_type</span> <span class="o">=</span> <span class="s1">&#39;plaquette&#39;</span>
+    <span class="n">preset</span> <span class="o">=</span> <span class="s1">&#39;analog_default&#39;</span>
+
+<span class="n">my_device_model</span> <span class="o">=</span> <span class="n">MyDeviceModel</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you want to try out this custom device, use the standard submission
+(see <a class="reference internal" href="quickstart.html#submitting-a-job-to-the-compiler"><span class="std std-ref">Submitting a Job to the Compiler</span></a>) to compile
+the following optimization problem:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">optimization_problem</span> <span class="o">=</span> <span class="n">ProblemRepresentation</span><span class="p">(</span>
+    <span class="n">interactions</span><span class="o">=</span><span class="p">[{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">1</span><span class="p">)},</span>
+                  <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">2</span><span class="p">)},</span>
+                  <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">)},</span>
+                  <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">)},</span>
+                  <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">)}],</span>
+    <span class="n">coefficients</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.3</span><span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>where you set the <code class="docutils literal notranslate"><span class="pre">device_model</span></code> to the one we defined here!</p>
+</div>
+</section>
+<section id="digital-device-model">
+<h2>Digital device model<a class="headerlink" href="#digital-device-model" title="Link to this heading"></a></h2>
+<p>In this example we will define a custom device which has 5 qubits in
+the following layout:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">--</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">--</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="o">|</span>          <span class="o">|</span>
+  <span class="o">|</span>          <span class="o">|</span>
+<span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">--</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>On all qubits that are connected with a dotted line, it is possible
+to do a CNOT gate. All qubits have the ability to get a local field
+in the <code class="docutils literal notranslate"><span class="pre">Z</span></code> direction.</p>
+<p>We start by defining all the qubit sites (the order does not matter):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">qubit_sites</span> <span class="o">=</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Then for the <code class="docutils literal notranslate"><span class="pre">qubit_connections</span></code> we have to specify that each qubit
+can get a local field, which is a single-qubit collection. For example,
+a local field on qubit <code class="docutils literal notranslate"><span class="pre">Qubit((0,</span> <span class="pre">0))</span></code> would be a collection with a single qubit,
+<code class="docutils literal notranslate"><span class="pre">{Qubit((0,</span> <span class="pre">0))}</span></code>. The local fields are:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">local_fields</span> <span class="o">=</span> <span class="p">[{</span><span class="n">qubit</span><span class="p">}</span> <span class="k">for</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="n">qubit_sites</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The next step is to define all possible CNOT connection that are possible on
+the device. The order of the elements in the connections does not matter,
+it is assumed that a CNOT can be performed in both directions. This results
+in the following lists of connections, where each connection is of length <code class="docutils literal notranslate"><span class="pre">2</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">constraint_connections</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>Now we have all the information we need to define the DeviceModel, where
+it is important that we set  <code class="docutils literal notranslate"><span class="pre">device_type</span> <span class="pre">=</span> <span class="pre">'cnot'</span></code>.
+In order to use the standard compiler for digital devices, we add the attribute
+<code class="docutils literal notranslate"><span class="pre">preset</span> <span class="pre">=</span> <span class="pre">'default_digital'</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">parityos.device_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceModelBase</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyDigitalDeviceModel</span><span class="p">(</span><span class="n">DeviceModelBase</span><span class="p">):</span>
+    <span class="n">qubit_connections</span> <span class="o">=</span> <span class="n">local_fields</span> <span class="o">+</span> <span class="n">constraint_connections</span>
+    <span class="n">device_type</span> <span class="o">=</span> <span class="s1">&#39;cnot&#39;</span>
+    <span class="n">preset</span> <span class="o">=</span> <span class="s1">&#39;digital_default&#39;</span>
+</pre></div>
+</div>
+<p>So to define the custom device, you can run the following code:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">parityos</span><span class="w"> </span><span class="kn">import</span> <span class="n">Qubit</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">parityos.device_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceModelBase</span>
+
+<span class="n">qubit_sites</span> <span class="o">=</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">local_fields</span> <span class="o">=</span> <span class="p">[{</span><span class="n">qubit</span><span class="p">}</span> <span class="k">for</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="n">qubit_sites</span><span class="p">]</span>
+<span class="n">constraint_connections</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+    <span class="p">{</span><span class="n">Qubit</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">Qubit</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+<span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyDigitalDeviceModel</span><span class="p">(</span><span class="n">DeviceModelBase</span><span class="p">):</span>
+    <span class="n">qubit_connections</span> <span class="o">=</span> <span class="n">local_fields</span> <span class="o">+</span> <span class="n">constraint_connections</span>
+    <span class="n">device_type</span> <span class="o">=</span> <span class="s1">&#39;cnot&#39;</span>
+    <span class="n">preset</span> <span class="o">=</span> <span class="s1">&#39;digital_default&#39;</span>
+
+<span class="n">my_digital_device_model</span> <span class="o">=</span> <span class="n">MyDigitalDeviceModel</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you want to try out this custom device, use the standard submission
+(see <a class="reference internal" href="quickstart.html#submitting-a-job-to-the-compiler"><span class="std std-ref">Submitting a Job to the Compiler</span></a>) to compile
+the following optimization problem:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">optimization_problem</span> <span class="o">=</span> <span class="n">ProblemRepresentation</span><span class="p">(</span>
+    <span class="n">interactions</span><span class="o">=</span><span class="p">[{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">1</span><span class="p">)},</span>
+                  <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">2</span><span class="p">)},</span>
+                  <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">)},</span>
+                  <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">)},</span>
+                  <span class="p">{</span><span class="n">Qubit</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">Qubit</span><span class="p">(</span><span class="mi">3</span><span class="p">)}],</span>
+    <span class="n">coefficients</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.3</span><span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>where you set the <code class="docutils literal notranslate"><span class="pre">device_model</span></code> to the <code class="docutils literal notranslate"><span class="pre">my_digital_device_model</span></code>
+defined above.</p>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Quickstart" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="asynchronous_submission.html" class="btn btn-neutral float-right" title="Asynchronous submissions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Parity Quantum Computing GmbH.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

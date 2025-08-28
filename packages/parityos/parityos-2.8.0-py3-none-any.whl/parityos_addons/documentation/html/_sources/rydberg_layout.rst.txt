@@ -1,0 +1,209 @@
+Rydberg Layout addon
+=========================
+
+The Rydberg layout addon creates atomic layouts and analog schedules for neutral atom
+quantum computers.
+
+Device Specification
+-----------------------
+
+To work with quantum hardware and simulators, we need to define the specifications of our device.
+These specifications include information about atom placement, the maximum number of atoms,
+the interaction coefficient, and the allowed detuning range.
+In this example, we will define an ``AtomicDeviceSpecs``. ::
+
+    import math
+    from parityos_addons.rydberg_layout.base.device import AtomicDeviceSpecs, CircularDevice
+
+    device_specs = AtomicDeviceSpecs(
+        device_geometry=CircularDevice(50),
+        min_atom_distance=4,
+        max_atom_count=100,
+        interaction_coefficient=5.0 * 1e6,
+        detuning_range=(-60, 60),
+    )
+
+where ``device_geometry`` specifies the geometry of the device (circular, radius = maximum atomic
+distance from center, in µm), ``min_atom_distance`` is the minimum allowed separation between atoms
+(in µm), ``max_atom_count`` is the maximum number of atoms, and ``interaction_coefficient``
+corresponds to :math:`C_6/\hbar` (in  rad/µs x µm^6),
+with ``detuning_range`` representing
+the allowed range of detuning (in rad/µs).
+
+Atoms
+-----------------------
+
+Let's arrange atoms in the triangle gadget proposed in [Lanthaler23]_.
+To do this, we need to define the ``Qubit`` instances, their coordinates,
+and their ``Detuning``\s. ::
+
+    from parityos import Qubit
+    from parityos_addons.rydberg_layout.base.atom import Atom
+    from parityos_addons.rydberg_layout.base.atom_coordinate import AtomCoordinate
+    from parityos_addons.rydberg_layout.base.detuning import Detuning
+
+    qubit_count = 6
+    qubits = [Qubit(index) for index in range(qubit_count)]
+    rydberg_distance = 5.0
+    list_of_coordinates = [
+        AtomCoordinate(0.0, 0.0, 0.0),
+        AtomCoordinate(2 * rydberg_distance, 0.0, 0.0),
+        AtomCoordinate(rydberg_distance, math.sqrt(3) * rydberg_distance, 0.0),
+        AtomCoordinate(0.5 * rydberg_distance, math.sqrt(3) / 2 * rydberg_distance, 0.0),
+        AtomCoordinate(rydberg_distance, 0.0, 0.0),
+        AtomCoordinate(1.5 * rydberg_distance, math.sqrt(3) / 2 * rydberg_distance, 0.0),
+    ]
+
+    alpha_detuning = 15 # rad/µs
+    list_of_detunings = [
+        Detuning(J=alpha_detuning, alpha=alpha_detuning),
+        Detuning(J=alpha_detuning, alpha=alpha_detuning),
+        Detuning(J=alpha_detuning, alpha=alpha_detuning),
+        Detuning(J=0.0, alpha=2 * alpha_detuning),
+        Detuning(J=0.0, alpha=2 * alpha_detuning),
+        Detuning(J=0.0, alpha=2 * alpha_detuning),
+    ]
+
+
+    atoms = [
+        Atom(coordinates, qubit, detunings)
+        for coordinates, qubit, detunings in zip(
+            list_of_coordinates, qubits, list_of_detunings
+        )
+    ]
+
+Here, we have chosen `J` values for the detunings such that all the atoms will have the same
+`Detuning.value`, which will allow us to run simulations later.
+
+RydbergAtoms
+-----------------------
+
+For creating a ``RydbergAtoms`` instance one needs to supply the list of ``Atoms``\s and the given
+device specification. An exception is raised if the ``Atoms``\s do not fit to the device, e.g.
+because minimal distances are violated. ::
+
+    from parityos_addons.rydberg_layout.base.rydberg_atoms import RydbergAtoms
+
+    rydberg_atoms = RydbergAtoms(atoms, device_specs)
+
+Analog Computation with Rydberg Atoms
+----------------------------------------------
+
+The Ising Hamiltonian for Rydberg Atoms [Henriet2020]_ can be written as follows:
+
+.. math:: H(t) = \frac{\hbar}{2} \Omega(t) \sum_j X_j - \hbar \delta(t) \sum_j n_j + \sum_{i \ne j} \frac{C_6}{r_{ij}^6} n_i n_j,
+
+where :math:`n_j = (1 + Z_j) / 2`, :math:`X_j` and :math:`Z_j` are the Pauli matrices of the spin
+:math:`j` and :math:`C_6` is the van-der-Waals interaction coefficient.
+:math:`\Omega(t)` denotes the time-dependent Rabi-frequency and :math:`\delta(t)` denotes the time-dependent detuning.
+Analog schedules for neutral atom can be defined by providing the corresponding :math:`\Omega(t)`,
+:math:`\delta(t)` functions. Here is an example how one can create a ``RydbergSchedule`` by
+providing those inputs: ::
+
+    import sympy
+    from parityos_addons.rydberg_layout.schedule.rydberg_schedule import RydbergSchedule
+
+
+    # Parameters in rad/µs and ns
+    Omega_max = 9
+    final_detuning = 1
+    initial_detuning = -0.5
+
+    t_rise = 1000
+    t_sweep = 3000
+    t_fall = 1000
+    t_total = t_rise + t_sweep + t_fall
+
+    t = sympy.Symbol("t")
+
+    # the times when the pulse is changing
+    t_1 = t_rise
+    t_2 = t_rise + t_sweep
+
+    rabi_coefficient = sympy.Piecewise(
+        ((t / t_1) * Omega_max, (t >= 0) & (t < t_1)),
+        (Omega_max, (t >= t_1) & (t < t_2)),
+        ((1 - (t - t_2) / (t_total - t_2)) * Omega_max, (t >= t_2) & (t <= t_total)),
+    )
+
+    detuning_coefficient = sympy.Piecewise(
+        (initial_detuning, (t >= 0) & (t < t_1)),
+        (
+            (final_detuning * (t - t_1) + initial_detuning * (t_2 - t)) / (t_2 - t_1),
+            (t >= t_1) & (t < t_2),
+        ),
+        (final_detuning, (t >= t_2) & (t <= t_total)),
+    )
+
+    rydberg_schedule = RydbergSchedule(
+        rydberg_atoms=rydberg_atoms,
+        detuning_coefficient=detuning_coefficient,
+        rabi_coefficient=rabi_coefficient,
+        time_parameter=t,
+        duration=t_total,
+    )
+
+Visualization tools for atoms and schedules
+----------------------------------------------
+
+We can use visualization tools to check if the atoms are in the expected positions: ::
+
+    from parityos_addons.rydberg_layout.visualization.plot_rydberg_atoms import (
+        plot_rydberg_atoms,
+    )
+
+    plot_rydberg_atoms(rydberg_atoms, show=True)
+
+Also, one can visualize the ``RydbergSchedule``\s: ::
+
+    from parityos_addons.rydberg_layout.visualization.plot_rydberg_schedule import (
+        plot_rydberg_schedule,
+    )
+
+    plot_rydberg_schedule(rydberg_schedule, show=True)
+
+Pulser Exporter
+----------------------------------------------
+For simulations, we can use ``pulser_exporter``. For that, one needs to add [pulser]_
+during the installation: ::
+
+    pip install parityos["rydberg_layout", "pulser"]
+
+Here is how we can run the simulation for the example created above: ::
+
+    import pulser
+    from parityos_addons.interfaces.pulser_exporter import (
+        rydberg_schedule_to_pulse, atoms_to_pulser_register,
+    )
+
+    register = atoms_to_pulser_register(atoms=atoms)
+    pulse = rydberg_schedule_to_pulse(schedule=rydberg_schedule)
+
+    sequence = pulser.Sequence(register, pulser.devices.MockDevice)
+    sequence.declare_channel("rydberg_global", "rydberg_global")
+    sequence.add(pulse, "rydberg_global")
+
+    backend = pulser.backends.QutipBackend(sequence)
+    result = backend.run()
+    counts = result.sample_final_state(1000)
+    solution = max(counts, key=counts.get)
+
+    print("counts: ", counts)
+    print("solution:", solution)
+
+For this simulation, it is expected that in the solution only the atoms at the corners of the
+triangle gadget will be in the Rydberg state. This can be checked by visualizing the obtained
+atomic state: ::
+
+    from parityos_addons.rydberg_layout.utils.rydberg_atom_state import RydbergAtomState
+    from parityos_addons.rydberg_layout.visualization.plot_rydberg_state import plot_rydberg_state
+
+    atom_state = RydbergAtomState.from_bit_string(atoms=atoms, bit_string=solution)
+    plot_rydberg_state(atom_state, show=True)
+
+References
+-----------------------
+
+.. [Lanthaler23] M. Lanthaler et al, Rydberg-blockade-based parity quantum optimization, Phys. Rev. Lett. 130, 220601 (2023).
+.. [Henriet2020] L. Henriet et al, "Quantum computing with neutral atoms", Quantum 4, 327 (2020).
+.. [pulser] H. Silvério et al, "Pulser: An open-source package for the design of pulse sequences in programmable neutral-atom arrays", Quantum 6, 629 (2022).
