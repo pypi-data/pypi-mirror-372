@@ -1,0 +1,98 @@
+if [ -f "~/.dagknows/tools_env_vars" ]; then
+  source ~/.dagknows/tools_env_vars
+fi
+
+dagknows_curr_profile() {
+  if [ -f ~/.dagknows/current_profile ]; then
+    cat ~/.dagknows/current_profile
+  fi
+}
+
+dagknows_curr_session() {
+  if [ -f ~/.dagknows/`dagknows_curr_profile`/current_session ]; then
+    cat ~/.dagknows/`dagknows_curr_profile`/current_session
+  fi
+}
+
+dagknows_cli_blobfile() {
+   SESSION=`dagknows_curr_session`
+   PROFILE=`dagknows_curr_profile`
+   BLOBFILE="$HOME/.dagknows/$PROFILE/sessions/$SESSION/cliblob"
+   CMDFILE="$HOME/.dagknows/$PROFILE/sessions/$SESSION/commands"
+   echo $BLOBFILE
+}
+
+dagknows_cmd_file() {
+   SESSION=`dagknows_curr_session`
+   PROFILE=`dagknows_curr_profile`
+   BLOBFILE="$HOME/.dagknows/$PROFILE/sessions/$SESSION/cliblob"
+   CMDFILE="$HOME/.dagknows/$PROFILE/sessions/$SESSION/commands"
+   echo $CMDFILE
+}
+
+dagknows_start_session_script() {
+   PID=`echo $$`
+   MYPPID=`ps -o ppid= -p ${PID} | xargs`
+   MYPCMD=`ps -o comm= -p ${MYPPID} | xargs`
+   SESSION=`dagknows_curr_session`
+   PROFILE=`dagknows_curr_profile`
+   ( nohup dk forwarder ensure 2>&1 > /dev/null & )
+   # nohup dk forwarder ensure 2>&1 | tee nohup.out &
+   if [ "$SESSION" = "" -o "$PROFILE" = "" ]; then
+     return
+   fi
+   if [ "$MYPCMD" != "script" ]; then
+      dk sessions start
+   else
+      echo ""
+   fi
+}
+
+dagknows_preexec() {
+   PID=`echo $$`
+   MYPPID=`ps -o ppid= -p ${PID} | xargs`
+   MYPCMD=`ps -o comm= -p ${MYPPID} | xargs`
+   SESSION=`dagknows_curr_session`
+   PROFILE=`dagknows_curr_profile`
+   if [ "$SESSION" = "" -o "$PROFILE" = "" ]; then
+     return
+   fi
+
+   BLOBFILE=`dagknows_cli_blobfile`
+   CMDFILE=`dagknows_cmd_file`
+   if [ "$MYPCMD" = "script" ]; then
+      if [ ! -f "$BLOBFILE" ]; then
+        echo "WARNING - Please start a new shell, script output file ($BLOBFILE) missing"
+        if [ -f "$CMDFILE" ]; then
+          mv $CMDFILE "${CMDFILE}.bak"
+        fi
+      else
+        system=`uname`
+        if [ x"$SHELL" = "x/bin/bash" ]; then
+          if [ x"$system" = "xDarwin" ]; then
+            echo "PROMPT: " "'${SESSION}'" " CMD: " $*  > $CMDFILE
+          else
+            echo "PROMPT: " "'${PS1@P}'" " CMD: " $*  >> $CMDFILE
+          fi
+        else  # zsh
+          echo "PROMPT: " "'${(%%)PS1}'" " CMD: " $1  >> $CMDFILE
+        fi
+      fi
+   fi
+}
+
+dagknows_precmd() {
+  SESSION=`dagknows_curr_session`
+  PROFILE=`dagknows_curr_profile`
+  if [ "$SESSION" != "" -a "$PROFILE" != "" ]; then
+    dk --profile=$PROFILE sessions flush $DK_FLUSH_FLAGS $SESSION
+
+    if echo "$PS1" | grep -q -v "DagKnows - [^]]*]"; then
+      PS1="[DagKnows - $PROFILE:$SESSION] $PS1"
+    else
+      PS1=`echo $PS1 | sed -e "s/DagKnows - [^]]*]/DagKnows - $PROFILE:$SESSION]/g"`
+    fi
+  else
+    PS1=`echo $PS1 | sed -e "s/\[DagKnows - [^]]*] //g"`
+  fi
+}
