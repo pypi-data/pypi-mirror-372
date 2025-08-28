@@ -1,0 +1,58 @@
+name: release
+run-name: Release by @${{ github.actor }} from ${{ github.ref_name }}
+
+on: [push]
+
+jobs:
+  release:
+    if: ${{ github.ref_type == 'branch' }}
+    uses: nextmv-io/release/.github/workflows/release.yml@develop
+    with:
+      BRANCH: ${{ github.ref_name }}
+      REPOSITORY: nextpipe
+      LANGUAGE: python
+      PACKAGE_NAME: nextpipe
+      PACKAGE_LOCATION: .
+      VERSION_FILE: __about__.py
+    secrets: inherit
+
+  publish: # Unfortunately, PyPI publishing does not support reusable workflows, so we must publish here.
+    needs: release
+    if: ${{ needs.release.outputs.RELEASE_NEEDED == 'true' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/nextpipe
+    permissions:
+      id-token: write # This is required for trusted publishing to PyPI
+    steps:
+      - name: git clone ${{ github.ref_name }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: set up Python
+        uses: actions/setup-python@v5
+
+      - name: install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install build hatch
+
+      - name: python - build binary wheel and source tarball
+        run: python -m build
+
+      - name: python - publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ./dist
+
+  notify:
+    needs: [release, publish]
+    if: ${{ needs.release.outputs.RELEASE_NEEDED == 'true' && needs.release.outputs.SHOULD_NOTIFY_SLACK == 'true' }}
+    uses: nextmv-io/release/.github/workflows/notify-slack.yml@develop
+    with:
+      PACKAGE_NAME: nextpipe
+      VERSION: ${{ needs.release.outputs.VERSION }}
+      REPOSITORY: nextpipe
+    secrets: inherit

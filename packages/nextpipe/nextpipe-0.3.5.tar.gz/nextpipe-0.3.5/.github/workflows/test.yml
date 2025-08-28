@@ -1,0 +1,28 @@
+name: test
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.13"]
+    steps:
+      - name: git clone
+        uses: actions/checkout@v4
+
+      - name: set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+
+      - name: unit tests
+        env:
+          NEXTMV_API_KEY_NEXTPIPE: ${{ secrets.NEXTMV_API_KEY_NEXTPIPE }}
+        run: |
+          export NEXTMV_API_KEY=$NEXTMV_API_KEY_NEXTPIPE
+          python -m unittest
