@@ -1,0 +1,106 @@
+# SpatialZoomer: multi-scale feature analysis of spatial transcriptomics
+
+The Python implementation of **SpatialZoomer**, a scalable toolkit for **multi-scale spatial feature analysis** of single-cell resolution spatial transcriptomics via spectral graph signal processing.  
+
+1. [Introduction](#introduction)
+2. [Demos](#demos)
+3. [System Requirements](#system-requirements)
+4. [Installation](#installation)
+5. [Tutorials](#tutorials)
+6. [Cite](#citation)
+
+
+## Introduction
+SpatialZoomer is a toolkit that enables the multi-scale analysis of spatial transcriptomics data. By modeling gene expression as signals on spatial graphs and applying spectral graph signal processing, the toolkit efficiently extracts multi-scale spatial features and identifies biologically meaningful structures. It can automatically identify “critical” scales by partitioning the cross-scale similarity map. 
+
+### Functions
+
+1. **Zoom-capable analysis across spatial scales**  
+   Automatically identifies spatial structures ranging from **cell**, **niche**, to **domain** level across critical scales.
+
+2. **Identification of spatial context-dependent subtypes**  
+   As spatial scale increases, cells incorporate broader spatial context and gradually resolve into **subclusters** influenced by their microenvironments.
+
+3. **Revealing complex tissue architecture**  
+   The extracted multi-scale features can be used to dissect the complex spatial organization.
+
+### Advantages
+- High computational efficiency with low memory usage  
+- Fast runtime for high-resolution datasets
+- Capable of processing > 1 million cells on desktops
+- No GPU required
+
+## Demos
+Explore SpatialZoomer's multi-scale results across four datasets on our interactive demo site:
+
+Explore SpatialZoomer's multi-scale results by sliding the  across four datasets on our interactive demo site:
+
+
+👉 [**Demo Website**](https://li-xinqi.github.io/SpatialZoomer/)
+
+
+## System Requirements
+
+SpatialZoomer is lightweight and can be executed on laptops, desktops or servers. We tested it on the four machines:
+
+| Device         | OS             | CPU                                           | RAM        |
+|----------------|----------------|-----------------------------------------------|-------------|
+| Laptop         | Windows 11     | AMD Ryzen 7 8845H, 3.8GHz | 32 GB       |
+| Desktop        | Windows 10     | Intel Core i7-12700F, 2.10GHz    | 64 GB       | 
+| Server 1       | CentOS 7        | Intel Xeon Gold 6254, 3.10GHz       | 251 GB      
+| Server 2       | Ubuntu 18.04   | Intel Xeon E5-2630 v3, 2.40GHz    | 251 GB      
+
+- Most datasets can be processed within **1 hour** to generate multi-scale results (10+ scales).
+- The **Xenium Prime Ovarian Cancer** dataset (>1.1M cells, 5K genes) **exceeds memory limit** on a 32 GB laptop.
+- The **Xenium Prime Cervical Cancer** dataset (≈800K cells, 5K genes) runs successfully on a 32 GB machine within **~4 hours**.
+
+- **Figure 1:** Peak memory usage across devices *(add image link here)*  
+- **Figure 2:** Total runtime across datasets *(add image link here)*
+
+This package requires only a standard computer with enough RAM to support the in-memory operations with GPU-free.
+
+
+
+**设备与运行结果:** 
+32G台式机因为内存爆炸运行不了1,10+万细胞、5K基因的Xenium Prime Ovarian cancer样本，其余样本都可以运行，包括801,131细胞、5K基因的Xenium Prime Cervical cancer样本，能在4h内获得10+个重要尺度下的结果。其余机器均能快速运行所有样本。
+
+在四个机器上的时间和内存（图片展示）
+大部分样本能够在1h内获得10余个尺度的多尺度结果
+图1（内存）
+图2（时间），后续给地址
+
+## Installation
+3.9以上环境
+conda create -n spatialzoomer python=3.10 -y
+conda activate spatialzoomer
+conda install -c conda-forge pyarrow
+pip install SpatialZoomer==1.0.0
+
+
+Requires **Python ≥ 3.9**
+
+We recommend using `conda`:
+
+```bash
+# Create and activate virtual environment
+conda create -n spatialzoomer python=3.10 -y
+conda activate spatialzoomer
+
+# Install dependencies
+conda install -c conda-forge pyarrow
+
+# Install SpatialZoomer
+pip install SpatialZoomer==1.0.0
+```
+
+## Tutorials
+Tutorial 1: Multi-scale analysis 
+针对空间转录组数据，自动选取重要尺度，并提计算每个尺度下的空间结构
+(github跳转地址).ipynb 以CosMx mouse brain为例
+.ipynb 以Xenium V1 lung cancer为例
+.ipynb 以Xenium V1 ovarian cancer 为例
+
+Tutorial 2: Identify spatial context dependent clusters
+随着尺度增大，细胞融入更多的context信息，逐渐分离为亚群
+.ipynb 以Xenium V1 lung cancer为例
+.ipynb 以Xenium V1 ovarian cancer 为例
