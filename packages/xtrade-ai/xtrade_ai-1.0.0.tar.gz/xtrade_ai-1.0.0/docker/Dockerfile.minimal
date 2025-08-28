@@ -1,0 +1,72 @@
+# XTrade-AI Framework Minimal Dockerfile
+# Category: Minimal Production Build
+# Description: Minimal XTrade-AI framework installed from PyPI
+# Use case: Resource-constrained environments, basic functionality
+# Size: Small (basic PyPI package + minimal dependencies)
+# Base: python:3.11-alpine
+
+FROM python:3.11-alpine
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Add metadata labels
+LABEL maintainer="XTrade-AI Team <anasamu7@gmail.com>"
+LABEL org.opencontainers.image.title="XTrade-AI Framework (Minimal)"
+LABEL org.opencontainers.image.description="Minimal XTrade-AI framework installed from PyPI"
+LABEL org.opencontainers.image.vendor="XTrade-AI"
+LABEL org.opencontainers.image.source="https://github.com/anasamu7/xtrade-ai"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.category="ai-trading"
+LABEL org.opencontainers.image.type="application"
+LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.created="2024-01-01T00:00:00Z"
+LABEL xtrade.category="production"
+LABEL xtrade.type="minimal"
+LABEL xtrade.optimization="small"
+LABEL xtrade.use-case="resource-constrained"
+LABEL xtrade.features="basic"
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    build-base \
+    curl \
+    git \
+    postgresql-dev \
+    && rm -rf /var/cache/apk/*
+
+# Upgrade pip and install build tools
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install XTrade-AI framework from PyPI (basic installation)
+RUN pip install --no-cache-dir \
+    xtrade-ai \
+    && pip cache purge
+
+# Create necessary directories
+RUN mkdir -p /app/data /app/models /app/logs /app/config
+
+# Create non-root user for security
+RUN adduser -D -s /bin/sh xtrade && \
+    chown -R xtrade:xtrade /app
+USER xtrade
+
+# Set default environment
+ENV XTRADE_DATA_DIR=/app/data
+ENV XTRADE_MODEL_DIR=/app/models
+ENV XTRADE_LOG_DIR=/app/logs
+ENV XTRADE_CONFIG_DIR=/app/config
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import xtrade_ai; print('XTrade-AI Framework is healthy')" || exit 1
+
+# Expose API port
+EXPOSE 8000
+
+# Default command - start API server
+CMD ["xtrade-ai", "start-api", "--host", "0.0.0.0", "--port", "8000"]

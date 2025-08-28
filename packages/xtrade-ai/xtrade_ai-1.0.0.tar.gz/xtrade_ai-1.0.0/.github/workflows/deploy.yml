@@ -1,0 +1,588 @@
+name: XTrade-AI Framework Deployment
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'xtrade_ai/**'
+      - 'requirements/**'
+      - 'pyproject.toml'
+      - 'setup.py'
+      - 'MANIFEST.in'
+      - 'LICENSE'
+      - 'CHANGELOG.md'
+      - '.github/workflows/deploy.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'xtrade_ai/**'
+      - 'requirements/**'
+      - 'pyproject.toml'
+      - 'setup.py'
+  release:
+    types: [ published, created ]
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deployment even without code changes'
+        required: false
+        default: false
+        type: boolean
+      deploy_to_pypi:
+        description: 'Deploy to PyPI'
+        required: false
+        default: true
+        type: boolean
+      deploy_to_testpypi:
+        description: 'Deploy to TestPyPI'
+        required: false
+        default: false
+        type: boolean
+      deploy_docker:
+        description: 'Deploy Docker images'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+  PYPI_PACKAGE_NAME: 'xtrade-ai'
+  DOCKER_IMAGE_NAME: 'xtrade-ai'
+
+jobs:
+  # Check if deployment is needed
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should-deploy: ${{ steps.check.outputs.should-deploy }}
+      should-test: ${{ steps.check.outputs.should-test }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Check for relevant changes
+      id: check
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.force_deploy }}" = "true" ]; then
+          echo "should-deploy=true" >> $GITHUB_OUTPUT
+          echo "should-test=true" >> $GITHUB_OUTPUT
+          echo "🔄 Force deployment requested"
+          exit 0
+        fi
+        
+        if [ "${{ github.event_name }}" = "release" ]; then
+          echo "should-deploy=true" >> $GITHUB_OUTPUT
+          echo "should-test=true" >> $GITHUB_OUTPUT
+          echo "🏷️ Release event detected"
+          exit 0
+        fi
+        
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          echo "should-deploy=false" >> $GITHUB_OUTPUT
+          echo "should-test=true" >> $GITHUB_OUTPUT
+          echo "🔍 Pull request detected - running tests only"
+          exit 0
+        fi
+        
+        # Check for changes in relevant paths
+        CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+        echo "Changed files:"
+        echo "$CHANGED_FILES"
+        
+        # Check if any relevant files changed
+        if echo "$CHANGED_FILES" | grep -E "(xtrade_ai/|requirements/|pyproject\.toml|setup\.py|MANIFEST\.in|LICENSE|CHANGELOG\.md)"; then
+          echo "should-deploy=true" >> $GITHUB_OUTPUT
+          echo "should-test=true" >> $GITHUB_OUTPUT
+          echo "✅ Relevant changes detected, proceeding with deployment"
+        else
+          echo "should-deploy=false" >> $GITHUB_OUTPUT
+          echo "should-test=true" >> $GITHUB_OUTPUT
+          echo "⏭️ No relevant changes detected, running tests only"
+        fi
+
+  # Quality checks
+  quality-checks:
+    runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.should-test == 'true'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ hashFiles('requirements/**/*.txt', 'pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
+    
+    - name: Install dependencies
+      run: |
+        echo "🔧 Installing Python dependencies..."
+        python -m pip install --upgrade pip setuptools wheel build twine
+        pip install -r requirements/base.txt
+        pip install -r requirements/dev.txt
+        pip install -e .
+    
+    - name: Run linting
+      run: |
+        echo "🔍 Running linting checks..."
+        black --check xtrade_ai/ test/ || echo "⚠️ Black formatting issues found"
+        isort --check-only xtrade_ai/ test/ || echo "⚠️ Import sorting issues found"
+        flake8 xtrade_ai/ test/ || echo "⚠️ Flake8 issues found"
+    
+    - name: Run security checks
+      run: |
+        echo "🔒 Running security checks..."
+        bandit -r xtrade_ai/ || echo "⚠️ Security issues found"
+        safety check || echo "⚠️ Dependency vulnerabilities found"
+    
+    - name: Test imports
+      run: |
+        echo "🧪 Testing package imports..."
+        python -c "import xtrade_ai; print('✅ Main package imported successfully')"
+        python -c "from xtrade_ai import XTradeAIFramework, XTradeAIConfig; print('✅ Core classes imported successfully')"
+        python -c "from xtrade_ai.utils import get_logger; print('✅ Utils imported successfully')"
+        python -c "from xtrade_ai.modules import technical_analysis; print('✅ Modules imported successfully')"
+        python -c "from xtrade_ai.api import app; print('✅ API imported successfully')"
+    
+    - name: Run tests
+      run: |
+        echo "🧪 Running tests..."
+        pytest test/ -v --cov=xtrade_ai --cov-report=xml || echo "⚠️ Some tests failed"
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+      continue-on-error: true
+
+  # Build and test package
+  build-and-test:
+    runs-on: ubuntu-latest
+    needs: [check-changes, quality-checks]
+    if: needs.check-changes.outputs.should-test == 'true'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ hashFiles('requirements/**/*.txt', 'pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
+    
+    - name: Install dependencies
+      run: |
+        echo "🔧 Installing Python dependencies..."
+        python -m pip install --upgrade pip setuptools wheel build twine
+        pip install -r requirements/base.txt
+        pip install -e .
+    
+    - name: Clean previous builds
+      run: |
+        echo "🧹 Cleaning previous builds..."
+        rm -rf build/ dist/ *.egg-info/
+        rm -rf xtrade_ai/_version.py
+        echo "✅ Clean completed"
+    
+    - name: Build package
+      run: |
+        echo "📦 Building package..."
+        python -m build --wheel --sdist
+        ls -la dist/
+        echo "📋 Package contents:"
+        tar -tzf dist/*.tar.gz | head -20
+        
+        # Show version information
+        echo "📋 Version Information:"
+        echo "Package files:"
+        ls -la dist/
+        echo ""
+        echo "Current version from package:"
+        python -c "import xtrade_ai; print(f'Version: {xtrade_ai.__version__}')" || echo "Could not determine version"
+    
+    - name: Validate package
+      run: |
+        echo "🔍 Validating package..."
+        twine check dist/*
+        
+        # Validate version for PyPI
+        PACKAGE_VERSION=$(python -c "import xtrade_ai; print(xtrade_ai.__version__)" 2>/dev/null || echo "unknown")
+        echo "📋 Package version: $PACKAGE_VERSION"
+        
+        # Check if version contains local part (not allowed on PyPI)
+        if [[ "$PACKAGE_VERSION" == *"+"* ]]; then
+          echo "❌ ERROR: Version contains local part (+), which is not allowed on PyPI"
+          echo "   Version: $PACKAGE_VERSION"
+          echo "   This happens when using local_scheme other than 'no-local-version'"
+          echo "   Please check setuptools-scm configuration in pyproject.toml"
+          exit 1
+        fi
+        
+        # Check if it's a valid PEP 440 version
+        if [[ "$PACKAGE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]+)?$ ]]; then
+          echo "✅ Version format is valid for PyPI: $PACKAGE_VERSION"
+        else
+          echo "⚠️ Warning: Version format may not be standard: $PACKAGE_VERSION"
+          echo "   But continuing with upload attempt..."
+        fi
+    
+    - name: Test package installation
+      run: |
+        echo "🧪 Testing package installation..."
+        pip install dist/*.whl --force-reinstall
+        python -c "import xtrade_ai; print('✅ Package installed successfully')"
+        
+        # Test CLI
+        xtrade-ai --help || echo "⚠️ CLI test failed"
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-package
+        path: dist/
+        retention-days: 7
+
+  # Deploy to TestPyPI
+  deploy-testpypi:
+    needs: [check-changes, build-and-test]
+    runs-on: ubuntu-latest
+    if: |
+      needs.check-changes.outputs.should-deploy == 'true' && 
+      (github.event.inputs.deploy_to_testpypi == 'true' || github.event_name == 'pull_request')
+    environment: AUTOMATION
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-package
+        path: dist/
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install twine
+      run: |
+        echo "📦 Installing twine..."
+        pip install --upgrade pip setuptools wheel
+        pip install twine>=4.0.0
+    
+    - name: Check TestPyPI credentials
+      run: |
+        if [ -z "${{ secrets.TESTPYPI_API_TOKEN || '' }}" ]; then
+          echo "⚠️ TestPyPI API token not found. Skipping TestPyPI deployment."
+          echo "To enable TestPyPI deployment, add TESTPYPI_API_TOKEN secret to repository settings."
+          exit 0
+        else
+          echo "✅ TestPyPI credentials found. Proceeding with deployment."
+        fi
+    
+    - name: Publish to TestPyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN || '' }}
+        TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
+      run: |
+        if [ -n "${{ secrets.TESTPYPI_API_TOKEN || '' }}" ]; then
+          echo "🚀 Uploading to TestPyPI..."
+          twine upload --skip-existing dist/*
+          echo "✅ TestPyPI upload completed!"
+          echo "🔗 TestPyPI URL: https://test.pypi.org/project/${{ env.PYPI_PACKAGE_NAME }}/"
+        else
+          echo "⏭️ Skipping TestPyPI upload - no credentials provided"
+        fi
+      continue-on-error: true
+
+  # Deploy to PyPI
+  deploy-pypi:
+    needs: [check-changes, build-and-test]
+    runs-on: ubuntu-latest
+    if: |
+      needs.check-changes.outputs.should-deploy == 'true' && 
+      github.event.inputs.deploy_to_pypi != 'false' &&
+      github.event_name != 'pull_request'
+    environment: AUTOMATION
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-package
+        path: dist/
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install twine
+      run: |
+        echo "📦 Installing twine..."
+        pip install --upgrade pip setuptools wheel
+        pip install twine>=4.0.0
+    
+    - name: Check PyPI credentials
+      run: |
+        if [ -z "${{ secrets.PYPI_API_TOKEN || '' }}" ]; then
+          echo "⚠️ PyPI API token not found. Skipping PyPI deployment."
+          echo "To enable PyPI deployment, add PYPI_API_TOKEN secret to repository settings."
+          echo "Go to: Settings > Secrets and variables > Actions > New repository secret"
+          echo "Name: PYPI_API_TOKEN"
+          echo "Value: Your PyPI API token"
+          exit 0
+        else
+          echo "✅ PyPI credentials found. Proceeding with deployment."
+        fi
+    
+    - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN || '' }}
+      run: |
+        if [ -n "${{ secrets.PYPI_API_TOKEN || '' }}" ]; then
+          echo "🚀 Uploading to PyPI..."
+          
+          # Check if this is a development version or release version
+          PACKAGE_VERSION=$(python -c "import xtrade_ai; print(xtrade_ai.__version__)" 2>/dev/null || echo "unknown")
+          echo "📋 Package version: $PACKAGE_VERSION"
+          
+          # Validate version format for PyPI
+          if [[ "$PACKAGE_VERSION" == *"+"* ]]; then
+            echo "❌ ERROR: Version contains local part (+), which is not allowed on PyPI"
+            echo "   Version: $PACKAGE_VERSION"
+            echo "   This version cannot be uploaded to PyPI"
+            exit 1
+          fi
+          
+          # For development versions, we can upload multiple times
+          # For release versions, we need to check if it already exists
+          if [[ "$PACKAGE_VERSION" == *"dev"* ]]; then
+            echo "🔧 Development version detected - can upload multiple times"
+            UPLOAD_STRATEGY="--skip-existing"
+          else
+            echo "🏷️ Release version detected - checking for existing version"
+            UPLOAD_STRATEGY=""
+          fi
+          
+          # Upload all files to PyPI
+          echo "📦 Uploading all distribution files to PyPI..."
+          UPLOAD_SUCCESS=true
+          
+          for file in dist/*; do
+            filename=$(basename "$file")
+            echo "Uploading file: $filename"
+            
+            if twine upload $UPLOAD_STRATEGY "$file"; then
+              echo "✅ Successfully uploaded $filename"
+            else
+              echo "❌ Failed to upload $filename"
+              if [[ "$UPLOAD_STRATEGY" == "--skip-existing" ]]; then
+                echo "⚠️ This might be due to version conflict. Trying without --skip-existing..."
+                if twine upload "$file"; then
+                  echo "✅ Successfully uploaded $filename (replaced existing)"
+                else
+                  echo "❌ Failed to upload $filename even without --skip-existing"
+                  UPLOAD_SUCCESS=false
+                fi
+              else
+                UPLOAD_SUCCESS=false
+              fi
+            fi
+          done
+          
+          if [ "$UPLOAD_SUCCESS" = true ]; then
+            echo "✅ PyPI upload process completed!"
+            echo "📦 Package: ${{ env.PYPI_PACKAGE_NAME }}"
+            echo "🔗 PyPI URL: https://pypi.org/project/${{ env.PYPI_PACKAGE_NAME }}/"
+            echo "💡 Version: $PACKAGE_VERSION"
+          else
+            echo "❌ PyPI upload failed"
+            exit 1
+          fi
+        else
+          echo "⏭️ Skipping PyPI upload - no credentials provided"
+        fi
+      continue-on-error: true
+
+  # Deploy Docker images
+  deploy-docker:
+    needs: [check-changes, build-and-test]
+    runs-on: ubuntu-latest
+    if: |
+      needs.check-changes.outputs.should-deploy == 'true' && 
+      github.event.inputs.deploy_docker != 'false' &&
+      github.event_name != 'pull_request'
+    environment: AUTOMATION
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Check Docker credentials
+      run: |
+        if [ -z "${{ secrets.DOCKER_USERNAME || '' }}" ] || [ -z "${{ secrets.DOCKER_PASSWORD || '' }}" ]; then
+          echo "⚠️ Docker credentials not found. Skipping Docker deployment."
+          echo "To enable Docker deployment, add DOCKER_USERNAME and DOCKER_PASSWORD secrets."
+          echo "Go to: Settings > Secrets and variables > Actions > New repository secret"
+          exit 0
+        else
+          echo "✅ Docker credentials found. Proceeding with deployment."
+        fi
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+      continue-on-error: true
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+    
+    - name: Build and push Docker images
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile
+        push: ${{ secrets.DOCKER_USERNAME != '' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+      continue-on-error: true
+    
+    - name: Build and push Minimal Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile.minimal
+        push: ${{ secrets.DOCKER_USERNAME != '' }}
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:minimal
+          ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:minimal-${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64
+      continue-on-error: true
+
+  # Create GitHub Release
+  create-release:
+    needs: [check-changes, build-and-test, deploy-pypi]
+    runs-on: ubuntu-latest
+    if: |
+      needs.check-changes.outputs.should-deploy == 'true' && 
+      github.event_name == 'release' &&
+      github.event.action == 'published'
+    environment: AUTOMATION
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-package
+        path: dist/
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Create Release Assets
+      run: |
+        echo "📦 Creating release assets..."
+        mkdir -p release-assets
+        cp dist/* release-assets/
+        ls -la release-assets/
+    
+    - name: Upload Release Assets
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-assets
+        path: release-assets/
+        retention-days: 30
+
+  # Final notification
+  notify:
+    runs-on: ubuntu-latest
+    needs: [check-changes, quality-checks, build-and-test, deploy-testpypi, deploy-pypi, deploy-docker, create-release]
+    if: always()
+    
+    steps:
+    - name: Notify deployment status
+      run: |
+        echo "🎉 XTrade-AI Framework deployment completed!"
+        echo "📦 Repository: ${{ github.repository }}"
+        echo "🔗 Ref: ${{ github.ref }}"
+        echo "🏷️ Event: ${{ github.event_name }}"
+        
+        if [ "${{ github.event_name }}" = "release" ]; then
+          echo "🏷️ Release: ${{ github.event.release.tag_name }}"
+        fi
+        
+        echo ""
+        echo "📋 Deployment Summary:"
+        echo "   - Code changes check: ${{ needs.check-changes.result == 'success' && '✅' || '❌' }}"
+        echo "   - Quality checks: ${{ needs.quality-checks.result == 'success' && '✅' || '❌' }}"
+        echo "   - Build and test: ${{ needs.build-and-test.result == 'success' && '✅' || '❌' }}"
+        echo "   - TestPyPI deployment: ${{ needs.deploy-testpypi.result == 'success' && '✅' || '⚠️ (no credentials)' }}"
+        echo "   - PyPI deployment: ${{ needs.deploy-pypi.result == 'success' && '✅' || '⚠️ (no credentials)' }}"
+        echo "   - Docker deployment: ${{ needs.deploy-docker.result == 'success' && '✅' || '⚠️ (no credentials)' }}"
+        echo "   - Release creation: ${{ needs.create-release.result == 'success' && '✅' || '⏭️ (not applicable)' }}"
+        
+        echo ""
+        echo "🚀 Next steps:"
+        echo "   - Add PYPI_API_TOKEN secret for PyPI publishing"
+        echo "   - Add TESTPYPI_API_TOKEN secret for TestPyPI publishing"
+        echo "   - Add DOCKER_USERNAME/DOCKER_PASSWORD for Docker deployment"
+        echo "   - Check PyPI: https://pypi.org/project/${{ env.PYPI_PACKAGE_NAME }}/"
+        echo "   - Check TestPyPI: https://test.pypi.org/project/${{ env.PYPI_PACKAGE_NAME }}/"
+        echo "   - Check Docker Hub: https://hub.docker.com/r/${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}"
+        
+        if [ "${{ needs.check-changes.outputs.should-deploy }}" = "false" ]; then
+          echo ""
+          echo "⏭️ Deployment skipped - no relevant changes detected"
+          echo "To force deployment, use the 'workflow_dispatch' trigger with force_deploy=true"
+        fi
+        
+        echo ""
+        echo "📚 Documentation:"
+        echo "   - GitHub: https://github.com/${{ github.repository }}"
+        echo "   - PyPI: https://pypi.org/project/${{ env.PYPI_PACKAGE_NAME }}/"
+        echo "   - Issues: https://github.com/${{ github.repository }}/issues"

@@ -1,0 +1,45 @@
+%% XTrade-AI High-Level Architecture
+flowchart TD
+
+%% Inputs
+A[User Inputs<br/>- OHLCV (N x 5)<br/>- Indicators (N x K)<br/>- Config] --> B
+
+%% Preprocessing
+B[DataPreprocessor<br/>- NaN handling<br/>- fit/transform<br/>- normalization] --> C
+
+%% Environment
+C[XTradeEnvironment (Gymnasium)<br/>- Observation: windowed OHLCV + indicators + positions + market + account<br/>- Actions: BUY/SELL/HOLD/CLOSE<br/>- Reward: equity delta] --> D
+
+%% Training Orchestrator
+D[XTradeAIFramework] --> E[Baseline3Integration (SB3/SB3-Contrib)]
+D --> F[TechnicalAnalysis (CNN-LSTM)]
+D --> G[CloseOrderDecision (Transformer)]
+D --> H[RiskManagement (GRU)]
+D --> I[AdaptiveIndicator (Autoencoder)]
+D --> J[XGBoostModule (optional)]
+D --> K[Monitoring]
+
+E -.predict.-> L[Policy Action]
+F -.logits.-> M[TA Signals]
+G -.indices/proba.-> N[Close Decision]
+H -.risk score/size.-> O[Risk Assessment]
+J -.features/proba.-> P[XGB Output]
+
+%% Action Selection
+L --> Q
+M --> Q
+N --> Q
+O --> Q
+P --> Q
+Q[ActionSelector<br/>- Close priority<br/>- Risk-aware vote<br/>- Output TradingDecision]
+
+Q --> R[(Env Step)]
+R -->|Experience| E
+R -->|Monitor| K
+
+%% Persistence
+D --> S[ModelSaver<br/>- zip + encrypt to .models]
+
+%% Fine Tuning
+T[Load SB3 Model] --> E
+T --> D
