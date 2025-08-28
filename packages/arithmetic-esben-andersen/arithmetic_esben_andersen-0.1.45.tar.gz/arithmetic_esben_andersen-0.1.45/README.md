@@ -1,0 +1,2 @@
+[![CI](https://github.com/esbenscriver/arithmetic-esben-andersen/actions/workflows/ci.yml/badge.svg)](https://github.com/esbenscriver/arithmetic-esben-andersen/actions/workflows/ci.yml)
+[![CD](https://github.com/esbenscriver/arithmetic-esben-andersen/actions/workflows/cd.yml/badge.svg)](https://github.com/esbenscriver/arithmetic-esben-andersen/actions/workflows/cd.yml)

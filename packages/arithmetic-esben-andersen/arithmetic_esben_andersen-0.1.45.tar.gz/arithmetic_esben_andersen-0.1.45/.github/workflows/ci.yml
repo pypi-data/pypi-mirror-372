@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print GitHub context
+        run: echo '${{ toJson(github) }}'
+        
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies and run test
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv sync --locked
+          pytest
+
+  lint:
+    name: Check linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: "Python format"
+        run: uvx ruff format --diff .
+
+      - name: "Python lint"
+        run: uvx ruff check .
+
+      - name: "Python type check"
+        run: |
+            uvx mypy -v .
+            uvx ty check
