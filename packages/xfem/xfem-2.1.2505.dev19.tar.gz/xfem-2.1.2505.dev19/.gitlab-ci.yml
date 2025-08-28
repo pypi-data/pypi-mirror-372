@@ -1,0 +1,313 @@
+# use gitlab-ci's anchor to only run build-jobs if files are changed that affect build stage
+.build-template: &build-config
+  rules: 
+    - changes:
+      - CMakeLists.txt
+      - .gitlab-ci.yml
+      # - .ci/* # currently in .ci are only scripts for testing
+      - .github/*
+      - cutint/*
+      - external_dependencies/*
+      - lsetcurving/*
+      - python/*
+      - spacetime/*
+      - utils/*
+      - xfem/*
+
+stages:
+    - build
+    - test
+    - deploy
+        
+build-on-src-ngs:
+  stage: build
+  image: docker.gitlab.gwdg.de/ngsuite/ngs-docker/ngs-docker:src
+  script:
+    - python3 -c "import ngsolve; print(ngsolve.__version__)"
+    - git config --global --add safe.directory /builds/${CI_PROJECT_PATH}
+    # i think we do not need external dependencies in the pipeline
+    # - git config --global --add safe.directory /builds/${CI_PROJECT_PATH}/external_dependencies/jupyter
+    # - git config --global --add safe.directory /builds/${CI_PROJECT_PATH}/external_dependencies/ngsolve
+    # - git submodule
+    # - git submodule update --init
+    - mkdir build
+    - mkdir install    
+    - cd build
+    - cmake -DBUILD_NGSOLVE=OFF -DBUILD_ON_PIP_NGSOLVE=OFF -DCMAKE_INSTALL_PREFIX=../install ..
+    - make -j3 install
+  # <<: *build-config
+  artifacts:
+    paths:
+      - build
+      - install
+  needs: []  
+  when: manual
+
+build-on-pip-ngs:
+  stage: build
+  image: python:3.12
+  script:
+    - apt-get update
+    - apt-get install -y cmake git
+    - pip3 install ngsolve numpy
+    - python3 -c "import ngsolve; print(ngsolve.__version__)"
+    - git config --global --add safe.directory /builds/${CI_PROJECT_PATH}
+    - mkdir build
+    - mkdir install    
+    - cd build
+    - cmake -DBUILD_NGSOLVE=OFF -DBUILD_ON_PIP_NGSOLVE=ON -DCMAKE_INSTALL_PREFIX=../install ..
+    - make -j3 install
+  # <<: *build-config
+  artifacts:
+    paths:
+      - build
+      - install
+  needs: []
+
+ctests-demos:
+  stage: test
+  image: docker.gitlab.gwdg.de/ngsuite/ngs-docker/ngs-docker:src
+  script:
+    - bash .ci/ci_ctests.sh demos
+  # <<: *build-config
+  when: on_success
+  allow_failure: false
+  dependencies:
+    - build-on-src-ngs
+  needs: [build-on-src-ngs]
+
+ctests-mayfail:
+  stage: test
+  image: docker.gitlab.gwdg.de/ngsuite/ngs-docker/ngs-docker:src
+  script:
+    - bash .ci/ci_ctests.sh mayfail
+  # <<: *build-config
+  when: on_success
+  allow_failure: true
+  dependencies:
+    - build-on-src-ngs
+  needs: [build-on-src-ngs]  
+
+ctests-pytests:
+  stage: test
+  image: docker.gitlab.gwdg.de/ngsuite/ngs-docker/ngs-docker:src
+  script:
+    -  bash .ci/ci_ctests.sh pytests
+  # <<: *build-config
+  when: on_success
+  allow_failure: false
+  artifacts:
+    when: always
+    paths:
+      - build/ctest-results.xml
+    reports:
+      junit: build/ctest-results.xml
+  dependencies:
+    - build-on-src-ngs
+  needs: [build-on-src-ngs]
+
+ctests-pytests-on-pip-ngs:
+  stage: test
+  image: python:3.12
+  script:
+    - apt-get update
+    - apt-get install -y cmake
+    - pip3 install ngsolve pytest scipy numpy psutil
+    - bash .ci/ci_ctests.sh pytests
+  # <<: *build-config
+  when: on_success
+  allow_failure: false
+  artifacts:
+    when: always
+    paths:
+      - build/ctest-results.xml
+    reports:
+      junit: build/ctest-results.xml
+  dependencies:
+    - build-on-pip-ngs
+  needs: [build-on-pip-ngs]  
+
+ctests-demos-on-pip-ngs:
+  stage: test
+  image: python:3.12
+  script:
+    - apt-get update
+    - apt-get install -y cmake
+    - pip3 install ngsolve pytest scipy numpy psutil
+    - bash .ci/ci_ctests.sh demos
+  # <<: *build-config
+  when: on_success
+  allow_failure: false
+  dependencies:
+    - build-on-pip-ngs
+  needs: [build-on-pip-ngs]
+
+metrics:
+  tags:
+    - c5
+  stage: test
+  image: docker.gitlab.gwdg.de/ngsuite/ngs-docker/ngs-docker:src
+  script:
+    - export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${PWD}/install/lib/python3.10/dist-packages/xfem"
+    - export PYTHONPATH="${PYTHONPATH}:${PWD}/install/lib/python3.10/dist-packages"
+    - python3 tests/ngsxfem_report.py 2> metrics.txt
+  # <<: *build-config
+  artifacts:
+    reports:
+      metrics: metrics.txt
+  when: manual
+  allow_failure: true
+  dependencies:
+    - build-on-src-ngs
+  needs: [build-on-src-ngs]  
+
+codestyle-demos:
+  stage: test
+  image: docker.gitlab.gwdg.de/ngsuite/ngs-docker/ngs-docker:src
+  script:
+    - export PIP_BREAK_SYSTEM_PACKAGES=1
+    - pip3 install pycodestyle
+    - export PATH="${PATH}:/home/jovyan/.local/bin"
+    - pycodestyle demos/{*,spacetime/*,mpi/*}.py
+  # <<: *build-config
+  when: always
+  allow_failure: true
+  dependencies:
+    - build-on-src-ngs
+  needs: []  
+
+paper:
+  stage: deploy
+  image:
+    name: openjournals/paperdraft
+    entrypoint: [""]
+  script:
+    - cd doc
+    - /usr/local/bin/pandoc --defaults="$OPENJOURNALS_PATH"/docker-defaults.yaml --defaults="$OPENJOURNALS_PATH"/"$JOURNAL"/defaults.yaml -s -o paper.pdf paper.md
+    - cp *.pdf ../
+  artifacts:
+    paths:
+      - paper.pdf
+  needs: []  
+
+paper-appendix:
+  stage: deploy
+  image:
+    name: schruste/latex
+    entrypoint: [""] 
+  script:
+    - cd doc
+    - pandoc --template latex.template --pdf-engine=lualatex -s -o feature-details.pdf feature-details.md        
+    - pandoc --template latex.template --pdf-engine=lualatex -s -o literature.pdf literature.md
+    - cp *.pdf ../
+  artifacts:
+    paths:
+      - literature.pdf
+      - feature-details.pdf
+  needs: []  
+        
+        
+pages:
+  stage: deploy
+  image: docker.gitlab.gwdg.de/ngsuite/ngs-docker/ngs-docker:src
+  script:
+    - git config --global --add safe.directory /builds/${CI_PROJECT_PATH}
+    - git config --global --add safe.directory /builds/${CI_PROJECT_PATH}/external_dependencies/jupyter
+    - git config --global --add safe.directory /builds/${CI_PROJECT_PATH}/external_dependencies/ngsolve
+    - git submodule
+    - git submodule update --init
+
+    # this export is needed for some sphinx-command
+    - export TZ=UTC
+  
+    # after nbconvert 5.6.1 (i.e. 6+) the templates are missing
+    - python3 -m venv --clear venv
+    - source venv/bin/activate
+    - mkdir -p venv/share
+    - mkdir -p venv/share/jupyter
+    - cp -r ~/.venv/share/jupyter/nbconvert venv/share/jupyter/
+    - pip3 install -r doc/sphinx/requirements.txt
+  
+    # the following exports work independent of python version
+    - cd install/lib
+    - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:"$(pwd)/`find -name xfem`/.."
+    - export PATH="${PATH}:/home/jovyan/.local/bin"
+    - export XFEM_PATH="$(pwd)/`find -name xfem`/.."
+    - export PYTHONPATH=$XFEM_PATH:$PYTHONPATH
+    - cd ../..
+
+    # generate html-files and copy some stuff
+    - sphinx-apidoc -e -f -o doc/sphinx/xfem_doc $XFEM_PATH/xfem
+    - cp external_dependencies/jupyter/{aggregation,basics,intlset,cutfem,spacetime_fitted,spacetime_unfitted,mlset_basic,mlset_pde,unfmixed}.ipynb doc/sphinx/jupyter
+    - cp external_dependencies/jupyter/helper.py doc/sphinx/jupyter
+    - cp -r external_dependencies/jupyter/graphics doc/sphinx/jupyter
+    - cp demos/*.py doc/sphinx/xfem_misc/
+    - mkdir -p doc/sphinx/xfem_misc/aggregates doc/sphinx/xfem_misc/mpi doc/sphinx/xfem_misc/spacetime doc/sphinx/xfem_misc/spdes
+    - cp demos/aggregates/*.py doc/sphinx/xfem_misc/aggregates
+    - cp demos/mpi/*.py doc/sphinx/xfem_misc/mpi
+    - cp demos/spacetime/*.py doc/sphinx/xfem_misc/spacetime
+    - cp demos/spdes/*.py doc/sphinx/xfem_misc/spdes
+    - cp -r doc/graphics doc/sphinx/xfem_misc/
+    - sphinx-build doc/sphinx html
+    - cp doc/sphinx/bullets.css html/_static
+
+    # copy missing files
+    - mkdir -p html/doc html/xfem_misc/python
+    - cp doc/feature-details.md html/doc/feature-details.md
+    - cp INSTALLATION.md html/INSTALLATION.md
+    - cp python/ngs_check.py html/xfem_misc/python/ngs_check.py
+
+    - rm -f html/.doctrees/nbsphinx/jupyter/*.ipynb
+    - rm -f html/jupyter/*.ipynb
+    - mv html public
+  # <<: *build-config
+  artifacts:
+    paths:
+      - public
+  dependencies:
+    - build-on-src-ngs
+  needs: [build-on-src-ngs, ctests-demos, ctests-pytests, ctests-pytests-on-pip-ngs, ctests-demos-on-pip-ngs]  
+
+  #only:
+  #  - release # this job will affect only the 'sphinx' branch
+
+pip_linux:
+  #image: quay.io/pypa/manylinux2014_x86_64
+  image: quay.io/pypa/manylinux_2_28_x86_64    
+
+  stage: deploy
+  script:
+    - ./.ci/build_pip.sh 39
+    - ./.ci/build_pip.sh 310
+    - ./.ci/build_pip.sh 311
+    - ./.ci/build_pip.sh 312
+    - ./.ci/build_pip.sh 313
+    - export PIP_BREAK_SYSTEM_PACKAGES=1
+    - /opt/python/cp39-cp39/bin/pip install twine
+    - /opt/python/cp39-cp39/bin/python -m twine upload --skip-existing wheelhouse/* -u __token__ -p $PYPI_UPLOAD_TOKEN
+    # - ./.ci/build_pip.sh 312
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  dependencies:
+    - build-on-src-ngs
+  when: manual # we don't want to trigger this job in ngsxfem-simd
+  needs: [build-on-src-ngs, ctests-demos, ctests-pytests, ctests-pytests-on-pip-ngs, ctests-demos-on-pip-ngs]
+
+
+# build a docker image that is published only in gitlab container registry
+docker_build:
+  stage: deploy
+
+  image:
+    name: gcr.io/kaniko-project/executor:v1.9.0-debug
+    entrypoint: [""]
+     
+  script:
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "$CI_REGISTRY_IMAGE/$CI_PROJECT_NAME:$CI_COMMIT_BRANCH"
+  
+  when: manual
+  needs: [ctests-demos, ctests-pytests, ctests-pytests-on-pip-ngs, ctests-demos-on-pip-ngs]
+
