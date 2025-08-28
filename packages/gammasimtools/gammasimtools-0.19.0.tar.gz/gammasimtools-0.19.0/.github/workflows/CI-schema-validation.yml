@@ -1,0 +1,66 @@
+---
+name: CI-schema-validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/simtools/schemas/model_parameters/*'
+      - 'tests/integration_tests/config/*'
+
+jobs:
+
+  schema-validation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -leo pipefail {0}
+
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installation
+        run: |
+          pip install -e .
+
+      - name: Check for files without the suffix *.schema.yml
+        run: |
+          for file in src/simtools/schemas/model_parameters/*.yml; do
+            if [[ ! $file =~ .*schema.yml$ ]]; then
+              echo "File $file does not have the suffix *.schema.yml"
+              exit 1
+            fi
+          done
+
+      - name: Model parameter schema validation
+        run: |
+          for file in src/simtools/schemas/model_parameters/*.yml; do
+            echo "Testing schema $file"
+            python src/simtools/applications/validate_file_using_schema.py \
+            --file_name "$file" \
+            --schema model_parameter_and_data_schema.metaschema.yml \
+            --data_type "schema" \
+            --log_level DEBUG
+          done
+
+      - name: Integration test config file validation
+        run: |
+          for file in tests/integration_tests/config/*.yml; do
+            echo "Testing config file $file"
+            python src/simtools/applications/validate_file_using_schema.py \
+            --file_name "$file" \
+            --schema application_workflow.metaschema.yml \
+            --data_type "schema" \
+            --log_level DEBUG
+          done

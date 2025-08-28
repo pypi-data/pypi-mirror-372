@@ -1,0 +1,126 @@
+---
+name: CI-linting
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize]
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+
+  linting:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -leo pipefail {0}
+
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          # super-linter needs the full git history to get the
+          # list of files that changed across commits
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check for non-ASCII characters
+        run: |
+          found=0
+          while IFS= read -r file; do
+            matches=$(perl -ne 'print if /[^[:ascii:]]/ && !/latin/i' "$file")
+            if [ -n "$matches" ]; then
+              echo "File: $file"
+              echo "$matches"
+              found=1
+            fi
+          done < <(find . -type f \( -name "*.py" -o -name "*.rst" -o -name "*.yml" -o -name "*.toml" \))
+
+          if [ "$found" -eq 1 ]; then
+            echo "Non-ASCII characters found in documentation."
+            exit 1
+          fi
+
+      - name: Lint Docker files
+        run: |
+          find ./docker -name "Dockerfile-*" -print0 | while IFS= read -r -d '' dockerfile; do
+            docker run --rm -i ghcr.io/hadolint/hadolint < "$dockerfile"
+          done
+
+      - name: install packages not included in super-linter
+        run: |
+          pip install validate-pyproject
+
+      - name: pyproject.toml
+        run: |
+          validate-pyproject pyproject.toml
+
+      - name: Check whether the citation metadata from CITATION.cff is valid
+        uses: citation-file-format/cffconvert-github-action@2.0.0
+        with:
+          args: "--validate"
+
+      # Dependencies required to avoid errors
+      # reported by linters
+      - name: Install mamba dependencies
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: environment.yml
+          init-shell: bash
+
+      - name: Python dependencies
+        run: |
+          pip install -e '.[tests,dev,doc]'
+          pip install pylint
+
+      - name: pylint
+        run: |
+          git ls-files 'src/simtools/*.py' | xargs pylint -v
+
+      - name: Restore pre-commit cache
+        uses: actions/cache@v4
+        id: precommit-cache
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pre-commit-
+
+      - name: Pre-commit
+        run: |
+          pre-commit run --all-files
+
+      - name: Save pre-commit cache
+        if: success()  # only save if previous steps succeeded
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Lint Code Base
+        uses: super-linter/super-linter@v8
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          # .env file
+          VALIDATE_ENV: true
+          # language
+          VALIDATE_NATURAL_LANGUAGE: true
+          # bash
+          VALIDATE_BASH: true
+          # path for linter rules
+          LINTER_RULES_PATH: ./
+          # create a log file
+          CREATE_LOG_FILE: true
+          LOG_FILE: superlinter.log
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
