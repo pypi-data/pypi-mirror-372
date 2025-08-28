@@ -1,0 +1,86 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Install dependencies
+      run: |
+        uv sync
+        echo "✅ Dependencies installed"
+    
+    - name: Run syntax check
+      run: |
+        python -m py_compile src/fastal/langgraph/toolkit/__init__.py
+        python -m py_compile src/fastal/langgraph/toolkit/models/factory.py
+        python -m py_compile src/fastal/langgraph/toolkit/models/providers/stt/openai.py
+        echo "✅ Syntax check passed"
+    
+    - name: Run tests without optional dependencies
+      run: |
+        uv run pytest tests/ -v --tb=short
+        echo "✅ Core tests passed without optional dependencies"
+    
+    - name: Test import safety
+      run: |
+        uv run python -c "from fastal.langgraph.toolkit import ModelFactory; print('✅ Core import successful')"
+        uv run python -c "from fastal.langgraph.toolkit.models.providers.stt import openai as stt_openai; print('✅ STT module import safe'); print(f'OpenAI available: {stt_openai.OPENAI_AVAILABLE}')"
+        echo "✅ Import safety verified"
+    
+    - name: Check available providers
+      run: |
+        uv run python -c "from fastal.langgraph.toolkit import ModelFactory; providers = ModelFactory.get_available_providers(); print('Available providers:', providers); assert 'stt_providers' in providers; assert 'openai' in providers['stt_providers']; print('✅ Provider detection working')"
+
+  test-with-openai:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Install dependencies with OpenAI
+      run: |
+        uv sync
+        uv add openai
+        echo "✅ Dependencies with OpenAI installed"
+    
+    - name: Run tests with OpenAI available
+      run: |
+        uv run pytest tests/test_stt.py -v --tb=short
+        echo "✅ STT tests passed with OpenAI available"
+    
+    - name: Test STT provider creation
+      run: |
+        uv run python -c "from fastal.langgraph.toolkit.models.providers.stt.openai import OpenAISTTProvider, OPENAI_AVAILABLE; from types import SimpleNamespace; print('OpenAI available: ' + str(OPENAI_AVAILABLE)); provider = OpenAISTTProvider(SimpleNamespace(api_key='test-key'), 'whisper-1') if OPENAI_AVAILABLE else None; print('✅ STT provider creation successful' if OPENAI_AVAILABLE else '❌ OpenAI not detected despite installation')"
