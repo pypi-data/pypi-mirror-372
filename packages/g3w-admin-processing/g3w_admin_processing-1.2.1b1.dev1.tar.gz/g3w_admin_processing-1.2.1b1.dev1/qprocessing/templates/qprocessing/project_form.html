@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+{% load g3wadmin_tags %}
+{% load crispy_forms_tags %}
+{% load i18n %}
+
+
+{% block custom_js_links_page %}
+<script>
+const QPROCESSINGPROJECT_ID = {% if form.instance.pk %} {{ form.instance.pk }} {% else %} -1 {% endif %};
+$(document).ready(function(){
+       ga.$projectSelect = $('#id_projects');
+        ga.$projectSelect.on('change', function(e){
+
+            var value = $(this).val();
+            var $viewers_select = $("#id_viewer_users");
+            var $viewer_groups_select = $("#id_viewer_user_groups");
+            if (value) {
+                $.ajax({
+                    url: '{% url 'qprocessing-viewer-users' %}' + '?project_id='+value+'&qpp_id='+QPROCESSINGPROJECT_ID,
+                    success:function(res){
+                        $viewers_select.html('');
+                        $viewers_select.select2({data: res.viewer_users});
+                        $viewer_groups_select.html('');
+                        $viewer_groups_select.select2({data: res.group_viewers});
+                    }
+
+                });
+            } else {
+                $("#id_viewer_users").select2('val', '');
+                $("#id_viewer_user_groups").select2('val', '');
+            }
+
+        });
+        // to start
+        ga.$projectSelect.trigger('change');
+});
+</script>
+{% endblock %}
+
+
+{% block page_header %}
+    <h1>
+        {% if form.instance.pk %}
+            {% trans 'QProcessing Project' %}
+            <small>{{ form.instance.project.title }}</small>
+        {% else %}
+        {% trans 'New' %} {% trans 'QProcessing Project' %}
+        {% endif %}
+
+    </h1>
+{% endblock %}
+
+{% block main_content %}
+
+<form method="post" id="project-form" data-widget-type="ajaxUpload"  enctype="multipart/form-data">
+    {% if form.errors %}
+        <div class="row">
+            <div class="col-md-12">
+            <div class="alert alert-danger alert-dismissable">
+                <h4><i class="icon fa fa-ban"></i> {% trans 'Alert' %}!</h4>
+                    {% trans 'Some errors on form. Check it and send again.' %}
+              </div>
+            </div>
+        </div>
+    {% endif %}
+    {% crispy form %}
+    {% g3wadmin_add_button_form %}
+</form>
+{% endblock %}
