@@ -1,0 +1,62 @@
+# Miscelleaneous tests for use with BatsPP
+
+# merge_notes.py should not pull in control charctars
+$ echo $'\x00' > _test-notes.txt; consolidate-notes.bash -; perl-grep -c '\x00' _master-note-info.list 
+0
+
+#-------------------------------------------------------------------------------
+# cut.py tests
+
+# cut.py doesn't quote fields if tab-delimited
+$ echo $'1\t2\t3\t4' | cut.py --fields="3,4" -
+3	4
+
+# However, it does for CSV.
+# TODO: but why?
+$ echo $'1,2,3,4' | cut.py --csv --fields="3,4" -
+"3","4"
+
+# Need to specify Excel output style
+$ echo $'1,2,3,4' | cut.py --csv --fields="3,4" --output-dialect excel -
+3,4
+
+$ echo $'1,2,3,4' | cut.py --csv --fields="3,4" --output-tsv -
+3	4
+
+#-------------------------------------------------------------------------------
+# rgb_color_name.py
+
+# Make sure --hex is default if --hex3 or --hex6 specified.
+# This is a regression test for the following error:
+# $ echo '"img2img_background_color": "#ffffff",' | rgb_color_name.py --hex6 - 2> /dev/null
+# "img2img_background_color": "#ffffff",
+
+$ echo '"img2img_background_color": "#ffffff",' | rgb_color_name.py --hex6 - 2> /dev/null
+"img2img_background_color": "<#ffffff", white>",
+
+#-------------------------------------------------------------------------------
+
+# Make sure convert_emoticons.py runs OK
+#
+## $ echo hey | convert_emoticons.py -
+## Traceback (most recent call last):
+##   File "/home/tomohara/mezcla-tom/convert_emoticons.py", line 157, in <module>
+##     main()
+##   File "/home/tomohara/mezcla-tom/convert_emoticons.py", line 149, in main
+##     for line in main_app.read_entire_input().splitlines():
+## AttributeError: 'Main' object has no attribute 'read_entire_input'
+
+#-------------------------------------------------------------------------------
+# Make sure mezcla runs OK
+
+## $ ./mezcla 
+## Traceback (most recent call last):
+##   File "./mezcla", line 15, in <module>
+##     from mezcla.__main__ import main as mezcla_main
+## ModuleNotFoundError: No module named 'mezcla.__main__'
+## 
+## $ pwd-host-info 
+## /home/tomohara/mezcla-tom
+## hw2
+## hwsrv-592788.hostwindsdns.com
+## 
