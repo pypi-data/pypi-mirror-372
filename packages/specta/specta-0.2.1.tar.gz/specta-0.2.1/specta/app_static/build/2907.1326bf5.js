@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_JUPYTERLAB_CORE_OUTPUT=self.webpackChunk_JUPYTERLAB_CORE_OUTPUT||[]).push([[2907],{12907:(e,c,r)=>{r.d(c,{createArchitectureServices:()=>s.S});var s=r(59038);r(74428)}}]);
