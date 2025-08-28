@@ -1,0 +1,305 @@
+Metadata-Version: 2.4
+Name: fs-k8s-fastapi-helper
+Version: 0.1.0
+Summary: A Kubernetes health check probe helper for FastAPI applications
+Author-email: wuzh <wuzh@fxiaoke.com>
+Maintainer-email: wuzh <wuzh@fxiaoke.com>
+License-Expression: MIT
+Project-URL: Homepage, https://git.firstshare.cn/devops/fs-k8s-fastapi-helper
+Project-URL: Documentation, https://git.firstshare.cn/devops/fs-k8s-fastapi-helper
+Project-URL: Repository, https://git.firstshare.cn/devops/fs-k8s-fastapi-helper
+Project-URL: Bug Tracker, https://git.firstshare.cn/devops/fs-k8s-fastapi-helper/-/issues
+Keywords: kubernetes,k8s,fastapi,health-check,probe,liveness,readiness,microservices
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Systems Administration
+Classifier: Topic :: Internet :: WWW/HTTP :: HTTP Servers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Operating System :: OS Independent
+Classifier: Framework :: FastAPI
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: fastapi[standard]>=0.100.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.18.0; extra == "dev"
+Requires-Dist: black>=21.0; extra == "dev"
+Requires-Dist: flake8>=3.8; extra == "dev"
+Requires-Dist: mypy>=0.800; extra == "dev"
+Requires-Dist: pre-commit>=2.15; extra == "dev"
+Provides-Extra: test
+Requires-Dist: pytest>=6.0; extra == "test"
+Requires-Dist: pytest-asyncio>=0.18.0; extra == "test"
+Requires-Dist: pytest-cov>=2.10; extra == "test"
+Provides-Extra: docs
+Requires-Dist: mkdocs>=1.2.0; extra == "docs"
+Requires-Dist: mkdocs-material>=7.0; extra == "docs"
+Dynamic: license-file
+
+# fs-k8s-fastapi-helper
+
+一个专为Kubernetes环境设计的FastAPI应用健康检查探针助手。
+
+## 项目简介
+
+FS K8s Python Helper 是一个轻量级的Python库，专门为在Kubernetes环境中运行的FastAPI应用提供标准化的健康检查探针。它简化了K8s健康检查的配置，提供了开箱即用的存活探针(liveness probe)和就绪探针(readiness probe)实现。
+
+## 功能特性
+
+- 🚀 **快速集成**: 一行代码即可为FastAPI应用添加K8s健康检查探针
+- 🔍 **智能检测**: 支持自定义目标路径的就绪检查
+- 🛡️ **完整探针**: 提供启动、存活和就绪三种探针
+
+## 安装
+
+### 从PyPI安装
+
+```bash
+pip install fs-k8s-fastapi-helper
+```
+
+### 从源码安装
+
+```bash
+git clone https://git.firstshare.cn/devops/fs-k8s-fastapi-helper.git
+cd fs-k8s-fastapi-helper
+pip install -e .
+```
+
+### 依赖要求
+
+- Python 3.7+
+- FastAPI >= 0.100.0
+
+## 快速开始
+
+### 基本使用
+
+```python
+from fastapi import FastAPI
+from fs_k8s_fastapi_helper import install_k8s_health_probes
+
+app = FastAPI()
+
+# 安装基本的健康检查探针
+install_k8s_health_probes(app)
+
+# 你的应用路由
+@app.get("/")
+def index():
+    return {"message": "Welcome to FS K8s Python Helper Demo"}
+
+@app.get("/health")
+def ping():
+    return {"status": "healthy", "service": "demo-app"}
+```
+
+> 💡 **更多示例**: 查看 [examples/demo_app.py](examples/demo_app.py) 获取完整的示例应用。
+
+### 自定义配置
+
+```python
+from fastapi import FastAPI
+from fs_k8s_fastapi_helper import install_k8s_health_probes
+
+app = FastAPI()
+
+# 自定义就绪检查目标路径
+install_k8s_health_probes(
+    app,
+    custom_readiness_path="/health"  # 就绪检查的目标路径
+)
+```
+
+## API 文档
+
+### 探针端点
+
+#### 启动探针 (Startup Probe)
+- **路径**: `/k8s-helper/startup`
+- **方法**: GET
+- **响应**: 
+  ```json
+  {
+    "status": "ok"
+  }
+  ```
+
+#### 存活探针 (Liveness Probe)
+- **路径**: `/k8s-helper/liveness`
+- **方法**: GET
+- **响应**: 
+  ```json
+  {
+    "status": "ok"
+  }
+  ```
+
+#### 就绪探针 (Readiness Probe)
+- **路径**: `/k8s-helper/readiness`
+- **方法**: GET
+- **响应**:
+  ```json
+  {
+    "status": "ok"
+  }
+  ```
+  或当目标路径检查失败时:
+  ```json
+  {
+    "status": "degraded",
+    "target_status": 503
+  }
+  ```
+
+### 函数参数
+
+#### `install_k8s_health_probes()`
+
+| 参数 | 类型 | 默认值 | 描述 |
+|------|------|--------|------|
+| `app` | FastAPI | 必需 | FastAPI应用实例 |
+| `custom_readiness_path` | Optional[str] | None | 就绪检查的目标路径，如果有自定义的状态检测可传递路径 |
+
+### 常量定义
+
+```python
+STARTUP_PATH = "/k8s-helper/startup"
+LIVENESS_PATH = "/k8s-helper/liveness"
+READINESS_PATH = "/k8s-helper/readiness"
+```
+
+## Kubernetes 配置示例
+
+
+## 使用场景
+
+### 场景1: 基本健康检查
+```python
+# 仅验证应用是否正常运行
+install_k8s_health_probes(app)
+```
+
+### 场景2: 依赖服务检查
+```python
+# 检查应用是否能正常访问数据库或其他依赖服务
+install_k8s_health_probes(app, custom_readiness_path="/health")
+```
+
+### 场景3: 自定义健康检查
+```python
+# 检查特定的业务逻辑端点
+install_k8s_health_probes(app, custom_readiness_path="/health")
+```
+
+## 开发
+
+### 项目结构
+
+```
+fs-k8s-fastapi-helper/
+├── fs_k8s_fastapi_helper/     # 📦 包源码目录
+│   ├── __init__.py          # 包初始化文件
+│   └── service.py           # 核心服务模块
+├── tests/                   # 🧪 测试目录
+├── docs/                    # 📚 文档目录
+├── examples/                # 🎯 示例应用目录
+│   ├── demo_app.py         # 🚀 完整示例应用
+│   └── README.md           # 📖 示例说明文档
+├── pyproject.toml           # ⚙️ 项目配置（现代化）
+├── MANIFEST.in              # 📋 文件清单
+├── LICENSE                  # 📄 许可证
+└── README.md                # 📖 项目文档
+```
+
+### 开发环境设置
+
+```bash
+# 克隆项目
+git clone https://git.firstshare.cn/devops/fs-k8s-fastapi-helper.git
+cd fs-k8s-fastapi-helper
+
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# 或 venv\Scripts\activate  # Windows
+
+# 安装开发依赖
+pip install -e .[dev]
+
+# 运行代码格式化
+black .
+
+# 运行导入排序
+isort .
+
+# 运行测试
+pytest
+
+# 运行示例应用
+python examples/demo_app.py
+```
+
+### 构建和发布
+
+```bash
+# 构建包
+python -m build --no-isolation --sdist
+
+# 检查包
+twine check dist/*
+
+# 上传到TestPyPI（测试）
+twine upload --repository testpypi dist/*
+
+# 上传到正式PyPI
+twine upload dist/*
+```
+
+### 测试健康检查端点
+
+```bash
+# 启动示例应用
+python examples/demo_app.py
+
+# 或者使用uvicorn
+uvicorn examples.demo_app:app --host 0.0.0.0 --port 8000
+
+# 测试启动探针
+curl http://localhost:8000/k8s-helper/startup
+
+# 测试存活探针
+curl http://localhost:8000/k8s-helper/liveness
+
+# 测试就绪探针
+curl http://localhost:8000/k8s-helper/readiness
+
+# 测试自定义健康检查
+curl http://localhost:8000/health
+
+```
+
+## 工作原理
+
+1. **启动探针**: 简单的状态检查，确认应用是否已启动完成
+2. **存活探针**: 简单的状态检查，确认应用进程是否正常运行
+3. **就绪探针**: 
+   - 如果没有设置 `custom_readiness_path`，仅验证应用路由是否注册
+- 如果设置了 `custom_readiness_path`，会使用 `TestClient` 在内部发起请求到指定路径
+   - 如果目标路径返回 4xx 或 5xx 状态码，就绪探针会返回 503 状态码
+   - 如果请求过程中发生异常，会捕获异常并返回错误信息
+
+## 错误处理
+
+- **目标路径不可达**: 返回 503 状态码和 `degraded` 状态
+- **网络异常**: 捕获异常并返回异常类型信息
+- **应用异常**: 通过 HTTP 状态码判断服务健康状态
+
