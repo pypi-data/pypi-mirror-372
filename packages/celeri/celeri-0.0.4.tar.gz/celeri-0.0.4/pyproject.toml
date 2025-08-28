@@ -1,0 +1,202 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs", "hatch-fancy-pypi-readme"]
+build-backend = "hatchling.build"
+
+[project]
+name = "celeri"
+dynamic = ["version", "readme"]
+description = "Next generation earthquake cycle kinematics"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Brendan Meade", email = "brendanjmeade@gmail.com"},
+]
+requires-python = ">=3.11"
+dependencies = [
+    "addict",
+    "cartopy",
+    "colorcet",
+    "cutde>=25.7.24",
+    "cvxopt",
+    "cvxpy",
+    "gmsh",
+    "h5py",
+    "ipykernel",
+    "ipython",
+    "loguru",
+    "matplotlib",
+    "meshio",
+    "numba",
+    "numpy",
+    "nutpie",
+    "pandas",
+    "papermill",
+    "pyarrow",
+    "pydantic",
+    "pymc",
+    "pyproj",
+    "pytest",
+    "scipy",
+    "shapely",
+    "spherical-geometry",
+    "tqdm",
+    "xarray",
+    "zarr",
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+celeri-solve = "celeri.scripts.celeri_solve:main"
+celeri-snap-segments = "celeri.scripts.snap_segments:main"
+celeri-segmesh = "celeri.scripts.segmesh:main"
+celeri-msh2stl = "celeri.scripts.msh2stl:main"
+celeri-stl2msh = "celeri.scripts.stl2msh:main"
+celeri-forward = "celeri.scripts.celeri_forward:main"
+celeri-create-grid-station = "celeri.scripts.create_grid_station:main"
+celeri-create-bel-mesh = "celeri.scripts.create_bel_mesh:main"
+
+
+[project.urls]
+Homepage = "https://github.com/brendanjmeade/celeri"
+
+[tool.hatch.build.targets.sdist]
+# We only really need the main package and the tests in order to build and verify
+# the package.
+exclude = [
+  "/.github",
+  "/convert",
+  "/data",
+  "/meshing",
+  "/notebooks",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["celeri"]
+
+[tool.hatch.version]
+# Determine the version number based on Git tags
+source = "vcs"
+# Ensure that the version number is of the form vX.Y.Z
+tag-pattern = '''^v(\d+\.\d+\.\d+)$'''
+
+[tool.hatch.version.raw-options]
+# See configuration details in
+# <https://setuptools-scm.readthedocs.io/en/latest/extending/#version-number-construction>
+# The following avoids the weird default behavior of incrementing the version number
+# before a release is made.
+version_scheme = "no-guess-dev"
+
+# Relative links to GitHub in the README.md file break when rendered on PyPI.
+# hatch-fancy-pypi-readme fixes this issue by replacing the relative links with
+# absolute links to the raw content on GitHub.
+# <https://github.com/hynek/hatch-fancy-pypi-readme>
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+# Image links should go to the raw content on GitHub
+# <https://stackoverflow.com/a/46875147>
+pattern = '\[(.*?)\]\(((?!https?://)\S+\.(png|jpe?g|svg|gif))\)'
+replacement = '[\1](https://raw.githubusercontent.com/brendanjmeade/celeri/main/\g<2>)'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+# Handle also HTML image tags
+pattern = '''(<img\b[^>]*\bsrc=)(['"])((?!https?://)[^'"]+)(['"][^>]*>)'''
+replacement = '<img src="https://raw.githubusercontent.com/brendanjmeade/celeri/main/\g<3>\g<4>'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+# Remaining non-image relative links map to the normal absolute GitHub URL
+# <https://stackoverflow.com/a/46875147>
+pattern = '\[(.*?)\]\(((?!https?://)\S+)\)'
+replacement = '[\1](https://github.com/brendanjmeade/celeri/tree/main/\g<2>)'
+
+[tool.pytest.ini_options]
+addopts = "-s --tb=short"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+show-fixes = true
+output-format = "full"
+
+[tool.ruff.format]
+docstring-code-format = true
+exclude = [
+    "notebooks/*",
+]
+
+[tool.ruff.lint]
+select = [
+    "D",  # pydocstyle
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+    "I",  # isort
+    "C4",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+    "UP",  # pyupgrade
+    "RUF",  # Ruff-specific rules
+    "TID",  # flake8-tidy-imports
+    "BLE",  # flake8-blind-except
+    "PTH",  # flake8-pathlib
+    "PERF",  # perflint
+    "A",  # flake8-builtins
+]
+ignore = [
+    "C408",  # unnecessary-collection-call (allow dict(a=1, b=2); clarity over speed!)
+    "D203",  # one-blank-line-before-class (must ignore this or D211)
+    "D213",  # multi-line-summary-second-line (must ignore this or D212)
+    "D100",  # Missing docstring in public module
+    "D101",  # Missing docstring in public class
+    "D102",  # Missing docstring in public method
+    "D103",  # Missing docstring in public function
+    "D104",  # Missing docstring in public package
+    "D105",  # Missing docstring in magic method
+    "D107",  # Missing docstring in __init__
+    "D205",  # Missing blank line after summary
+    "D400",  # ends-in-period
+    "D401",  # First line of docstring should be in imperative mood
+    "D404",  # First word of the docstring should not be "This"
+    "D413",  # Missing blank line after last section
+    "D415",  # ends-in-punctuation (redundant with D400 ends-in-period)
+    "D417",  # Missing argument descriptions in the docstring
+    "E501",  # line-too-long
+    "BLE001",  # bare except
+    "PERF203", # try-except-in-loop
+    # The following list is recommended to disable these when using ruff's formatter.
+    # (Not all of the following are actually enabled.)
+    "W191",  # tab-indentation
+    "E111",  # indentation-with-invalid-multiple
+    "E114",  # indentation-with-invalid-multiple-comment
+    "E117",  # over-indented
+    "D206",  # indent-with-spaces
+    "D300",  # triple-single-quotes
+    "Q000",  # bad-quotes-inline-string
+    "Q001",  # bad-quotes-multiline-string
+    "Q002",  # bad-quotes-docstring
+    "Q003",  # avoidable-escaped-quote
+    "COM812",  # missing-trailing-comma
+    "COM819",  # prohibited-trailing-comma
+    "ISC001",  # single-line-implicit-string-concatenation
+    "ISC002",  # multi-line-implicit-string-concatenation
+]
+exclude = [
+    "notebooks/*",
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.pyright]
+venvPath = ".pixi/envs"
+venv = "default"
