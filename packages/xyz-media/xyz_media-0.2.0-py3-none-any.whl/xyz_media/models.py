@@ -1,0 +1,127 @@
+# -*- coding:utf-8 -*- 
+# author = 'denishuang'
+from __future__ import unicode_literals
+
+from django.contrib.contenttypes.models import ContentType
+from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.utils.functional import cached_property
+
+from . import choices
+from django.contrib.auth.models import User
+from xyz_util import modelutils
+
+class Lecturer(models.Model):
+    class Meta:
+        verbose_name_plural = verbose_name = "讲师"
+        ordering = ('name',)
+
+    avatar = models.URLField("头像", null=True, blank=True)
+    name = models.CharField("名称", max_length=255)
+    description = models.TextField("描述", null=True, blank=True, default='')
+    create_time = models.DateTimeField("创建时间", auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+    @cached_property
+    def video_rating_sumary(self):
+        from xyz_comment.models import RatingSumary
+        from django.contrib.contenttypes.models import ContentType
+        from django.db.models import Avg, Sum
+        vids = list(self.videos.values_list('id', flat=True))
+        return RatingSumary.objects.filter(
+            content_type=ContentType.objects.get_for_model(Video),
+            object_id__in=vids
+        ).aggregate(score_avg=Avg('score'), user_count =Sum('user_count'))
+
+class Video(models.Model):
+    class Meta:
+        verbose_name_plural = verbose_name = "视频"
+        ordering = ('owner_type', 'owner_id', 'name')
+
+    user = models.ForeignKey(User, verbose_name=User._meta.verbose_name, related_name="media_videos",
+                             on_delete=models.PROTECT)
+    owner_type = models.ForeignKey('contenttypes.ContentType', verbose_name='归类', null=True, blank=True,
+                                   on_delete=models.PROTECT)
+    owner_id = models.PositiveIntegerField(verbose_name='属主编号', null=True, blank=True, db_index=True)
+    owner = GenericForeignKey('owner_type', 'owner_id')
+    name = models.CharField("名称", max_length=255)
+    description = models.CharField("描述", max_length=255, null=True, blank=True, default='')
+    url = models.URLField("网址")
+    cover_url = models.URLField('封面', blank=True, null=True)
+    duration = models.PositiveSmallIntegerField('时长', blank=True, default=0, help_text='单位: 秒.', editable=False)
+    size = models.PositiveIntegerField('大小', blank=True, default=0, help_text='单位: 比特Byte', editable=False)
+    context = modelutils.JSONField("详情", blank=True, default={})
+    outline = models.TextField("大纲", blank=True, default='', help_text='可在每一行最后加上时间点， 格式样例: [03:12]')
+    status = models.PositiveSmallIntegerField("状态", choices=choices.STATUS, blank=True, default=choices.STATUS_PROCESS)
+    tags = models.CharField('标签', max_length=256, blank=True, default='')
+    is_active = models.BooleanField("有效", blank=False, default=False)
+    lecturer = models.ForeignKey(Lecturer, verbose_name=Lecturer._meta.verbose_name, blank=True, null=True, related_name="videos", on_delete=models.PROTECT)
+    create_time = models.DateTimeField("创建时间", auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Image(models.Model):
+    class Meta:
+        verbose_name_plural = verbose_name = "图片"
+        ordering = ('-create_time',)
+
+    user = models.ForeignKey(User, verbose_name=User._meta.verbose_name, related_name="media_images",
+                             on_delete=models.PROTECT)
+    owner_type = models.ForeignKey(ContentType, verbose_name='属主类别', null=True, blank=True,
+                                   on_delete=models.PROTECT, related_name="media_images")
+    owner_id = models.PositiveIntegerField(verbose_name='属主编号', null=True, blank=True, db_index=True)
+    owner = GenericForeignKey('owner_type', 'owner_id')
+    name = models.CharField("名称", max_length=255)
+    # description = models.CharField("描述", max_length=255, null=True, blank=True, default='')
+    url = models.URLField("网址", max_length=255)
+    is_active = models.BooleanField("有效", blank=False, default=True)
+    create_time = models.DateTimeField("创建时间", auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Attachment(models.Model):
+    class Meta:
+        verbose_name_plural = verbose_name = "附件"
+
+    user = models.ForeignKey(User, verbose_name=User._meta.verbose_name, related_name="media_attachments",
+                             on_delete=models.PROTECT)
+    owner_type = models.ForeignKey(ContentType, verbose_name='属主类别', null=True, blank=True,
+                                   on_delete=models.PROTECT)
+    owner_id = models.PositiveIntegerField(verbose_name='属主编号', null=True, blank=True)
+    owner = GenericForeignKey('owner_type', 'owner_id')
+    name = models.CharField("名称", max_length=255)
+    description = models.CharField("描述", max_length=255, null=True, blank=True, default='')
+    url = models.URLField("网址")
+    is_active = models.BooleanField("有效", blank=False, default=True)
+    create_time = models.DateTimeField("创建时间", auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Audio(models.Model):
+    class Meta:
+        verbose_name_plural = verbose_name = "音频"
+        ordering = ('owner_type', 'owner_id', 'name')
+
+    user = models.ForeignKey(User, verbose_name=User._meta.verbose_name, related_name="media_audios",
+                             on_delete=models.PROTECT)
+    owner_type = models.ForeignKey('contenttypes.ContentType', verbose_name='归类', null=True, blank=True,
+                                   on_delete=models.PROTECT)
+    owner_id = models.PositiveIntegerField(verbose_name='属主编号', null=True, blank=True, db_index=True)
+    owner = GenericForeignKey('owner_type', 'owner_id')
+    name = models.CharField("名称", max_length=255)
+    url = models.URLField("网址")
+    duration = models.PositiveSmallIntegerField('时长', blank=True, default=0, help_text='单位: 秒.', editable=False)
+    size = models.PositiveIntegerField('大小', blank=True, default=0, help_text='单位: 比特Byte', editable=False)
+    is_active = models.BooleanField("有效", blank=False, default=False)
+    create_time = models.DateTimeField("创建时间", auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return self.name
