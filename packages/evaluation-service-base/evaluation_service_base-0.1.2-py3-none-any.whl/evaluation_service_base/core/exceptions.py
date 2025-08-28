@@ -1,0 +1,4 @@
+
+class TaskCancelledException(Exception):
+    pass
+
