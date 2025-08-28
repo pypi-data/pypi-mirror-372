@@ -1,0 +1,6 @@
+class InvestecError(Exception):
+    ...
+
+
+class InvestecAuthenticationError(InvestecError):
+    ...
