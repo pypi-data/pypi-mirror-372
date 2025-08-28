@@ -1,0 +1,185 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "broadie"
+version = "1.0.15"
+description = "A powerful multi-agent framework with persistence, API server, and agent-to-agent communication"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Broad Institute", email = "broadie@broadinstitute.org" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "langchain-google-genai>=2.1.0",
+    "python-dotenv>=1.0.0",
+    "langchain>=0.3.0",
+    "langchain-core>=0.3.0",
+    "pydantic>=2.0.0",
+    "langgraph>=0.6.0",
+    "typing_extensions>=4.0.0",
+    "langsmith>=0.4.0",
+    "pydantic_settings>=2.10.1",
+    "fastapi>=0.95.0",
+    "uvicorn[standard]>=0.22.0",
+    "a2a-sdk[sql]",
+    "click>=8.0.0",
+    "sqlalchemy>=2.0.0",
+    "aiosqlite>=0.19.0",
+    "asyncpg>=0.28.0",
+    # Integration tools dependencies
+    "google-api-python-client>=2.100.0",
+    "google-auth>=2.23.0",
+    "google-auth-oauthlib>=1.1.0",
+    "slack-sdk>=3.20.0",
+    "langmem==0.0.29"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0",
+  "pytest-asyncio>=0.23",
+  "coverage>=7.2",
+  "build>=1.0.0",
+  "twine>=5.0.0",
+  "black>=23.0.0",
+  "isort>=5.12.0",
+  "mypy>=1.5.0",
+  "ruff>=0.5.0",
+  "httpx>=0.27.0"
+]
+google = [
+  "google-api-python-client>=2.100.0",
+  "google-auth>=2.23.0",
+  "google-auth-oauthlib>=1.1.0"
+]
+slack = [
+  "slack-sdk>=3.20.0"
+]
+postgres = [
+  "asyncpg>=0.28.0"
+]
+sqlite = [
+  "aiosqlite>=0.19.0"
+]
+
+
+[project.scripts]
+broadie = "broadie.cli.main:cli"
+
+[project.urls]
+Homepage = "https://github.com/broadinstitute/broadie"
+Repository = "https://github.com/broadinstitute/broadie"
+Documentation = "https://docs.broadie.ai"
+"Bug Tracker" = "https://github.com/broadinstitute/broadie/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["broadie*"]
+
+[tool.setuptools.package-data]
+broadie = [
+    "templates/*.json",
+    "py.typed",
+    "static/ui/**/*",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+include = '\.pyi?$'
+extend-exclude = '''
+(
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)
+'''
+
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["broadie"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "slack_sdk.*",
+    "chromadb.*",
+    "sentence_transformers.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=broadie",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=80",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow running tests",
+]
+
+[tool.coverage.run]
+source = ["broadie"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
