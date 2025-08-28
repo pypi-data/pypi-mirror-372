@@ -1,0 +1,103 @@
+fragment SearchEntityInfo on Entity {
+  urn
+  ... on GlossaryTerm {
+    datasets: relationships(input:{
+      direction: INCOMING,
+      types: ["SchemaFieldWithGlossaryTerm"]
+    }) {
+      relationships {
+        type
+        entity {
+          ... on Dataset{
+          urn
+          ...entityDataProduct
+        }
+        }
+      }
+    }
+  }
+}
+fragment entityDataProduct on Entity {
+  dataProduct: relationships(
+    input: {
+      types: ["DataProductContains"]
+      direction: INCOMING
+      start: 0
+      count: 1
+    }
+  ) {
+    relationships {
+      type
+      entity {
+        urn
+        type
+        ... on DataProduct {
+          properties {
+            name
+            description
+          }
+        }
+      }
+    }
+  }
+}
+fragment FacetEntityInfo on Entity {
+  ... on Dataset {
+    name
+    properties {
+      name
+    }
+  }
+  ... on Container {
+    subTypes {
+      typeNames
+    }
+    properties {
+      name
+    }
+  }
+  ... on GlossaryTerm {
+    properties {
+      name
+    }
+  }
+}
+
+query search(
+  $types: [EntityType!]
+  $query: String!
+  $orFilters: [AndFilterInput!]
+  $count: Int!
+  $scrollId: String
+) {
+  scrollAcrossEntities(
+    input: {
+      query: $query
+      count: $count
+      scrollId: $scrollId
+      types: $types
+      orFilters: $orFilters
+      searchFlags: { skipHighlighting: true, maxAggValues: 5 }
+    }
+  ) {
+    count
+    total
+    searchResults {
+      entity {
+        ...SearchEntityInfo
+      }
+    }
+    facets {
+      field
+      displayName
+      aggregations {
+        value
+        count
+        displayName
+        entity {
+          ...FacetEntityInfo
+        }
+      }
+    }
+  }
+}
