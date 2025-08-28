@@ -1,0 +1,49 @@
+name: titanic
+version: 1.0.0
+
+control:
+  # 실행 이력 관리
+  # backup:        # Optional) 디스크 사용량 기준 백업 수행
+  #   type: size     # Required) 백업 방식(size, count, day)
+  #   value: 5MB     # Required)저장 용량. Default 1GB. ex) 1000000000, 1GB, 1MB, 1KB
+  backup:        # Optional) 수행 횟수 기준 백업 수행
+    type: count    # Required) 백업 방식(size, count, day)
+    value: 5       # Optional) default 1000
+  # backup:        # Optional) 마지막 실행일 기준 기간(일)동안 백업
+  #   type: day      # Required) 백업 방식(size, count, day)
+  #   value: 7       # Optional) default: 7일
+
+  check_resource: True  # Optional) 실행시 사용된 CPU, Memory resource 사용량 로그 출력. Default: False
+
+solution:
+  pip:                       # Optional) 사용자 정의 함수의 3rd Party libs 를 내려 받기 위한 설정
+    # requirements: False        # Optional) 사용자 소스코드 git 코드 이하 requirements.txt 를 설치하고 싶은 경우 True로 설정
+    requirements:             # Optional) 개별 library를 설치하고자 하는 경우
+      - numpy==1.26.4
+      - pandas==1.5.3
+      - scikit-learn
+  #     - scikit-learn --index-url https://my.local.mirror.com/simple
+  # credential:                # Optional) Credential(train/inferenece의 input, output의 파일이 S3인 경우 공통 적용되는 인증 정보)
+  #   profile_name: aws-profile-name
+  function:                  # Required) 사용자 정의 함수
+    preprocess:                # 함수 이름 -> train.pipeline의 이름으로 사용됨
+      def: titanic.preprocess    # Required) 사용자 모듈에서 실행 대상 함수
+    train:
+      def: titanic.train
+      argument:
+        x_columns: [ 'Pclass', 'Sex', 'SibSp', 'Parch']
+        y_column: Survived
+    inference:
+      def: titanic.inference
+      argument:
+        x_columns: [ 'Pclass', 'Sex', 'SibSp', 'Parch']
+  train:
+    dataset_uri: [train_dataset/]     # 데이터 폴더, 폴더 리스트 (파일 형식 불가) 
+    # dataset_uri: s3://mellerikat-test/tmp/alo/                # 예제1) S3 key(prefix) 이하 경로 모든 폴더, 파일
+    artifact_uri: train_artifact/
+    pipeline: [preprocess, train]   # 실행 대상 function 목록
+  inference:
+    dataset_uri: inference_dataset/
+    # model_uri: model_artifacts/n100_depth5.pkl  # 이미 학습된 모델을 load 
+    artifact_uri: inference_artifact/ #  Optional) pipeline['artifact']['workspace'] 경로 이하에 저장된 파일에 대해 압축 및 업로드 경로 정의. default 경로 이하 inferenece.tar.gz으로 업로드 됨
+    pipeline: [preprocess, inference]
