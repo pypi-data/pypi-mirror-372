@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2025 Arm Ltd.
+
+[build-system]
+requires = ["tox>=4", "setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "batrachomyomachia"
+version = "2025.8.27"
+description = "Add your description here"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.13"
+dependencies = [
+    "asgiref>=3.9.1",
+    "celery[redis,gevent]>=5.3.3",
+    "click>=8.2.1",
+    "dynaconf>=3.2.11",
+    "emails>=0.6",
+    "filelock>=3.19.1",
+    "flask[async]>=3.1.2",
+    "flower>=2.0.0",
+    "gitpython>=3.1.45",
+    "jinja2>=3.1.6",
+    "platformdirs>=4.3.8",
+    "pyforgejo>=2.0.4",
+    "python-dotenv>=1.1.1",
+    "ruamel-yaml>=0.18",
+    "uvicorn[standard]>=0.35.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "mypy", "fakeredis", "types-click", "ruff", "pytest-cov", "tox"]
+
+[project.scripts]
+bmm = "batrachomyomachia.cli:cli"
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+
+[tool.ruff]
+lint.select = ["E", "F", "I"] # E: pycodestyle, F: pyflakes, I: isort
+target-version = "py313"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+
+[tool.setuptools.package-data]
+batrachomyomachia = ["default-settings.yml", "templates/**/*.j2"]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py313, lint, typecheck, format
+skip_missing_interpreters = true
+
+[testenv]
+description = Run tests with pytest
+allowlist_externals = uv
+commands_pre =
+    uv pip install -e .[dev]
+commands =
+    pytest --cov=batrachomyomachia --cov-report=html --cov-report=xml
+skip_install = true
+passenv = PYTHONPATH
+
+[testenv:lint]
+description = Run ruff linter
+commands = ruff check .
+
+[testenv:typecheck]
+description = Run mypy type checks
+commands =
+    mypy .
+
+[testenv:format]
+description = Check formatting with ruff
+commands = ruff format --check .
+
+"""
