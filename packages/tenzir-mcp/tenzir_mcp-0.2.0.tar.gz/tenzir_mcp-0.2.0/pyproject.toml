@@ -1,0 +1,208 @@
+[project]
+name = "tenzir-mcp"
+version = "0.2.0"
+description = "MCP server for Tenzir"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Tenzir", email = "engineering@tenzir.com" }
+]
+maintainers = [
+    { name = "Tenzir Engineering", email = "engineering@tenzir.com" }
+]
+license = { text = "Apache-2.0" }
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "tenzir",
+    "data-pipeline",
+    "security",
+    "secops",
+    "secdataops",
+    "ocsf",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Logging",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "fastmcp>=0.2.0",
+    "pydantic>=2.0.0",
+    "httpx>=0.25.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.5.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/tenzir/mcp"
+Repository = "https://github.com/tenzir/mcp"
+Documentation = "https://docs.tenzir.com/mcp"
+Source = "https://github.com/tenzir/mcp"
+"Bug Tracker" = "https://github.com/tenzir/mcp/issues"
+
+[project.scripts]
+tenzir-mcp = "tenzir_mcp.server:main"
+
+[build-system]
+requires = ["hatchling>=1.21.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.hooks.custom]
+path = "scripts/build_hook.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tenzir_mcp"]
+artifacts = [
+    "src/tenzir_mcp/data/docs/**/*",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src/**/*",
+    "/tests",
+    "/scripts",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
+artifacts = [
+    "src/tenzir_mcp/data/docs/**/*",
+]
+exclude = [
+    "*.pyc",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+]
+
+
+[tool.black]
+line-length = 88
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["tenzir_mcp"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "N",  # pep8-naming
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "SIM108", # Use ternary operator
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --cov=src/tenzir_mcp --cov-report=term-missing --cov-report=html --cov-report=xml"
+testpaths = [
+    "tests",
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow (deselect with '-m not slow')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["src/tenzir_mcp"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
