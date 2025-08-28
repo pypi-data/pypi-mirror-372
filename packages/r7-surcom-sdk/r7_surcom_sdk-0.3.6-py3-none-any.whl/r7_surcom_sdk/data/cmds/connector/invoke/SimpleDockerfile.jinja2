@@ -1,0 +1,39 @@
+FROM python:3.11.12-slim
+
+WORKDIR /app
+
+# Create a non-root user
+RUN useradd -m -u 1000 surcomuser \
+ && chown -R surcomuser:surcomuser /home/surcomuser
+USER surcomuser
+
+# Install the r7-surcom-api package
+{% if data.use_artifactory %}
+RUN pip install -U --pre r7_surcom_api --extra-index-url "https://artifacts.corp.rapid7.com/artifactory/api/pypi/pypi-local/simple"
+{% else %}
+RUN pip install r7_surcom_api
+{% endif %}
+{% if data.python_dependencies %}
+
+# Install additional Python dependencies
+RUN pip install {% for dep in data.python_dependencies %}'{{ dep }}'{% endfor %}
+
+{% endif %}
+{% if data.debug_mode %}
+
+# Setup debugging
+ENV PYDEVD_DISABLE_FILE_VALIDATION=1
+RUN pip install debugpy
+EXPOSE {{ data.debug_port }}
+{% endif %}
+{% if data.verbose %}
+
+# Enable verbose logging
+ENV LOG_LEVEL=DEBUG
+{% endif %}
+
+# Copy the functions directory into the container
+COPY surcom_connector .
+
+# Set the default command to run a Python script
+CMD ["python3", "-m", "functions", "-h"]
