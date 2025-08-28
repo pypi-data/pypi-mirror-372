@@ -1,0 +1,88 @@
+Metadata-Version: 2.4
+Name: emsuite
+Version: 0.1.7
+Summary: Electrostatic Map Suite - A suite of calculators for quantified electrostatic interactions.
+Author-email: "Stephen O. Ajagbe" <ajagbetobistephen@gmail.com>
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: geometric>=1.1
+Requires-Dist: pyscf>=2.10.0
+Requires-Dist: rdkit>=2025.3.5
+Requires-Dist: vdw-surfgen>=0.5.1
+
+# EMSuite
+
+A suite of calculators for quantified electrostatic interactions.
+
+The current implementation  consists primarily of a calculator for tuning effects of external charges on intrinsic electronic properties using PySCF as the QM engine.
+
+
+## Installation
+
+```bash
+pip install emsuite
+```
+
+From current tests, I advise installing in a python 3.10 environment to avoid conflicts. 
+
+## Quick Start
+
+```python
+from emsuite import TuningCalculator
+
+# Initialize calculator
+calc = TuningCalculator(
+molecule = 'water'       # xyz filename
+method = 'dft'           # Can also be hf, which will not need the functional
+functional = 'b3lyp'     
+basis_set = 'augccpvdz'
+charge = 0
+spin = 1  
+state_of_interest = 2  # Focus is excited state 2.
+triplet_excitation = False # Use for triplet state calculations 
+solvent = None      # Use for solvent based calculations. Follow solvent nomenclature of [PySCF SMD Solvent Dictionary](https://pyscf.org/_modules/pyscf/solvent/smd.html#SMD)
+input_type = 'xyz'  # 'xyz' or 'smiles'
+smiles_input = 'O'  # Use with input type = 'smiles'
+optimize_geometry = True # Option to optimize the geometry of the input. Works for both smiles and xyz.
+)
+
+# Run calculations
+calc.run_calculation(['gse', 'homo', 'lumo', 'gap', 'exe'], n_processes = N) #Calculate the tuning effect of a 
+#+1.0e charge on the ground state energy, HOMO, LUMO, HOMO-LUMO gap and S2 execitation energy.
+# N is number of threads to run in parallel. It does this point wise. 
+
+## Available Properties
+
+**Basic Electronic Properties:**
+- `gse` - Ground state energy
+- `homo` - HOMO energy
+- `lumo` - LUMO energy  
+- `gap` - HOMO-LUMO gap
+- `dm` - Dipole moment
+
+**Ionization & Electron Affinity:**
+- `ie` - Ionization energy
+- `ea` - Electron affinity
+
+**Chemical Descriptors:**
+- `cp` - Chemical potential
+- `eng` - Electronegativity
+- `hard` - Chemical hardness
+- `efl` - Electrophilicity index
+- `nfl` - Nucleophilicity index
+
+**Excited States (TD-DFT/TD-HF):**
+- `exe` - Excitation energies
+- `osc` - Oscillator strengths
+
+## Requirements
+
+- Python 3.10+
+- PySCF
+- RDKit
+- numpy
+- vdw-surfgen
+
+## License
+
+GNU-GPL
