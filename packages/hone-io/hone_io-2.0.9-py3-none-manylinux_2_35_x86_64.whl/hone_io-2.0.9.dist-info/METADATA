@@ -1,0 +1,277 @@
+Metadata-Version: 2.4
+Name: hone-io
+Version: 2.0.9
+Summary: Library for quantum machine learning.
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: torch==2.7.0
+Requires-Dist: structlog>=24.4.0
+Requires-Dist: pandas>=2.2.3
+Requires-Dist: qbism>=0.1.0
+Requires-Dist: numpy>=2.1.3
+Requires-Dist: rich
+Requires-Dist: scikit-learn
+Requires-Dist: sentry_sdk
+Requires-Dist: tensordict>=0.7.2
+Requires-Dist: cryptlex-lexactivator>=3.33.0
+Requires-Dist: cachetools>=6.1.0
+
+# Hone-io Community Edition - QCML Scikit-Learn Integration
+
+Welcome to the **Honeio Community Edition**! This package provides scikit-learn compatible wrappers for Quantum Classical Machine Learning (QCML) models based on Hamiltonian Space Models (HSM).
+
+## 🚀 What is QCML?
+
+QCML (Quantum Cognition Machine Learning) leverages quantum-inspired Hamiltonian dynamics for classical machine learning tasks. The models use Hamiltonian Space Models to create rich, non-linear representations that can capture complex patterns in your data.
+
+## 📦 Available Classes
+
+### `QCMLRegressor`
+A scikit-learn compatible regressor for continuous target prediction tasks.
+
+### `QCMLClassifier`
+A scikit-learn compatible classifier for discrete classification tasks.
+
+Both classes wrap the underlying HSM layers with learnable input weighting and provide familiar scikit-learn interfaces.
+
+## 🎯 Key Features
+
+- **Scikit-learn compatibility**: Drop-in replacement for sklearn estimators
+- **Quantum-inspired learning**: Uses Hamiltonian dynamics for feature representation
+- **Adaptive weighting**: Learnable input feature weights for automatic feature selection
+- **GPU support**: Train on CPU or CUDA devices
+- **Model persistence**: Save and load trained models
+- **Flexible batching**: Support for batch training or full-batch optimization
+
+## ⚠️ Community Edition Limitations
+
+The community edition has the following restrictions:
+
+| Parameter | Limit | Description |
+|-----------|-------|-------------|
+| **Input Features** | 100 | Maximum number of input features/operators |
+| **Output Features** | 12 | Maximum number of output features/operators |
+| **Hilbert Space Dimension** | 8 | Maximum dimension of the quantum state space |
+| **Training Samples** | 1,000 | Maximum number of training samples per batch |
+
+> 💡 **Need more capacity?** Contact [support@qognitive.io](mailto:support@qognitive.io) for information about commercial licensing to remove these limitations.
+
+## 🛠️ Installation
+
+```bash
+pip install hone-io
+```
+
+## 📚 Quick Start Examples
+
+### Regression Example
+
+```python
+import numpy as np
+from sklearn.datasets import make_regression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+from honeio.integrations.sklearn import QCMLRegressor
+
+# Generate sample regression data
+X, y = make_regression(
+    n_samples=800,    # Within community limit of 1,000
+    n_features=20,    # Within community limit of 100
+    noise=0.1,
+    random_state=42
+)
+
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Create and configure the QCML regressor
+model = QCMLRegressor(
+    hilbert_space_dim=8,     # Maximum for community edition
+    epochs=500,              # Number of training epochs
+    lr=0.01,                 # Learning rate for HSM parameters
+    weights_lr=0.05,         # Learning rate for input weights
+    loss='L1',               # L1, L2, or SmoothL1
+    device='cpu',            # 'cpu' or 'cuda'
+    batch_size=100,          # Batch size for training
+    random_state=42
+)
+
+# Train the model
+print("Training QCML Regressor...")
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate performance
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Test MSE: {mse:.4f}")
+print(f"Test R²: {r2:.4f}")
+
+# Feature importance (based on learned weights)
+feature_weights = model.weighted_layer.get_weights_by_feature()
+print(f"Feature weights shape: {feature_weights.shape}")
+print(f"Top 5 most important features: {np.argsort(np.abs(feature_weights.detach().numpy()))[-5:]}")
+```
+
+### Classification Example
+
+```python
+import numpy as np
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from honeio.integrations.sklearn import QCMLClassifier
+
+# Generate sample classification data
+X, y = make_classification(
+    n_samples=900,           # Within community limit
+    n_features=25,           # Within community limit
+    n_classes=3,             # Multi-class classification
+    n_informative=15,
+    n_redundant=5,
+    random_state=42
+)
+
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Create and configure the QCML classifier
+model = QCMLClassifier(
+    hilbert_space_dim=6,     # Quantum state space dimension
+    epochs=800,              # Training epochs
+    lr=0.02,                 # Learning rate
+    weights_lr=0.08,         # Weights learning rate
+    device='cpu',
+    batch_size=50,
+    random_state=42
+)
+
+# Train the model
+print("Training QCML Classifier...")
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+y_pred_proba = model.predict_proba(X_test)
+
+# Evaluate performance
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Test Accuracy: {accuracy:.4f}")
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# Show prediction probabilities for first 5 samples
+print("\nPrediction probabilities (first 5 samples):")
+for i in range(5):
+    print(f"Sample {i}: True={y_test[i]}, Pred={y_pred[i]}, Probs={y_pred_proba[i]}")
+```
+
+### Advanced Example: Feature Grouping
+
+```python
+import numpy as np
+from sklearn.datasets import make_classification
+from honeio.integrations.sklearn import QCMLClassifier
+
+# Create data with known feature groups
+X, y = make_classification(n_samples=500, n_features=12, n_classes=2, random_state=42)
+
+# Define feature groups (e.g., features 0-2 are related, 3-5 are related, etc.)
+feature_groups = [
+    [0, 1, 2],      # Group 1: features 0, 1, 2 share same weight
+    [3, 4, 5],      # Group 2: features 3, 4, 5 share same weight
+    [6, 7],         # Group 3: features 6, 7 share same weight
+    # Features 8, 9, 10, 11 will have individual weights
+]
+
+# Create classifier with feature grouping
+model = QCMLClassifier(
+    hilbert_space_dim=4,
+    epochs=300,
+    groups=feature_groups,    # Apply group constraints
+    lr=0.015,
+    random_state=42
+)
+
+model.fit(X, y)
+
+# The model now learns only 7 weights instead of 12:
+# - 1 weight for group [0,1,2]
+# - 1 weight for group [3,4,5]
+# - 1 weight for group [6,7]
+# - 4 individual weights for features [8,9,10,11]
+print(f"Number of learned weights: {len(model.weighted_layer.weights)}")
+print(f"Feature weights: {model.weighted_layer.get_weights_by_feature()}")
+```
+
+## 🔧 Parameter Guide
+
+### Common Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `hilbert_space_dim` | int | 8 | Dimension of quantum state space (max 8 in community) |
+| `epochs` | int | 1000 | Number of training epochs |
+| `lr` | float | 0.1 | Learning rate for HSM parameters |
+| `weights_lr` | float | 0.1 | Learning rate for input feature weights |
+| `device` | str | 'cpu' | Training device ('cpu' or 'cuda') |
+| `batch_size` | int | None | Batch size (None = full batch) |
+| `random_state` | int | 0 | Random seed for reproducibility |
+
+### Regressor-Specific Parameters
+
+| Parameter | Options | Description |
+|-----------|---------|-------------|
+| `loss` | 'L1', 'L2', 'SmoothL1' | Loss function for regression |
+
+### Classifier-Specific Parameters
+
+| Parameter | Options | Description |
+|-----------|---------|-------------|
+| `loss` | 'cross_entropy' | Loss function for classification |
+
+### Advanced Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `groups` | list[list[int]] | Feature groups that share weights |
+| `opt_betas` | tuple[float, float] | Adam optimizer beta parameters |
+
+## 💾 Model Persistence
+
+### Saving Models
+
+```python
+from pathlib import Path
+from honeio.integrations.sklearn.hooks import save_states_pickle
+
+# Set up save function
+save_path = Path('./my_model')
+model.save_model_fn = save_states_pickle(save_path)
+
+# Save the trained model
+model.save()
+```
+
+### Loading Models
+
+```python
+from honeio.integrations.sklearn import QCMLRegressor
+from honeio.integrations.sklearn.hooks import load_states_pickle
+
+# Load a saved model
+load_fn = load_states_pickle(Path('./my_model'))
+loaded_model = QCMLRegressor.load(load_fn)
+
+# Use the loaded model
+predictions = loaded_model.predict(X_test)
+```
+
+*Hone-io Community Edition* 🚀
