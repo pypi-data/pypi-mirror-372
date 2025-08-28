@@ -1,0 +1,35 @@
+# QuantumScan Project
+
+QuantumScan는 취약한 기존 암호 알고리즘을 탐지하고 NIST PQC 표준으로의 전환을 돕는 CLI 도구입니다.
+
+> ⚠️ Privacy Note: 외부 네트워크 전송 없음, 로컬 스캔, 경로/결과는 워크플로 아티팩트 또는 PR 코멘트로만 사용
+
+## GitHub Action 사용 예
+
+```yaml
+- uses: ./PROJECTS/quantumscan
+  with:
+      path: .
+      report_format: md
+      max_file_mb: 5
+      fail_on_findings: false
+      exclude: tests
+```
+
+## PQC 매핑 스니펫
+
+| Legacy 알고리즘 | 권고(PQC/해시) | NIST/FIPS |
+| --- | --- | --- |
+| RSA-2048 | ML-KEM-768 | [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) |
+| ECDSA P-256 | ML-DSA-65 | [FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) |
+| SHA-1 | SHA-256, SHA3-256 | [FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/final), [FIPS 202](https://csrc.nist.gov/pubs/fips/202/final) |
+
+하이브리드 전환 예: `X25519 + ML-KEM-768`.
+
+## NIST PQC References
+
+- [FIPS 203 — ML-KEM (CRYSTALS-Kyber)](https://csrc.nist.gov/pubs/fips/203/final)
+- [FIPS 204 — ML-DSA (CRYSTALS-Dilithium)](https://csrc.nist.gov/pubs/fips/204/final)
+- [FIPS 205 — SLH-DSA (SPHINCS+)](https://csrc.nist.gov/pubs/fips/205/final)
+- [NIST PQC Selected Algorithms](https://csrc.nist.gov/projects/post-quantum-cryptography/selected-algorithms)
+- [NIST News (FIPS 승인 공지)](https://csrc.nist.gov/news/2024/postquantum-cryptography-fips-approved)
