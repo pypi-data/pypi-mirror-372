@@ -1,0 +1,297 @@
+.TH "ramalama 1" 
+.nh
+.ad l
+
+.SH NAME
+.PP
+ramalama \- Simple management tool for working with AI Models
+
+.SH SYNOPSIS
+.PP
+\fBramalama\fP [\fIoptions\fP] \fIcommand\fP
+
+.SH DESCRIPTION
+.PP
+RamaLama : The goal of RamaLama is to make AI boring.
+
+.PP
+RamaLama tool facilitates local management and serving of AI Models.
+
+.PP
+On first run RamaLama inspects your system for GPU support, falling back to CPU support if no GPUs are present.
+
+.PP
+RamaLama uses container engines like Podman or Docker to pull the appropriate OCI image with all of the software necessary to run an AI Model for your systems setup.
+
+.PP
+Running in containers eliminates the need for users to configure the host
+system for AI. After the initialization, RamaLama runs the AI Models within a
+container based on the OCI image. RamaLama pulls container image specific to
+the GPUs discovered on the host system. These images are tied to the minor
+version of RamaLama. For example RamaLama version 1.2.3 on an NVIDIA system
+pulls quay.io/ramalama/cuda:1.2. To override the default image use the
+\fB\fC\-\-image\fR option.
+
+.PP
+RamaLama pulls AI Models from model registries. Starting a chatbot or a rest API service from a simple single command. Models are treated similarly to how Podman and Docker treat container images.
+
+.PP
+When both Podman and Docker are installed, RamaLama defaults to Podman, The \fB\fCRAMALAMA\_CONTAINER\_ENGINE=docker\fR environment variable can override this behaviour. When neither are installed RamaLama attempts to run the model with software on the local system.
+
+.PP
+Note: On MacOS systems that use Podman for containers, configure the Podman machine to use the \fB\fClibkrun\fR machine provider. The \fB\fClibkrun\fR provider enables containers within the Podman Machine access to the Mac's GPU. See \fBramalama\-macos(7)\fP for further information.
+
+.PP
+Note: On systems with NVIDIA GPUs, see \fBramalama\-cuda(7)\fP to correctly configure the host system.
+
+.PP
+RamaLama CLI defaults can be modified via ramalama.conf files. Default settings for flags are defined in \fBramalama.conf(5)\fP\&.
+
+.SH SECURITY
+.SS Test and run your models more securely
+.PP
+Because RamaLama defaults to running AI models inside of rootless containers using Podman on Docker. These containers isolate the AI models from information on the underlying host. With RamaLama containers, the AI model is mounted as a volume into the container in read/only mode. This results in the process running the model, llama.cpp or vLLM, being isolated from the host.  In addition, since \fB\fCramalama run\fR uses the \-\-network=none option, the container can not reach the network and leak any information out of the system. Finally, containers are run with \-\-rm options which means that any content written during the running of the container is wiped out when the application exits.
+
+.SS Here’s how RamaLama delivers a robust security footprint:
+.PP
+.RS
+
+.nf
+✅ Container Isolation – AI models run within isolated containers, preventing direct access to the host system.
+✅ Read\-Only Volume Mounts – The AI model is mounted in read\-only mode, meaning that processes inside the container cannot modify host files.
+✅ No Network Access – ramalama run is executed with \-\-network=none, meaning the model has no outbound connectivity for which information can be leaked.
+✅ Auto\-Cleanup – Containers run with \-\-rm, wiping out any temporary data once the session ends.
+✅ Drop All Linux Capabilities – No access to Linux capabilities to attack the underlying host.
+✅ No New Privileges – Linux Kernel feature which disables container processes from gaining additional privileges.
+
+.fi
+.RE
+
+.SH MODEL TRANSPORTS
+.PP
+RamaLama supports multiple AI model registries types called transports. Supported transports:
+
+.TS
+allbox;
+l l l 
+l l l .
+\fB\fCTransports\fR	\fB\fCPrefix\fR	\fB\fCWeb Site\fR
+URL based	https://, http://, file://	T{
+\fB\fChttps://web.site/ai.model\fR, \fB\fCfile://tmp/ai.model\fR
+T}
+HuggingFace	huggingface://, hf://, hf.co/	\fB\fChuggingface.co\fR
+ModelScope	modelscope://, ms://	\fB\fCmodelscope.cn\fR
+Ollama	ollama://	\fB\fCollama.com\fR
+OCI Container Registries	oci://	\fB\fCopencontainers.org\fR
+ 	 	T{
+Examples: \fB\fCquay.io\fR,  \fB\fCDocker Hub\fR,\fB\fCArtifactory\fR
+T}
+.TE
+
+.PP
+RamaLama uses to the Ollama registry transport. This default can be overridden in the \fB\fCramalama.conf\fR file or via the RAMALAMA\_TRANSPORTS
+environment. \fB\fCexport RAMALAMA\_TRANSPORT=huggingface\fR Changes RamaLama to use huggingface transport.
+
+.PP
+Modify individual model transports by specifying the \fB\fChuggingface://\fR, \fB\fCoci://\fR, \fB\fCollama://\fR, \fB\fChttps://\fR, \fB\fChttp://\fR, \fB\fCfile://\fR prefix to the model.
+
+.PP
+URL support means if a model is on a web site or even on your local system, you can run it directly.
+
+.PP
+ramalama pull \fB\fChuggingface://\fRafrideva/Tiny\-Vicuna\-1B\-GGUF/tiny\-vicuna\-1b.q2\_k.gguf
+
+.PP
+ramalama run \fB\fCfile://\fR$HOME/granite\-7b\-lab\-Q4\_K\_M.gguf
+
+.PP
+To make it easier for users, RamaLama uses shortname files, which container
+alias names for fully specified AI Models allowing users to specify the shorter
+names when referring to models. RamaLama reads shortnames.conf files if they
+exist . These files contain a list of name value pairs for specification of
+the model. The following table specifies the order which RamaLama reads the files
+. Any duplicate names that exist override previously defined shortnames.
+
+.TS
+allbox;
+l l 
+l l .
+\fB\fCShortnames type\fR	\fB\fCPath\fR
+Distribution	T{
+/usr/share/ramalama/shortnames.conf
+T}
+Local install	T{
+/usr/local/share/ramalama/shortnames.conf
+T}
+Administrators	/etc/ramamala/shortnames.conf
+Users	T{
+$HOME/.config/ramalama/shortnames.conf
+T}
+.TE
+
+.PP
+.RS
+
+.nf
+$ cat /usr/share/ramalama/shortnames.conf
+[shortnames]
+  "tiny" = "ollama://tinyllama"
+  "granite" = "huggingface://instructlab/granite\-7b\-lab\-GGUF/granite\-7b\-lab\-Q4\_K\_M.gguf"
+  "granite:7b" = "huggingface://instructlab/granite\-7b\-lab\-GGUF/granite\-7b\-lab\-Q4\_K\_M.gguf"
+  "ibm/granite" = "huggingface://instructlab/granite\-7b\-lab\-GGUF/granite\-7b\-lab\-Q4\_K\_M.gguf"
+  "merlinite" = "huggingface://instructlab/merlinite\-7b\-lab\-GGUF/merlinite\-7b\-lab\-Q4\_K\_M.gguf"
+  "merlinite:7b" = "huggingface://instructlab/merlinite\-7b\-lab\-GGUF/merlinite\-7b\-lab\-Q4\_K\_M.gguf"
+...
+
+.fi
+.RE
+
+.PP
+\fBramalama [GLOBAL OPTIONS]\fP
+
+.SH GLOBAL OPTIONS
+.SS \fB\-\-debug\fP
+.PP
+print debug messages
+
+.SS \fB\-\-dryrun\fP
+.PP
+show container runtime command without executing it (default: False)
+
+.SS \fB\-\-engine\fP
+.PP
+run RamaLama using the specified container engine. Default is \fB\fCpodman\fR if installed otherwise docker.
+The default can be overridden in the ramalama.conf file or via the RAMALAMA\_CONTAINER\_ENGINE environment variable.
+
+.SS \fB\-\-help\fP, \fB\-h\fP
+.PP
+show this help message and exit
+
+.SS \fB\-\-nocontainer\fP
+.PP
+Do not run RamaLama workloads in containers (default: False)
+The default can be overridden in the ramalama.conf file.
+
+.PP
+Note: OCI images cannot be used with the \-\-nocontainer option. This option disables the following features: Automatic GPU acceleration, containerized environment isolation, and dynamic resource allocation. For a complete list of affected features, please see the RamaLama documentation at [link\-to\-feature\-list].
+
+.SS \fB\-\-quiet\fP
+.PP
+Decrease output verbosity.
+
+.SS \fB\-\-runtime\fP=\fIllama.cpp\fP | \fIvllm\fP
+.PP
+specify the runtime to use, valid options are 'llama.cpp' and 'vllm' (default: llama.cpp)
+The default can be overridden in the ramalama.conf file.
+
+.SS \fB\-\-store\fP=STORE
+.PP
+store AI Models in the specified directory (default rootless: \fB\fC$HOME/.local/share/ramalama\fR, default rootful: \fB\fC/var/lib/ramalama\fR)
+The default can be overridden in the ramalama.conf file.
+
+.SH COMMANDS
+.TS
+allbox;
+l l 
+l l .
+\fB\fCCommand\fR	\fB\fCDescription\fR
+ramalama\-bench(1)	benchmark specified AI Model
+ramalama\-chat(1)	T{
+OpenAI chat with the specified REST API URL
+T}
+ramalama\-containers(1)	list all RamaLama containers
+ramalama\-convert(1)	T{
+convert AI Models from local storage to OCI Image
+T}
+ramalama\-info(1)	T{
+display RamaLama configuration information
+T}
+ramalama\-inspect(1)	inspect the specified AI Model
+ramalama\-list(1)	list all downloaded AI Models
+ramalama\-login(1)	login to remote registry
+ramalama\-logout(1)	logout from remote registry
+ramalama\-perplexity(1)	T{
+calculate the perplexity value of an AI Model
+T}
+ramalama\-pull(1)	T{
+pull AI Models from Model registries to local storage
+T}
+ramalama\-push(1)	T{
+push AI Models from local storage to remote registries
+T}
+ramalama\-rag(1)	T{
+generate and convert Retrieval Augmented Generation (RAG) data from provided documents into an OCI Image
+T}
+ramalama\-rm(1)	T{
+remove AI Models from local storage
+T}
+ramalama\-run(1)	T{
+run specified AI Model as a chatbot
+T}
+ramalama\-serve(1)	T{
+serve REST API on specified AI Model
+T}
+ramalama\-stop(1)	T{
+stop named container that is running AI Model
+T}
+ramalama\-version(1)	display version of RamaLama
+.TE
+
+.SH CONFIGURATION FILES
+.PP
+\fBramalama.conf\fP (\fB\fC/usr/share/ramalama/ramalama.conf\fR, \fB\fC/etc/ramalama/ramalama.conf\fR, \fB\fC/etc/ramalama/ramalama.conf.d/*.conf\fR, \fB\fC$HOME/.config/ramalama/ramalama.conf\fR, \fB\fC$HOME/.config/ramalama/ramalama.conf.d/*.conf\fR)
+
+.PP
+RamaLama has builtin defaults for command line options. These defaults can be overridden using the ramalama.conf configuration files.
+
+.PP
+Distributions ship the \fB\fC/usr/share/ramalama/ramalama.conf\fR file with their default settings. Administrators can override fields in this file by creating the \fB\fC/etc/ramalama/ramalama.conf\fR file.  Users can further modify defaults by creating the \fB\fC$HOME/.config/ramalama/ramalama.conf\fR file. RamaLama merges its builtin defaults with the specified fields from these files, if they exist. Fields specified in the users file override the administrator's file, which overrides the distribution's file, which override the built\-in defaults.
+
+.PP
+RamaLama uses builtin defaults if no ramalama.conf file is found.
+
+.PP
+If the \fBRAMALAMA\_CONFIG\fP environment variable is set, then its value is used for the ramalama.conf file rather than the default.
+
+.SH ENVIRONMENT VARIABLES
+.PP
+RamaLama default behaviour can also be overridden via environment variables,
+although the recommended way is to use the ramalama.conf file.
+
+.TS
+allbox;
+l l 
+l l .
+\fB\fCENV Name\fR	\fB\fCDescription\fR
+RAMALAMA\_CONFIG	T{
+specific configuration file to be used
+T}
+RAMALAMA\_CONTAINER\_ENGINE	T{
+container engine (Podman/Docker) to use
+T}
+RAMALAMA\_FORCE\_EMOJI	T{
+define whether \fB\fCramalama run\fR uses EMOJI
+T}
+RAMALAMA\_IMAGE	T{
+container image to use for serving AI Model
+T}
+RAMALAMA\_IN\_CONTAINER	T{
+Run RamaLama in the default container
+T}
+RAMALAMA\_STORE	location to store AI Models
+RAMALAMA\_TRANSPORT	T{
+default AI Model transport (ollama, huggingface, OCI)
+T}
+TMPDIR	T{
+directory for temporary files. Defaults to /var/tmp if unset.
+T}
+.TE
+
+.SH SEE ALSO
+.PP
+\fBpodman(1)\fP, \fBdocker(1)\fP, \fBramalama.conf(5)\fP, \fBramalama\-cuda(7)\fP, \fBramalama\-macos(7)\fP
+
+.SH HISTORY
+.PP
+Aug 2024, Originally compiled by Dan Walsh 
+\[la]dwalsh@redhat.com\[ra]

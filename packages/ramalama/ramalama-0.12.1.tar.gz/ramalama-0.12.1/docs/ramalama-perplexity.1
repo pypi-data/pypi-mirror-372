@@ -1,0 +1,232 @@
+.TH "ramalama-perplexity 1" 
+.nh
+.ad l
+
+.SH NAME
+.PP
+ramalama\-perplexity \- calculate the perplexity value of an AI Model
+
+.SH SYNOPSIS
+.PP
+\fBramalama perplexity\fP [\fIoptions\fP] \fImodel\fP [arg ...]
+
+.SH MODEL TRANSPORTS
+.TS
+allbox;
+l l l 
+l l l .
+\fB\fCTransports\fR	\fB\fCPrefix\fR	\fB\fCWeb Site\fR
+URL based	https://, http://, file://	T{
+\fB\fChttps://web.site/ai.model\fR, \fB\fCfile://tmp/ai.model\fR
+T}
+HuggingFace	huggingface://, hf://, hf.co/	\fB\fChuggingface.co\fR
+ModelScope	modelscope://, ms://	\fB\fCmodelscope.cn\fR
+Ollama	ollama://	\fB\fCollama.com\fR
+OCI Container Registries	oci://	\fB\fCopencontainers.org\fR
+ 	 	T{
+Examples: \fB\fCquay.io\fR,  \fB\fCDocker Hub\fR,\fB\fCArtifactory\fR
+T}
+.TE
+
+.PP
+RamaLama defaults to the Ollama registry transport. This default can be overridden in the \fB\fCramalama.conf\fR file or via the RAMALAMA\_TRANSPORTS
+environment. \fB\fCexport RAMALAMA\_TRANSPORT=huggingface\fR Changes RamaLama to use huggingface transport.
+
+.PP
+Modify individual model transports by specifying the \fB\fChuggingface://\fR, \fB\fCoci://\fR, \fB\fCollama://\fR, \fB\fChttps://\fR, \fB\fChttp://\fR, \fB\fCfile://\fR prefix to the model.
+
+.PP
+URL support means if a model is on a web site or even on your local system, you can run it directly.
+
+.SH OPTIONS
+.SS \fB\-\-authfile\fP=\fIpassword\fP
+.PP
+path of the authentication file for OCI registries
+
+.SS \fB\-\-ctx\-size\fP, \fB\-c\fP
+.PP
+size of the prompt context. This option is also available as \fB\-\-max\-model\-len\fP\&. Applies to llama.cpp and vllm regardless of alias (default: 2048, 0 = loaded from model)
+
+.SS \fB\-\-device\fP
+.PP
+Add a host device to the container. Optional permissions parameter can
+be used to specify device permissions by combining r for read, w for
+write, and m for mknod(2).
+
+.PP
+Example: \-\-device=/dev/dri/renderD128:/dev/xvdc:rwm
+
+.PP
+The device specification is passed directly to the underlying container engine. See documentation of the supported container engine for more information.
+
+.SS \fB\-\-env\fP=
+.PP
+Set environment variables inside of the container.
+
+.PP
+This option allows arbitrary environment variables that are available for the
+process to be launched inside of the container. If an environment variable is
+specified without a value, the container engine checks the host environment
+for a value and set the variable only if it is set on the host.
+
+.SS \fB\-\-help\fP, \fB\-h\fP
+.PP
+show this help message and exit
+
+.SS \fB\-\-image\fP=IMAGE
+.PP
+OCI container image to run with specified AI model. RamaLama defaults to using
+images based on the accelerator it discovers. For example:
+\fB\fCquay.io/ramalama/ramalama\fR\&. See the table below for all default images.
+The default image tag is based on the minor version of the RamaLama package.
+Version 0.12.1 of RamaLama pulls an image with a \fB\fC:0.12\fR tag from the quay.io/ramalama OCI repository. The \-\-image option overrides this default.
+
+.PP
+The default can be overridden in the ramalama.conf file or via the
+RAMALAMA\_IMAGE environment variable. \fB\fCexport RAMALAMA\_IMAGE=quay.io/ramalama/aiimage:1.2\fR tells
+RamaLama to use the \fB\fCquay.io/ramalama/aiimage:1.2\fR image.
+
+.PP
+Accelerated images:
+
+.TS
+allbox;
+l l 
+l l .
+\fB\fCAccelerator\fR	\fB\fCImage\fR
+CPU, Apple	quay.io/ramalama/ramalama
+HIP\_VISIBLE\_DEVICES	quay.io/ramalama/rocm
+CUDA\_VISIBLE\_DEVICES	quay.io/ramalama/cuda
+ASAHI\_VISIBLE\_DEVICES	quay.io/ramalama/asahi
+INTEL\_VISIBLE\_DEVICES	quay.io/ramalama/intel\-gpu
+ASCEND\_VISIBLE\_DEVICES	quay.io/ramalama/cann
+MUSA\_VISIBLE\_DEVICES	quay.io/ramalama/musa
+.TE
+
+.SS \fB\-\-keep\-groups\fP
+.PP
+pass \-\-group\-add keep\-groups to podman (default: False)
+If GPU device on host system is accessible to user via group access, this option leaks the groups into the container.
+
+.SS \fB\-\-name\fP, \fB\-n\fP
+.PP
+name of the container to run the Model in
+
+.SS \fB\-\-network\fP=\fInone\fP
+.PP
+set the network mode for the container
+
+.SS \fB\-\-ngl\fP
+.PP
+number of gpu layers, 0 means CPU inferencing, 999 means use max layers (default: \-1)
+The default \-1, means use whatever is automatically deemed appropriate (0 or 999)
+
+.SS \fB\-\-oci\-runtime\fP
+.PP
+Override the default OCI runtime used to launch the container. Container
+engines like Podman and Docker, have their own default oci runtime that they
+use. Using this option RamaLama will override these defaults.
+
+.PP
+On Nvidia based GPU systems, RamaLama defaults to using the
+\fB\fCnvidia\-container\-runtime\fR\&. Use this option to override this selection.
+
+.SS \fB\-\-privileged\fP
+.PP
+By default, RamaLama containers are unprivileged (=false) and cannot, for
+example, modify parts of the operating system. This is because by de‐
+fault a container is only allowed limited access to devices. A "privi‐
+leged" container is given the same access to devices as the user launch‐
+ing the container, with the exception of virtual consoles (/dev/tty\\d+)
+when running in systemd mode (\-\-systemd=always).
+
+.PP
+A privileged container turns off the security features that isolate the
+container from the host. Dropped Capabilities, limited devices, read\-
+only mount points, Apparmor/SELinux separation, and Seccomp filters are
+all disabled. Due to the disabled security features, the privileged
+field should almost never be set as containers can easily break out of
+confinement.
+
+.PP
+Containers running in a user namespace (e.g., rootless containers) can‐
+not have more privileges than the user that launched them.
+
+.SS \fB\-\-pull\fP=\fIpolicy\fP
+.RS
+.IP \(bu 2
+\fBalways\fP: Always pull the image and throw an error if the pull fails.
+.IP \(bu 2
+\fBmissing\fP: Only pull the image when it does not exist in the local containers storage. Throw an error if no image is found and the pull fails.
+.IP \(bu 2
+\fBnever\fP: Never pull the image but use the one from the local containers storage. Throw an error when no image is found.
+.IP \(bu 2
+\fBnewer\fP: Pull if the image on the registry is newer than the one in the local containers storage. An image is considered to be newer when the digests are different. Comparing the time stamps is prone to errors. Pull errors are suppressed if a local image was found.
+
+.RE
+
+.SS \fB\-\-runtime\-args\fP="\fIargs\fP"
+.PP
+Add \fIargs\fP to the runtime (llama.cpp or vllm) invocation.
+
+.SS \fB\-\-seed\fP=
+.PP
+Specify seed rather than using random seed model interaction
+
+.SS \fB\-\-selinux\fP=\fItrue\fP
+.PP
+Enable SELinux container separation
+
+.SS \fB\-\-temp\fP="0.8"
+.PP
+Temperature of the response from the AI Model
+llama.cpp explains this as:
+
+.PP
+.RS
+
+.nf
+The lower the number is, the more deterministic the response.
+
+The higher the number is the more creative the response is, but more likely to hallucinate when set too high.
+
+    Usage: Lower numbers are good for virtual assistants where we need deterministic responses. Higher numbers are good for roleplay or creative tasks like editing stories
+
+.fi
+.RE
+
+.SS \fB\-\-thinking\fP=\fItrue\fP
+.PP
+Enable or disable thinking mode in reasoning models
+
+.SS \fB\-\-threads\fP, \fB\-t\fP
+.PP
+Maximum number of cpu threads to use.
+The default is to use half the cores available on this system for the number of threads.
+
+.SS \fB\-\-tls\-verify\fP=\fItrue\fP
+.PP
+require HTTPS and verify certificates when contacting OCI registries
+
+.SH DESCRIPTION
+.PP
+Calculate the perplexity of an AI Model. Perplexity measures how well the model can predict the next token with lower values being better.
+
+.SH EXAMPLES
+.PP
+.RS
+
+.nf
+ramalama perplexity granite3\-moe
+
+.fi
+.RE
+
+.SH SEE ALSO
+.PP
+\fBramalama(1)\fP
+
+.SH HISTORY
+.PP
+Jan 2025, Originally compiled by Eric Curtin 
+\[la]ecurtin@redhat.com\[ra]

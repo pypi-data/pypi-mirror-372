@@ -1,0 +1,52 @@
+.TH "ramalama-oci 5 RamaLama oci:// Image Format" 
+.nh
+.ad l
+
+
+.SH NAME
+.PP
+ramalama\-oci \- RamaLama oci:// Image Format
+
+
+.SH DESCRIPTION
+.PP
+RamaLama’s \fB\fCoci://\fR transport uses OpenContainers image registries to store AI models.
+
+.PP
+Each model is stored in an ordinary container image (currently not using a specialized OCI artifact).
+
+.PP
+The image is, structurally, a single\-platform image (the top\-level element is an OCI Image Manifest, not an OCI Image Index).
+
+.SH Model Data
+.PP
+Because the AI model is stored in an image, not an artifact, the data is, like in all OCI images, wrapped in the standard tar layer format.
+
+.PP
+The contents of the image must contain a \fB\fC/models/model.file\fR file (or, usually, a symbolic link),
+which contains an AI model in GGUF format (consumable by \fB\fCllama\-server\fR).
+
+.SH Metadata
+.PP
+The image’s config contains an \fB\fCorg.containers.type\fR label. The value of the label can be one of:
+
+.RS
+.IP \(bu 2
+\fB\fCai.image.model.raw\fR: The image contains only the AI model
+.IP \(bu 2
+\fB\fCai.image.model.car\fR: The image also contains other software; more details of that software are currently unspecified in this document.
+
+.RE
+
+.SH Local Image Storage
+.PP
+The model image may be pulled into, or created in, Podman’s local image storage.
+
+.PP
+In such a situation, to simplify identification of AI models,
+the model image may be wrapped in an OCI index pointing at the AI model image,
+and in the index, the manifests’ descriptor pointing at the AI model image contains an \fB\fCorg.cnai.model.model\fR annotation.
+
+.PP
+Note that the wrapping in an OCI index does not happen in all situations,
+and in particular does not happen when RamaLama uses Docker instead of Podman.

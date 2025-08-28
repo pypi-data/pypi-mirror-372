@@ -1,0 +1,299 @@
+.TH "ramalama-cuda 7" 
+.nh
+.ad l
+
+
+.SH Setting Up RamaLama with CUDA Support on Linux systems
+.PP
+This guide walks through the steps required to set up RamaLama with CUDA support.
+
+.SH Install the NVIDIA Container Toolkit
+.PP
+Follow the installation instructions provided in the NVIDIA Container Toolkit installation guide.
+
+.SS Installation using dnf/yum (For RPM based distros like Fedora)
+.RS
+.IP \(bu 2
+Install the NVIDIA Container Toolkit packages
+
+.RE
+
+.PP
+.RS
+
+.nf
+   sudo dnf install \-y nvidia\-container\-toolkit
+
+.fi
+.RE
+
+.PP
+.RS
+
+.PP
+\fBNote:\fP The NVIDIA Container Toolkit is required on the host for running CUDA in containers.
+\fBNote:\fP If the above installation is not working for you and you are running Fedora, try removing it and using the COPR.
+.RE
+
+.SS Installation using APT (For Debian based distros like Ubuntu)
+.RS
+.IP \(bu 2
+Configure the Production Repository
+
+.RE
+
+.PP
+.RS
+
+.nf
+   curl \-fsSL https://nvidia.github.io/libnvidia\-container/gpgkey |   
+   sudo gpg \-\-dearmor \-o /usr/share/keyrings/nvidia\-container\-toolkit\-keyring.gpg
+
+   curl \-s \-L https://nvidia.github.io/libnvidia\-container/stable/deb/nvidia\-container\-toolkit.list |   
+   sed 's#deb https://#deb [signed\-by=/usr/share/keyrings/nvidia\-container\-toolkit\-keyring.gpg] https://#g' |   
+   sudo tee /etc/apt/sources.list.d/nvidia\-container\-toolkit.list
+
+.fi
+.RE
+
+.RS
+.IP \(bu 2
+Update the packages list from the repository
+
+.RE
+
+.PP
+.RS
+
+.nf
+   sudo apt\-get update
+
+.fi
+.RE
+
+.RS
+.IP \(bu 2
+Install the NVIDIA Container Toolkit packages
+
+.RE
+
+.PP
+.RS
+
+.nf
+   sudo apt\-get install \-y nvidia\-container\-toolkit
+
+.fi
+.RE
+
+.PP
+.RS
+
+.PP
+\fBNote:\fP The NVIDIA Container Toolkit is required for WSL to have CUDA resources while running a container.
+.RE
+
+.SH Setting Up CUDA Support
+.PP
+For additional information see:  Support for Container Device Interface
+
+
+.SH Generate the CDI specification file
+.PP
+.RS
+
+.nf
+   sudo nvidia\-ctk cdi generate \-\-output=/etc/cdi/nvidia.yaml
+
+.fi
+.RE
+
+
+.SH Check the names of the generated devices
+.PP
+Open and edit the NVIDIA container runtime configuration:
+
+.PP
+.RS
+
+.nf
+   nvidia\-ctk cdi list
+   INFO[0000] Found 1 CDI devices
+   nvidia.com/gpu=all
+
+.fi
+.RE
+
+.PP
+.RS
+
+.PP
+\fBNote:\fP Generate a new CDI specification after any configuration change most notably when the driver is upgraded!
+.RE
+
+.SH Testing the Setup
+.PP
+\fBBased on this Documentation:\fP  Running a Sample Workload
+
+.ti 0
+\l'\n(.lu'
+
+
+.SH \fBTest the Installation\fP
+.PP
+Run the following command to verify setup:
+
+.PP
+.RS
+
+.nf
+   podman run \-\-rm \-\-device=nvidia.com/gpu=all fedora nvidia\-smi
+
+.fi
+.RE
+
+
+.SH \fBExpected Output\fP
+.PP
+Verify everything is configured correctly, with output similar to this:
+
+.PP
+.RS
+
+.nf
+   Thu Dec  5 19:58:40 2024
+   +\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+
+   | NVIDIA\-SMI 565.72                 Driver Version: 566.14         CUDA Version: 12.7     |
+   |\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+
+   | GPU  Name                 Persistence\-M | Bus\-Id          Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory\-Usage | GPU\-Util  Compute M. |
+   |                                         |                        |               MIG M. |
+   |=========================================+========================+======================|
+   |   0  NVIDIA GeForce RTX 3080        On  |   00000000:09:00.0  On |                  N/A |
+   | 34%   24C    P5             31W /  380W |     867MiB /  10240MiB |      7%      Default |
+   |                                         |                        |                  N/A |
+   +\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+
+
+   +\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+
+   | Processes:                                                                              |
+   |  GPU   GI   CI        PID   Type   Process name                              GPU Memory |
+   |        ID   ID                                                               Usage      |
+   |=========================================================================================|
+   |    0   N/A  N/A        35      G   /Xwayland                                   N/A      |
+   |    0   N/A  N/A        35      G   /Xwayland                                   N/A      |
+   +\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+
+
+.fi
+.RE
+
+.PP
+.RS
+
+.PP
+\fBNOTE:\fP On systems that have SELinux enabled, it may be necessary to turn on the \fB\fCcontainer\_use\_devices\fR boolean in order to run the \fB\fCnvidia\-smi\fR command successfully from a container.
+.RE
+
+.PP
+To check the status of the boolean, run the following:
+
+.PP
+.RS
+
+.nf
+   getsebool container\_use\_devices
+
+.fi
+.RE
+
+.PP
+If the result of the command shows that the boolean is \fB\fCoff\fR, run the following to turn the boolean on:
+
+.PP
+.RS
+
+.nf
+   sudo setsebool \-P container\_use\_devices 1
+
+.fi
+.RE
+
+.SS CUDA\_VISIBLE\_DEVICES
+.PP
+RamaLama respects the \fB\fCCUDA\_VISIBLE\_DEVICES\fR environment variable if it's already set in your environment. If not set, RamaLama will default to using all the GPU detected by nvidia\-smi.
+
+.PP
+You can specify which GPU devices should be visible to RamaLama by setting this variable before running RamaLama commands:
+
+.PP
+.RS
+
+.nf
+export CUDA\_VISIBLE\_DEVICES="0,1"  # Use GPUs 0 and 1
+ramalama run granite
+
+.fi
+.RE
+
+.PP
+This is particularly useful in multi\-GPU systems where you want to dedicate specific GPUs to different workloads.
+
+.PP
+If the \fB\fCCUDA\_VISIBLE\_DEVICES\fR environment variable is set to an empty string, RamaLama will default to using the CPU.
+
+.PP
+.RS
+
+.nf
+export CUDA\_VISIBLE\_DEVICES=""  # Defaults to CPU
+ramalama run granite
+
+.fi
+.RE
+
+.PP
+To revert to using all available GPUs, unset the environment variable:
+
+.PP
+.RS
+
+.nf
+unset CUDA\_VISIBLE\_DEVICES
+
+.fi
+.RE
+
+.SH Troubleshooting
+.SS CUDA Updates
+.PP
+On some CUDA software updates, RamaLama stops working complaining about missing shared NVIDIA libraries for example:
+
+.PP
+.RS
+
+.nf
+ramalama run granite
+Error: crun: cannot stat `/lib64/libEGL\_nvidia.so.565.77`: No such file or directory: OCI runtime attempted to invoke a command that was not found
+
+.fi
+.RE
+
+.PP
+Because the CUDA version is updated, the CDI specification file needs to be recreated.
+
+.PP
+.RS
+
+.nf
+   sudo nvidia\-ctk cdi generate \-\-output=/etc/cdi/nvidia.yaml
+
+.fi
+.RE
+
+.SH SEE ALSO
+.PP
+\fBramalama(1)\fP, \fBpodman(1)\fP
+
+.SH HISTORY
+.PP
+Jan 2025, Originally compiled by Dan Walsh 
+\[la]dwalsh@redhat.com\[ra]

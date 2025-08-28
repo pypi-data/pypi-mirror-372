@@ -1,0 +1,684 @@
+.TH "ramalama-serve 1" 
+.nh
+.ad l
+
+.SH NAME
+.PP
+ramalama\-serve \- serve REST API on specified AI Model
+
+.SH SYNOPSIS
+.PP
+\fBramalama serve\fP [\fIoptions\fP] \fImodel\fP
+
+.SH DESCRIPTION
+.PP
+Serve specified AI Model as a chat bot. RamaLama pulls specified AI Model from
+registry if it does not exist in local storage.
+
+.SH MODEL TRANSPORTS
+.TS
+allbox;
+l l l 
+l l l .
+\fB\fCTransports\fR	\fB\fCPrefix\fR	\fB\fCWeb Site\fR
+URL based	https://, http://, file://	T{
+\fB\fChttps://web.site/ai.model\fR, \fB\fCfile://tmp/ai.model\fR
+T}
+HuggingFace	huggingface://, hf://, hf.co/	\fB\fChuggingface.co\fR
+ModelScope	modelscope://, ms://	\fB\fCmodelscope.cn\fR
+Ollama	ollama://	\fB\fCollama.com\fR
+OCI Container Registries	oci://	\fB\fCopencontainers.org\fR
+ 	 	T{
+Examples: \fB\fCquay.io\fR,  \fB\fCDocker Hub\fR,\fB\fCArtifactory\fR
+T}
+.TE
+
+.PP
+RamaLama defaults to the Ollama registry transport. This default can be overridden in the \fB\fCramalama.conf\fR file or via the RAMALAMA\_TRANSPORTS
+environment. \fB\fCexport RAMALAMA\_TRANSPORT=huggingface\fR Changes RamaLama to use huggingface transport.
+
+.PP
+Modify individual model transports by specifying the \fB\fChuggingface://\fR, \fB\fCoci://\fR, \fB\fCollama://\fR, \fB\fChttps://\fR, \fB\fChttp://\fR, \fB\fCfile://\fR prefix to the model.
+
+.PP
+URL support means if a model is on a web site or even on your local system, you can run it directly.
+
+.SH REST API ENDPOINTS
+.PP
+Under the hood, \fB\fCramalama\-serve\fR uses the \fB\fCllama.cpp\fR HTTP server by default. When using \fB\fC\-\-runtime=vllm\fR, it uses the vLLM server. When using \fB\fC\-\-runtime=mlx\fR, it uses the MLX LM server.
+
+.PP
+For REST API endpoint documentation, see:
+\- llama.cpp: 
+\[la]https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md#api-endpoints\[ra]
+\- vLLM: 
+\[la]https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html\[ra]
+\- MLX LM: 
+\[la]https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/SERVER.md\[ra]
+
+.SH OPTIONS
+.SS \fB\-\-add\-to\-unit\fP
+.PP
+format: \-\-add\-to\-unit section:key:value
+
+.PP
+Adds to the generated unit file (quadlet) in the section \fIsection\fP the key \fIkey\fP with the value \fIvalue\fP\&.
+
+.PP
+Useful, for instance, to add environment variables to the generated unit file, or to place the container in a specific pod/network (Container:Network:xxx.network).
+
+.PP
+\fBOnly valid with \fI\-\-generate\fP parameter.\fP
+
+.PP
+Section, key and value are required and must be separated by colons.
+
+.SS \fB\-\-api\fP=\fBllama\-stack\fP | none**
+.PP
+Unified API layer for Inference, RAG, Agents, Tools, Safety, Evals, and Telemetry.(default: none)
+The default can be overridden in the ramalama.conf file.
+
+.SS \fB\-\-authfile\fP=\fIpassword\fP
+.PP
+Path of the authentication file for OCI registries
+
+.SS \fB\-\-ctx\-size\fP, \fB\-c\fP
+.PP
+size of the prompt context. This option is also available as \fB\-\-max\-model\-len\fP\&. Applies to llama.cpp and vllm regardless of alias (default: 2048, 0 = loaded from model)
+
+.SS \fB\-\-detach\fP, \fB\-d\fP
+.PP
+Run the container in the background and print the new container ID.
+The default is TRUE. The \-\-nocontainer option forces this option to False.
+
+.PP
+Use the \fB\fCramalama stop\fR command to stop the container running the served ramalama Model.
+
+.SS \fB\-\-device\fP
+.PP
+Add a host device to the container. Optional permissions parameter can
+be used to specify device permissions by combining r for read, w for
+write, and m for mknod(2).
+
+.PP
+Example: \-\-device=/dev/dri/renderD128:/dev/xvdc:rwm
+
+.PP
+The device specification is passed directly to the underlying container engine. See documentation of the supported container engine for more information.
+
+.SS \fB\-\-dri\fP=\fIon\fP | \fIoff\fP
+.PP
+Enable or disable mounting \fB\fC/dev/dri\fR into the container when running with \fB\fC\-\-api=llama\-stack\fR (enabled by default). Use to prevent access to the host device when not required, or avoid errors in environments where \fB\fC/dev/dri\fR is not available.
+
+.SS \fB\-\-env\fP=
+.PP
+Set environment variables inside of the container.
+
+.PP
+This option allows arbitrary environment variables that are available for the
+process to be launched inside of the container. If an environment variable is
+specified without a value, the container engine checks the host environment
+for a value and set the variable only if it is set on the host.
+
+.SS \fB\-\-generate\fP=type
+.PP
+Generate specified configuration format for running the AI Model as a service
+
+.TS
+allbox;
+l l 
+l l .
+\fB\fCKey\fR	\fB\fCDescription\fR
+quadlet	T{
+Podman supported container definition for running AI Model under systemd
+T}
+kube	T{
+Kubernetes YAML definition for running the AI Model as a service
+T}
+quadlet/kube	T{
+Kubernetes YAML definition for running the AI Model as a service and Podman supported container definition for running the Kube YAML specified pod under systemd
+T}
+.TE
+
+.PP
+Optionally, an output directory for the generated files can be specified by
+appending the path to the type, e.g. \fB\fC\-\-generate kube:/etc/containers/systemd\fR\&.
+
+.SS \fB\-\-help\fP, \fB\-h\fP
+.PP
+show this help message and exit
+
+.SS \fB\-\-host\fP="0.0.0.0"
+.PP
+IP address for llama.cpp to listen on.
+
+.SS \fB\-\-image\fP=IMAGE
+.PP
+OCI container image to run with specified AI model. RamaLama defaults to using
+images based on the accelerator it discovers. For example:
+\fB\fCquay.io/ramalama/ramalama\fR\&. See the table above for all default images.
+The default image tag is based on the minor version of the RamaLama package.
+Version 0.12.1 of RamaLama pulls an image with a \fB\fC:0.12\fR tag from the quay.io/ramalama OCI repository. The \-\-image option overrides this default.
+
+.PP
+The default can be overridden in the ramalama.conf file or via the
+RAMALAMA\_IMAGE environment variable. \fB\fCexport RAMALAMA\_IMAGE=quay.io/ramalama/aiimage:1.2\fR tells
+RamaLama to use the \fB\fCquay.io/ramalama/aiimage:1.2\fR image.
+
+.PP
+Accelerated images:
+
+.TS
+allbox;
+l l 
+l l .
+\fB\fCAccelerator\fR	\fB\fCImage\fR
+CPU, Apple	quay.io/ramalama/ramalama
+HIP\_VISIBLE\_DEVICES	quay.io/ramalama/rocm
+CUDA\_VISIBLE\_DEVICES	quay.io/ramalama/cuda
+ASAHI\_VISIBLE\_DEVICES	quay.io/ramalama/asahi
+INTEL\_VISIBLE\_DEVICES	quay.io/ramalama/intel\-gpu
+ASCEND\_VISIBLE\_DEVICES	quay.io/ramalama/cann
+MUSA\_VISIBLE\_DEVICES	quay.io/ramalama/musa
+.TE
+
+.SS \fB\-\-keep\-groups\fP
+.PP
+pass \-\-group\-add keep\-groups to podman (default: False)
+If GPU device on host system is accessible to user via group access, this option leaks the groups into the container.
+
+.SS \fB\-\-model\-draft\fP
+.PP
+A draft model is a smaller, faster model that helps accelerate the decoding
+process of larger, more complex models, like Large Language Models (LLMs). It
+works by generating candidate sequences of tokens that the larger model then
+verifies and refines. This approach, often referred to as speculative decoding,
+can significantly improve the speed of inferencing by reducing the number of
+times the larger model needs to be invoked.
+
+.PP
+Use \-\-runtime\-arg to pass the other draft model related parameters.
+Make sure the sampling parameters like top\_k on the web UI are set correctly.
+
+.SS \fB\-\-name\fP, \fB\-n\fP
+.PP
+Name of the container to run the Model in.
+
+.SS \fB\-\-network\fP=\fI""\fP
+.PP
+set the network mode for the container
+
+.SS \fB\-\-ngl\fP
+.PP
+number of gpu layers, 0 means CPU inferencing, 999 means use max layers (default: \-1)
+The default \-1, means use whatever is automatically deemed appropriate (0 or 999)
+
+.SS \fB\-\-oci\-runtime\fP
+.PP
+Override the default OCI runtime used to launch the container. Container
+engines like Podman and Docker, have their own default oci runtime that they
+use. Using this option RamaLama will override these defaults.
+
+.PP
+On Nvidia based GPU systems, RamaLama defaults to using the
+\fB\fCnvidia\-container\-runtime\fR\&. Use this option to override this selection.
+
+.SS \fB\-\-port\fP, \fB\-p\fP
+.PP
+port for AI Model server to listen on. It must be available. If not specified,
+the serving port will be 8080 if available, otherwise a free port in 8081\-8090 range.
+
+.SS \fB\-\-privileged\fP
+.PP
+By default, RamaLama containers are unprivileged (=false) and cannot, for
+example, modify parts of the operating system. This is because by de‐
+fault a container is only allowed limited access to devices. A "privi‐
+leged" container is given the same access to devices as the user launch‐
+ing the container, with the exception of virtual consoles (/dev/tty\\d+)
+when running in systemd mode (\-\-systemd=always).
+
+.PP
+A privileged container turns off the security features that isolate the
+container from the host. Dropped Capabilities, limited devices, read\-
+only mount points, Apparmor/SELinux separation, and Seccomp filters are
+all disabled. Due to the disabled security features, the privileged
+field should almost never be set as containers can easily break out of
+confinement.
+
+.PP
+Containers running in a user namespace (e.g., rootless containers) can‐
+not have more privileges than the user that launched them.
+
+.SS \fB\-\-pull\fP=\fIpolicy\fP
+.RS
+.IP \(bu 2
+\fBalways\fP: Always pull the image and throw an error if the pull fails.
+.IP \(bu 2
+\fBmissing\fP: Only pull the image when it does not exist in the local containers storage. Throw an error if no image is found and the pull fails.
+.IP \(bu 2
+\fBnever\fP: Never pull the image but use the one from the local containers storage. Throw an error when no image is found.
+.IP \(bu 2
+\fBnewer\fP: Pull if the image on the registry is newer than the one in the local containers storage. An image is considered to be newer when the digests are different. Comparing the time stamps is prone to errors. Pull errors are suppressed if a local image was found.
+
+.RE
+
+.SS \fB\-\-rag\fP=
+.PP
+Specify path to Retrieval\-Augmented Generation (RAG) database or an OCI Image containing a RAG database
+
+.PP
+Note: RAG support requires AI Models be run within containers, \-\-nocontainer not supported. Docker does not support image mounting, meaning Podman support required.
+
+.SS \fB\-\-runtime\-args\fP="\fIargs\fP"
+.PP
+Add \fIargs\fP to the runtime (llama.cpp or vllm) invocation.
+
+.SS \fB\-\-seed\fP=
+.PP
+Specify seed rather than using random seed model interaction
+
+.SS \fB\-\-selinux\fP=\fItrue\fP
+.PP
+Enable SELinux container separation
+
+.SS \fB\-\-temp\fP="0.8"
+.PP
+Temperature of the response from the AI Model.
+llama.cpp explains this as:
+
+.PP
+.RS
+
+.nf
+The lower the number is, the more deterministic the response.
+
+The higher the number is the more creative the response is, but more likely to hallucinate when set too high.
+
+Usage: Lower numbers are good for virtual assistants where we need deterministic responses. Higher numbers are good for roleplay or creative tasks like editing stories
+
+.fi
+.RE
+
+.SS \fB\-\-thinking\fP=\fItrue\fP
+.PP
+Enable or disable thinking mode in reasoning models
+
+.SS \fB\-\-threads\fP, \fB\-t\fP
+.PP
+Maximum number of cpu threads to use.
+The default is to use half the cores available on this system for the number of threads.
+
+.SS \fB\-\-tls\-verify\fP=\fItrue\fP
+.PP
+require HTTPS and verify certificates when contacting OCI registries
+
+.SS \fB\-\-webui\fP=\fIon\fP | \fIoff\fP
+.PP
+Enable or disable the web UI for the served model (enabled by default). When set to "on" (the default), the web interface is properly initialized. When set to "off", the \fB\fC\-\-no\-webui\fR option is passed to the llama\-server command to disable the web interface.
+
+.SH EXAMPLES
+.SS Run two AI Models at the same time. Notice both are running within Podman Containers.
+.PP
+.RS
+
+.nf
+
+$ ramalama serve \-d \-p 8080 \-\-name mymodel ollama://smollm:135m
+09b0e0d26ed28a8418fb5cd0da641376a08c435063317e89cf8f5336baf35cfa
+
+$ ramalama serve \-d \-n example \-\-port 8081 oci://quay.io/mmortari/gguf\-py\-example/v1/example.gguf
+3f64927f11a5da5ded7048b226fbe1362ee399021f5e8058c73949a677b6ac9c
+
+$ podman ps
+CONTAINER ID  IMAGE                             COMMAND               CREATED         STATUS         PORTS                   NAMES
+09b0e0d26ed2  quay.io/ramalama/ramalama:latest  /usr/bin/ramalama...  32 seconds ago  Up 32 seconds  0.0.0.0:8081\->8081/tcp  ramalama\_sTLNkijNNP
+3f64927f11a5  quay.io/ramalama/ramalama:latest  /usr/bin/ramalama...  17 seconds ago  Up 17 seconds  0.0.0.0:8082\->8082/tcp  ramalama\_YMPQvJxN97
+
+.fi
+.RE
+
+.SS Generate quadlet service off of HuggingFace granite Model
+.PP
+.RS
+
+.nf
+$ ramalama serve \-\-name MyGraniteServer \-\-generate=quadlet granite
+Generating quadlet file: MyGraniteServer.container
+
+$ cat MyGraniteServer.container
+[Unit]
+Description=RamaLama $HOME/.local/share/ramalama/models/huggingface/instructlab/granite\-7b\-lab\-GGUF/granite\-7b\-lab\-Q4\_K\_M.gguf AI Model Service
+After=local\-fs.target
+
+[Container]
+AddDevice=\-/dev/accel
+AddDevice=\-/dev/dri
+AddDevice=\-/dev/kfd
+Exec=llama\-server \-\-port 1234 \-m $HOME/.local/share/ramalama/models/huggingface/instructlab/granite\-7b\-lab\-GGUF/granite\-7b\-lab\-Q4\_K\_M.gguf
+Image=quay.io/ramalama/ramalama:latest
+Mount=type=bind,src=/home/dwalsh/.local/share/ramalama/models/huggingface/instructlab/granite\-7b\-lab\-GGUF/granite\-7b\-lab\-Q4\_K\_M.gguf,target=/mnt/models/model.file,ro,Z
+ContainerName=MyGraniteServer
+PublishPort=8080
+
+[Install]
+# Start by default on boot
+WantedBy=multi\-user.target default.target
+
+$ mv MyGraniteServer.container $HOME/.config/containers/systemd/
+$ systemctl \-\-user daemon\-reload
+$ systemctl start \-\-user MyGraniteServer
+$ systemctl status \-\-user MyGraniteServer
+● MyGraniteServer.service \- RamaLama granite AI Model Service
+     Loaded: loaded (/home/dwalsh/.config/containers/systemd/MyGraniteServer.container; generated)
+    Drop\-In: /usr/lib/systemd/user/service.d
+	    └─10\-timeout\-abort.conf
+     Active: active (running) since Fri 2024\-09\-27 06:54:17 EDT; 3min 3s ago
+   Main PID: 3706287 (conmon)
+      Tasks: 20 (limit: 76808)
+     Memory: 1.0G (peak: 1.0G)
+
+...
+$ podman ps
+CONTAINER ID  IMAGE                             COMMAND               CREATED        STATUS        PORTS                    NAMES
+7bb35b97a0fe  quay.io/ramalama/ramalama:latest  llama\-server \-\-po...  3 minutes ago  Up 3 minutes  0.0.0.0:43869\->8080/tcp  MyGraniteServer
+
+.fi
+.RE
+
+.SS Generate quadlet service off of tiny OCI Model
+.PP
+.RS
+
+.nf
+$ ramalama \-\-runtime=vllm serve \-\-name tiny \-\-generate=quadlet oci://quay.io/rhatdan/tiny:latest
+Downloading quay.io/rhatdan/tiny:latest...
+Trying to pull quay.io/rhatdan/tiny:latest...
+Getting image source signatures
+Copying blob 65ba8d40e14a skipped: already exists
+Copying blob e942a1bf9187 skipped: already exists
+Copying config d8e0b28ee6 done   |
+Writing manifest to image destination
+Generating quadlet file: tiny.container
+Generating quadlet file: tiny.image
+Generating quadlet file: tiny.volume
+
+$cat tiny.container
+[Unit]
+Description=RamaLama /run/model/model.file AI Model Service
+After=local\-fs.target
+
+[Container]
+AddDevice=\-/dev/accel
+AddDevice=\-/dev/dri
+AddDevice=\-/dev/kfd
+Exec=vllm serve \-\-port 8080 /run/model/model.file
+Image=quay.io/ramalama/ramalama:latest
+Mount=type=volume,source=tiny:latest.volume,dest=/mnt/models,ro
+ContainerName=tiny
+PublishPort=8080
+
+[Install]
+# Start by default on boot
+WantedBy=multi\-user.target default.target
+
+$ cat tiny.volume
+[Volume]
+Driver=image
+Image=tiny:latest.image
+
+$ cat tiny.image
+[Image]
+Image=quay.io/rhatdan/tiny:latest
+
+.fi
+.RE
+
+.SS Generate quadlet service off of tiny OCI Model and output to directory
+.PP
+.RS
+
+.nf
+$ ramalama \-\-runtime=vllm serve \-\-name tiny \-\-generate=quadlet:\~/.config/containers/systemd/ oci://quay.io/rhatdan/tiny:latest
+Generating quadlet file: tiny.container
+Generating quadlet file: tiny.image
+Generating quadlet file: tiny.volume
+
+$ ls \~/.config/containers/systemd/
+tiny.container tiny.image tiny.volume
+
+.fi
+.RE
+
+.SS Generate a kubernetes YAML file named MyTinyModel
+.PP
+.RS
+
+.nf
+$ ramalama serve \-\-name MyTinyModel \-\-generate=kube oci://quay.io/rhatdan/tiny\-car:latest
+Generating Kubernetes YAML file: MyTinyModel.yaml
+$ cat MyTinyModel.yaml
+# Save the output of this file and use kubectl create \-f to import
+# it into Kubernetes.
+#
+# Created with ramalama\-0.0.21
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: MyTinyModel
+  labels:
+    app: MyTinyModel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: MyTinyModel
+  template:
+    metadata:
+      labels:
+	app: MyTinyModel
+    spec:
+      containers:
+      \- name: MyTinyModel
+	image: quay.io/ramalama/ramalama:latest
+	command: ["llama\-server"]
+	args: ['\-\-port', '8080', '\-m', '/mnt/models/model.file']
+	ports:
+	\- containerPort: 8080
+	volumeMounts:
+	\- mountPath: /mnt/models
+	  subPath: /models
+	  name: model
+	\- mountPath: /dev/dri
+	  name: dri
+      volumes:
+      \- image:
+	  reference: quay.io/rhatdan/tiny\-car:latest
+	  pullPolicy: IfNotPresent
+	name: model
+      \- hostPath:
+	  path: /dev/dri
+	name: dri
+
+.fi
+.RE
+
+.SS Generate a Llama Stack Kubernetes YAML file named MyLamaStack
+.PP
+.RS
+
+.nf
+$ ramalama serve \-\-api llama\-stack \-\-name MyLamaStack \-\-generate=kube oci://quay.io/rhatdan/granite:latest
+Generating Kubernetes YAML file: MyLamaStack.yaml
+$ cat MyLamaStack.yaml
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: MyLamaStack
+  labels:
+    app: MyLamaStack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: MyLamaStack
+  template:
+    metadata:
+      labels:
+	ai.ramalama: ""
+	app: MyLamaStack
+	ai.ramalama.model: oci://quay.io/rhatdan/granite:latest
+	ai.ramalama.engine: podman
+	ai.ramalama.runtime: llama.cpp
+	ai.ramalama.port: 8080
+	ai.ramalama.command: serve
+    spec:
+      containers:
+      \- name: model\-server
+	image: quay.io/ramalama/ramalama:0.8
+	command: ["llama\-server"]
+	args: ['\-\-port', '8081', '\-\-model', '/mnt/models/model.file', '\-\-alias', 'quay.io/rhatdan/granite:latest', '\-\-ctx\-size', 2048, '\-\-temp', '0.8', '\-\-jinja', '\-\-cache\-reuse', '256', '\-v', '\-\-threads', 16, '\-\-host', '127.0.0.1']
+	securityContext:
+	  allowPrivilegeEscalation: false
+	  capabilities:
+	    drop:
+	    \- CAP\_CHOWN
+	    \- CAP\_FOWNER
+	    \- CAP\_FSETID
+	    \- CAP\_KILL
+	    \- CAP\_NET\_BIND\_SERVICE
+	    \- CAP\_SETFCAP
+	    \- CAP\_SETGID
+	    \- CAP\_SETPCAP
+	    \- CAP\_SETUID
+	    \- CAP\_SYS\_CHROOT
+	    add:
+	    \- CAP\_DAC\_OVERRIDE
+	  seLinuxOptions:
+	    type: spc\_t
+	volumeMounts:
+	\- mountPath: /mnt/models
+	  subPath: /models
+	  name: model
+	\- mountPath: /dev/dri
+	  name: dri
+      \- name: llama\-stack
+	image: quay.io/ramalama/llama\-stack:0.8
+	args:
+	\- /bin/sh
+	\- \-c
+	\- llama stack run \-\-image\-type venv /etc/ramalama/ramalama\-run.yaml
+	env:
+	\- name: RAMALAMA\_URL
+	  value: http://127.0.0.1:8081
+	\- name: INFERENCE\_MODEL
+	  value: quay.io/rhatdan/granite:latest
+	securityContext:
+	  allowPrivilegeEscalation: false
+	  capabilities:
+	    drop:
+	    \- CAP\_CHOWN
+	    \- CAP\_FOWNER
+	    \- CAP\_FSETID
+	    \- CAP\_KILL
+	    \- CAP\_NET\_BIND\_SERVICE
+	    \- CAP\_SETFCAP
+	    \- CAP\_SETGID
+	    \- CAP\_SETPCAP
+	    \- CAP\_SETUID
+	    \- CAP\_SYS\_CHROOT
+	    add:
+	    \- CAP\_DAC\_OVERRIDE
+	  seLinuxOptions:
+	    type: spc\_t
+	ports:
+	\- containerPort: 8321
+	  hostPort: 8080
+      volumes:
+      \- hostPath:
+	  path: quay.io/rhatdan/granite:latest
+	name: model
+      \- hostPath:
+	  path: /dev/dri
+	name: dri
+
+.fi
+.RE
+
+.SS Generate a kubernetes YAML file named MyTinyModel shown above, but also generate a quadlet to run it in.
+.PP
+.RS
+
+.nf
+$ ramalama \-\-name MyTinyModel \-\-generate=quadlet/kube oci://quay.io/rhatdan/tiny\-car:latest
+run\_cmd:  podman image inspect quay.io/rhatdan/tiny\-car:latest
+Generating Kubernetes YAML file: MyTinyModel.yaml
+Generating quadlet file: MyTinyModel.kube
+$ cat MyTinyModel.kube
+[Unit]
+Description=RamaLama quay.io/rhatdan/tiny\-car:latest Kubernetes YAML \- AI Model Service
+After=local\-fs.target
+
+[Kube]
+Yaml=MyTinyModel.yaml
+
+[Install]
+# Start by default on boot
+WantedBy=multi\-user.target default.target
+
+.fi
+.RE
+
+.SH NVIDIA CUDA Support
+.PP
+See \fBramalama\-cuda(7)\fP for setting up the host Linux system for CUDA support.
+
+.SH MLX Support
+.PP
+The MLX runtime is designed for Apple Silicon Macs and provides optimized performance on these systems. MLX support has the following requirements:
+
+.RS
+.IP \(bu 2
+\fBOperating System\fP: macOS only
+.IP \(bu 2
+\fBHardware\fP: Apple Silicon (M1, M2, M3, or later)
+.IP \(bu 2
+\fBContainer Mode\fP: MLX requires \fB\fC\-\-nocontainer\fR as it cannot run inside containers
+.IP \(bu 2
+\fBDependencies\fP: Requires \fB\fCmlx\-lm\fR package to be installed on the host system
+
+.RE
+
+.PP
+To install MLX dependencies, use either \fB\fCuv\fR or \fB\fCpip\fR:
+
+.PP
+.RS
+
+.nf
+uv pip install mlx\-lm
+# or pip:
+pip install mlx\-lm
+
+.fi
+.RE
+
+.PP
+Example usage:
+
+.PP
+.RS
+
+.nf
+ramalama \-\-runtime=mlx serve hf://mlx\-community/Unsloth\-Phi\-4\-4bit
+
+.fi
+.RE
+
+.SH SEE ALSO
+.PP
+\fBramalama(1)\fP, \fBramalama\-stop(1)\fP, \fBquadlet(1)\fP, \fBsystemctl(1)\fP, \fBpodman(1)\fP, \fBpodman\-ps(1)\fP, \fBramalama\-cuda(7)\fP
+
+.SH HISTORY
+.PP
+Aug 2024, Originally compiled by Dan Walsh 
+\[la]dwalsh@redhat.com\[ra]
