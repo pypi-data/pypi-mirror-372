@@ -1,0 +1,296 @@
+.TH "ramalama.conf 5 RamaLama AI tool configuration file" 
+.nh
+.ad l
+
+
+.SH NAME
+.PP
+ramalama.conf \- These configuration files specifies default
+configuration options and command\-line flags for RamaLama.
+
+
+.SH DESCRIPTION
+.PP
+RamaLama reads all ramalama.conf files, if they exists
+and modify the defaults for running RamaLama on the host. ramalama.conf uses
+a TOML format that can be easily modified and versioned.
+
+.PP
+RamaLama reads the he following paths for global configuration that effects all users.
+
+.TS
+allbox;
+l l 
+l l .
+\fB\fCPaths\fR	\fB\fCException\fR
+T{
+\fB/usr/share/ramalama/ramalama.conf\fP
+T}	On Linux
+T{
+\fB/usr/local/share/ramalama/ramalama.conf\fP
+T}	On Linux
+T{
+\fB/etc/ramalama/ramalama.conf\fP
+T}	On Linux
+T{
+\fB/etc/ramalama/ramalama.conf.d/*\&.conf\fP
+T}	On Linux
+T{
+\fB$HOME/.local/.pipx/venvs/usr/share/ramalama/ramalama.conf\fP
+T}	On pipx installed macOS
+.TE
+
+.PP
+For user specific configuration it reads
+
+.TS
+allbox;
+l l 
+l l .
+\fB\fCPaths\fR	\fB\fCException\fR
+T{
+\fB$XDG\_CONFIG\_HOME/ramalama/ramalama.conf\fP
+T}	 
+T{
+\fB$XDG\_CONFIG\_HOME/ramalama/ramalama.conf.d/*\&.conf\fP
+T}	 
+T{
+\fB$HOME/.config/ramalama/ramalama.conf\fP
+T}	T{
+\fB\fC$XDG\_CONFIG\_HOME\fR not set
+T}
+T{
+\fB$HOME/.config/ramalama/ramalama.conf.d/*\&.conf\fP
+T}	T{
+\fB\fC$XDG\_CONFIG\_HOME\fR not set
+T}
+.TE
+
+.PP
+Fields specified in ramalama conf files override the default options, as well as
+options in previously read ramalama conf files.
+
+.PP
+Config files in the \fB\fC\&.d\fR directories, are added in alpha numeric sorted order and must end in \fB\fC\&.conf\fR\&.
+
+.SH ENVIRONMENT VARIABLES
+.PP
+If the \fB\fCRAMALAMA\_CONFIG\fR environment variable is set, all system and user
+config files are ignored and only the specified config file is loaded.
+
+
+.SH FORMAT
+.PP
+The [TOML format][toml] is used as the encoding of the configuration file.
+Every option is nested under its table. No bare options are used. The format of
+TOML can be simplified to:
+
+.PP
+.RS
+
+.nf
+[table1]
+option = value
+
+[table2]
+option = value
+
+[table3]
+option = value
+
+[table3.subtable1]
+option = value
+
+.fi
+.RE
+
+.SH RAMALAMA TABLE
+.PP
+The ramalama table contains settings to configure and manage the OCI runtime.
+
+.PP
+\fB\fC[ramalama]\fR
+
+.PP
+\fBapi\fP="none"
+
+.PP
+Unified API layer for Inference, RAG, Agents, Tools, Safety, Evals, and Telemetry.
+Options: llama\-stack, none
+
+.PP
+\fBcarimage\fP="registry.access.redhat.com/ubi10\-micro:latest"
+
+.PP
+OCI model car image
+
+.PP
+Image to be used when building and pushing \-\-type=car models
+
+.PP
+\fBcontainer\fP=true
+
+.PP
+Run RamaLama in the default container.
+RAMALAMA\_IN\_CONTAINER environment variable overrides this field.
+
+.PP
+\fBctx\_size\fP=2048
+
+.PP
+Size of the prompt context (0 = loaded from model)
+
+.PP
+**env=[]
+
+.PP
+Environment variables to be added to the environment used when running in a container engine (e.g., Podman, Docker). For example "LLAMA\_ARG\_THREADS=10".
+
+.PP
+\fBengine\fP="podman"
+
+.PP
+Run RamaLama using the specified container engine.
+Valid options are: Podman and Docker
+This field can be overridden by the RAMALAMA\_CONTAINER\_ENGINE environment variable.
+
+.PP
+\fBhost\fP="0.0.0.0"
+
+.PP
+IP address for llama.cpp to listen on.
+
+.PP
+\fBimage\fP="quay.io/ramalama/ramalama:latest"
+
+.PP
+OCI container image to run with the specified AI model
+RAMALAMA\_IMAGE environment variable overrides this field.
+
+.PP
+\fB\fC[ramalama.images]\fR
+  HIP\_VISIBLE\_DEVICES    = "quay.io/ramalama/rocm"
+  CUDA\_VISIBLE\_DEVICES   = "quay.io/ramalama/cuda"
+  ASAHI\_VISIBLE\_DEVICES  = "quay.io/ramalama/asahi"
+  INTEL\_VISIBLE\_DEVICES  = "quay.io/ramalama/intel\-gpu"
+  ASCEND\_VISIBLE\_DEVICES = "quay.io/ramalama/cann"
+  MUSA\_VISIBLE\_DEVICES   = "quay.io/ramalama/musa"
+
+.PP
+Alternative images to use when RamaLama recognizes specific hardware
+
+.PP
+\fBkeep\_groups\fP=false
+
+.PP
+Pass \fB\fC\-\-group\-add keep\-groups\fR to podman, when using podman.
+In some cases this is needed to access the gpu from a rootless container
+
+.PP
+\fBngl\fP=\-1
+
+.PP
+number of gpu layers, 0 means CPU inferencing, 999 means use max layers (default: \-1)
+The default \-1, means use whatever is automatically deemed appropriate (0 or 999)
+
+.PP
+\fBprefix\fP=""
+Specify default prefix for chat and run command. By default the prefix
+is based on the container engine used.
+
+.TS
+allbox;
+l l 
+l l .
+\fB\fCContainer Engine\fR	\fB\fCPrefix\fR
+Podman	"🦭 > "
+Docker	"🐋 > "
+No Engine	"🦙 > "
+No EMOJI support	"> "
+.TE
+
+.PP
+\fBport\fP="8080"
+
+.PP
+Specify default port for services to listen on
+
+.PP
+\fBpull\fP="newer"
+
+.RS
+.IP \(bu 2
+\fBalways\fP: Always pull the image and throw an error if the pull fails.
+.IP \(bu 2
+\fBmissing\fP: Only pull the image when it does not exist in the local containers storage. Throw an error if no image is found and the pull fails.
+.IP \(bu 2
+\fBnever\fP: Never pull the image but use the one from the local containers storage. Throw an error when no image is found.
+.IP \(bu 2
+\fBnewer\fP: Pull if the image on the registry is newer than the one in the local containers storage. An image is considered to be newer when the digests are different. Comparing the time stamps is prone to errors. Pull errors are suppressed if a local image was found.
+
+.RE
+
+.PP
+\fBrag\_format\fP="qdrant"
+
+.PP
+Specify the default output format for output of the \fB\fCramalama rag\fR command
+Options: json, markdown, qdrant
+
+.PP
+\fBruntime\fP="llama.cpp"
+
+.PP
+Specify the AI runtime to use; valid options are 'llama.cpp', 'vllm', and 'mlx' (default: llama.cpp)
+Options: llama.cpp, vllm, mlx
+
+.PP
+\fBselinux\fP=false
+
+.PP
+SELinux container separation enforcement
+
+.PP
+\fBstore\fP="$HOME/.local/share/ramalama"
+
+.PP
+Store AI Models in the specified directory
+
+.PP
+\fBtemp\fP="0.8"
+Temperature of the response from the AI Model
+llama.cpp explains this as:
+
+.PP
+.RS
+
+.nf
+The lower the number is, the more deterministic the response.
+
+The higher the number is the more creative the response is, but more likely to hallucinate when set too high.
+
+    Usage: Lower numbers are good for virtual assistants where we need deterministic responses. Higher numbers are good for roleplay or creative tasks like editing stories
+
+.fi
+.RE
+
+.PP
+\fBthinking\fP=true
+
+.PP
+Enable thinking mode on reasoning models
+
+.PP
+\fBthreads\fP=\-1
+
+.PP
+maximum number of cpu threads to use for inferencing
+The default \-1, uses the default of the underlying implementation
+
+.PP
+\fBtransport\fP="ollama"
+
+.PP
+Specify the default transport to be used for pulling and pushing of AI Models.
+Options: oci, ollama, huggingface.
+RAMALAMA\_TRANSPORT environment variable overrides this field.

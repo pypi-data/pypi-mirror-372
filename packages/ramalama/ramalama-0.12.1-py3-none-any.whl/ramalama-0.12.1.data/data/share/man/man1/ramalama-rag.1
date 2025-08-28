@@ -1,0 +1,181 @@
+.TH "ramalama-rag 1" 
+.nh
+.ad l
+
+.SH NAME
+.PP
+ramalama\-rag \- generate and convert Retrieval Augmented Generation (RAG) data from provided documents into an OCI Image
+
+.SH SYNOPSIS
+.PP
+\fBramalama rag\fP [options] [path ...] image
+
+.SH DESCRIPTION
+.PP
+Generate RAG data from provided documents and convert into an OCI Image. This command uses a specific container image containing the docling
+tool to convert the specified content into a RAG vector database. If the image does not exist locally, RamaLama will pull the image
+down and launch a container to process the data.
+
+.PP
+NOTE: this command does not work without a container engine.
+
+.PP
+positional arguments:
+
+.PP
+\fIPATH\fP    Files/Directory containing PDF, DOCX, PPTX, XLSX, HTML,
+        AsciiDoc \& Markdown formatted files to be processed.
+        Can be specified multiple times.
+
+.PP
+\fIDESTINATION\fP   Path or OCI Image name to contain processed rag data
+
+.SH OPTIONS
+.SS \fB\-\-env\fP=
+.PP
+Set environment variables inside of the container.
+
+.PP
+This option allows arbitrary environment variables that are available for the
+process to be launched inside of the container. If an environment variable is
+specified without a value, the container engine checks the host environment
+for a value and set the variable only if it is set on the host.
+
+.SS \fB\-\-format\fP=\fIjson\fP |  \fImarkdown\fP | \fIqdrant\fP |
+.PP
+Convert documents into the following formats
+
+.TS
+allbox;
+l l 
+l l .
+\fB\fCType\fR	\fB\fCDescription\fR
+json	T{
+JavaScript Object Notation. lightweight format for exchanging data
+T}
+markdown	T{
+Lightweight markup language using plain text editing
+T}
+qdrant	T{
+Retrieval\-Augmented Generation (RAG) Vector database Qdrant distribution
+T}
+milvus	T{
+Retrieval\-Augmented Generation (RAG) Vector database Milvus distribution
+T}
+.TE
+
+.SS \fB\-\-help\fP, \fB\-h\fP
+.PP
+Print usage message
+
+.SS \fB\-\-image\fP=IMAGE
+.PP
+OCI container image to run with specified AI model. RamaLama defaults to using
+images based on the accelerator it discovers. For example:
+\fB\fCquay.io/ramalama/ramalama\-rag\fR\&. See the table below for all default images.
+The default image tag is based on the minor version of the RamaLama package.
+Version 0.12.1 of RamaLama pulls an image with a \fB\fC:0.12\fR tag from the quay.io/ramalama OCI repository. The \-\-image option overrides this default.
+
+.PP
+The default can be overridden in the ramalama.conf file or via the
+RAMALAMA\_IMAGE environment variable. \fB\fCexport RAMALAMA\_IMAGE=quay.io/ramalama/aiimage:1.2\fR tells
+RamaLama to use the \fB\fCquay.io/ramalama/aiimage:1.2\fR image.
+
+.PP
+Accelerated images:
+
+.TS
+allbox;
+l l 
+l l .
+\fB\fCAccelerator\fR	\fB\fCImage\fR
+CPU, Apple	quay.io/ramalama/ramalama\-rag
+HIP\_VISIBLE\_DEVICES	quay.io/ramalama/rocm\-rag
+CUDA\_VISIBLE\_DEVICES	quay.io/ramalama/cuda\-rag
+ASAHI\_VISIBLE\_DEVICES	quay.io/ramalama/asahi\-rag
+INTEL\_VISIBLE\_DEVICES	T{
+quay.io/ramalama/intel\-gpu\-rag
+T}
+ASCEND\_VISIBLE\_DEVICES	quay.io/ramalama/cann\-rag
+MUSA\_VISIBLE\_DEVICES	quay.io/ramalama/musa\-rag
+.TE
+
+.SS \fB\-\-keep\-groups\fP
+.PP
+pass \-\-group\-add keep\-groups to podman (default: False)
+If GPU device on host system is accessible to user via group access, this option leaks the groups into the container.
+
+.SS \fB\-\-network\fP=\fInone\fP
+.PP
+sets the configuration for network namespaces when handling RUN instructions
+
+.SS \fB\-\-ocr\fP
+.PP
+Sets the Docling OCR flag. OCR stands for Optical Character Recognition and is used to extract text from images within PDFs converting it into raw text that an LLM can understand. This feature is useful if the PDF's one is converting has a lot of embedded images with text. This process uses a great amount of RAM so the default is false.
+
+.SS \fB\-\-pull\fP=\fIpolicy\fP
+.PP
+Pull image policy. The default is \fBmissing\fP\&.
+
+.RS
+.IP \(bu 2
+\fBalways\fP: Always pull the image and throw an error if the pull fails.
+.IP \(bu 2
+\fBmissing\fP: Only pull the image when it does not exist in the local containers storage. Throw an error if no image is found and the pull fails.
+.IP \(bu 2
+\fBnever\fP: Never pull the image but use the one from the local containers storage. Throw an error when no image is found.
+.IP \(bu 2
+\fBnewer\fP: Pull if the image on the registry is newer than the one in the local containers storage. An image is considered to be newer when the digests are different. Comparing the time stamps is prone to errors. Pull errors are suppressed if a local image was found.
+
+.RE
+
+.SS \fB\-\-selinux\fP=\fItrue\fP
+.PP
+Enable SELinux container separation
+
+.SH EXAMPLES
+.PP
+.RS
+
+.nf
+$ ramalama rag ./README.md https://github.com/containers/podman/blob/main/README.md quay.io/rhatdan/myrag
+100% |███████████████████████████████████████████████████████|  114.00 KB/    0.00 B 922.89 KB/s   59m 59s
+Building quay.io/ramalama/myrag...
+adding vectordb...
+c857ebc65c641084b34e39b740fdb6a2d9d2d97be320e6aa9439ed0ab8780fe0
+
+.fi
+.RE
+
+.PP
+.RS
+
+.nf
+$ ramalama rag \-\-ocr README.md https://mysight.edu/document quay.io/rhatdan/myrag
+
+.fi
+.RE
+
+.PP
+.RS
+
+.nf
+$ ramalama rag \-\-format markdown /tmp/internet.pdf /tmp/output
+$ ls /tmp/output/docs/tmp/
+/tmp/output/docs/tmp/internet.md
+$ ramalama rag \-\-format json /tmp/internet.pdf /tmp/output
+$ ls /tmp/output/docs/tmp/
+/tmp/output/docs/tmp/internet.md
+/tmp/output/docs/tmp/internet.json
+
+.fi
+.RE
+
+.SH SEE ALSO
+.PP
+\fBramalama(1)\fP
+
+.SH HISTORY
+.PP
+Dec 2024, Originally compiled by Dan Walsh 
+\[la]dwalsh@redhat.com\[ra]
