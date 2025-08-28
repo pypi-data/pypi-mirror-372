@@ -1,0 +1,209 @@
+<html>
+  <body>
+    <div id="oxview_frame"></div>
+
+    <script>
+      // ----------------------------------------------------
+      // Streamlit <-> Component messaging helpers
+      function sendMessageToStreamlitClient(type, data) {
+        var outData = Object.assign({ isStreamlitMessage: true, type }, data);
+        window.parent.postMessage(outData, "*");
+      }
+      function init() {
+        sendMessageToStreamlitClient("streamlit:componentReady", { apiVersion: 1 });
+      }
+      function setFrameHeight(height) {
+        sendMessageToStreamlitClient("streamlit:setFrameHeight", { height });
+      }
+      function sendDataToPython(data) {
+        sendMessageToStreamlitClient("streamlit:setComponentValue", data);
+      }
+
+      // ----------------------------------------------------
+      // Per-iframe state to prevent duplicate loads
+      const framesState = Object.create(null);
+      function makeSig(t_files, file_types, colormap, width, height, files_content) {
+        // Include files_content length and simple hashes to catch changes
+        let fcSig = null;
+        if (Array.isArray(files_content)) {
+          // Avoid huge JSON; just lengths + first/last 16 chars
+          fcSig = files_content.map(c => {
+            if (typeof c !== "string") return null;
+            const n = c.length;
+            const head = c.slice(0, 16);
+            const tail = c.slice(-16);
+            return [n, head, tail];
+          });
+        }
+        return JSON.stringify({
+          f: t_files,
+          e: file_types,
+          c: colormap ?? null,
+          w: String(width),
+          h: String(height),
+          fc: fcSig,
+        });
+      }
+
+      function applyIfNew(frame_id, args) {
+        const state = framesState[frame_id];
+        if (!state) return;
+        const { t_files, file_types, colormap, width, height, files_content, reset_scene, reset_camera } = args;
+        const sig = makeSig(t_files, file_types, colormap, width, height, files_content, reset_scene, reset_camera);
+        if (state.lastSig === sig) return;
+        state.lastSig = sig;
+        handle(t_files, file_types, frame_id, colormap, files_content, reset_scene, reset_camera);
+      }
+
+      function handle(t_files, file_types, frame_id, colormap, files_content, reset_scene, reset_camera) {
+        const frame = document.getElementById("oxview-frame-" + frame_id);
+        if (!frame) {
+          console.error("No iframe found for frame_id", frame_id);
+          return;
+        }
+
+        const inbox_settings = ["Monomer", "Origin"];
+        const t_blobs = [];
+
+        if (reset_scene !== undefined && reset_scene) {
+          const reset_blobs = [];
+          if (reset_camera !== undefined && reset_camera) {
+            reset_blobs.push(new Blob(['resetScene(resetCamera=true)'], { type: "text/plain" }));
+          } else {
+            reset_blobs.push(new Blob(['resetScene(resetCamera=false)'], { type: "text/plain" }));
+          }
+          frame.contentWindow.postMessage({
+            message: "iframe_drop",
+            files: reset_blobs,
+            ext: ['js'],
+            inbox_settings: inbox_settings,
+          });
+        }
+
+        if (Array.isArray(files_content) && files_content.length === t_files.length) {
+          // Preferred path: build blobs from inline contents
+          for (let i = 0; i < files_content.length; i++) {
+            const content = files_content[i] ?? "";
+            t_blobs.push(new Blob([content], { type: "text/plain" }));
+          }
+        } else {
+          // Fallback path: fetch files from disk (add cache-buster to avoid stale caching)
+          for (let i = 0; i < t_files.length; i++) {
+            try {
+              const req = new XMLHttpRequest();
+              req.open("GET", t_files[i] + "?v=" + Date.now(), false); // sync on purpose
+              req.send(null);
+              t_blobs.push(new Blob([req.responseText ?? ""], { type: "text/plain" }));
+            } catch (e) {
+              console.error("Failed to fetch file", t_files[i], e);
+              t_blobs.push(new Blob([""], { type: "text/plain" }));
+            }
+          }
+        }
+
+        // Other version to load the colormap with the rest, but sometimes it fails stochastically
+        // if (colormap !== undefined && colormap !== null) {
+        //   t_blobs.push(new Blob([`api.changeColormap('${colormap}')`], { type: "text/plain" }));
+        //   file_types.push('js');
+        // }
+
+        frame.contentWindow.postMessage({
+          message: "iframe_drop",
+          files: t_blobs,
+          ext: file_types,
+          inbox_settings: inbox_settings,
+        });
+
+        // OLD OTHER OPTION TO SEPARE COLORMAPS
+        // if (colormap !== undefined && colormap !== null) {
+        //   frame.contentWindow.api?.changeColormap?.(colormap);
+        // }
+        // run this after the structure is added makes sure that it's loaded properly
+        if (colormap !== undefined && colormap !== null) {
+          frame.contentWindow.postMessage({
+            message: "iframe_drop",
+            files: [new Blob([`api.changeColormap('${colormap}')`], { type: "text/plain" })],
+            ext: ['js'],
+            inbox_settings: inbox_settings,
+          });  
+        }
+      }
+
+      function attachOnLoadOnce(frame, frame_id) {
+        const state = framesState[frame_id];
+        if (!state) return;
+        const onLoad = () => {
+          frame.removeEventListener("load", onLoad);
+          state.isLoading = false;
+          state.isLoaded = true;
+          const p = state.pending;
+          state.pending = null;
+          if (p) applyIfNew(frame_id, p);
+        };
+        frame.addEventListener("load", onLoad);
+      }
+
+      function onDataFromPython(event) {
+        if (event.data.type !== "streamlit:render") return;
+
+        const args = event.data.args || {};
+        const t_files = args.files_text;
+        const file_types = args.file_types;
+        const width = args.width ?? "99%";
+        const height = args.height ?? "500";
+        const frame_id = args.frame_id;
+        const colormap = args.colormap;
+        const files_content = args.files_content || null;
+        const reset_scene = args.reset_scene === true;
+        const reset_camera = args.reset_camera === true;
+
+        const iframe_id = "oxview-frame-" + frame_id;
+        let frame = document.getElementById(iframe_id);
+        let state = framesState[frame_id];
+
+        const payload = { t_files, file_types, colormap, width, height, files_content, reset_scene, reset_camera };
+
+        if (!frame) {
+          frame = document.createElement("iframe");
+          frame.id = iframe_id;
+          frame.width = width;
+          frame.height = height;
+          frame.src = "./oxview_src/index.html";
+          frame.style.border = "none";
+          document.getElementById("oxview_frame").appendChild(frame);
+
+          framesState[frame_id] = state = {
+            el: frame,
+            isLoading: true,
+            isLoaded: false,
+            pending: payload,
+            lastSig: null,
+          };
+
+          attachOnLoadOnce(frame, frame_id);
+          return;
+        }
+
+        // keep size in sync
+        frame.width = width;
+        frame.height = height;
+
+        if (state && state.isLoading) {
+          state.pending = payload; // coalesce while loading
+          return;
+        }
+
+        applyIfNew(frame_id, payload);
+      }
+
+      // ----------------------------------------------------
+      window.addEventListener("message", onDataFromPython);
+      init();
+      window.addEventListener("load", function () {
+        window.setTimeout(function () {
+          setFrameHeight(document.documentElement.clientHeight);
+        }, 0);
+      });
+    </script>
+  </body>
+</html>
