@@ -1,0 +1,329 @@
+<div class="row">
+    <div class="col-12">
+
+        <!-- Log viewer -->
+        <div class="card" id="log-card" style="display:none;">
+            <div class="card-header">
+                <h2 class="card-title">Logs en direct — <span id="log-task-id"></span></h2>
+            </div>
+            <div class="card-body">
+                <pre id="log-output" class="bg-dark text-white p-3 rounded" style="height:300px; overflow:auto;"></pre>
+            </div>
+        </div>
+
+        <!-- Filter form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Filtres</h3>
+            </div>
+            <div class="card-body">
+                <form id="filter-form" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="task-name-filter" class="form-label">Nom de tâche</label>
+                        <input type="text" class="form-control" id="task-name-filter" placeholder="Filtrer par nom">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="start-time-filter" class="form-label">Date début</label>
+                        <input type="text" class="form-control" id="start-time-filter" placeholder="ex: 1d, 7d, 2h ou YYYY-MM-DD" value="1d">
+                        <small class="form-text text-muted">Format: 1h, 7d, 30m ou YYYY-MM-DD</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end-time-filter" class="form-label">Date fin</label>
+                        <input type="text" class="form-control" id="end-time-filter" placeholder="ex: now ou YYYY-MM-DD" value="now">
+                        <small class="form-text text-muted">Format: now, 1h, 7d ou YYYY-MM-DD</small>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">Appliquer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Task table -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2 class="card-title">Liste des tâches</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table card-table table-vcenter text-nowrap" id="tasks-table">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Fonction</th>
+                        <th>Status</th>
+                        <th>Durée</th>
+                        <th>Démarrée</th>
+                        <th>Terminée</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="task-list">
+                    <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal for task details -->
+<div class="modal modal-blur fade " id="modal-task" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Détails de la tâche</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Task overview section -->
+                <div class="p-3 bg-light border-bottom">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Informations générales</h6>
+                            <div class="mb-2">
+                                <span class="text-muted">ID:</span> 
+                                <strong id="detail-id" class="ms-1"></strong>
+                            </div>
+                            <div class="mb-2">
+                                <span class="text-muted">Fonction:</span> 
+                                <strong id="detail-function" class="ms-1"></strong>
+                            </div>
+                            <div class="mb-2">
+                                <span class="text-muted">Statut:</span> 
+                                <span id="detail-success-badge" class="ms-1 badge"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Timing</h6>
+                            <div class="mb-2">
+                                <span class="text-muted">Durée:</span> 
+                                <strong id="detail-duration" class="ms-1"></strong>
+                            </div>
+                            <div class="mb-2">
+                                <span class="text-muted">Démarrée:</span> 
+                                <span id="detail-start" class="ms-1"></span>
+                            </div>
+                            <div class="mb-2">
+                                <span class="text-muted">Terminée:</span> 
+                                <span id="detail-end" class="ms-1"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Parameters section -->
+                <div class="p-3">
+                    <h6 class="text-muted mb-3">Paramètres</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header py-2">
+                                    <h6 class="card-title mb-0">Arguments</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <pre id="detail-args" class="p-2 rounded mb-0" style="max-height: 100px; overflow-y: auto;"></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header py-2">
+                                    <h6 class="card-title mb-0">Kwargs</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <pre id="detail-kwargs" class="p-2 rounded mb-0" style="max-height: 100px; overflow-y: auto;"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Result section -->
+                <div class="p-3 border-top">
+                    <h6 class="text-muted mb-3">Résultat</h6>
+                    <div class="card">
+                        <div class="card-body p-2">
+                            <pre id="detail-result" class="p-2 rounded mb-0" style="max-height: 100px; overflow-y: auto;"></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Error section -->
+                <div class="p-3 border-top" id="detail-error" style="display: none;">
+                    <h6 class="text-danger mb-3">Erreur</h6>
+                    <div class="card border-danger">
+                        <div class="card-body p-2">
+                            <pre id="detail-error-msg" class="text-danger p-2 rounded mb-0" style="max-height: 100px; overflow-y: auto;"></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Logs section -->
+                <div class="p-3 border-top">
+                    <h6 class="text-muted mb-3">Logs</h6>
+                    <pre id="detail-logs" class="bg-dark text-white p-3 rounded mb-0" style="max-height: 200px; overflow-y: auto;"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    {#let activeLogTaskId = null;#}
+    {##}
+    {#const logHandler = (msg) => {#}
+    {#    const taskId = msg.meta?.task_id;#}
+    {#    if (!taskId || taskId !== activeLogTaskId) return;#}
+    {##}
+    {#    const log = document.getElementById("log-output");#}
+    {##}
+    {#    if (msg.meta?.event === "__TASK_DONE__") {#}
+    {#        log.innerHTML += "<br><strong>[END OF TASK]</strong><br>";#}
+    {#        return;#}
+    {#    }#}
+    {##}
+    {#    const level = msg.meta?.level || "INFO";#}
+    {#    const content = msg.content || "";#}
+    {#    log.innerHTML += `<div><span class="badge bg-${level.toLowerCase()}">${level}</span> ${content}</div>`;#}
+    {#    log.scrollTop = log.scrollHeight;#}
+
+    function streamLogs(taskId) {
+        setupLogStreamHandler(taskId);
+    }
+
+    {#function streamLogs(taskId) {#}
+    {#    if (!window.WebSocketEvents || !window.WebSocketEvents.isReady) {#}
+    {#        console.error("WebSocketEvents is not ready.");#}
+    {#        return;#}
+    {#    }#}
+    {##}
+    {#    activeLogTaskId = taskId;#}
+    {#    document.getElementById("log-task-id").textContent = taskId;#}
+    {#    document.getElementById("log-output").textContent = "";#}
+    {#    document.getElementById("log-card").style.display = "block";#}
+    {##}
+    {#    // Unregister any previous handler to avoid duplication#}
+    {#    window.WebSocketEvents.unregister("logs", logHandler);#}
+    {##}
+    {#    // Register new handler scoped to this task#}
+    {#    window.WebSocketEvents.register("logs", logHandler);#}
+
+        async function fetchTasks() {
+            // Get filter values
+            const taskName = document.getElementById("task-name-filter").value;
+            const startTime = document.getElementById("start-time-filter").value;
+            const endTime = document.getElementById("end-time-filter").value;
+            
+            // Build URL with query parameters
+            let url = "{{ widget.url_list_tasks }}";
+            const params = new URLSearchParams();
+            if (taskName) params.append("task_name", taskName);
+            if (startTime) params.append("start_time", startTime);
+            if (endTime) params.append("end_time", endTime);
+            
+            // Add query parameters if any exist
+            if (params.toString()) {
+                url += "?" + params.toString();
+            }
+            
+            const res = await fetch(url);
+            const tasks = await res.json();
+            const tbody = document.getElementById("task-list");
+            tbody.innerHTML = "";
+            
+            if (tasks.length === 0) {
+                const row = document.createElement("tr");
+                row.innerHTML = `<td colspan="7" class="text-center">Aucune tâche trouvée</td>`;
+                tbody.appendChild(row);
+                return;
+            }
+            
+            tasks.forEach(t => {
+                const url = "{{ widget.url_detail_task }}".replace("TASK_ID_REPLACE", t.task_id);
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                <td>${t.task_id}</td>
+                <td>${t.function}</td>
+                <td><span class="badge ${t.success ? 'bg-green' : 'bg-grey'}">${t.status}</span></td>
+                <td>${t.duration?.toFixed(2) ?? "-"}</td>
+                <td>${t.start_time ?? "-"}</td>
+                <td>${t.end_time ?? "-"}</td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewTask('${t.task_id}')">Détails</button>
+                        <a class="btn btn-sm btn-outline-secondary" href="${url}">Full Détails</a>
+                    </div>
+                </td>
+            `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function viewTask(taskId) {
+            const url = "{{ widget.url_get_task }}".replace("TASK_ID_REPLACE", taskId);
+            const res = await fetch(url);
+            const task = await res.json();
+
+            // Set basic information
+            document.getElementById("detail-id").textContent = task.task_id;
+            document.getElementById("detail-function").textContent = task.function;
+            
+            // Set status badge with appropriate color
+            const successBadge = document.getElementById("detail-success-badge");
+            if (task.success === true) {
+                successBadge.textContent = "Succès";
+                successBadge.className = "ms-1 badge bg-success";
+            } else if (task.success === false) {
+                successBadge.textContent = "Échec";
+                successBadge.className = "ms-1 badge bg-danger";
+            } else {
+                successBadge.textContent = task.status || "En cours";
+                successBadge.className = "ms-1 badge bg-warning";
+            }
+            
+            // Set timing information
+            document.getElementById("detail-duration").textContent = task.duration?.toFixed(2) + " sec" ?? "-";
+            document.getElementById("detail-start").textContent = task.start_time ?? "-";
+            document.getElementById("detail-end").textContent = task.end_time ?? "-";
+            
+            // Set parameters
+            document.getElementById("detail-args").textContent = task.args ? JSON.stringify(task.args, null, 2) : "[]";
+            document.getElementById("detail-kwargs").textContent = task.kwargs ? JSON.stringify(task.kwargs, null, 2) : "{}";
+            
+            // Set result
+            document.getElementById("detail-result").textContent = task.result ? 
+                (typeof task.result === 'object' ? JSON.stringify(task.result, null, 2) : task.result) : "-";
+            
+            // Set logs
+            document.getElementById("detail-logs").textContent = task.logs ?? "";
+
+            // Handle error display
+            const errorBlock = document.getElementById("detail-error");
+            const errorMsg = document.getElementById("detail-error-msg");
+            if (task.error) {
+                errorMsg.textContent = task.error;
+                errorBlock.style.display = "block";
+            } else {
+                errorMsg.textContent = "";
+                errorBlock.style.display = "none";
+            }
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('modal-task'));
+            modal.show();
+        }
+
+        // Handle form submission
+        document.getElementById('filter-form').addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent form from submitting normally
+            fetchTasks();
+        });
+        
+        // Initial fetch and periodic refresh
+        setInterval(fetchTasks, 5000);
+        fetchTasks();
+</script>
