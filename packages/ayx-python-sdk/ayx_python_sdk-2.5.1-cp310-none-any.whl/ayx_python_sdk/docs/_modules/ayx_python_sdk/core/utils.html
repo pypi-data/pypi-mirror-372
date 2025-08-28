@@ -1,0 +1,280 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ayx_python_sdk.core.utils &mdash; AyxPythonSdk 2.5.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/documentation_options.js?v=983e91d6"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            AyxPythonSdk
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">ayx_python_sdk</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting Started Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugin_lifecycle.html">Lifecycle of a Plugin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugin_code.html">Plugin Tool Execution Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config_xml.html">Tool Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../differences_with_original_sdk.html">Differences Between the New and Old Python SDKs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../third_party_packages.html">Python 3rd-party Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../virtual_environments.html">Virtual Environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../python_embeddable_distribution.html">Python Embeddable Distribution (PED)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../example_tools.html">Example Tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">AyxPythonSdk</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">ayx_python_sdk.core.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ayx_python_sdk.core.utils</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2022 Alteryx, Inc. All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the ALTERYX SDK AND API LICENSE AGREEMENT;</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    https://www.alteryx.com/alteryx-sdk-and-api-license-agreement</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Utility functions definitions for plugin SDK.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.core.field</span><span class="w"> </span><span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">FieldType</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
+
+
+<div class="viewcode-block" id="to_date">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.utils.to_date">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_date</span><span class="p">(</span><span class="n">stdate</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;datetime.date&quot;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Turn a date represented by a string to a Python date.</span>
+
+<span class="sd">    (only the date part and not the time of the day)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">stdate</span><span class="p">,</span> <span class="s2">&quot;%m/</span><span class="si">%d</span><span class="s2">/%Y&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="to_time">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.utils.to_time">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_time</span><span class="p">(</span><span class="n">sttime</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;datetime.time&quot;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Turn a date represented by a string to a Python time.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">sttime</span><span class="p">,</span> <span class="s2">&quot;%H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="to_datetime">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.utils.to_datetime">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_datetime</span><span class="p">(</span><span class="n">stdatetime</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;datetime.datetime&quot;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Turn a date represented by a string to a Python datetime.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">stdatetime</span><span class="p">,</span> <span class="s2">&quot;%m/</span><span class="si">%d</span><span class="s2">/%Y %H:%M:%S&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="is_spatial">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.utils.is_spatial">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_spatial</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="s2">&quot;pa.Metadata&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return true if the given arrow type is a spatial object (string + &#39;ayx&#39; meta info).&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;ayx.source&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">&quot;WKT&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="create_schema">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.utils.create_schema">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_schema</span><span class="p">(</span><span class="n">col_meta</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="p">{})</span> <span class="o">-&gt;</span> <span class="s2">&quot;pa.Schema&quot;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a Python Arrow Schema given a Dict of Metadata.&quot;&quot;&quot;</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">col_meta</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">fd</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+                <span class="n">name</span><span class="p">,</span>
+                <span class="n">field_type</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">string</span><span class="p">),</span>
+                <span class="n">size</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;size&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">scale</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scale&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">source</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                <span class="n">description</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fd</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="n">fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fd</span><span class="o">.</span><span class="n">to_arrow</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_ayx_meta">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.utils.get_ayx_meta">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_ayx_meta</span><span class="p">(</span><span class="n">metaname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add ayx. prefix to metadata name.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">metaname</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;size&quot;</span><span class="p">,</span> <span class="s2">&quot;scale&quot;</span><span class="p">,</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="s2">&quot;ayx.&quot;</span> <span class="o">+</span> <span class="n">metaname</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bad metadata name: &quot;</span> <span class="o">+</span> <span class="n">metaname</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="set_metadata">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.utils.set_metadata">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span>
+    <span class="n">tbl</span><span class="p">:</span> <span class="s2">&quot;pa.Table&quot;</span><span class="p">,</span> <span class="n">col_meta</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="p">{},</span> <span class="n">schema</span><span class="p">:</span> <span class="s2">&quot;pa.Schema&quot;</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;pa.Table&quot;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store column-level metadata as byte strings.</span>
+
+<span class="sd">    Column-level metadata is stored in the table columns schema fields.</span>
+
+<span class="sd">    To update the metadata, first new fields are created for all columns.</span>
+<span class="sd">    Next a schema is created using the new fields and updated table metadata.</span>
+<span class="sd">    Finally a new table is created by replacing the old one&#39;s schema, but</span>
+<span class="sd">    without copying any data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">    ----</span>
+<span class="sd">        tbl (pyarrow.Table): The table to store metadata in</span>
+<span class="sd">        col_meta: A dictionary with column metadata in the form</span>
+<span class="sd">            {</span>
+<span class="sd">                &#39;column_1&#39;: {&#39;type&#39;: FieldType.int64, &#39;size&#39;: 8},</span>
+<span class="sd">                &#39;column_2&#39;: {&#39;size&#39;: 64, &#39;source&#39;: &#39;something&#39;}</span>
+<span class="sd">            }</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Create updated column fields with new metadata</span>
+    <span class="k">if</span> <span class="n">schema</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">tbl</span><span class="o">.</span><span class="n">itercolumns</span><span class="p">()),</span> <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">col_meta</span><span class="p">:</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">tbl</span><span class="o">.</span><span class="n">schema</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">col_meta</span><span class="p">:</span>
+                <span class="c1"># Get updated column metadata</span>
+                <span class="n">metadata</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="ow">or</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">col_meta</span><span class="p">[</span><span class="n">col</span><span class="o">.</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">metadata</span><span class="p">[</span><span class="n">get_ayx_meta</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+                <span class="c1"># Update field with updated metadata</span>
+                <span class="n">col</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span>
+                    <span class="n">col</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="n">col</span><span class="o">.</span><span class="n">nullable</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span>
+                <span class="p">)</span>
+            <span class="n">fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+
+        <span class="c1"># Create new schema with updated field metadata</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span>
+
+        <span class="c1"># With updated schema build new table (shouldn&#39;t copy data)</span>
+        <span class="c1"># tbl = pa.Table.from_batches(tbl.to_batches(), schema)</span>
+        <span class="n">tbl</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">tbl</span><span class="o">.</span><span class="n">itercolumns</span><span class="p">()),</span> <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">tbl</span></div>
+
+
+
+<div class="viewcode-block" id="decode_metadata">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.utils.decode_metadata">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">decode_metadata</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Arrow stores metadata keys and values as bytes.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">metadata</span><span class="p">:</span>
+        <span class="c1"># None or {} are not decoded</span>
+        <span class="k">return</span> <span class="n">metadata</span>
+
+    <span class="n">decoded</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ayx.&quot;</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">key</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+        <span class="n">decoded</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+    <span class="k">return</span> <span class="n">decoded</span></div>
+
+
+
+<div class="viewcode-block" id="get_metadata">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.utils.get_metadata">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="n">tbl</span><span class="p">:</span> <span class="s2">&quot;pa.Table&quot;</span><span class="p">,</span> <span class="n">col_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get all column metadata as dicts or just one column, given col_name.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">col_name</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">tbl</span><span class="o">.</span><span class="n">schema</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">col_name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">decode_metadata</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">col</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">decode_metadata</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">tbl</span><span class="o">.</span><span class="n">schema</span><span class="p">}</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Alteryx, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

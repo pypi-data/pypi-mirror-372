@@ -1,0 +1,175 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ayx_python_sdk.providers.file_provider.file_provider_dcm &mdash; AyxPythonSdk 2.5.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/documentation_options.js?v=983e91d6"></script>
+      <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            AyxPythonSdk
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">ayx_python_sdk</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugin_lifecycle.html">Lifecycle of a Plugin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugin_code.html">Plugin Tool Execution Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../config_xml.html">Tool Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../differences_with_original_sdk.html">Differences Between the New and Old Python SDKs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../third_party_packages.html">Python 3rd-party Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../virtual_environments.html">Virtual Environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../python_embeddable_distribution.html">Python Embeddable Distribution (PED)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../example_tools.html">Example Tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">AyxPythonSdk</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">ayx_python_sdk.providers.file_provider.file_provider_dcm</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ayx_python_sdk.providers.file_provider.file_provider_dcm</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2022 Alteryx, Inc. All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the ALTERYX SDK AND API LICENSE AGREEMENT;</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    https://www.alteryx.com/alteryx-sdk-and-api-license-agreement</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;File Provider: Proxy class for DCM API.&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">DcmBase</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.core.doc_utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">inherit_docs</span>
+
+
+<div class="viewcode-block" id="FileProviderDCM">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.file_provider.html#ayx_python_sdk.providers.file_provider.file_provider_dcm.FileProviderDCM">[docs]</a>
+<span class="nd">@inherit_docs</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">FileProviderDCM</span><span class="p">(</span><span class="n">DcmBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class that wraps  DCM API work.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="FileProviderDCM.get_connection">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.file_provider.html#ayx_python_sdk.providers.file_provider.file_provider_dcm.FileProviderDCM.get_connection">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="FileProviderDCM.get_write_lock">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.file_provider.html#ayx_python_sdk.providers.file_provider.file_provider_dcm.FileProviderDCM.get_write_lock">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_write_lock</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">secret_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">expires_in</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="FileProviderDCM.free_write_lock">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.file_provider.html#ayx_python_sdk.providers.file_provider.file_provider_dcm.FileProviderDCM.free_write_lock">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">free_write_lock</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">secret_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">lock_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="FileProviderDCM.update_connection_secret">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.file_provider.html#ayx_python_sdk.providers.file_provider.file_provider_dcm.FileProviderDCM.update_connection_secret">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_connection_secret</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">lock_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">secret_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">expires_on</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">],</span>
+        <span class="n">parameters</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Alteryx, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

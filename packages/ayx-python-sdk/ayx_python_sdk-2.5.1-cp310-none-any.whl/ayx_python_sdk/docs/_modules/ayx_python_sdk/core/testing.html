@@ -1,0 +1,310 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ayx_python_sdk.core.testing &mdash; AyxPythonSdk 2.5.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/documentation_options.js?v=983e91d6"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            AyxPythonSdk
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">ayx_python_sdk</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting Started Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugin_lifecycle.html">Lifecycle of a Plugin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugin_code.html">Plugin Tool Execution Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config_xml.html">Tool Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../differences_with_original_sdk.html">Differences Between the New and Old Python SDKs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../third_party_packages.html">Python 3rd-party Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../virtual_environments.html">Virtual Environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../python_embeddable_distribution.html">Python Embeddable Distribution (PED)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../example_tools.html">Example Tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">AyxPythonSdk</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">ayx_python_sdk.core.testing</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ayx_python_sdk.core.testing</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2022 Alteryx, Inc. All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the ALTERYX SDK AND API LICENSE AGREEMENT;</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    https://www.alteryx.com/alteryx-sdk-and-api-license-agreement</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Convenience functions, classes, and fixtures for user-generated unit testing.&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Type</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">Anchor</span><span class="p">,</span> <span class="n">PluginV2</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider</span><span class="w"> </span><span class="kn">import</span> <span class="n">AMPProviderV2</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.sdk_tool_service_v2</span><span class="w"> </span><span class="kn">import</span> <span class="n">SdkToolServiceV2</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_IncomingConnection</span><span class="p">:</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">]</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_IncomingAnchor</span><span class="p">:</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">connections</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">_IncomingConnection</span><span class="p">]</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_OutgoingAnchor</span><span class="p">:</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">num_connections</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">]</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_PluginInitializationData</span><span class="p">:</span>
+    <span class="n">configXml</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># noqa</span>
+    <span class="n">incomingAnchors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">_IncomingAnchor</span><span class="p">]</span>  <span class="c1"># noqa</span>
+    <span class="n">outgoingAnchors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">_OutgoingAnchor</span><span class="p">]</span>  <span class="c1"># noqa</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_DummyCtrlIn</span><span class="p">:</span>
+    <span class="n">plugin_initialization_data</span><span class="p">:</span> <span class="n">_PluginInitializationData</span>
+
+
+<span class="n">BatchTuple</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;BatchTuple&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;input_data&quot;</span><span class="p">,</span> <span class="s2">&quot;expected_output_data&quot;</span><span class="p">])</span>
+
+
+<div class="viewcode-block" id="SdkToolTestService">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.testing.SdkToolTestService">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SdkToolTestService</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A minimal in-process client for testing user plugins.&quot;&quot;&quot;</span>
+
+    <span class="n">MAPPING</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;NONE&quot;</span><span class="p">,</span> <span class="s2">&quot;INFO&quot;</span><span class="p">,</span> <span class="s2">&quot;WARN&quot;</span><span class="p">,</span> <span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="s2">&quot;FILEINPUT&quot;</span><span class="p">,</span> <span class="s2">&quot;FILEOUTPUT&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">plugin_class</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">PluginV2</span><span class="p">],</span>
+        <span class="n">input_anchor_config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">]],</span>
+        <span class="n">output_anchor_config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">]],</span>
+        <span class="n">config_mock</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">service</span> <span class="o">=</span> <span class="n">SdkToolServiceV2</span><span class="p">()</span>
+
+        <span class="n">provider</span> <span class="o">=</span> <span class="n">AMPProviderV2</span><span class="p">()</span>
+        <span class="n">incoming_anchors</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">_IncomingAnchor</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                <span class="n">connections</span><span class="o">=</span><span class="p">[</span>
+                    <span class="n">_IncomingConnection</span><span class="p">(</span>
+                        <span class="n">name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">metadata</span><span class="o">=</span><span class="n">input_anchor_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="p">],</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">input_anchor_config</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="p">]</span>
+
+        <span class="n">outgoing_anchors</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">_OutgoingAnchor</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">num_connections</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">output_anchor_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">output_anchor_config</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="p">]</span>
+
+        <span class="c1"># TODO: generate/pass config_mock in as a dict/json, convert to xml here</span>
+        <span class="n">init_data</span> <span class="o">=</span> <span class="n">_DummyCtrlIn</span><span class="p">(</span>
+            <span class="n">_PluginInitializationData</span><span class="p">(</span>
+                <span class="n">configXml</span><span class="o">=</span><span class="n">config_mock</span><span class="p">,</span>
+                <span class="n">incomingAnchors</span><span class="o">=</span><span class="n">incoming_anchors</span><span class="p">,</span>
+                <span class="n">outgoingAnchors</span><span class="o">=</span><span class="n">outgoing_anchors</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">provider</span><span class="o">.</span><span class="n">set_anchors</span><span class="p">(</span><span class="n">init_data</span><span class="p">)</span>
+        <span class="n">provider</span><span class="o">.</span><span class="n">environment</span><span class="o">.</span><span class="n">set_tool_config</span><span class="p">(</span><span class="n">config_mock</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugin</span> <span class="o">=</span> <span class="n">plugin_class</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">plugin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugin</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_streams</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">RecordBatch</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_io_stream</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># TODO: auto-generate plugin initialization from configXML</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">io_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Store any strings sent over through provider.io.</span>
+
+<span class="sd">        This is roughly the format the resulting strings follow:</span>
+<span class="sd">            &quot;(INFO|WARN|ERROR):(.*)&quot;</span>
+<span class="sd">        For example, this provider.io call in the plugin code:</span>
+<span class="sd">            self.provider.io.info(&quot;Test Code&quot;)</span>
+<span class="sd">        would show up as &quot;INFO:Test Code&quot; in self.io_stream.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List[str]</span>
+<span class="sd">            All strings generated by provider.io calls within the plugin code.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_io_stream</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">data_streams</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">RecordBatch</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Capture any data written via provider.io.write_to_anchor().</span>
+
+<span class="sd">        The completed stream is represented by a dictionary, typed like so:</span>
+<span class="sd">        {</span>
+<span class="sd">            &quot;&lt;Output Anchor name&gt;&quot;: [pa.RecordBatch]</span>
+<span class="sd">        }</span>
+<span class="sd">        If provider.io.write_to_anchor is never called, the data_streams attribute should be an empty dictionary.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Dict[str, List[pa.RecordBatch]</span>
+<span class="sd">            A mapping between output anchor names and the corresponding list of RecordBatches</span>
+<span class="sd">            written to that output anchor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_streams</span>
+
+<div class="viewcode-block" id="SdkToolTestService.run_on_record_batch">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.testing.SdkToolTestService.run_on_record_batch">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_on_record_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">RecordBatch</span><span class="p">,</span> <span class="n">anchor</span><span class="p">:</span> <span class="n">Anchor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Prepare and run the plugin&#39;s on_record_batch method, and capture the I/O and data streams.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_flush_and_save_streams</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">record_batch_received</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">anchor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_flush_and_save_streams</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="SdkToolTestService.run_on_incoming_connection_complete">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.testing.SdkToolTestService.run_on_incoming_connection_complete">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_on_incoming_connection_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">anchor</span><span class="p">:</span> <span class="n">Anchor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Prepare and run the plugin&#39;s on_incoming_connection_complete method, and capture the I/O and data streams.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_flush_and_save_streams</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">incoming_connection_complete_callback</span><span class="p">(</span><span class="n">anchor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_flush_and_save_streams</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="SdkToolTestService.run_on_complete">
+<a class="viewcode-back" href="../../../ayx_python_sdk.core.html#ayx_python_sdk.core.testing.SdkToolTestService.run_on_complete">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_on_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Prepare and run the plugin&#39;s on_complete method, and capture the I/O and data streams.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_flush_and_save_streams</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">on_complete_callback</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_flush_and_save_streams</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_flush_and_save_streams</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">outputs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">io_outputs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">ctrl_io</span><span class="o">.</span><span class="n">ctrl_out</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">ctrl_io</span><span class="o">.</span><span class="n">ctrl_out</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="n">io_outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">MAPPING</span><span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">output_message</span><span class="o">.</span><span class="n">message_type</span><span class="p">]</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">output_message</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">record_io</span><span class="o">.</span><span class="n">pending_writes</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">record_io</span><span class="o">.</span><span class="n">pending_writes</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;anchor_name&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outputs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">outputs</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;anchor_name&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">outputs</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;anchor_name&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pydict</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_pydict</span><span class="p">())</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_streams</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">key</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">concat_tables</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">to_batches</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">outputs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_io_stream</span> <span class="o">=</span> <span class="n">io_outputs</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Alteryx, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,417 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository &mdash; AyxPythonSdk 2.5.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../../_static/documentation_options.js?v=983e91d6"></script>
+      <script src="../../../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            AyxPythonSdk
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules.html">ayx_python_sdk</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../getting_started.html">Getting Started Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugin_lifecycle.html">Lifecycle of a Plugin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugin_code.html">Plugin Tool Execution Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../config_xml.html">Tool Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../differences_with_original_sdk.html">Differences Between the New and Old Python SDKs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../third_party_packages.html">Python 3rd-party Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../virtual_environments.html">Virtual Environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../python_embeddable_distribution.html">Python Embeddable Distribution (PED)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../example_tools.html">Example Tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">AyxPythonSdk</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../repositories.html">ayx_python_sdk.providers.amp_provider.repositories</a></li>
+      <li class="breadcrumb-item active">ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2022 Alteryx, Inc. All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the ALTERYX SDK AND API LICENSE AGREEMENT;</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    https://www.alteryx.com/alteryx-sdk-and-api-license-agreement</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Class that saves input connection information given the associated anchor.&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">TYPE_CHECKING</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.core.input_connection_base</span><span class="w"> </span><span class="kn">import</span> <span class="n">InputConnectionStatus</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.builders</span><span class="w"> </span><span class="kn">import</span> <span class="n">InputConnectionBuilder</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.repositories.singleton</span><span class="w"> </span><span class="kn">import</span> <span class="n">Singleton</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+        <span class="n">AMPInputAnchor</span><span class="p">,</span>
+        <span class="n">AMPInputConnection</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.resources.generated.incoming_connection_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+        <span class="n">IncomingConnection</span> <span class="k">as</span> <span class="n">ProtobufInputConnection</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="InputConnectionRepository">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">InputConnectionRepository</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">Singleton</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Repository that stores input connection information.&quot;&quot;&quot;</span>
+
+    <span class="n">_input_connection_builder</span> <span class="o">=</span> <span class="n">InputConnectionBuilder</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the input connection repository.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_anchor_connection_map</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="s2">&quot;AMPInputConnection&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connection_status_map</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;InputConnectionStatus&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_packet_size_map</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="InputConnectionRepository.save_connection">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository.save_connection">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_connection</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">anchor_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">connection</span><span class="p">:</span> <span class="s2">&quot;AMPInputConnection&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save input connection information for the assoiciated anchor name.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        anchor_name</span>
+<span class="sd">            The name of the input anchor object that the connection is associated with.</span>
+<span class="sd">        connection</span>
+<span class="sd">            The AMPInputConnection object itself, to be saved to the repository.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_anchor_connection_map</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">anchor_name</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Adding connection </span><span class="si">%s</span><span class="s2"> to InputConnectionRepository for anchor </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">connection</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">anchor_name</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_anchor_connection_map</span><span class="p">[</span><span class="n">anchor_name</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">connection</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Current InputConnectionRepository: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_anchor_connection_map</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Input Connection </span><span class="si">{</span><span class="n">connection</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> is not open&quot;</span><span class="p">)</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.repositories.input_metadata_repository</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">InputMetadataRepository</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">InputMetadataRepository</span><span class="p">()</span><span class="o">.</span><span class="n">save_metadata</span><span class="p">(</span>
+            <span class="n">anchor_name</span><span class="p">,</span> <span class="n">connection</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">connection</span><span class="o">.</span><span class="n">metadata</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="InputConnectionRepository.save_grpc_connection">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository.save_grpc_connection">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_grpc_connection</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">anchor</span><span class="p">:</span> <span class="s2">&quot;AMPInputAnchor&quot;</span><span class="p">,</span> <span class="n">connection</span><span class="p">:</span> <span class="s2">&quot;ProtobufInputConnection&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save input connection object given a protobuf object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        anchor</span>
+<span class="sd">            The input anchor object that the connection is associated with.</span>
+<span class="sd">        connection</span>
+<span class="sd">            The protobuf representation of the input connection, to be serialized into AMP and saved to the repository.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">amp_connection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_connection_builder</span><span class="o">.</span><span class="n">from_protobuf</span><span class="p">(</span>
+            <span class="n">connection</span><span class="p">,</span> <span class="n">anchor</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_connection</span><span class="p">(</span><span class="n">anchor</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">amp_connection</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="InputConnectionRepository.get_all_connections">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository.get_all_connections">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all_connections</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">anchor_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="s2">&quot;AMPInputConnection&quot;</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the connections associated with the given anchor name.&quot;&quot;&quot;</span>
+        <span class="n">connections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_anchor_connection_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">anchor_name</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Current InputConnectionRepository: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_anchor_connection_map</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">connections</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Anchor </span><span class="si">{</span><span class="n">anchor_name</span><span class="si">}</span><span class="s2"> not found in repository.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">connections</span></div>
+
+
+<div class="viewcode-block" id="InputConnectionRepository.get_connection">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository.get_connection">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_connection</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">anchor_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">connection_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AMPInputConnection&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the connection associated with the given anchor name and connection name.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        anchor_name</span>
+<span class="sd">            The name of the anchor that the connection is associated with.</span>
+<span class="sd">        connection_name</span>
+<span class="sd">            The name of the input connection to retrieve.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">connections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_all_connections</span><span class="p">(</span><span class="n">anchor_name</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Searching connections on anchor </span><span class="si">%s</span><span class="s2"> for connection </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">anchor_name</span><span class="p">,</span>
+            <span class="n">connection_name</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">connection</span> <span class="ow">in</span> <span class="n">connections</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">connection_name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">connection</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Input connection </span><span class="si">{</span><span class="n">connection_name</span><span class="si">}</span><span class="s2"> not found in repository for anchor </span><span class="si">{</span><span class="n">anchor_name</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="InputConnectionRepository.delete_connection">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository.delete_connection">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">anchor_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">connection_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete the connection associated with the given anchor name and connection name.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        anchor_name</span>
+<span class="sd">            The name of the anchor that the connection is associated with.</span>
+<span class="sd">        connection_name</span>
+<span class="sd">            The name of the input connection to delete.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">connections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_all_connections</span><span class="p">(</span><span class="n">anchor_name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">connection</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">connections</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">connection_name</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="s2">&quot;Removing connection </span><span class="si">%s</span><span class="s2"> from anchor </span><span class="si">%s</span><span class="s2"> in InputConnectionRepository&quot;</span><span class="p">,</span>
+                    <span class="n">connection_name</span><span class="p">,</span>
+                    <span class="n">anchor_name</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">connections</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">connections</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_anchor_connection_map</span><span class="p">[</span><span class="n">anchor_name</span><span class="p">]</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                        <span class="s2">&quot;Removing anchor </span><span class="si">%s</span><span class="s2"> from InputConnectionRepository&quot;</span><span class="p">,</span> <span class="n">anchor_name</span>
+                    <span class="p">)</span>
+                <span class="k">return</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Input connection </span><span class="si">{</span><span class="n">connection_name</span><span class="si">}</span><span class="s2"> not found in repository for anchor </span><span class="si">{</span><span class="n">anchor_name</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="InputConnectionRepository.clear_repository">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository.clear_repository">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clear_repository</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete all data in the repository.&quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Clearing InputConnectionRepository&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_anchor_connection_map</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_packet_size_map</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connection_status_map</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Current InputConnectionRepository: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_anchor_connection_map</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="InputConnectionRepository.save_connection_status">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository.save_connection_status">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_connection_status</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">anchor_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">connection_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="s2">&quot;InputConnectionStatus&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save input connection status associated with a given input connection/anchor name.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        anchor_name</span>
+<span class="sd">            The name of the anchor that the connection is associated with.</span>
+<span class="sd">        connection_name</span>
+<span class="sd">            The name of the input connection to set the status of.</span>
+<span class="sd">        status</span>
+<span class="sd">            Enumeration value (1,2,3, or 4) that corresponds to the status</span>
+<span class="sd">            of this connection. (Created, Initialized, Receiving records, Closed)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Updating connection status of anchor </span><span class="si">%s</span><span class="s2"> connection </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">anchor_name</span><span class="p">,</span>
+            <span class="n">connection_name</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connection_status_map</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">anchor_name</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connection_status_map</span><span class="p">[</span><span class="n">anchor_name</span><span class="p">][</span><span class="n">connection_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">status</span></div>
+
+
+<div class="viewcode-block" id="InputConnectionRepository.get_connection_status">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository.get_connection_status">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_connection_status</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">anchor_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">connection_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;InputConnectionStatus&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve input connection status associated with a given input connection/anchor name.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        anchor_name</span>
+<span class="sd">            The name of the anchor that the connection is associated with.</span>
+<span class="sd">        connection_name</span>
+<span class="sd">            The name of the input connection to get the status of.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        InputConnectionStatus</span>
+<span class="sd">            Enumeration value (1,2,3, or 4) that corresponds to the status</span>
+<span class="sd">            of this connection. (Created, Initialized, Receiving records, Closed)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">anchor_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connection_status_map</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Anchor </span><span class="si">{</span><span class="n">anchor_name</span><span class="si">}</span><span class="s2"> not found in repository&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">connection_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connection_status_map</span><span class="p">[</span><span class="n">anchor_name</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Status for connection </span><span class="si">{</span><span class="n">connection_name</span><span class="si">}</span><span class="s2"> not found in repository for anchor </span><span class="si">{</span><span class="n">anchor_name</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connection_status_map</span><span class="p">[</span><span class="n">anchor_name</span><span class="p">][</span><span class="n">connection_name</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">status</span></div>
+
+
+<div class="viewcode-block" id="InputConnectionRepository.save_connection_packet_size">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository.save_connection_packet_size">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_connection_packet_size</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">anchor_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">connection_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save packet size associated with a given input connection/anchor name.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        anchor_name</span>
+<span class="sd">            The name of the anchor that the connection is associated with.</span>
+<span class="sd">        connection_name</span>
+<span class="sd">            The name of the input connection.</span>
+<span class="sd">        size</span>
+<span class="sd">            The max number of packets allowed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Updating packet size for anchor </span><span class="si">%s</span><span class="s2"> connection </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">anchor_name</span><span class="p">,</span>
+            <span class="n">connection_name</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_packet_size_map</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">anchor_name</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_packet_size_map</span><span class="p">[</span><span class="n">anchor_name</span><span class="p">][</span><span class="n">connection_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">size</span></div>
+
+
+<div class="viewcode-block" id="InputConnectionRepository.get_connection_packet_size">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.input_connection_repository.InputConnectionRepository.get_connection_packet_size">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_connection_packet_size</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">anchor_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">connection_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve packet size associated with a given input connection/anchor name.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        anchor_name</span>
+<span class="sd">            The name of the anchor that the connection is associated with.</span>
+<span class="sd">        connection_name</span>
+<span class="sd">            The name of the input connection to get the status of.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int, optional</span>
+<span class="sd">            The max packet size on the conenction, if set, otherwise None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">anchor_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_packet_size_map</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Anchor </span><span class="si">{</span><span class="n">anchor_name</span><span class="si">}</span><span class="s2"> not found in repository&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">connection_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_packet_size_map</span><span class="p">[</span><span class="n">anchor_name</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Packet size for connection </span><span class="si">{</span><span class="n">connection_name</span><span class="si">}</span><span class="s2"> not found in repository for anchor </span><span class="si">{</span><span class="n">anchor_name</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_packet_size_map</span><span class="p">[</span><span class="n">anchor_name</span><span class="p">][</span><span class="n">connection_name</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">size</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Alteryx, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

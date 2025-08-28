@@ -1,0 +1,400 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ayx_python_sdk.cli.workspace &mdash; AyxPythonSdk 2.5.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/documentation_options.js?v=983e91d6"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            AyxPythonSdk
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">ayx_python_sdk</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting Started Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugin_lifecycle.html">Lifecycle of a Plugin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugin_code.html">Plugin Tool Execution Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config_xml.html">Tool Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../differences_with_original_sdk.html">Differences Between the New and Old Python SDKs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../third_party_packages.html">Python 3rd-party Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../virtual_environments.html">Virtual Environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../python_embeddable_distribution.html">Python Embeddable Distribution (PED)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../example_tools.html">Example Tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">AyxPythonSdk</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">ayx_python_sdk.cli.workspace</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ayx_python_sdk.cli.workspace</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2022 Alteryx, Inc. All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the ALTERYX SDK AND API LICENSE AGREEMENT;</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    https://www.alteryx.com/alteryx-sdk-and-api-license-agreement</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Configurations for managing the workspace.&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">string</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xml.etree.ElementTree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">Et</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.cli.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_install_dir</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.cli.yxi_builder</span><span class="w"> </span><span class="kn">import</span> <span class="n">YxiBuilder</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">xmltodict</span>
+
+
+<span class="n">WORKSPACE_CONFIGURATION_FILE_NAME</span> <span class="o">=</span> <span class="s2">&quot;ayx_workspace.json&quot;</span>
+
+
+<div class="viewcode-block" id="WorkspaceError">
+<a class="viewcode-back" href="../../../ayx_python_sdk.cli.html#ayx_python_sdk.cli.workspace.WorkspaceError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">WorkspaceError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exception for workspace errors.&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="Workspace">
+<a class="viewcode-back" href="../../../ayx_python_sdk.cli.html#ayx_python_sdk.cli.workspace.Workspace">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Workspace</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class that wraps all workspace configurations and handles basic workspace functions.&quot;&quot;&quot;</span>
+
+    <span class="n">workspace_dir</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="n">tools</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">yxi_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">tool_family_name</span><span class="p">:</span> <span class="nb">str</span>
+
+<div class="viewcode-block" id="Workspace.build_workspace">
+<a class="viewcode-back" href="../../../ayx_python_sdk.cli.html#ayx_python_sdk.cli.workspace.Workspace.build_workspace">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_workspace</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">workspace_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">allow_creation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Workspace&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a workspace instance that wraps the configurations for the given workspace_directory.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">workspace_directory</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">allow_creation</span><span class="p">:</span>
+                <span class="n">Workspace</span><span class="o">.</span><span class="n">_create_workspace_directory</span><span class="p">(</span><span class="n">workspace_directory</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">WorkspaceError</span><span class="p">(</span><span class="s2">&quot;Workspace directory not found.&quot;</span><span class="p">)</span>
+
+        <span class="n">workspace_config_path</span> <span class="o">=</span> <span class="n">workspace_directory</span> <span class="o">/</span> <span class="n">WORKSPACE_CONFIGURATION_FILE_NAME</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">workspace_config_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">WorkspaceError</span><span class="p">(</span>
+                <span class="s2">&quot;ERROR: Specified workspace_directory isn&#39;t a workspace directory, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;since a </span><span class="si">{</span><span class="n">WORKSPACE_CONFIGURATION_FILE_NAME</span><span class="si">}</span><span class="s2"> file doesn&#39;t exist.&quot;</span>
+                <span class="s2">&quot;Please use an existing workspace, or specify a directory that doesn&#39;t exist yet.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">workspace_directory</span> <span class="o">/</span> <span class="n">WORKSPACE_CONFIGURATION_FILE_NAME</span><span class="p">),</span> <span class="s2">&quot;r&quot;</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">raw_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">migrated_data</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">migrate_raw_workspace_config</span><span class="p">(</span><span class="n">raw_data</span><span class="p">)</span>
+
+            <span class="n">workspace</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">workspace_dir</span><span class="o">=</span><span class="n">workspace_directory</span><span class="p">,</span> <span class="o">**</span><span class="n">migrated_data</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">migrated_data</span> <span class="o">!=</span> <span class="n">raw_data</span><span class="p">:</span>
+                <span class="n">workspace</span><span class="o">.</span><span class="n">write</span><span class="p">()</span>
+
+            <span class="k">return</span> <span class="n">workspace</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_workspace_directory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">workspace_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy the base configs to the tool directory.&quot;&quot;&quot;</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_copy_base_workspace_config</span><span class="p">(</span><span class="n">workspace_directory</span><span class="p">)</span>
+
+        <span class="n">workspace</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">workspace_dir</span><span class="o">=</span><span class="n">workspace_directory</span><span class="p">,</span>
+            <span class="n">yxi_name</span><span class="o">=</span><span class="n">workspace_directory</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">tool_family_name</span><span class="o">=</span><span class="n">workspace_directory</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">tools</span><span class="o">=</span><span class="p">[],</span>
+        <span class="p">)</span>
+        <span class="n">workspace</span><span class="o">.</span><span class="n">write</span><span class="p">()</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_copy_base_workspace_config</span><span class="p">(</span><span class="n">workspace_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">install_dir</span> <span class="o">=</span> <span class="n">get_install_dir</span><span class="p">()</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">install_dir</span> <span class="o">/</span> <span class="s2">&quot;assets&quot;</span> <span class="o">/</span> <span class="s2">&quot;base_tool_config&quot;</span><span class="p">),</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">workspace_directory</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">install_dir</span> <span class="o">/</span> <span class="s2">&quot;examples&quot;</span> <span class="o">/</span> <span class="s2">&quot;requirements.txt&quot;</span><span class="p">),</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">workspace_directory</span><span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="Workspace.migrate_raw_workspace_config">
+<a class="viewcode-back" href="../../../ayx_python_sdk.cli.html#ayx_python_sdk.cli.workspace.Workspace.migrate_raw_workspace_config">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">migrate_raw_workspace_config</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Migrate raw JSON from old format to new format.&quot;&quot;&quot;</span>
+        <span class="n">migrated_data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;tools&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">tools</span> <span class="o">=</span> <span class="n">migrated_data</span><span class="p">[</span><span class="s2">&quot;tools&quot;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tools</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">WorkspaceError</span><span class="p">(</span>
+                    <span class="s2">&quot;tools field in config file not properly formatted.&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">migrated_data</span><span class="p">[</span><span class="s2">&quot;tools&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="bp">cls</span><span class="o">.</span><span class="n">_migrate_tool</span><span class="p">(</span><span class="n">tool</span><span class="p">)</span> <span class="k">for</span> <span class="n">tool</span> <span class="ow">in</span> <span class="n">tools</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">migrated_data</span><span class="p">[</span><span class="s2">&quot;tools&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">return</span> <span class="n">migrated_data</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_migrate_tool</span><span class="p">(</span><span class="n">tool</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="c1"># We migrated from a tools object, to just a simple list of tool names</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">tool</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s2">&quot;name&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tool</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">WorkspaceError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Couldn&#39;t find tool name in tool </span><span class="si">{</span><span class="n">tool</span><span class="si">}</span><span class="s2"> during migration.&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">tool</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">name</span>
+
+        <span class="k">raise</span> <span class="n">WorkspaceError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Couldn&#39;t parse tool </span><span class="si">{</span><span class="n">tool</span><span class="si">}</span><span class="s2"> during migration. &quot;</span>
+            <span class="s2">&quot;It should be a string, or an object with a &#39;name&#39; key&quot;</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="Workspace.add_tool_from_template">
+<a class="viewcode-back" href="../../../ayx_python_sdk.cli.html#ayx_python_sdk.cli.workspace.Workspace.add_tool_from_template">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_tool_from_template</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tool_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">template_tool_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a tool to the workspace.&quot;&quot;&quot;</span>
+        <span class="n">tool_name_without_whitespace</span> <span class="o">=</span> <span class="n">remove_whitespace</span><span class="p">(</span><span class="n">tool_name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tool_name_without_whitespace</span><span class="o">.</span><span class="n">isalnum</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">WorkspaceError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The tool name is not alpha numeric: </span><span class="si">{</span><span class="n">tool_name</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+        <span class="n">new_tool_directory</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workspace_dir</span> <span class="o">/</span> <span class="n">tool_name_without_whitespace</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">new_tool_directory</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">WorkspaceError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;The plugin &#39;</span><span class="si">{</span><span class="n">tool_name_without_whitespace</span><span class="si">}</span><span class="s2">&#39; already exists in the workspace.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">example_tool_directory</span> <span class="o">=</span> <span class="n">get_install_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;examples&quot;</span> <span class="o">/</span> <span class="n">template_tool_name</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">example_tool_directory</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">new_tool_directory</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_config_file</span><span class="p">(</span><span class="n">template_tool_name</span><span class="p">,</span> <span class="n">tool_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_main_py</span><span class="p">(</span><span class="n">template_tool_name</span><span class="p">,</span> <span class="n">tool_name_without_whitespace</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tool_name_without_whitespace</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_config_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">example_tool_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_tool_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">new_tool_name_no_whitespace</span> <span class="o">=</span> <span class="n">remove_whitespace</span><span class="p">(</span><span class="n">new_tool_name</span><span class="p">)</span>
+        <span class="n">old_config_path</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workspace_dir</span>
+            <span class="o">/</span> <span class="n">new_tool_name_no_whitespace</span>
+            <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">example_tool_name</span><span class="si">}</span><span class="s2">Config.xml&quot;</span>
+        <span class="p">)</span>
+        <span class="n">new_config_path</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">old_config_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">new_tool_name_no_whitespace</span><span class="si">}</span><span class="s2">Config.xml&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">old_config_path</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">new_config_path</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">new_config_path</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">xmltodict</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;AlteryxJavaScriptPlugin&quot;</span><span class="p">][</span><span class="s2">&quot;Properties&quot;</span><span class="p">][</span><span class="s2">&quot;MetaInfo&quot;</span><span class="p">][</span>
+            <span class="s2">&quot;Name&quot;</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">new_tool_name</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">new_config_path</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">xmltodict</span><span class="o">.</span><span class="n">unparse</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">pretty</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_main_py</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">example_tool_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_tool_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the name of the tool in the main.py file.&quot;&quot;&quot;</span>
+        <span class="n">main_filepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workspace_dir</span> <span class="o">/</span> <span class="n">new_tool_name</span> <span class="o">/</span> <span class="s2">&quot;main.py&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">main_filepath</span><span class="p">),</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+        <span class="n">content</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">example_tool_name</span><span class="p">,</span> <span class="n">new_tool_name</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">main_filepath</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Workspace.delete_tool">
+<a class="viewcode-back" href="../../../ayx_python_sdk.cli.html#ayx_python_sdk.cli.workspace.Workspace.delete_tool">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete_tool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tool_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove a tool from the workspace.&quot;&quot;&quot;</span>
+        <span class="n">tool_name_without_whitespace</span> <span class="o">=</span> <span class="n">remove_whitespace</span><span class="p">(</span><span class="n">tool_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tool_name_without_whitespace</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">WorkspaceError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No tool folder found for </span><span class="si">{</span><span class="n">tool_name_without_whitespace</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">tool_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workspace_dir</span> <span class="o">/</span> <span class="n">tool_name_without_whitespace</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">tool_path</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">tool_name_without_whitespace</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Workspace.build_yxi">
+<a class="viewcode-back" href="../../../ayx_python_sdk.cli.html#ayx_python_sdk.cli.workspace.Workspace.build_yxi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_yxi</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">output_yxi_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">package_requirements</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a YXI for the workspace.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">WorkspaceError</span><span class="p">(</span><span class="s2">&quot;No tools have been added yet.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_tool_family</span><span class="p">()</span>
+        <span class="n">YxiBuilder</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workspace_dir</span><span class="p">,</span> <span class="n">output_yxi_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">package_requirements</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">build_yxi</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_set_tool_family</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Ensure the workspace Config.xml and sub tools contains the tool family.&quot;&quot;&quot;</span>
+        <span class="n">xml_paths</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">workspace_dir</span> <span class="o">/</span> <span class="s2">&quot;Config.xml&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workspace_dir</span> <span class="o">/</span> <span class="n">tool</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">tool</span><span class="si">}</span><span class="s2">Config.xml&quot;</span> <span class="k">for</span> <span class="n">tool</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tools</span>
+        <span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">xml_paths</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">config_file</span><span class="p">:</span>
+                <span class="n">tree</span> <span class="o">=</span> <span class="n">Et</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
+                <span class="n">root_node</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+                <span class="n">engine_settings</span> <span class="o">=</span> <span class="n">root_node</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;EngineSettings&quot;</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">engine_settings</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Config XML doesn&#39;t contain EngineSettings tag.&quot;</span><span class="p">)</span>
+
+            <span class="n">engine_settings</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s2">&quot;ToolFamily&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_family_name</span>
+            <span class="n">tree</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Workspace.write">
+<a class="viewcode-back" href="../../../ayx_python_sdk.cli.html#ayx_python_sdk.cli.workspace.Workspace.write">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write the workspace configurations to the workspace directory.&quot;&quot;&quot;</span>
+        <span class="n">workspace_config_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workspace_dir</span> <span class="o">/</span> <span class="n">WORKSPACE_CONFIGURATION_FILE_NAME</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">workspace_config_path</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">workspace_config_file</span><span class="p">:</span>
+            <span class="n">workspace_config_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model_dump_json</span><span class="p">(</span>
+                    <span class="n">exclude</span><span class="o">=</span><span class="p">{</span>
+                        <span class="s2">&quot;workspace_dir&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                        <span class="s2">&quot;tools&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;__all__&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;ToolDirectory&quot;</span><span class="p">}},</span>
+                    <span class="p">},</span>
+                    <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="remove_whitespace">
+<a class="viewcode-back" href="../../../ayx_python_sdk.cli.html#ayx_python_sdk.cli.workspace.remove_whitespace">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">remove_whitespace</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove whitespace from a string.&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">whitespace_char</span> <span class="ow">in</span> <span class="n">string</span><span class="o">.</span><span class="n">whitespace</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">whitespace_char</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">s</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Alteryx, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

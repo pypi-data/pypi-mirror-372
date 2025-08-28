@@ -1,0 +1,234 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ayx_python_sdk.providers.amp_provider.builders.metadata_builder &mdash; AyxPythonSdk 2.5.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../../_static/documentation_options.js?v=983e91d6"></script>
+      <script src="../../../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            AyxPythonSdk
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules.html">ayx_python_sdk</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../getting_started.html">Getting Started Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugin_lifecycle.html">Lifecycle of a Plugin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugin_code.html">Plugin Tool Execution Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../config_xml.html">Tool Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../differences_with_original_sdk.html">Differences Between the New and Old Python SDKs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../third_party_packages.html">Python 3rd-party Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../virtual_environments.html">Virtual Environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../python_embeddable_distribution.html">Python Embeddable Distribution (PED)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../example_tools.html">Example Tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">AyxPythonSdk</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">ayx_python_sdk.providers.amp_provider.builders.metadata_builder</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ayx_python_sdk.providers.amp_provider.builders.metadata_builder</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2022 Alteryx, Inc. All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the ALTERYX SDK AND API LICENSE AGREEMENT;</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    https://www.alteryx.com/alteryx-sdk-and-api-license-agreement</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Class that implements the serialization/deserialization for Metadata protobuf objects.&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.core.field</span><span class="w"> </span><span class="kn">import</span> <span class="n">FieldType</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.core.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">Metadata</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.resources.generated.metadata_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FieldType</span> <span class="k">as</span> <span class="n">ProtobufFieldType</span><span class="p">,</span>
+    <span class="n">Metadata</span> <span class="k">as</span> <span class="n">ProtobufMetadata</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">_protobuf_to_core_field_type</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;FT_BOOL&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">bool</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_BYTE&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">byte</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_INT16&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">int16</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_INT32&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">int32</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_INT64&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">int64</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_FIXED_DECIMAL&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">fixeddecimal</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_FLOAT&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">float</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_DOUBLE&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">double</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_STRING&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">string</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_WSTRING&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">wstring</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_V_STRING&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">v_string</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_V_WSTRING&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">v_wstring</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_DATE&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_TIME&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_DATETIME&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_BLOB&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">blob</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="s2">&quot;FT_SPATIALOBJ&quot;</span><span class="p">:</span> <span class="n">FieldType</span><span class="o">.</span><span class="n">spatialobj</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">_core_to_protobuf_field_type</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">core_name</span><span class="p">:</span> <span class="n">protobuf_name</span>
+    <span class="k">for</span> <span class="n">protobuf_name</span><span class="p">,</span> <span class="n">core_name</span> <span class="ow">in</span> <span class="n">_protobuf_to_core_field_type</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+<span class="p">}</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="MetadataBuilder">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.builders.html#ayx_python_sdk.providers.amp_provider.builders.input_connection_builder.MetadataBuilder">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MetadataBuilder</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;RPC Builder for transforming Metadata into Protobufs and vice versa.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="MetadataBuilder.to_protobuf">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.builders.html#ayx_python_sdk.providers.amp_provider.builders.input_connection_builder.MetadataBuilder.to_protobuf">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_protobuf</span><span class="p">(</span><span class="n">amp_metadata</span><span class="p">:</span> <span class="n">Metadata</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProtobufMetadata</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Serialize a Metadata (core.metadata) object into a protobuf.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        amp_metadata</span>
+<span class="sd">            AMP Metadata object to be serialized into protobuf.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ProtobufMetadata</span>
+<span class="sd">            The Protobuf representation of the AMP Metadata object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">protobuf_metadata</span> <span class="o">=</span> <span class="n">ProtobufMetadata</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">amp_metadata</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Serializing metadata field </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">field</span><span class="p">)</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">protobuf_metadata</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">add</span><span class="p">()</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">size</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">scale</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">source</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">description</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">ProtobufFieldType</span><span class="o">.</span><span class="n">Value</span><span class="p">(</span>
+                <span class="n">_core_to_protobuf_field_type</span><span class="p">[</span><span class="n">field</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">protobuf_metadata</span></div>
+
+
+<div class="viewcode-block" id="MetadataBuilder.from_protobuf">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.builders.html#ayx_python_sdk.providers.amp_provider.builders.input_connection_builder.MetadataBuilder.from_protobuf">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_protobuf</span><span class="p">(</span><span class="n">protobuf_metadata</span><span class="p">:</span> <span class="n">ProtobufMetadata</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Metadata</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Deserialize a protobuf into a Metadata object (core.metadata).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        protobuf_metadata</span>
+<span class="sd">            Protobuf object to be serialized into an AMP metadata.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metadata</span>
+<span class="sd">            The AMP Metadata representation of the protobuf object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">amp_metadata</span> <span class="o">=</span> <span class="n">Metadata</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">protobuf_metadata</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">field_type</span> <span class="o">=</span> <span class="n">FieldType</span><span class="p">(</span>
+                <span class="n">_protobuf_to_core_field_type</span><span class="p">[</span><span class="n">ProtobufFieldType</span><span class="o">.</span><span class="n">Name</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">type</span><span class="p">)]</span>
+            <span class="p">)</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">size</span> <span class="ow">or</span> <span class="mi">0</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">scale</span> <span class="ow">or</span> <span class="mi">0</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">source</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">description</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">description</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">amp_metadata</span><span class="o">.</span><span class="n">add_field</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">field_type</span><span class="o">=</span><span class="n">field_type</span><span class="p">,</span>
+                <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">,</span>
+                <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+                <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">amp_metadata</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Alteryx, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

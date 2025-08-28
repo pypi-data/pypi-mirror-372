@@ -1,0 +1,601 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ayx_python_sdk.providers.amp_provider.amp_io_components &mdash; AyxPythonSdk 2.5.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/documentation_options.js?v=983e91d6"></script>
+      <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            AyxPythonSdk
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">ayx_python_sdk</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugin_lifecycle.html">Lifecycle of a Plugin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugin_code.html">Plugin Tool Execution Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../config_xml.html">Tool Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../differences_with_original_sdk.html">Differences Between the New and Old Python SDKs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../third_party_packages.html">Python 3rd-party Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../virtual_environments.html">Virtual Environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../python_embeddable_distribution.html">Python Embeddable Distribution (PED)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../example_tools.html">Example Tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">AyxPythonSdk</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">ayx_python_sdk.providers.amp_provider.amp_io_components</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ayx_python_sdk.providers.amp_provider.amp_io_components</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2022 Alteryx, Inc. All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the ALTERYX SDK AND API LICENSE AGREEMENT;</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    https://www.alteryx.com/alteryx-sdk-and-api-license-agreement</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;AMP Provider: Proxy class for SDK IO (input/output).&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">asyncio.queues</span><span class="w"> </span><span class="kn">import</span> <span class="n">QueueEmpty</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">TYPE_CHECKING</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.grpc_helpers.control_msgs</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ctrl_msg</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.grpc_helpers.dcme_msgs</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dcm_msg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">DcmEException</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.data_transport.amp_transport</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">AmpStreamTransport</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.resources.generated.output_message_data_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">OutputMessagePriorityFlags</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.resources.generated.sdk_tool_service_v2_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">RecordTransferOut</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">deprecation</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>  <span class="c1"># noqa: F401</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.resources.generated.sdk_tool_service_v2_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+        <span class="n">ControlIn</span><span class="p">,</span>
+        <span class="n">ControlOut</span><span class="p">,</span>
+        <span class="n">RecordTransferIn</span><span class="p">,</span>  <span class="c1"># noqa: F401</span>
+    <span class="p">)</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">Schema</span>  <span class="c1"># noqa: F401</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span>
+<span class="n">Anchor</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;Anchor&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;connection&quot;</span><span class="p">])</span>
+
+
+<div class="viewcode-block" id="StreamIOBuffer">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.StreamIOBuffer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">StreamIOBuffer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Defines buffers for RecordTransfer transactions, and provides functions for using them.&quot;&quot;&quot;</span>
+
+    <span class="n">pending_writes</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>  <span class="c1"># type: ignore</span>
+    <span class="n">completed_streams</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>  <span class="c1"># type: ignore</span>
+    <span class="n">transport</span> <span class="o">=</span> <span class="n">AmpStreamTransport</span><span class="p">()</span>
+
+<div class="viewcode-block" id="StreamIOBuffer.receive_chunk">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.StreamIOBuffer.receive_chunk">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">receive_chunk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">:</span> <span class="s2">&quot;RecordTransferIn&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Receive a RecordIn message containing a chunk or full arrows data stream.&quot;&quot;&quot;</span>
+        <span class="n">completed_record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">receive_record</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">completed_record</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">completed_streams</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;record_batch&quot;</span><span class="p">:</span> <span class="n">completed_record</span><span class="p">,</span>
+                    <span class="s2">&quot;anchor&quot;</span><span class="p">:</span> <span class="n">Anchor</span><span class="p">(</span>
+                        <span class="n">msg</span><span class="o">.</span><span class="n">incoming_records</span><span class="o">.</span><span class="n">anchor_name</span><span class="p">,</span>
+                        <span class="n">msg</span><span class="o">.</span><span class="n">incoming_records</span><span class="o">.</span><span class="n">connection_name</span><span class="p">,</span>
+                    <span class="p">),</span>
+                <span class="p">}</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="StreamIOBuffer.get_stream_msgs">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.StreamIOBuffer.get_stream_msgs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_stream_msgs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;RecordTransferOut&quot;</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Yield n RecordOut messages with n arrow stream chunks and terminator.</span>
+
+<span class="sd">        Where:</span>
+<span class="sd">        - n is the set chunk size in AmpStreamTransport</span>
+<span class="sd">        - terminator is `end_of_chunk` in RecordOut.OutgoingRecords</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">send_record</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;anchor_name&quot;</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="StreamIOBuffer.push_record">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.StreamIOBuffer.push_record">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">push_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Push a arrows RecordBatch or Table to the write queue.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pending_writes</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span><span class="n">record</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="StreamIOBuffer.write_to_buffer">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.StreamIOBuffer.write_to_buffer">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_to_buffer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;plugin called write for </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">push_record</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">&quot;anchor_name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">payload</span><span class="p">,</span> <span class="s2">&quot;write_type&quot;</span><span class="p">:</span> <span class="s2">&quot;outgoing_records&quot;</span><span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="StreamIOBuffer.flush">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.StreamIOBuffer.flush">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Flush queues in the safest order we can.</span>
+
+<span class="sd">        Wait until all streams are received from client, ensuring we call `on_record_batch` for all sent.</span>
+<span class="sd">        Handle any resulting writes from `on_record_batch` or other methods writing records.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">completed_streams</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">pending_writes</span><span class="o">.</span><span class="n">join</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="StreamIOBuffer.dump_queues">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.StreamIOBuffer.dump_queues">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">dump_queues</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dump any remaining items from the queue. NOT atomic, and is destructive.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">completed_streams</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pending_writes</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">q</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
+                <span class="n">q</span><span class="o">.</span><span class="n">task_done</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">QueueEmpty</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Emptied </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">q</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                    <span class="s2">&quot;Error occured while dumping ControlIO buffers! </span><span class="se">\n</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2"> </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="nb">repr</span><span class="p">(</span><span class="n">q</span><span class="p">),</span>
+                    <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="n">e</span></div>
+
+
+<div class="viewcode-block" id="StreamIOBuffer.push_close_anchor_msg">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.StreamIOBuffer.push_close_anchor_msg">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">push_close_anchor_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Send ControlOut with CloseOutgoingAnchor.&quot;&quot;&quot;</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">RecordTransferOut</span><span class="p">()</span>
+        <span class="n">msg</span><span class="o">.</span><span class="n">close_outgoing_anchor</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_record</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">msg</span><span class="p">,</span> <span class="s2">&quot;write_type&quot;</span><span class="p">:</span> <span class="s2">&quot;close_outgoing_anchor&quot;</span><span class="p">})</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ControlIOBuffer">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ControlIOBuffer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Component Class that wraps all Control IO for the server.&quot;&quot;&quot;</span>
+
+    <span class="c1"># Ignoring type as these are always fresh inits</span>
+    <span class="n">ctrl_in_callback</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>  <span class="c1"># type: ignore</span>
+    <span class="n">ctrl_out</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>  <span class="c1"># type: ignore</span>
+    <span class="n">ctrl_driver_actions</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>  <span class="c1"># type: ignore</span>
+    <span class="n">ctrl_user_callback_actions</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>  <span class="c1"># type: ignore</span>
+    <span class="n">awaiting_response</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">blocking_awaiting_response</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="ControlIOBuffer.push_ctrl_out">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.push_ctrl_out">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">push_ctrl_out</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">:</span> <span class="s2">&quot;ControlOut&quot;</span><span class="p">,</span> <span class="n">callback_fn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">&quot;Callable&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Push ControlOut to the write queue, notifying server it has something to send.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">callback_fn</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">awaiting_response</span><span class="p">[</span><span class="n">msg</span><span class="o">.</span><span class="n">msg_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">callback_fn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl_out</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.flush">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.flush">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Shutdown in the safest order possible.</span>
+
+<span class="sd">        Let workers empty the control out queue to send any remaining processing needs.</span>
+<span class="sd">        Wait for any responses to be handled.</span>
+<span class="sd">        Let workers empty and handle any responses from the client from ctrl_out queue flush.</span>
+<span class="sd">        Let workers finish any pending actions resulting from the above.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Loop until any outstanding callback responses are handled.</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">awaiting_response</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># While we have any requests waiting for a response,</span>
+            <span class="c1"># send pending requests, execute any current or resulting callbacks</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl_out</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl_in_callback</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl_driver_actions</span><span class="o">.</span><span class="n">join</span><span class="p">()</span></div>
+
+            <span class="c1"># loop again if we generated any new awaits</span>
+            <span class="c1"># otherwise, &quot;done&quot; with this set of ops</span>
+
+<div class="viewcode-block" id="ControlIOBuffer.dump_queues">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.dump_queues">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">dump_queues</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dump remaining items in all queues. NOT atomic, and destructive.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ctrl_in_callback</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl_out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl_driver_actions</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">q</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
+                <span class="n">q</span><span class="o">.</span><span class="n">task_done</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">QueueEmpty</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Emptied </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">q</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                    <span class="s2">&quot;Error occured while dumping ControlIO buffers! </span><span class="se">\n</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2"> </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="nb">repr</span><span class="p">(</span><span class="n">q</span><span class="p">),</span>
+                    <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="n">e</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.push_driver_callback">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.push_driver_callback">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">push_driver_callback</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">driver_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Event</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Push a driver function and parameters. For callables that do not require a client response as an argument.&quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;pushing callback </span><span class="si">{</span><span class="n">driver_fn</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">event_cb_complete</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;driver_fn&quot;</span><span class="p">:</span> <span class="n">driver_fn</span><span class="p">,</span>
+            <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="n">args</span><span class="p">,</span>
+            <span class="s2">&quot;kwargs&quot;</span><span class="p">:</span> <span class="n">kwargs</span><span class="p">,</span>
+            <span class="s2">&quot;event_cb_complete&quot;</span><span class="p">:</span> <span class="n">event_cb_complete</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl_driver_actions</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">event_cb_complete</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.push_callback_action">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.push_callback_action">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">push_callback_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">:</span> <span class="s2">&quot;ControlIn&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Place the response message and assigned callback on the action queue.&quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Received callback response, pushing compute...&quot;</span><span class="p">)</span>
+        <span class="n">prop_key</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">WhichOneof</span><span class="p">(</span><span class="s2">&quot;payload&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">prop_key</span> <span class="o">==</span> <span class="s2">&quot;dcm_e_response&quot;</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">resp_msg</span> <span class="o">=</span> <span class="n">dcm_msg</span><span class="o">.</span><span class="n">handle_response</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">dcm_e_response</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">DcmEException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DCME raised exception </span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">e</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">resp_msg</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">prop_key</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">action_item</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;response_msg&quot;</span><span class="p">:</span> <span class="n">resp_msg</span><span class="p">,</span>
+                <span class="s2">&quot;callback_fn&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">awaiting_response</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">msg_id</span><span class="p">),</span>
+            <span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ctrl_user_callback_actions</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span><span class="n">action_item</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CONTROLIO received msg with invalid ID! </span><span class="se">\n</span><span class="s2"> </span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">e</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.error_with_priority">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.error_with_priority">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">error_with_priority</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">priority</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">error_msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">if</span> <span class="n">args</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">ctrl_msg</span><span class="o">.</span><span class="n">new_ctrl_out_error_msg</span><span class="p">(</span><span class="n">error_msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">),</span> <span class="n">priority</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">ctrl_msg</span><span class="o">.</span><span class="n">new_ctrl_out_error_msg</span><span class="p">(</span><span class="n">error_msg</span><span class="p">,</span> <span class="n">priority</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.warn_with_priority">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.warn_with_priority">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">warn_with_priority</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">priority</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">warn_msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">if</span> <span class="n">args</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">ctrl_msg</span><span class="o">.</span><span class="n">new_ctrl_out_warn_msg</span><span class="p">(</span><span class="n">warn_msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">),</span> <span class="n">priority</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">ctrl_msg</span><span class="o">.</span><span class="n">new_ctrl_out_warn_msg</span><span class="p">(</span><span class="n">warn_msg</span><span class="p">,</span> <span class="n">priority</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.info_with_priority">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.info_with_priority">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">info_with_priority</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">priority</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">info_msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">if</span> <span class="n">args</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">ctrl_msg</span><span class="o">.</span><span class="n">new_ctrl_out_info_msg</span><span class="p">(</span><span class="n">info_msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">),</span> <span class="n">priority</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">ctrl_msg</span><span class="o">.</span><span class="n">new_ctrl_out_info_msg</span><span class="p">(</span><span class="n">info_msg</span><span class="p">,</span> <span class="n">priority</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.error">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.error">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_with_priority</span><span class="p">(</span><span class="n">OutputMessagePriorityFlags</span><span class="o">.</span><span class="n">OMPF_None</span><span class="p">,</span> <span class="n">error_msg</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.warn">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.warn">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">warn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">warn_msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warn_with_priority</span><span class="p">(</span><span class="n">OutputMessagePriorityFlags</span><span class="o">.</span><span class="n">OMPF_None</span><span class="p">,</span> <span class="n">warn_msg</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.info">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.info">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">info_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info_with_priority</span><span class="p">(</span><span class="n">OutputMessagePriorityFlags</span><span class="o">.</span><span class="n">OMPF_None</span><span class="p">,</span> <span class="n">info_str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.decrypt_password">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.decrypt_password">[docs]</a>
+    <span class="nd">@deprecation</span><span class="o">.</span><span class="n">deprecated</span><span class="p">(</span>
+        <span class="n">deprecated_in</span><span class="o">=</span><span class="s2">&quot;1.0.2&quot;</span><span class="p">,</span>
+        <span class="n">details</span><span class="o">=</span><span class="s2">&quot;Use functions of provider&#39;s dcm property instead&quot;</span><span class="p">,</span>
+    <span class="p">)</span>  <span class="c1"># type: ignore</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">decrypt_password</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encrypted_pass</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Decrypt the passed value and return readable.&quot;&quot;&quot;</span>
+        <span class="c1"># Need to resolve whether or not this is a different call since latest DCM changes.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Creating password message...&quot;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">ctrl_msg</span><span class="o">.</span><span class="n">new_ctrl_out_decrypt_msg</span><span class="p">(</span><span class="n">encrypted_pass</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">blocking_awaiting_response</span><span class="p">[</span><span class="n">msg</span><span class="o">.</span><span class="n">msg_id</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Waiting for response from client...&quot;</span><span class="p">)</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocking_awaiting_response</span><span class="p">[</span><span class="n">msg</span><span class="o">.</span><span class="n">msg_id</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># Wait for a response. An event may be cleaner looking. Hint for hardening time.</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocking_awaiting_response</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">msg_id</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">password</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="n">e</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.translate_msg_use_callback">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.translate_msg_use_callback">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">translate_msg_use_callback</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">source_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">interp_args</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">callback_fn</span><span class="p">:</span> <span class="n">Callable</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Push the msg to the write queue, and assign a reference id for the passed callback.</span>
+
+<span class="sd">        DOES NOT BLOCK, and only guarantees the callback will be run before plugin shutdown.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Creating Translate Message...&quot;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">ctrl_msg</span><span class="o">.</span><span class="n">new_ctrl_out_translate_msg</span><span class="p">(</span><span class="n">source_str</span><span class="p">,</span> <span class="o">*</span><span class="n">interp_args</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Callback Assigned, pushing out msg&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">callback_fn</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.translate_msg">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.translate_msg">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">translate_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">interp_args</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Push the msg to the write queue, and block until response.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Creating Translate Message...&quot;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">ctrl_msg</span><span class="o">.</span><span class="n">new_ctrl_out_translate_msg</span><span class="p">(</span><span class="n">source_str</span><span class="p">,</span> <span class="o">*</span><span class="n">interp_args</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">blocking_awaiting_response</span><span class="p">[</span><span class="n">msg</span><span class="o">.</span><span class="n">msg_id</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Waiting for response from client...&quot;</span><span class="p">)</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocking_awaiting_response</span><span class="p">[</span><span class="n">msg</span><span class="o">.</span><span class="n">msg_id</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># Wait for a response. An event may be cleaner looking. Hint for hardening time.</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocking_awaiting_response</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">msg_id</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">translated_message</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="n">e</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.update_progress">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.update_progress">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">progress</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Push the msg to the write queue, and block until response.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Creating UpdateProgress Message...&quot;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">ctrl_msg</span><span class="o">.</span><span class="n">new_ctrl_out_update_progress_msg</span><span class="p">(</span><span class="n">progress</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="n">e</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.get_connection">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.get_connection">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_connection</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">callback_fn</span><span class="p">:</span> <span class="n">Callable</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">dcm_msg</span><span class="o">.</span><span class="n">get_connection_msg</span><span class="p">(</span><span class="n">connection_id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">callback_fn</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.get_write_lock">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.get_write_lock">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_write_lock</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">secret_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">expires_in</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">&quot;dt.datetime&quot;</span><span class="p">],</span>
+        <span class="n">callback_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">dcm_msg</span><span class="o">.</span><span class="n">get_write_lock_msg</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">role</span><span class="p">,</span> <span class="n">secret_type</span><span class="p">,</span> <span class="n">expires_in</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">callback_fn</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.free_write_lock">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.free_write_lock">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">free_write_lock</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">secret_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">lock_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">callback_fn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">dcm_msg</span><span class="o">.</span><span class="n">free_write_lock_msg</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">role</span><span class="p">,</span> <span class="n">secret_type</span><span class="p">,</span> <span class="n">lock_id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">callback_fn</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.update_connection_secret">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.update_connection_secret">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_connection_secret</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">secret_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">expires_on</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">&quot;dt.datetime&quot;</span><span class="p">],</span>
+        <span class="n">parameters</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
+        <span class="n">lock_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">callback_fn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">dcm_msg</span><span class="o">.</span><span class="n">update_connection_secret_msg</span><span class="p">(</span>
+            <span class="n">connection_id</span><span class="p">,</span> <span class="n">lock_id</span><span class="p">,</span> <span class="n">role</span><span class="p">,</span> <span class="n">secret_type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">expires_on</span><span class="p">,</span> <span class="n">parameters</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_ctrl_out</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">callback_fn</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ControlIOBuffer.get_lock_and_update_secret">
+<a class="viewcode-back" href="../../../../ayx_python_sdk.providers.amp_provider.html#ayx_python_sdk.providers.amp_provider.amp_io_components.ControlIOBuffer.get_lock_and_update_secret">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_lock_and_update_secret</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">secret_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">expires_on</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">&quot;dt.datetime&quot;</span><span class="p">],</span>
+        <span class="n">parameters</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
+        <span class="n">on_complete</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set up a callback chain to request a lock, update a secret, and then free the lock.&quot;&quot;&quot;</span>
+        <span class="n">common_args</span> <span class="o">=</span> <span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">role</span><span class="p">,</span> <span class="n">secret_type</span><span class="p">)</span>
+
+        <span class="n">secret_lock_id</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_free_lock</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">nonlocal</span> <span class="n">secret_lock_id</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_write_lock</span><span class="p">(</span>
+                <span class="n">connection_id</span><span class="p">,</span>
+                <span class="n">role</span><span class="p">,</span>
+                <span class="n">secret_type</span><span class="p">,</span>
+                <span class="n">secret_lock_id</span><span class="p">,</span>
+                <span class="n">callback_fn</span><span class="o">=</span><span class="n">on_complete</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_update_with_lock</span><span class="p">(</span><span class="n">resp</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">nonlocal</span> <span class="n">secret_lock_id</span>
+            <span class="n">secret_lock_id</span> <span class="o">=</span> <span class="n">resp</span><span class="p">[</span><span class="s2">&quot;secretLockId&quot;</span><span class="p">]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_connection_secret</span><span class="p">(</span>
+                <span class="n">connection_id</span><span class="p">,</span>
+                <span class="n">role</span><span class="p">,</span>
+                <span class="n">secret_type</span><span class="p">,</span>
+                <span class="n">value</span><span class="p">,</span>
+                <span class="n">expires_on</span><span class="p">,</span>
+                <span class="n">parameters</span><span class="p">,</span>
+                <span class="n">secret_lock_id</span><span class="p">,</span>
+                <span class="n">callback_fn</span><span class="o">=</span><span class="n">_free_lock</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_write_lock</span><span class="p">(</span><span class="o">*</span><span class="n">common_args</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">_update_with_lock</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Alteryx, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
