@@ -1,0 +1,132 @@
+Benchmarking addon
+===================
+
+Benchmarking addon is a tool that can be used for calculating metrics for
+``parityos.ParityOSOutputs`` and ``parityos.api_interface.compiler_run.CompilerRuns``.
+Here we will show how one can use the benchmarking addon.
+
+Benchmarking ParityOSOutputs
+-----------------------
+
+For benchmarking we should choose a group of problems for which we will calculate the metrics.
+For example we can consider all the 3-regular graphs with 8 nodes::
+
+    from parityos import ProblemRepresentation
+    from parityos import Qubit
+
+    # here we have lists of interactions. [0, 1] means that we have interaction between
+    # qubit 0 and Qubit 1
+    three_regular_graphs = [
+        [[0, 1], [0, 7], [0, 6], [1, 3], [1, 7], [2, 7],
+         [2, 5], [2, 4], [3, 6], [3, 4], [5, 6], [5, 4]],
+        [[4, 7], [4, 6], [4, 0], [7, 5], [7, 1], [1, 3],
+         [1, 5], [3, 6], [3, 0], [2, 6], [2, 5], [2, 0]],
+        [[0, 1], [0, 7], [0, 6], [1, 6], [1, 7], [4, 7],
+         [4, 5], [4, 2], [5, 2], [5, 3], [6, 3], [2, 3]],
+        [[1, 2], [1, 6], [1, 7], [2, 3], [2, 4], [4, 5],
+         [4, 0], [5, 6], [5, 7], [6, 3], [7, 0], [0, 3]],
+        [[2, 7], [2, 3], [2, 5], [7, 4], [7, 6], [0, 1],
+         [0, 6], [0, 4], [1, 3], [1, 5], [4, 3], [6, 5]]
+    ]
+
+    three_regular_problems = []
+
+    for graph in three_regular_graphs:
+        problem = ProblemRepresentation(
+            interactions=[[Qubit(vertex_1), Qubit(vertex_2)] for vertex_1, vertex_2 in graph],
+            coefficients=[1]*len(graph),
+        )
+        three_regular_problems.append(problem)
+
+So, these are our problems that we should first compile to obtain the corresponding list of
+``ParityOSOutputs``. We will do compilation for the ``parityos.RectangularDigitalDevice``::
+
+    from parityos import CompilerClient, RectangularDigitalDevice
+
+    from parityos_addons.benchmarking import benchmark_parityos_outputs
+
+    client = CompilerClient()
+    digital_device = RectangularDigitalDevice(4, 4)
+
+    digitial_three_regular_outputs = [
+        client.compile(problem, digital_device) for problem in three_regular_problems
+    ]
+
+    parityos_output_stats = benchmark_parityos_outputs(
+        digitial_three_regular_outputs,
+        calculate_circuit_statistics=True,
+    )
+
+where ``digital_statistics`` ``pd.DataFrame`` is going to contain different metrics that describe
+the ``ParityOSOutputs``. The list of metrics is shown below::
+
+    [
+        'parityos_outputs',
+        'constraint_count',
+        'square_constraint_count',
+        'triangle_constraint_count',
+        'compilation_qubit_count',
+        'compilation_ancilla_count',
+        'interaction_count',
+        'constraint_circuit_depth',
+        'constraint_circuit_gate_count',
+        'constraint_circuit_two_body_gate_count',
+        'constraint_circuit_cnot_count',
+        'constraint_circuit_rzz_count',
+        'constraint_circuit_qubit_count',
+    ]
+
+Benchmarking CompilerRuns
+--------------------------------
+For benchmarking ``CompilerRuns`` one should submit compilations asynchronously and get the
+corresponding ``CompilerRuns``::
+
+    import time
+    from parityos import CompilerClient, RectangularDigitalDevice
+    from parityos_addons.benchmarking import benchmark_compiler_runs
+
+    client = CompilerClient()
+    digital_device = RectangularDigitalDevice(4, 4)
+
+    submission_ids = [client.submit(problem, digital_device) for problem in three_regular_problems]
+
+    time.sleep(40)
+
+    compiler_runs = [client.get_compiler_runs(submission_id)[0] for submission_id in submission_ids]
+
+    compiler_runs_stats = benchmark_compiler_runs(client, compiler_runs)
+
+The ``compiler_runs_stats`` contains in addition to all the metrics mentioned for the
+``parityos_output_stats`` some extra metrics that are mentioned bellow::
+
+    [
+       'CompilerRun',
+       'compilation_time',
+       'COMPLETED',
+       'FAILED',
+       'RUNNING',
+       'SUBMITTED',
+    ]
+
+Visualization
+--------------------------------
+To visualize the results one can use ``matplotlib`` library. Here is an example code that
+one can use to plot a histogram for a chosen metric::
+
+    import matplotlib.pyplot as plt
+
+    # change the column (the list of the columns can be found above)
+    # to get figures also for other columns:
+    column = compiler_runs_stats.compilation_time
+
+    title = f'statistics from {len(compiler_runs_stats)} problems'
+    x_label = f'{column.name.replace("_", " ")}'
+    y_label = 'problems'
+    number_of_bins = 5
+
+    plt.hist(column, number_of_bins)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    plt.show()
+

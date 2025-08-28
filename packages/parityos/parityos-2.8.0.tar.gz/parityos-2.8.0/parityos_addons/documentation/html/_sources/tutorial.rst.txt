@@ -1,0 +1,449 @@
+Solving Optimization Problems
+=============================
+
+In this tutorial we will demonstrate how to solve an
+optimization problem on quantum devices with the help
+of ParityOS. We will cover the entire workflow; first
+the problem is reformulated by encoding it as the ground
+state of a Spin-Hamiltonian. By using the Parity mapping
+and the compiler, the logical qubits in the Hamiltonian are
+mapped to a physical device where the respective
+quantum optimization algorithms can be run. From the output
+we then map back to the logical qubit configuration
+corresponding to the solution.
+
+Problem Formulation
+-------------------
+
+The problem we are going to tackle is an instance of
+MaxCut on hypergraphs which has many important applications,
+e.g. in circuit design. We are given a hypergraph
+:math:`G(V,E)` (a generalization of a graph where more
+than two nodes :math:`i \in V` per edge :math:`e \in E`
+are allowed) and the goal is to split the nodes
+into two sets such that as many edges as possible are cut
+(edges are cut if they contain at least one node from both
+sets). Since it is NP-hard to
+even approximate the solution to this problem to arbitrary
+precision, it may be advantageous to solve it with the help of
+heuristic quantum algorithms.
+
+Our hypergraph with 5 nodes and 7 edges connecting them
+looks as follows:
+
+.. figure:: hypergraph_tutorial.png
+  :scale: 40 %
+
+  A hypergraph where the nodes are labeled by the numbers in green circles and the (hyper) edges by the numbers in the circle with color of the edge.
+
+We now construct a Hamiltonian for solving the MaxCut problem on this
+hypergraph so that the solution is encoded in the ground state. We assign a
+spin variable (qubit) :math:`s_i, i=1, ..., 5` to every node which takes the
+value :math:`+1` if the node belongs to the first set and :math:`-1` if it
+belongs to the second set. Since we want the solution to maximise the number of
+cut edges we use terms :math:`H_e` that give a reward of :math:`-1` if the edge
+:math:`e` is cut and a penalty :math:`+1` if not.
+
+For "ordinary" edges :math:`e` with just two nodes :math:`i`, :math:`j` there
+is a simple expression :math:`H_e=s_is_j` which accomplishes that. In the
+general case (hyper-)edges can contain more nodes and hence we need a more
+involved expression like the following
+
+.. math:: H_e = -1 + 2 \prod_{i, j \in e} \frac{1}{2} (1 + s_i s_j)
+
+Naively, one could let the product run over all pairs of distinct nodes in
+:math:`e`. But we can reduce the number of terms by noting that it suffices to
+let the product run over a subset of pairs
+
+.. math:: \{(i_1,i_2), (i_2,i_3), (i_3,i_4), \ldots\} \subseteq e \times e
+
+which forms a chain that covers all nodes in :math:`e`. In our example we only
+have one "proper" hyperedge (with more than two nodes). For this one (edge 6)
+we can e.g. choose the chain
+
+.. math:: \{(3,1), (1,5), (5,2)\} .
+
+The total Hamiltonian is then given by
+:math:`H = \sum_{e \in E} H_e`. In our specific example
+this results in (neglecting the irrelevant constant term)
+
+.. math:: \begin{align} H = & \frac{5}{4}s_1 s_5 + s_2s_4 + s_3s_4 + \frac{5}{4} s_1s_3 + \frac{5}{4}s_2s_3 \\
+        &+ \frac{5}{4}s_2s_5 + \frac{1}{4}s_1s_2 + \frac{1}{4} s_3s_5 + \frac{1}{4} s_1s_2s_3s_5 ,
+    \end{align}
+
+which we use to create an instance of the ProblemRepresentation class
+in ParityOS in the following format (see also :ref:`quickstart:Defining an optimization problem`):
+
+.. code-block:: python
+
+    from parityos import ProblemRepresentation, Qubit
+
+    optimization_problem = ProblemRepresentation(
+        interactions=[
+            {Qubit(1), Qubit(5)},
+            {Qubit(2), Qubit(4)},
+            {Qubit(3), Qubit(4)},
+            {Qubit(1), Qubit(3)},
+            {Qubit(2), Qubit(3)},
+            {Qubit(2), Qubit(5)},
+            {Qubit(1), Qubit(2)},
+            {Qubit(3), Qubit(5)},
+            {Qubit(1), Qubit(2), Qubit(3), Qubit(5)},
+        ],
+        coefficients=[1.25, 1.0, 1.0, 1.25, 1.25, 1.25, 0.25, 0.25, 0.25],
+    )
+
+Note that because of the edge with higher rank the problem representation also contains
+interaction terms of higher order.
+
+Parity Mapping and Compilation
+------------------------------
+
+Next we use ParityOS to map the problem to physical
+parity qubits, i.e., each term :math:`J_{i,j,k\dots} s_is_js_k\dots`
+(a product of spin variables with real coefficients
+:math:`J_{i,j,k\dots}`) in the logical Hamiltonian
+gets mapped to a parity qubit that takes the value of that
+spin product :math:`s_{i,j,k,\dots} = s_i s_j s_k \dots`.
+These parity qubits are not completely independent but
+satisfy constraints. The physical Hamiltonian, containing
+the single body terms :math:`J_{i,j,k\dots} s_{i,j,k,\dots}`
+for the parity qubits and the constraint terms, has all the
+information of the initial logical Hamiltonian. ParityOS
+additionally generates a two dimensional layout such that
+these constraints can be enforced by local interactions
+(gates)between physical qubits. An important advantage of
+this mapping is that also the higher order terms in the
+logical Hamiltonian can be handled in the same way as two
+body interactions, removing the need to reduce the problem
+to a quadratic unconstrained binary optimization (QUBO)
+form which might cause a qubit overhead. For a more in
+depth explanation see also [Lechner15]_, [Fellner21]_.
+
+In order to implement the steps described above
+we first have to provide your ``username`` and ``password``
+to the compiler (see :ref:`quickstart:Initializing the Client`)
+e.g. with:
+
+.. code-block:: python
+
+    from parityos import CompilerClient
+
+    username = ''  # Put here your ParityOS username or set the PARITYOS_USER environment variable.
+    compiler_client = CompilerClient(username)
+
+and then select a device. Currently, there are a few
+options to choose from (see also :ref:`quickstart:Defining a Target Device`)
+and here we first pick a device suited to analog quantum
+computing, namely a 5x5 ``RectangularAnalogDevice``:
+
+.. code-block:: python
+
+    from parityos import RectangularAnalogDevice
+
+    x, y = 5, 5  # the dimensions of the device
+    # select an analog device
+    device_model = RectangularAnalogDevice(x, y)
+
+To compile the problem we can submit the problem to the compiler via:
+
+.. code-block:: python
+
+    parityos_output = compiler_client.compile(optimization_problem, device_model)
+
+The output contains the compiled problem representation in terms of the physical qubits
+which are located on the device.
+
+Additionally, we will compile the same problem on a digital device
+where gate-based quantum computing can be performed. We can select it by
+running:
+
+.. code-block:: python
+
+    from parityos import RectangularDigitalDevice
+
+
+    x, y = 5, 5  # the dimensions of the device
+    # select a digital device
+    device_model = RectangularDigitalDevice(x, y)
+
+and the compilation works exactly as before :
+
+.. code-block:: python
+
+    parityos_output = compiler_client.compile(optimization_problem, device_model)
+
+Since we picked a digital device we also obtain the constraint and
+driver circuits from the output (see :ref:`quickstart:The ParityOS output`)
+and ParityOS enables us to combine them into an optimization algorithm
+(cf. next section) and the resulting circuit is then ready to be run
+on suitable hardware. It is also possible to express the circuit
+in the ``Qiskit`` or ``Cirq`` frameworks.
+In order to show the entire workflow in the next section we will
+also simulate this step with the ``Qiskit`` framework [Qiskit]_.
+
+QAOA Optimization and Simulation
+--------------------------------
+
+Now that the problem has been converted to finding the
+ground state of a Hamiltonian we can apply a variety of
+quantum algorithms to solve the latter task. In any case
+the Parity layout eases the implementation as only local
+interactions remain which also benefits parallelizability
+and scalability. Here we choose to employ the quantum
+approximate optimization algorithm (QAOA).
+
+The QAOA is a hybrid quantum/classical
+heuristic algorithm (i.e., there are no performance guarantees for
+general case) that can be run on digital quantum computers
+[Farhi14]_. The main idea for approximating the ground state
+of a Hamiltonian :math:`H_{\mathrm{phys}}` is to find the
+minimal expectation value of :math:`H_{\mathrm{phys}}`
+in parameterized trial states, i.e., to minimize
+
+.. math:: F(\vec \gamma, \vec \beta) = \langle \Psi(\vec \gamma, \vec \beta) | H_{\mathrm{phys}} | \Psi(\vec \gamma, \vec \beta) \rangle.
+
+The trial states are constructed from the evolution
+of some initial state under :math:`p` alternating rounds of the
+problem Hamiltonian and a mixing or driver Hamiltonian :math:`H_M`
+
+.. math::  | \Psi(\vec \gamma, \vec \beta) \rangle = \exp (-i \beta_p H_M) \exp (-i \gamma_p H_{\mathrm{phys}})...\exp (-i \beta_1 H_M) \exp (-i \gamma_1 H_{\mathrm{phys}}) | \Psi_0 \rangle
+
+QAOA was motivated by adiabatic quantum computing and this formula
+might be viewed as an finite expansion of the adiabatic evolution.
+It is useful to pick an eigenstate of the mixing Hamiltonian as
+starting state :math:`| \Psi_0 \rangle`.
+
+Let us now implement a basic version [#]_ of this QAOA algorithm
+applied to our problem.
+
+The QAOA circuit
+................
+
+We can obtain the circuit and the bounds for the parameters by calling:
+
+.. code-block:: python
+
+    from parityos_addons.qaoa import generate_qaoa
+
+    qaoa_circuit, parameter_bounds = generate_qaoa(parityos_output=parityos_output,
+                                                   unitary_pattern='ZCX' * 4)
+
+By default the QAOA circuit starts in the all zeros state.
+The unitary pattern defines the order in which the evolution
+is performed; ``Z, C, X`` denote steps of the single-body terms,
+constraints and mixing terms which we repeat for four rounds.
+This splitting of the physical Hamiltonian into the
+(mutually commuting) single-body terms and constraints
+``Z, C`` is always possible in the Parity formulation
+(see also [Fellner21]_).
+
+In order to map the physical qubits to the ``Qiskit`` or ``Cirq`` framework
+we need to specify a ``qubit_map``. Here we simply set it
+according to:
+
+.. code-block:: python
+
+    qubit_map = {qubit: i for i, qubit in enumerate(parityos_output.constraint_circuit.qubits)}
+
+and the parameters are available via :
+
+.. code-block:: python
+
+    from qiskit.circuit import Parameter
+
+    parameter_map = {key: Parameter(str(key)) for key in parameter_bounds.keys()}
+
+With this information we can convert the circuit to a ``Qiskit`` circuit :
+
+.. code-block:: python
+
+
+    from parityos_addons.interfaces import QiskitExporter
+
+    # instantiate exporter
+    qiskit_exporter = QiskitExporter(parameter_map=parameter_map, qubit_map=qubit_map)
+    # convert to qiskit circuit
+    qaoa_circuit_qiskit = qiskit_exporter.to_qiskit(qaoa_circuit)
+
+Finally, we have to perform the measurement on all qubits:
+
+.. code-block:: python
+
+    # add final measurement
+    qaoa_circuit_qiskit.measure_all()
+
+Classical Optimization
+......................
+
+Next we set up the classical optimization for which it is
+convenient to first define a helper function to compute the
+expectation value that is to be optimized from the ``counts``,
+i.e., the output of our simulated circuit.
+Note that ``counts`` is a dictionary containing the number of
+runs (values) in which the physical bitstring (keys) in binary
+variables was measured. We need to convert this physical
+bitstring to spin variables and associate it to our qubits
+for which we employ the function:
+
+.. code-block:: python
+
+
+    def get_physical_configuration(bitstring):
+        # Map the bits in the bitstring to +1 or -1 values for the physical qubits.
+        return {qubit: (1 - 2 * int(bit)) for bit, qubit in zip(bitstring, qubit_map.keys())}
+
+The helper function for the expectation value is defined as:
+
+.. code-block:: python
+
+
+    def cost_expectation(counts, parityos_output, constraint_strength=1.5):
+        expectation_sum = 0
+        for bitstring, count in counts.items():
+            physical_configuration = get_physical_configuration(bitstring)
+            # evaluate physical bitstring on physical Hamiltonian
+            cost = parityos_output.compiled_problem.evaluate(physical_configuration,
+                                                             constraint_strength)
+            expectation_sum += cost * count
+
+        return expectation_sum / sum(counts.values())
+
+The crucial part is the method ``evaluate`` which  we call
+on the compiled problem in order to compute the expectation
+value of the physical Hamiltonian for a certain spin
+configuration. Setting the ``constraint_strength``, which
+determines the coefficient in front of the constraint terms
+in the Hamiltonian, can be quite tricky. A large value of the
+``constraint_strength`` will increase the energy gap between the
+ground state and highest energy state so the normalized energy gap
+between ground state and first excited state decreases. On
+the other hand a small value might lead to a violation
+of constraints in favor of the other terms in the Hamiltonian.
+
+Now we are able to execute the parametrized circuit
+with a simulator from ``Qiskit``. For this we will construct a
+function that can be passed to a classical optimizer:
+
+.. code-block:: python
+
+    from qiskit_aer import Aer
+
+    def execute_circuit(parameters, parityos_output=parityos_output):
+        backend = Aer.get_backend('qasm_simulator')
+        # assign parameters to parametrized qaoa circuit
+        circuit = qaoa_circuit_qiskit.assign_parameters(parameters)
+        # run the circuit on the chosen simulator 512 times with a seed to
+        # ensure reproducibility and save resources
+        counts = backend.run(circuit, seed_simulator=10, shots=512).result().get_counts()
+
+        return cost_expectation(counts, parityos_output)
+
+Starting the optimization multiple times from random initial
+values for the QAOA parameters, which we create via:
+
+.. code-block:: python
+
+    import numpy as np
+
+    n_starting_points = 5
+    initial_parameter_list = [[np.random.uniform(bound[0], bound[1])
+                              for bound in parameter_bounds.values()]
+                              for _ in range(n_starting_points)]
+
+improves the performance, where we used the parameter bounds
+that were obtained from the ``generate_qaoa`` function.
+With these initial values the classical optimization is
+invoked with:
+
+.. code-block:: python
+
+    from scipy.optimize import minimize
+
+    cost = None
+    for initial_parameters in initial_parameter_list:
+        # call classical optimization method
+        optimized_parameters = minimize(execute_circuit, initial_parameters, method='Nelder-Mead')
+        if (cost is None) or (optimized_parameters.fun < cost):
+            # update parameters when associated cost is lower than previous best
+            cost = optimized_parameters.fun
+            optimal_parameters = optimized_parameters.x
+
+Here we employed the ``Nelder-Mead`` optimizer from ``scipy`` but you can of
+course try different methods.
+
+Solutions of the QAOA algorithm and decoding
+............................................
+
+So far we obtained the optimized parameters for our QAOA circuit.
+We now run it one more time with these parameters:
+
+.. code-block:: python
+
+    # assign optimized parameters to circuit
+    optimal_qaoa_circuit = qaoa_circuit_qiskit.assign_parameters(optimal_parameters)
+
+    # select simulator
+    backend = Aer.get_backend('aer_simulator')
+    backend.shots = 512
+    # run qaoa circuit
+    counts = backend.run(optimal_qaoa_circuit, seed_simulator=10).result().get_counts()
+
+We select a number of physical bitstrings which were the most
+frequent outcomes of the circuit:
+
+.. code-block:: python
+
+    n_best_solutions = 5
+    best_physical_bitstrings = sorted(counts, key=counts.get, reverse=True)[:n_best_solutions]
+
+From these we get the candidates for the solution to the logical
+problem by decoding (see also :ref:`parity_decoder:The Parity Decoder`) via:
+
+.. code-block:: python
+
+    best_physical_configurations = [
+        get_physical_configuration(physical_bitstring)
+        for physical_bitstring in best_physical_bitstrings
+    ]
+    # decode physical configuration to logical bistring
+    best_logical_bitstrings = [parityos_output.decode(configuration)
+                               for configuration in best_physical_configurations]
+
+Finally, the candidate solutions are evaluated on the logical
+Hamiltonian and we pick the best solution:
+
+.. code-block:: python
+
+    from itertools import chain
+
+    cost = None
+    for logical_bitstring in chain(*best_logical_bitstrings):
+        # evaluate logical bitstring on logical Hamiltonian
+        cost_of_bitstring = optimization_problem.evaluate(configuration=logical_bitstring)
+        # update logical solution if associated cost is lower than previous best
+        if (cost is None) or (cost_of_bitstring < cost):
+            logical_solution = logical_bitstring
+            cost = cost_of_bitstring
+
+    print("solution: ", logical_solution)
+
+From the solution we can readily read off which nodes
+(represented by qubits) of the graph belong to which subset of
+the partition, e.g.
+
+.. figure:: hypergraph_solution_tutorial.png
+  :scale: 40 %
+
+  A two-partition of a hypergraph representing a solution to the MaxCut problem. Nodes belonging to the first (second) subset are colored in turquoise (yellow), (cut) edges in light green (red).
+
+This problem instance is degenerate, meaning that there is more than one
+optimal solution. Therefore running the code you might get a different result.
+
+
+.. [#] In the future there will also be advanced QAOA functionality native to ParityOS.
+
+.. [Lechner15] Lechner, Wolfgang, Philipp Hauke, and Peter Zoller. "A quantum annealing architecture with all-to-all connectivity from local interactions." Science advances 1.9 (2015): e1500838.
+.. [Fellner21] Fellner, Michael, et al. "Parity Quantum Optimization: Benchmarks." arXiv preprint arXiv:2105.06240 (2021).
+.. [Qiskit]  https://qiskit.org
+.. [Farhi14] Farhi, Edward, Jeffrey Goldstone, and Sam Gutmann. "A quantum approximate optimization algorithm." arXiv preprint arXiv:1411.4028 (2014).

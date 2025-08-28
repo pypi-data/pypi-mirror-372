@@ -1,0 +1,221 @@
+Making a custom device model
+=============================
+
+In the quickstart section, we have discussed the default devices for both
+analog and digital quantum computing. In this document, we will show
+how to define a device from scratch.
+
+Nevertheless, we strongly recommend to contact ParityQC first, so that we can
+provide a customized device model for your hardware that takes maximum advantage
+of the hardware-specific features of the ParityOS compiler.
+
+Device models
+-------------
+
+Custom device models can be defined by creating a new device model class,
+derived from the ``DeviceModelBase`` class::
+
+    class MyDeviceModel(DeviceModelBase):
+        """
+        Describes my splendid quantum computing device.
+        """
+
+The relevant attributes of such a class are:
+    ``qubit_connections``
+        A list of connections of qubits that are implemented as direct interactions on the device.
+        All qubits should be labeled with two-dimensional coordinates, as in ``Qubit((i, j))``.
+
+    ``device_type``
+        The type of this device, can either be ``'cnot'`` or ``'plaquette'``.
+
+    ``preset``
+        Determines the parameters that are passed on to the compiler in order to optimize the code
+        for the device. Standard values are ``'analog_default'`` and ``'digital_default'``.
+        Customer-specific presets can be provided upon request.
+
+
+Analog device model
+-----------------------------
+In this example we will define a custom device which has 5 qubits in
+the following layout::
+
+    (0, 1) -- (1, 1) -- (2, 1)
+      |          |     /
+      |          |   /
+    (0, 0) -- (1, 0)
+
+Where on the square we can have a 4-body constraint as well as all 4 possible
+3-body constraints. On the triangle on the left, only a 3-body constraint is
+possible. All qubits have the ability to get a local field in the ``Z`` direction.
+
+We start by labeling all the qubit sites. We just have to assign a unique label to each qubit.
+This can be a string, an integer or a coordinate as in the above example.::
+
+    qubit_sites = Qubit((0, 0)), Qubit((1, 0)), Qubit((0, 1)), Qubit((1, 1)), Qubit((2, 1))
+
+Then for the ``qubit_connections`` we have to specify that each qubit
+can get a local field, which is a single-qubit collection. For example,
+a local field on qubit ``Qubit((0, 0))`` would become ``{Qubit((0, 0))}``.
+In the above example, the local fields are::
+
+    local_fields = [{qubit} for qubit in qubit_sites]
+
+The next step is to define all possible constraints that are possible on
+the device, where each constraint is a collection of 3 or 4 qubits. The
+order of the qubits in the constraint, as well as the order of the constraints
+does not matter::
+
+    constraint_connections = [
+        {Qubit((0, 0)), Qubit((0, 1)), Qubit((1, 0)), Qubit((1, 1))},
+        {Qubit((0, 0)), Qubit((0, 1)), Qubit((1, 0))},
+        {Qubit((0, 0)), Qubit((0, 1)), Qubit((1, 1))},
+        {Qubit((0, 0)), Qubit((1, 0)), Qubit((1, 1))},
+        {Qubit((0, 1)), Qubit((1, 0)), Qubit((1, 1))},
+        {Qubit((1, 0)), Qubit((1, 1)), Qubit((2, 1))},
+    ]
+
+Where the first element is the 4-body constraint, after which the 4
+possible 3-body constraints on the left plaquette are listed. Finally, there
+is the 3-body constraint on the right plaquette.
+
+Now we have all the information we need to define the device model, where
+it is important that we set  ``device_type = 'plaquette'``.
+We can also specify a preset for the compiler, e.g. ``preset = 'default_analog'``::
+
+    from parityos.device_model import DeviceModelBase
+
+    class MyDeviceModel(DeviceModelBase):
+        qubit_connections = local_fields + constraint_connections
+        device_type = 'plaquette'
+        preset = 'analog_default'
+
+So to define the custom device, you can run the following code::
+
+    from parityos import Qubit
+    from parityos.device_model import DeviceModelBase
+
+    qubit_sites = Qubit((0, 0)), Qubit((1, 0)), Qubit((0, 1)), Qubit((1, 1)), Qubit((2, 1))
+    local_fields = [{qubit} for qubit in qubit_sites]
+
+    constraint_connections = [
+        {Qubit((0, 0)), Qubit((0, 1)), Qubit((1, 0)), Qubit((1, 1))},
+        {Qubit((0, 0)), Qubit((0, 1)), Qubit((1, 0))},
+        {Qubit((0, 0)), Qubit((0, 1)), Qubit((1, 1))},
+        {Qubit((0, 0)), Qubit((1, 0)), Qubit((1, 1))},
+        {Qubit((0, 1)), Qubit((1, 0)), Qubit((1, 1))},
+        {Qubit((1, 0)), Qubit((1, 1)), Qubit((2, 1))},
+    ]
+
+    class MyDeviceModel(DeviceModelBase):
+        qubit_connections = local_fields + constraint_connections
+        device_type = 'plaquette'
+        preset = 'analog_default'
+
+    my_device_model = MyDeviceModel()
+
+.. note::
+    If you want to try out this custom device, use the standard submission
+    (see :ref:`quickstart:Submitting a Job to the Compiler`) to compile
+    the following optimization problem::
+
+        optimization_problem = ProblemRepresentation(
+            interactions=[{Qubit(0), Qubit(1)},
+                          {Qubit(1), Qubit(2)},
+                          {Qubit(1), Qubit(3)},
+                          {Qubit(0), Qubit(3)},
+                          {Qubit(2), Qubit(3)}],
+            coefficients=[1, 0.5, -0.7, 0.8, -0.3],
+        )
+
+    where you set the ``device_model`` to the one we defined here!
+
+Digital device model
+--------------------
+In this example we will define a custom device which has 5 qubits in
+the following layout::
+
+    (0, 1) -- (1, 1) -- (2, 1)
+      |          |
+      |          |
+    (0, 0) -- (1, 0)
+
+On all qubits that are connected with a dotted line, it is possible
+to do a CNOT gate. All qubits have the ability to get a local field
+in the ``Z`` direction.
+
+We start by defining all the qubit sites (the order does not matter)::
+
+    qubit_sites = Qubit((0, 0)), Qubit((1, 0)), Qubit((0, 1)), Qubit((1, 1)), Qubit((2, 1))
+
+Then for the ``qubit_connections`` we have to specify that each qubit
+can get a local field, which is a single-qubit collection. For example,
+a local field on qubit ``Qubit((0, 0))`` would be a collection with a single qubit,
+``{Qubit((0, 0))}``. The local fields are::
+
+    local_fields = [{qubit} for qubit in qubit_sites]
+
+The next step is to define all possible CNOT connection that are possible on
+the device. The order of the elements in the connections does not matter,
+it is assumed that a CNOT can be performed in both directions. This results
+in the following lists of connections, where each connection is of length ``2``::
+
+    constraint_connections = [
+        {Qubit((0, 0)), Qubit((0, 1))},
+        {Qubit((0, 1)), Qubit((1, 1))},
+        {Qubit((0, 0)), Qubit((1, 0))},
+        {Qubit((1, 0)), Qubit((1, 1))},
+        {Qubit((1, 1)), Qubit((2, 1))},
+    ]
+
+Now we have all the information we need to define the DeviceModel, where
+it is important that we set  ``device_type = 'cnot'``.
+In order to use the standard compiler for digital devices, we add the attribute
+``preset = 'default_digital'``::
+
+    from parityos.device_model import DeviceModelBase
+
+    class MyDigitalDeviceModel(DeviceModelBase):
+        qubit_connections = local_fields + constraint_connections
+        device_type = 'cnot'
+        preset = 'digital_default'
+
+So to define the custom device, you can run the following code::
+
+    from parityos import Qubit
+    from parityos.device_model import DeviceModelBase
+
+    qubit_sites = Qubit((0, 0)), Qubit((1, 0)), Qubit((0, 1)), Qubit((1, 1)), Qubit((2, 1))
+    local_fields = [{qubit} for qubit in qubit_sites]
+    constraint_connections = [
+        {Qubit((0, 0)), Qubit((0, 1))},
+        {Qubit((0, 1)), Qubit((1, 1))},
+        {Qubit((0, 0)), Qubit((1, 0))},
+        {Qubit((1, 0)), Qubit((1, 1))},
+        {Qubit((1, 1)), Qubit((2, 1))},
+    ]
+
+    class MyDigitalDeviceModel(DeviceModelBase):
+        qubit_connections = local_fields + constraint_connections
+        device_type = 'cnot'
+        preset = 'digital_default'
+
+    my_digital_device_model = MyDigitalDeviceModel()
+
+.. note::
+    If you want to try out this custom device, use the standard submission
+    (see :ref:`quickstart:Submitting a Job to the Compiler`) to compile
+    the following optimization problem::
+
+        optimization_problem = ProblemRepresentation(
+            interactions=[{Qubit(0), Qubit(1)},
+                          {Qubit(1), Qubit(2)},
+                          {Qubit(1), Qubit(3)},
+                          {Qubit(0), Qubit(3)},
+                          {Qubit(2), Qubit(3)}],
+            coefficients=[1, 0.5, -0.7, 0.8, -0.3],
+        )
+
+    where you set the ``device_model`` to the ``my_digital_device_model``
+    defined above.
+
+

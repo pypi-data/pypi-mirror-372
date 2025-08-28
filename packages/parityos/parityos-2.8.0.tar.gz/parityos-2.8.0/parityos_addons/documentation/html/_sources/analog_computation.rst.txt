@@ -1,0 +1,112 @@
+Analog computation addon
+==========================
+
+The analog computation addon is for creating analog schedules that can be run on the quantum
+hardware or simulator.
+
+Schedule from ParityOSOutputs
+-----------------------------------
+
+The analog schedule for the Party compiled problem can be represented as follows
+[Lechner15]_:
+
+.. math:: H(t) = A(t) H_d + B(t) H_p + C(t) H_c
+
+where :math:`H_d` is the driver Hamiltonian (e.g. :math:`\sum_{i=1}^n{-X}`, where :math:`n` is the
+number of qubits), :math:`H_p` is the problem Hamiltonian, :math:`H_c` is the
+constraint Hamiltonian, :math:`A(t)`, :math:`B(t)` and :math:`C(t)` are time dependent functions
+that define the analog schedule. As an example one can define the time dependent parameters in the
+following way:
+
+.. math:: A(t) = 1 - t
+.. math:: B(t) = t
+.. math:: C(t) = t
+
+where :math:`t \in [0,1]` is the time parameter.
+
+Here's how to create the above-defined schedule from ``ParityOSOutput`` using the analog computation
+addon (assuming ``parityos_output`` is given – see Quickstart section). ::
+
+    import sympy
+
+    from parityos_addons.analog_computation import ParitySchedule
+
+    t = sympy.Symbol("t")
+    duration = 1.0
+    problem_expr = t
+    constraint_expr = t
+    driver_expr = duration - t
+
+    parity_schedule = ParitySchedule(
+        output=parityos_output,
+        interactions_coefficient=problem_expr,
+        constraints_coefficient=constraint_expr,
+        driver_coefficient=driver_expr,
+        time_parameter=t,
+        duration=duration,
+    )
+
+The ``ParitySchedule`` is using the default driver Hamiltonian :math:`H_d = \sum_{i=0}^n{-X}`. One
+can access ``interactions_schedule``, ``constraints_schedule`` and ``driver_schedule`` properties
+from a ``ParitySchedule``, which are going to give the corresponding ``ScheduleTerm`` instances.
+
+Custom Schedules
+-----------------------
+
+For constructing a more generic schedule (not necessarily related to LHZ arcitecture) one can
+use ``Schedule`` class. For that one should define the corresponding ``Observable`` and time
+dependent expression pairs to define ``ScheduleTerm``\s, which are going to be summed up in the
+``Schedule`` class.
+
+For example let's define a ``Schedule`` that consists of two ``ScheduleTerm``\s. One will be the
+driver ``ScheduleTerm``\: ::
+
+    from parityos import Qubit
+    from parityos.base.gates import X
+    from parityos_addons.analog_computation import Observable, PauliOp, ScheduleTerm
+
+    qubit_count = 3
+    qubits = [Qubit(index) for index in range(qubit_count)]
+
+    driver_interactions = [
+        PauliOp([X(qubits[0])]),
+        PauliOp([X(qubits[1])]),
+        PauliOp([X(qubits[2])]),
+        ]
+    driver_coefficient = [-1] * len(driver_interactions)
+    driver_observable = Observable(driver_interactions, driver_coefficient)
+
+    t = sympy.Symbol('t')
+    driver_expression = 1 - t
+    driver_schedule_term = ScheduleTerm(driver_observable, driver_expression)
+
+And the other one will be the problem ``ScheduleTerm``\: ::
+
+    from parityos.base.gates import Z
+
+    problem_interactions = [
+        PauliOp([Z(qubits[0]), Z(qubits[1])]),
+        PauliOp([Z(qubits[0]), Z(qubits[2])]),
+        PauliOp([Z(qubits[1]), Z(qubits[2])]),
+        ]
+    problem_coefficient = [1] * len(problem_interactions)
+    problem_observable = Observable(problem_interactions, problem_coefficient)
+
+    problem_expression = t
+    problem_schedule_term = ScheduleTerm(problem_observable, problem_expression)
+
+Then one just need to combine these two ``ScheduleTerm``\s into a single ``Schedule`` instance: ::
+
+    from parityos_addons.analog_computation import Schedule
+
+    custom_schedule = Schedule([problem_schedule_term, driver_schedule_term], t)
+
+The ``Schedule`` class is more generic than ``ParitySchedule`` class and one can obtain the
+corresponding ``Schedule`` for the given ``ParitySchedule`` in the following way: ::
+
+    schedule = parity_schedule.schedule
+
+References
+--------------------------------
+
+.. [Lechner15] Lechner, Wolfgang, Philipp Hauke, and Peter Zoller. "A quantum annealing architecture with all-to-all connectivity from local interactions." Science advances 1.9 (2015): e1500838.
