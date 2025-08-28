@@ -1,0 +1,2 @@
+class PortGateError(Exception):
+    pass
