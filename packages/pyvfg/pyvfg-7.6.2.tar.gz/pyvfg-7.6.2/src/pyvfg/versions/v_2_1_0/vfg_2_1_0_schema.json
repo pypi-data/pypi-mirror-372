@@ -1,0 +1,215 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "definitions": {
+        "filepath": {
+            "type": "string",
+            "pattern": "^.*\\.(npy)$"
+        },
+        "variable": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "enum": [
+                        "real",
+                        "nonnegative_real",
+                        "positive_real",
+                        "positive_definite",
+                        "positive_semidefinite",
+                        "simplex",
+                        "categorical"
+                    ]
+                },
+                "constraints": {
+                    "form": {
+                        "enum": [
+                            "delta"
+                        ]
+                    }
+                },
+                "shape": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "elements": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "messages": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/filepath"
+                    }
+                },
+                "observation": {
+                    "$ref": "#/definitions/filepath"
+                },
+                "control_state": {
+                    "type": "boolean"
+                }
+            },
+            "required": ["domain", "shape"],
+            "additionalProperties": false
+        },
+        "variable_reference": {
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "array",
+                    "items": [
+                        { "type": "string" },
+                        { "type": "integer" }
+                    ],
+                    "additionalItems": false
+                }
+            ]
+        },
+        "node_constraint": {
+            "type": "object",
+            "properties": {
+                "variables": {
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/variable_reference" }
+                },
+                "form": {
+                    "enum": [
+                        "delta"
+                    ]
+                },
+                "p_substitutions": {
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/variable_reference" }
+                }
+            },
+            "required": ["variables"]
+        },
+        "function": {
+            "type": "object",
+            "properties": {
+                "function": {
+                    "enum": [
+                        "categorical",
+                        "conditional_categorical",
+                        "dirichlet",
+                        "gaussian",
+                        "linear_gaussian",
+                        "mixture",
+                        "gmm",
+                        "wishart",
+                        "matrix_normal_wishart",
+                        "normal_inverse_wishart",
+                        "softmax",
+                        "mnlr",
+                        "potential",
+                        "+",
+                        "-",
+                        "*",
+                        "custom"
+                    ]
+                },
+                "output": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/variable_reference"
+                    },
+                    "minItems": 1
+                },
+                "parameters": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/definitions/variable_reference"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/variable_reference"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "constraints": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/node_constraint"
+                    }
+                },
+                "control_target": { "type": "boolean"}
+            },
+            "required": ["function", "output"],
+            "additionalProperties": false
+        },
+        "factor": {
+            "oneOf": [
+                {
+                "$ref": "#/definitions/function"},
+                {
+                    "type": "array",
+                    "items": { "type": "string" }
+                }
+            ]
+        },
+        "plate": {
+            "type": "object",
+            "properties": {
+                "factors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1
+                },
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1
+                },
+                "size": {
+                    "type": "integer"
+                }
+            },
+            "required": ["factors", "variables", "size"],
+            "additionalProperties": false
+        }
+    },
+    "properties": {
+        "version": {
+            "type": "string",
+            "const":"2.1.0"
+        },
+        "variables": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/variable"
+            }
+        },
+        "factors": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/factor"
+            }
+        },
+        "plates": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/plate"
+            }
+        }
+    },
+    "required": [
+        "version",
+        "factors",
+        "variables"
+    ],
+    "additionalProperties": false
+}
