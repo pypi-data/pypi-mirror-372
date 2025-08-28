@@ -1,0 +1,146 @@
+[project]
+name = "remotivelabs-broker"
+description = 'RemotiveLabs Broker API'
+version = "0.9.2b3"
+readme = "README.md"
+license = "Apache-2.0"
+homepage = "https://remotivelabs.com/"
+authors = [{ name = "Remotivelabs", email = "support@remotivelabs.com" }]
+keywords = ["automotive", "autotech", "networking", "CAN"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Manufacturing",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Communications",
+  "Topic :: Internet",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+requires-python = ">=3.9,<4.0"
+
+dependencies = [
+  "grpcio~=1.71.0",
+  "grpc-interceptor~=0.15.4",
+  "protobuf~=5.29.0",
+]
+
+[tool.poetry]
+packages = [{ include = "remotivelabs", from = "src" }]
+
+[project.urls]
+Homepage = "https://remotivelabs.com/"
+Documentation = "https://docs.remotivelabs.com/"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.11.10"
+mypy = "^1.15.0"
+pytest = "^8.3.3"
+pytest-cov = "^5.0.0"
+pytest-asyncio = "^0.24.0"
+pytest-xdist = { extras = ["psutil"], version = "^3.6.1" }
+grpc-stubs = "^1.53.0.5"
+pdoc = "^15.0.1"
+pytest-timeout = "^2.3.1"
+pytest-flakefinder = "^1.1.0"
+grpcio-tools = "^1.71.0"
+loguru = "^0.7.3"
+aiostream = "^0.6.4"
+python-on-whales = "^0.78.0"
+python-dotenv = "^1.1.1"
+
+[tool.poetry.requires-plugins]
+poethepoet = ">=0.34"
+
+[tool.poe.tasks]
+docs = { cmd = """pdoc remotivelabs \
+                       --docformat google \
+                       --favicon https://releases.remotivelabs.com/favicon.ico \
+                       --logo https://releases.remotivelabs.com/remotive-labs-logo-neg.png \
+                       -o dist/doc""" }
+format = [{ cmd = "ruff format ." }, { cmd = "ruff check --fix ." }]
+ruff = [{ cmd = "ruff check ." }, { cmd = "ruff format --check --diff ." }]
+mypy = [{ cmd = "mypy -p remotivelabs.broker -p tests -p misc" }]
+lint = ["ruff", "mypy"]
+publish = { cmd = "poetry publish --dry-run" }
+generate = [
+  { cmd = "rm -rf src/remotivelabs/broker/_generated/" },
+  { cmd = "mkdir -p src/remotivelabs/broker/_generated/" },
+  { cmd = """python -m grpc_tools.protoc \
+        --proto_path=${POE_PWD}/../../protos/ \
+        --python_out=src/remotivelabs/broker/_generated \
+        --grpc_python_out=src/remotivelabs/broker/_generated \
+        --pyi_out=src/remotivelabs/broker/_generated \
+        ../../protos/*.proto \
+        ../../protos/google/api/*.proto""" },
+  { cmd = "python misc/fix_import_statements.py" },
+]
+
+[tool.poe.tasks.test]
+cmd = "pytest --cov"
+args = [{ name = "extra_args", positional = true, multiple = true }]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+consider_namespace_packages = true
+testpaths = ["tests"]
+timeout_func_only = true
+
+[tool.ruff]
+line-length = 140
+exclude = ["src/remotivelabs/broker/_generated"]
+
+[tool.ruff.lint]
+select = [
+  "ARG",
+  "B034",
+  "C901",
+  "E",
+  "EXE",
+  "F",
+  "FA",
+  "I",
+  "N",
+  "UP032",
+  "RET",
+  "W",
+  "PL",
+]
+ignore = ['PLR2004']
+
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.11"
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = "src, tests, misc"
+packages = ["remotivelabs.broker", "tests", "misc"]
+# See https://mypy.readthedocs.io/en/stable/config_file.html
+disallow_untyped_calls = false
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+hide_error_codes = false
+
+[[tool.mypy.overrides]]
+module = ["remotivelabs.broker.client"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "remotivelabs.broker._generated.*"
+ignore_errors = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
