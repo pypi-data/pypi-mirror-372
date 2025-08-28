@@ -1,0 +1,167 @@
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+  
+cache:
+  paths:
+    - .cache/pip
+
+test mypy:
+  image: python:3.9
+  tags:
+    - geovisio
+  before_script:
+    - apt update && apt install -y gcc
+  script:
+    - pip install .[dev]
+    - mypy --install-types --non-interactive panoramax_cli/
+
+lint:
+  image: python:3.9
+  tags:
+    - geovisio
+  cache:
+    paths:
+      - .cache/pip
+  before_script:
+    - apt update && apt install -y gcc git
+  script:
+    - pip install .[dev]
+    - ruff format --diff
+
+tests:
+  image: docker:latest
+  tags:
+    - geovisio
+  services:
+    - docker:dind
+  variables:
+    FF_NETWORK_PER_BUILD: 1
+  script:
+    - PROJECT_DIR=$PWD docker compose -f tests/integration/docker-compose-panoramax.yml -f tests/integration/docker-compose-gitlab-override.yml run --rm integration-test-runner
+  after_script:
+    - PROJECT_DIR=$PWD docker compose -f tests/integration/docker-compose-panoramax.yml -f tests/integration/docker-compose-gitlab-override.yml logs || true
+    - PROJECT_DIR=$PWD docker compose -f tests/integration/docker-compose-panoramax.yml -f tests/integration/docker-compose-gitlab-override.yml down || true
+
+deploy_pypi:
+  stage: deploy
+  tags:
+    - geovisio
+  only:
+    - tags
+  image: python:3.9
+  cache:
+    paths:
+      - .cache/pip
+  before_script:
+    - apt update && apt install gcc
+  script:
+    - apt install git
+    - pip install .[build]
+    - flit publish # use [flit](https://flit.pypa.io/) and FLIT_USERNAME/FLIT_PASSWORD env var
+
+
+build-linux-binaries:
+  stage: deploy
+  only:
+    - tags
+  # because libstd++ will be included in the file (and libstdc++ is forward compatible)
+  # we build the linux cli with ubuntu jammy (22.04) and this will be the oldest supported version.
+  # On older system, you won't be able to use the binary easily (without installing a newer libstdc++).
+  image: ubuntu:jammy
+  tags:
+    - geovisio
+  cache:
+    paths:
+      - .cache/pip
+  before_script:
+    - apt update && apt install -y python3-dev python3-venv gcc binutils
+  script:
+    - python3 -m venv venv
+    - source ./venv/bin/activate
+    - pip install .[build-binary]
+    - pyinstaller --noconfirm --additional-hooks-dir=pyinstaller/hooks panoramax_cli/__main__.py --onefile --name panoramax_cli
+  artifacts:
+    paths:
+      - dist
+
+build-windows-binaries:
+  stage: deploy
+  only:
+    - tags
+  tags:
+    - saas-windows-medium-amd64
+  variables:
+    PYTHON_VERSION: "3.9"
+  before_script:
+    # https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/issues/13
+    - Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+    - choco install python3 --version=$PYTHON_VERSION --yes --force --no-progress
+    - refreshenv
+  script:
+    - python -m venv venv
+    - .\venv\Scripts\activate
+    - pip install .[build-binary]
+    - pyinstaller --noconfirm --additional-hooks-dir=pyinstaller/hooks panoramax_cli/__main__.py --onefile --name panoramax_cli --clean
+  artifacts:
+    paths:
+      - dist
+
+upload-binaries:
+  stage: deploy
+  tags:
+    - geovisio
+  image: curlimages/curl:latest
+  needs: 
+    - job: build-linux-binaries
+      artifacts: true
+    - job: build-windows-binaries
+      artifacts: true
+  only:
+    - tags
+  variables:
+    WIN_AMD64_BINARY: "panoramax_cli-win-amd64.exe"
+    LINUX_AMD64_BINARY: "panoramax_cli-linux-amd64"
+    PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/panoramax_cli/${CI_COMMIT_TAG}"
+  script:
+    - |
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file dist/panoramax_cli ${PACKAGE_REGISTRY_URL}/${LINUX_AMD64_BINARY}
+    - |
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file dist/panoramax_cli.exe ${PACKAGE_REGISTRY_URL}/${WIN_AMD64_BINARY}
+    # Writing variables to environment file to pass it to downstream jobs
+    - echo WIN_AMD64_BINARY=${WIN_AMD64_BINARY} >> upload-binaries.env
+    - echo LINUX_AMD64_BINARY=${LINUX_AMD64_BINARY} >> upload-binaries.env
+    - echo PACKAGE_REGISTRY_URL=${PACKAGE_REGISTRY_URL} >> upload-binaries.env
+  artifacts:
+    reports:
+      # To ensure we've access to this file in the next stage
+      dotenv: upload-binaries.env
+
+# Create a gitlab release on tag and attach binaries from it
+create-gitlab-release:
+  stage: deploy
+  tags:
+    - geovisio
+  only:
+    - tags
+  needs: 
+    - job: upload-binaries
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  script:
+    - echo "Uploading Panoramax release!"
+  release: 
+    tag_name: $CI_COMMIT_TAG
+    name: 'Panoramax $CI_COMMIT_TAG'
+    description: '$CI_COMMIT_TAG_MESSAGE'
+    assets:
+      links:
+        - name: ${LINUX_AMD64_BINARY}
+          url: ${PACKAGE_REGISTRY_URL}/${LINUX_AMD64_BINARY}
+          filepath: /bin/${LINUX_AMD64_BINARY}
+          link_type: package
+        - name: ${WIN_AMD64_BINARY}
+          url: ${PACKAGE_REGISTRY_URL}/${WIN_AMD64_BINARY}
+          filepath: /bin/${WIN_AMD64_BINARY}
+          link_type: package

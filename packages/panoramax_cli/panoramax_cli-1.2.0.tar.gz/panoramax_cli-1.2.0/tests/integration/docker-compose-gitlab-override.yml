@@ -1,0 +1,20 @@
+# Docker-compose used in gitlab-ci to run a container having access to all the other containers
+services:
+  integration-test-runner:
+    image: python:3.9
+    volumes:
+     - $PROJECT_DIR:/src
+    command: >
+      sh -c "cd ./src && ls && apt install gcc && pip install .[dev] && pytest -s -vv --external-panoramax-url=http://api.panoramax.localtest.me:5000"
+    depends_on:
+      panoramax-api:
+        condition: service_healthy
+      panoramax-background-worker:
+        condition: service_started
+      auth:
+        condition: service_healthy
+    networks:
+      db: {}
+      keycloak: {}
+      panoramax: {}
+

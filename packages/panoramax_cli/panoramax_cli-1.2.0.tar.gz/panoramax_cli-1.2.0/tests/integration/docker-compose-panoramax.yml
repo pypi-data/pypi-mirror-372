@@ -1,0 +1,126 @@
+# Docker-compose to run a panoramax combined with a keycloak in the integration tests
+services:
+  panoramax-api:
+    image: panoramax/api:develop
+    command: api
+    restart: always
+    ports:
+      - 5123:5000
+    depends_on:
+      db:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    environment:
+      DB_URL: postgres://gvs:gvspwd@db/panoramax
+      PICTURE_PROCESS_THREADS_LIMIT: 0
+      PICTURE_PROCESS_DERIVATES_STRATEGY: ON_DEMAND
+      API_FORCE_AUTH_ON_UPLOAD: "true"
+      OAUTH_CLIENT_ID: panoramax
+      OAUTH_CLIENT_SECRET: what_a_secret
+      OAUTH_OIDC_URL: http://keycloak.localtest.me:8189/realms/panoramax
+      OAUTH_PROVIDER: oidc
+      FLASK_SECRET_KEY: a_very_secret_key_never_to_be_used_in_production
+      FLASK_SESSION_COOKIE_DOMAIN: localtest.me
+      API_ACCEPT_DUPLICATE: true
+      API_WEBSITE_URL: false
+    healthcheck:
+      test: python -c "import requests; requests.get('http://localhost:5000/api').raise_for_status()"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - pic_data:/data/geovisio
+
+    networks:
+      keycloak: {}
+      db: {}
+      panoramax:
+        aliases:
+          - api.panoramax.localtest.me
+
+  panoramax-background-worker:
+    image: panoramax/api:develop
+    command: picture-worker
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    environment:
+      DB_URL: postgres://gvs:gvspwd@db/panoramax
+      PICTURE_PROCESS_DERIVATES_STRATEGY: ON_DEMAND
+      BD_MIN_CNX: 1
+      BD_MAX_CNX: 3
+
+    volumes:
+      - pic_data:/data/geovisio
+    deploy:
+      mode: replicated
+      replicas: 2
+    networks:
+      db: {}
+
+  migrations:
+    image: panoramax/api:develop
+    command: db-upgrade
+    environment:
+      DB_URL: postgres://gvs:gvspwd@db/panoramax
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      db: {}
+
+  db:
+    image: postgis/postgis:13-3.2
+    environment:
+      - POSTGRES_USER=gvs
+      - POSTGRES_PASSWORD=gvspwd
+      - POSTGRES_DB=panoramax
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER -h db
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    networks:
+      db: {}
+
+  auth:
+    command: start-dev --import-realm
+    environment:
+      GEOVISIO_BASE_URL: http://api.panoramax.localtest.me:5123
+      GEOVISIO_CLIENT_SECRET: what_a_secret
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: password
+      KEYCLOAK_FRONTEND_URL: http://panoramax-api:5000/api/auth/login
+      KC_HTTP_PORT: 8189
+    ports:
+      - "8189:8189"
+    healthcheck:
+      test: curl --fail http://localhost:8189/realms/panoramax
+      timeout: 5s
+      interval: 2s
+      retries: 20
+      start_period: 5s
+    image: quay.io/keycloak/keycloak:20.0.1
+    volumes:
+      - ./keycloak-realm.json:/opt/keycloak/data/import/panoramax_realm.json
+
+    networks:
+      keycloak:
+        aliases:
+          - keycloak.localtest.me
+
+volumes:
+  pic_data: {}
+
+networks:
+  db: {}
+  keycloak: {}
+  panoramax: {}
