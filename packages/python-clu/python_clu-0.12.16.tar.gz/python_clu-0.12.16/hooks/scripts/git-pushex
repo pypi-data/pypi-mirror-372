@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# 
+# git-pushex: “git push” wrapper,
+# with support for post-push hooks
+# 
+# By Alexander Böhn <https://github.com/fish2000>
+# © 2012 - 2037 OST, LLC and FVHS GmbH.
+#   All rights reserved.
+# 
+# Based on this bash function: https://git.io/JvFSa
+
+# Configuration / Settings / What have you:
+if [ "$1" ]; then
+    upstream="${1:-'origin'}"
+else
+    upstream=""
+fi
+
+# Hook script locations:
+gitdir="$(git rev-parse --git-dir)"
+prepush="${gitdir}/hooks/pre-push"
+postpush="${gitdir}/hooks/post-push"
+
+# Run the pre-push hook, if available:
+# test -x "${prepush}" && exec "${prepush}" "${branch}" "$@"
+
+# Execute the push operation:
+if [[ $upstream != "" ]]; then
+    branch="$(git rev-parse --symbolic --abbrev-ref $(git symbolic-ref HEAD))"
+    git push "${upstream}" "${branch}"
+else
+    git push --all
+fi
+
+# Run the post-push hook, if available:
+if (( $? == 0 )); then
+    if [[ -x $postpush ]]; then
+        exec "${postpush}" "${branch}" "$@"
+    fi
+fi
