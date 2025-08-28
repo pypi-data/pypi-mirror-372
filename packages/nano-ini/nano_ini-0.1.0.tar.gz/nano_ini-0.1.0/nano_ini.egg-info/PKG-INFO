@@ -1,0 +1,124 @@
+Metadata-Version: 2.4
+Name: nano-ini
+Version: 0.1.0
+Summary: Tiny .ini → dict reader (~1KB): key=value and [section], zero deps
+Author: ozgunlu
+License: MIT
+Project-URL: Homepage, https://github.com/ozgunlu/nano-ini
+Project-URL: Issues, https://github.com/ozgunlu/nano-ini/issues
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
+# nano-ini
+[![PyPI](https://img.shields.io/pypi/v/nano-ini.svg?color=blue)](https://pypi.org/project/nano-ini/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+![Size](https://img.shields.io/badge/size-~1KB-lightgrey.svg)
+[![CI](https://github.com/ozgunlu/nano-ini/actions/workflows/ci.yml/badge.svg)](https://github.com/ozgunlu/nano-ini/actions)
+
+Tiny **.ini → dict** reader — ~1 KB, zero deps.
+Supports `key=value` and `[section]`; outputs JSON (dict). Perfect for code-golf, minimal containers, or just for fun.
+
+---
+
+## ✨ Features
+- ✅ Sections: `[database]`, `[app]` …
+- ✅ Keys: `key=value` (whitespace trimmed)
+- ✅ Full-line comments: `;` or `#`
+- ✅ Root keys (before any section) stored under empty section `""`
+- ✅ Zero dependencies • single tiny file • CLI included
+---
+
+## 🚀 Usage
+```ini
+; sample.ini
+name = nano
+[database]
+host = localhost
+port = 5432
+```
+```bash
+# Local (from repo)
+python app_min.py sample.ini
+# {"":"","database":{"host":"localhost","port":"5432"}}
+python app_min.py sample.ini database
+# {"host":"localhost","port":"5432"}
+
+# stdin
+cat sample.ini | python app_min.py
+```
+
+After installing:
+
+```bash
+# CLI
+pip install nano-ini
+nano-ini sample.ini                 # full JSON
+nano-ini sample.ini database        # one section
+```
+
+---
+
+## 🤓 Why so small?
+
+- Pure stdlib, hand-rolled parser (no configparser dependency)
+- Minimal rules: key=value, [section], full-line comments only
+- Dumps compact JSON with separators=(',',':')
+
+---
+
+> **Notes:**
+> - Values are kept as strings (no auto-casting or interpolation).
+> - Inline comments (key=val ; note) aren’t parsed specially (keep them out of value lines).
+
+---
+
+## 🎉 Fun Ideas
+
+- **Grab a single value (host)**
+```bash
+nano-ini config.ini database | jq -r .host
+```
+```powershell
+(nano-ini config.ini database | ConvertFrom-Json).host
+```
+- **Export a section as environment variables**
+```bash
+export $(nano-ini config.ini database | jq -r 'to_entries|.[]|"\(.key)=\(.value)"')
+```
+```bash
+nano-ini config.ini database | jq -r 'to_entries|.[]|"\(.key)=\(.value)"' > .env
+```
+- **Validate required keys**
+```bash
+nano-ini config.ini database | jq -e 'has("host") and has("port")' >/dev/null && echo OK || echo MISSING
+```
+- **Overlay/merge INIs (last wins)**
+```bash
+cat base.ini override.ini | nano-ini - | jq .
+```
+- **Use root (no section) keys**
+```bash
+nano-ini config.ini "" | jq .
+```
+- **GitHub Actions: output a field**
+```bash
+echo "db_host=$(nano-ini config.ini database | jq -r .host)" >> "$GITHUB_OUTPUT"
+```
+- **First N records**
+```bash
+nano-csv2json data.csv | head -100 > sample.jsonl
+```
+
+---
+
+> **Tip:**
+> Output is compact JSON. Combine with jq for querying, filtering, or formatting.
+
+---
+
+## 📜 License
+
+MIT © 2025
+
