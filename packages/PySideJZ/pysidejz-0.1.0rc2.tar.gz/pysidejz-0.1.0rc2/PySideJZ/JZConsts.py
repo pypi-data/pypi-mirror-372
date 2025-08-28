@@ -1,0 +1,4 @@
+from PySide6.QtGui import QBrush, QColor
+
+JZ_STATUS_DEFAULT_COLOR = QBrush(QColor(144, 212, 252))
+JZ_STATUS_DEFAULT_EXPIRE_MS = 3000
