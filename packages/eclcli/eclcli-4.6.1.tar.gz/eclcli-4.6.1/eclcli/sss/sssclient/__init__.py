@@ -1,0 +1,6 @@
+SSS_VERSION = '2'
+SSS_FORMAT = 'json'
+SERVICE_TYPE = 'sssv2'
+ENDPOINT_TYPE = 'publicURL'
+AUTH_TYPE = "identity"
+ACTION_PREFIX = ""
