@@ -1,0 +1,193 @@
+################
+# BUILD SYSTEM #
+################
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+############
+# METADATA #
+############
+
+[project]
+name = "jambazid-poetry-demo"
+version = "0.0.95" # <CHANGE THIS>
+requires-python = ">=3.10"
+description = "A minimal Python project template built with Poetry." # <CHANGE THIS>
+authors = [
+    {name = "Jambazid PyPI", email = "pypi@jambazid.dev"},
+]
+maintainers = [
+    {name = "Jambazid PyPI", email = "pypi@jambazid.dev"},
+]
+readme = {file = "src/README.md", content-type = "text/markdown"}
+license = "MIT" # TODO: think about this! See https://opensource.guide/legal/#which-open-source-license-is-appropriate-for-my-project
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Documentation",
+]
+dynamic = [ "dependencies" ]
+
+[project.urls]
+Repository = "https://github.com/jambazid/python-poetry-template"
+Homepage = "https://poetry-demo.python.jambazid.dev"
+"Bug Tracker" = "https://github.com/jambazid/python-poetry-template/issues"
+
+[tool.poetry]
+packages = [
+    { include = "jambazid", from = "src" },
+    { include = "jambazid/**/py.typed", from = "src" },
+]
+include = ["jambazid/**/data/**/*"]
+
+
+###################
+# PACKAGE SOURCES #
+###################
+
+[[tool.poetry.source]]
+name = "Default"
+priority = "primary"
+url = "https://pypi.org/simple/"
+
+
+#######
+# CLI #
+#######
+
+
+[tool.poetry.scripts]
+# jambazid-demo = "jambazid.demo.cli:main"
+
+
+################
+# DEPENDENCIES #
+################
+
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+
+[tool.poetry.group.test.dependencies]
+tox = ">= 4.25, < 5"
+coverage = ">= 7.3.3, < 8"
+pytest = ">= 8.3.5"
+pytest-asyncio = ">= 0.26.0"
+pytest-env = ">= 1.1.5, < 2"
+pytest-html = ">= 4.1.1, < 5"
+pytest-randomly = ">= 3.16, < 4"
+hypothesis = ">= 6.131.15, < 7"
+mutmut = ">= 3.2.3, < 4"
+
+[tool.poetry.group.dev.dependencies]
+mypy = ">= 1.7.1"
+ruff = ">= 0.6.9"
+black = ">= 24.10.0, < 25"
+httpx = ">= 0.25.2, < 2"
+pylint = ">= 3.0.3"
+pdoc = ">= 14.2.0, < 15"
+commitizen = ">= 4.4.1, < 5"
+pre-commit = ">= 4.2.0, < 5"
+twine = ">= 6.1.0, < 7"
+
+
+################
+# TEST HARNESS #
+################
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+env = ['HYPOTHESIS_PROFILE=light']
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = ["tests/**/*"]
+
+[tool.coverage.report]
+omit = ["tests/**/*"]
+
+[tool.coverage.html]
+directory = "reports/html"
+
+[tool.coverage.xml]
+output = "reports/coverage.xml"
+
+[tool.mutmut]
+paths_to_mutate = "src/"
+tests_dir = "tests/"
+
+
+###########
+# LINTING #
+###########
+
+[tool.black]
+color = true
+line-length = 150
+target-version = ['py311']
+skip-string-normalization = false
+skip-magic-trailing-comma = false
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.format]
+max-line-length = 150
+
+[tool.pyright]
+include = ['src/jambazid']
+typeCheckingMode = "standard"
+reportUnnecessaryTypeIgnoreComment = true
+
+[tool.ruff]
+target-version = 'py311'
+line-length = 150
+lint.select = [
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    # "I", # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+    "UP",
+]
+lint.ignore = [
+    "E501", # line too long, handled by black
+    "B008", # do not perform function calls in argument defaults
+    "C901", # too complex
+    "E722", # bare `except`
+    "E731", # assigning a `lambda`
+    "C408", # Unnecessary `dict` call (rewrite as a literal)
+]
+
+
+#######
+# TOX #
+#######
+
+[tool.tox]
+requires = ["tox>=4.25"]
+envlist = [
+    #"python3.9",
+    "python3.10",
+    "python3.11",
+    "python3.12",
+    "python3.13",
+]
+
+[tool.tox.env_run_base]
+allowlist_externals = ["pyenv", "poetry"]
+commands_pre = [
+    #["pyenv", "local", "3.9", "3.10", "3.11", "3.12", "3.13"],
+    ["poetry", "install", "--no-root", "--sync"],
+]
+commands = [
+    ["poetry", "run", "pytest", "tests/", "--import-mode", "importlib"],
+]
