@@ -1,0 +1,99 @@
+Metadata-Version: 2.4
+Name: django-ext
+Version: 0.10
+Summary: Django Extensions
+Home-page: https://github.com/zengqiu/django-ext
+Author: zengqiu
+Author-email: zengqiu@qq.com
+License: MIT
+Platform: any
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Web Environment
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Internet :: WWW/HTTP :: Dynamic Content
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.5
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: django>=3.2
+Requires-Dist: django-currentuser>=0.5.3
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license
+Dynamic: license-file
+Dynamic: platform
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+Django Ext
+==========
+
+Some extensions for Django.
+
+# Models
+
+## TimestampModel
+
+Add `created_at` and `updated_at` for model.
+
+## TimeRangeModel
+
+Add `started_at` and `ended_at` for model.
+
+## UserTrackModel
+
+Add `created_by` and `update_by` for model.
+
+This model requires `django-currentuser`, and should add it to the middleware classes in your settings.py:
+
+```
+MIDDLEWARE = (
+    ...,
+    'django_currentuser.middleware.ThreadLocalUserMiddleware',
+)
+```
+
+## ExtraFieldsManager
+
+`ExtraFieldsManager` is intended to be used in conjunction with `ExtraFieldsQuerySet` to filter extra added fields using custom filter conditions.
+
+While initializing the `ExtraFieldsManager` class, it is necessary to use the `fields` parameter to specify extra fields and their corresponding filter conditions generation functions.
+
+Usage:
+
+```
+class MyModel(models.Model):
+    relation = models.ForeignKey(RelationModel, models.CASCADE, +, null=False)
+
+    objects = ExtraFieldsManager(fields={
+        # users: an extra field that is not present in the model
+        # lambda function: used to generate complex query conditions
+        'users': lambda x: Q(relation__data__users__contained_by=[str(user.id) for user in x]) | \
+        Q(relation__data__groups__contained_by=Group.objects.filter(user__in=x).distinct().values_list('id', flat=True))
+    })
+```
+
+# Commands
+
+## translate
+
+Translate the permission names into the local language.
+
+```
+$ python manage.py translate
+```
