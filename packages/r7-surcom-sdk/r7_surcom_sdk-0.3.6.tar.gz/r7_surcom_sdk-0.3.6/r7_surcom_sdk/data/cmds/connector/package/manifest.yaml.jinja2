@@ -1,0 +1,150 @@
+---
+id: {{data.id}}.app
+
+name: {{data.name}}
+
+publisher: {{data.author}}
+
+version: {{data.version}}
+
+icon: icon.svg
+
+notice: {{data.notice}}
+
+depends-on:
+  - noetic.builtins.app >= {{data.noetic_builtins_version}}
+
+environment-name: {{data.environment_name}}
+
+description: |
+  {{data.description}}
+
+readme: >
+  {{data.readme}}
+
+categories:
+  {% for c in data.categories|sort() %}
+  - {{c}}
+  {% endfor %}
+
+types:
+  {% for t in data.types|sort() %}
+  - id: {{t}}
+    file: types/{{t}}.yaml
+    icon: icon.svg
+  {% endfor %}
+
+functions:
+  {% for f in data.functions|sort(attribute="id") %}
+  {% if f.id == "test" %}
+
+    - id: {{data.id}}.test
+      hidden: true
+      name: Test Connection
+      description: Test the Connection
+      entrypoint: functions.fn_test.test
+      parameters:
+      {% if data.settings %}{% for s_name, s in data.settings|dictsort %}
+        - $ref: '#/components/parameters/{{s_name}}'
+      {% endfor %}{% endif %}
+      returns:
+        - $ref: '#/components/parameters/TestResponseStatus'
+        - $ref: '#/components/parameters/TestResponseMessage'
+  {% else %}
+
+    - id: {{data.id}}.{{f.id}}
+      name: {{f.id | replace("_", " ") | title}}
+      entrypoint: functions.fn_{{f.id}}.{{f.id}}
+      type: import
+      x-samos-return-items:
+      {% for rt in f.return_types|sort() %}
+        - {{rt}}
+      {% endfor %}
+
+  {% endif %}
+  {% endfor %}
+
+{% if data.settings %}
+settings:
+  {% for s_name, s in data.settings.items() %}
+
+  - name: {{s_name}}
+    type: {{s.type}}
+    title: {{s.title}}
+    {% if s.description %}
+    description: >-
+      {{s.description}}
+    {% endif %}
+    {% if s.example %}
+    example: {{s.example}}
+    {% endif %}
+    {% if s.default is boolean %}
+    default: {{s.default | lower}}
+    {% elif s.default %}
+    default: {{s.default}}
+    {% endif %}
+    {% if s.nullable %}
+    nullable: true
+    {% else %}
+    nullable: false
+    {% endif %}
+    {% if s.enum %}
+    enum:
+    {% for e in s.enum|sort() %}
+      - {{e}}
+    {% endfor %}
+    {% endif %}
+    {% if s.format and s.format == "password" %}
+    format: password
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{% if data['reference-schemas'] %}
+reference-schemas:
+  {% for refdoc in data['reference-schemas'] %}
+  - url: {{refdoc.url}}
+    file: {{refdoc.file}}
+  {% endfor %}
+{% endif %}
+
+components:
+
+  parameters:
+
+    TestResponseStatus:
+      name: status
+      description: Status response from the test function
+      schema:
+        type: string
+        enum:
+          - error
+          - success
+
+    TestResponseMessage:
+      name: message
+      schema:
+        type: string
+
+  {% if data.settings %}
+  {% for s_name, s in data.settings|dictsort %}
+
+    {{s_name}}:
+      name: {{s_name}}
+      type: {{s.type}}
+      default: '@{{data.id}}.{{s_name}}'
+  {% endfor %}
+  {% endif %}
+
+changelog:
+  {% for c in data.changelog %}
+  - date: '{{c.date}}'
+    version: {{c.version}}
+    text: |
+      {% for t in c.text %}
+      + {{t}}
+      {% endfor %}
+  {% endfor %}
+
+requirements: |
+  {{data.requirements}}
