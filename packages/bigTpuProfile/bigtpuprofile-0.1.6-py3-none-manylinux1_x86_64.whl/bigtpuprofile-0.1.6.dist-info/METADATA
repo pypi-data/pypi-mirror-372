@@ -1,0 +1,238 @@
+Metadata-Version: 2.4
+Name: bigTpuProfile
+Version: 0.1.6
+Summary: A profile visualization tool for bm1690
+Home-page: 
+Author: shaoxiong.xiang
+Author-email: shaoxiong.xiang@sophgo.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Requires-Dist: pandas
+Requires-Dist: bs4
+Requires-Dist: openpyxl
+Requires-Dist: numpy
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# bigTpuProfile
+
+bigTpuProfile 是一个板卡性能可视化的工具（目前仅支持bm1690）。
+
+## 目录
+
+- [bigTpuProfilee](#bigTpuProfile)
+
+  - [目录](#目录)
+
+  - [快速开始](#快速开始)
+
+  - [profile数据导出](#profile数据导出)
+    
+    - [算子](#算子)
+      - [tpu-train/tgi](#tpu-train/tgi)
+      - [tpudnn](#tpudnn)
+    - [bmodel](#bmodel)
+    
+  - [可视化](#可视化)
+
+  - [数据分析](#数据分析)
+
+    - [文件夹结构](#文件夹结构)
+    - [doc](#doc)
+    - [web](#web)
+
+  - [许可证](#许可证)
+
+    
+
+## 快速开始
+
+bigTpuProfile的使用主要分为两个步骤：
+
+1. profile数据导出
+2. 通过tpu-mlir进行可视化
+
+## profile数据导出
+
+### 算子
+
+1. bigTpuProfile有三种模式：
+
+    1）模式0 pmu only：不关心算子中具体cmd的类型， 只关心时间维度，该模式对性能影响最小
+
+    2）模式1 精简cmd：关心算子中各cmd的类型，该模式对性能影响较小，dma带宽统计不准确（额外开销 ~4%）
+
+    3）模式2 详细cmd：关心算子中各cmd的详细信息，通常用于调试、各dma带宽统计（额外开销 7 ~ 10%）
+
+2. max_record_num指的是profile的最大记录条数，需注意设置的值要大于记录值。
+
+3. profile输出文件命名规则:
+
+   cdm_profile_data_dev{DeviceID}-{CallNum}
+
+   profile 可在多个设备上独立运行文件名中标记为DeviceID, 也可在该设备上多次被调用(CallNum)
+
+#### tpu-train/tgi
+
+```python
+torch.ops.my_ops.enable_profile(max_record_num, mode)  # 设置记录起始点(记录cmd信息, mode: 0 pmu only, 1 精简cmd, 2 详细cmd)
+ 
+torch.ops.my_ops.disable_profile()  # 设置记录结束点
+```
+
+```python
+# tpu-train example
+# part 0
+torch.ops.my_ops.enable_profile(max_record_num, 0)  # enable profile without cmd info (pure pmu
+_ = a tpu * b tpu
+torch.ops.my_ops.disable_profile()  # disable profile and dump data (cdm_profile_data_dev0-0)
+# part 1
+torch.ops.my_ops.enable_profile(max_record_num, 1)  # enable profile with condensed cmd info
+_ = a tpu + b tpu
+torch.ops.my_ops.disable_profile()  #(cdm_profile_data_dev0-1)
+# part 2
+torch.ops.my_ops.enable_profile(max_record_num, 2)  # enable profile with detailed cmd info
+_ = a tpu + b tpu
+torch.ops.my_ops.disable_profile()  #(cdm_profile_data_dev0-2)
+```
+
+```python
+# tgi (text-generation-inference) example
+# test_whole_parallel.py
+
+def test_whole_model(batches=1, model_id="llama", model_path='/data', quantize=None, mode="chat"):
+    .....
+    for it in range(2):
+        .....
+        for i in range(DECODE_TOKEN_LEN):
+            os.environ["TOKEN_IDX"] = str(i)
+            generate_start = time.time_ns()
+            generations, next_batch, (forward_ns, decode_ns) = model.generate_token(
+                next_batch
+            )
+            generate_end = time.time_ns()
+            time_list.append(generate_end - generate_start)
+            for generation in generations:
+                if i == 0:
+                    generated_text[generation.request_id] = generation.tokens.texts[0]
+                else:
+                    generated_text[generation.request_id] += generation.tokens.texts[0]
+            if decode_only and enable_profile and it > 0 and i == 0:                 # condition
+                torch.ops.my_ops.enable_profile(max_record_num, book_keeping)        # enable profile
+            logger.info(f"Token {i} {[g.tokens.texts[0] for g in generations]}")
+            if next_batch is None:
+                break
+
+        if enable_profile and it > 0:                                                # condition
+            torch_tpu.tpu.optimer_utils.OpTimer_dump()
+            torch.ops.my_ops.disable_profile()                                       # disable profile
+  .....   
+    
+```
+
+#### tpudnn
+
+```c++
+// 假定handle类型为: tpudnnHandle_t
+auto pimpl = static_cast<TPUDNNImpl *>(handle);
+ 
+pimpl->enableProfile(max_record_num, mode);  // # 设置记录起始点(记录cmd信息, mode: 0 pmu only, 1 精简cmd, 2 详细cmd)
+pimpl->disableProfile();  // 设置记录结束点
+```
+
+```c++
+// tpudnn example
+....
+const int group_num =1;
+const int group_size = pimpl->getCoreNum();
+pimpl->enableProfile();    // enable profile
+status = pimpl->launchKernel("gelu_forward_multi_core", &api, sizeof(api), group_num, group_size);
+pimpl->disableProfile();   // disable profile
+pimpl->enableProfile(80);  // enable profile
+status = pimpl->launchKernel("gelu_forward_multi_core", &api, sizeof(api), group_num, group_size);
+pimpl->disableProfile();   // disable profile
+return status;
+```
+
+
+
+### bmodel
+
+与针对算子的使用方式不同，bmodel主要通过环境变量进行控制，仅需关注最大记录条目数是否合适，无需设置mode模式：
+
+- `ENABLE_ALL_PROFILE=1`： 启动profile
+
+- `TPUKERNEL_FIRMWARE_PATH=/home/xxx/libfirmware_core.so`： 设置fimrware.so 若bmodel版本太老需设置
+
+- `PROFILE_MODE`： （可选项，可选值1 2）查看额外的profile信息，如input，output搬运信息
+
+- `PROFILE_RECORD_SIZE`： （可选项，默认值131072） 设置 pmu 最大记录的条目数
+
+```bash
+# 用默认的libfirmware_core.so和条目数
+ENABLE_ALL_PROFILE=1 tpu-model-rt --bmodel ./xxx.bmodel
+ 
+# 指定fimrware.so， 指定记录条目数， 查看inputs ouputs搬运性能
+TPUKERNEL_FIRMWARE_PATH=/home/xxx/libfirmware_core.so ENABLE_ALL_PROFILE=1  PROFILE_MODE=2 PROFILE_RECORD_SIZE=40960 tpu-model-rt  --bmodel ./xxx.bmodel
+```
+
+## 可视化
+
+通过bigTpuProfile进行解析与可视化
+
+```bash
+# 使用 bigTpuProfile -h 查看可用参数
+bigTpuProfile cdm_profile_data_devX-X/ result_out --arch BM1690  # 可视化结果存储于result_out
+```
+
+## 数据分析
+
+### 文件夹结构
+
+```
+/result_out/
+├── tiuRegInfo_x
+├── tdmaRegInfo_x
+├── cdmaRegInfo_x
+├── PerfDoc   文档可视化结果
+└── PerfWeb   web可视化结果
+```
+
+### doc
+
+PerfAI_output.xlsx 中包括总览，及各个core中各engine（tiu gdma sdma cdma）所记录到的有效数据
+
+命名规则为：engineType_coreId
+
+![](./img/doc.png)
+
+
+
+### web
+
+result.html 中包括总览，各个core的可视化，以及core间的比对图
+
+![](./img/web.png)
+
+web中可通过滚轮或滑块进行局部缩放，悬停到某条指令后可通过global_idx，在doc对应的engineType_coreId子栏中的C列找到对应指令的详细信息
+
+![](./img/global_idx.png)
+
+通过其他选项也有助于性能分析（TIU uArch Rate 功能暂未支持）
+
+![](./img/web2.png)
+
+
+
+## 许可证
+
+bigTpuProfile 采用 2-Clause BSD 许可证，但第三方组件除外。
