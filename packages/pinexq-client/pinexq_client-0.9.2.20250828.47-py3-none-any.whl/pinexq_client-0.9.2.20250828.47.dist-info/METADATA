@@ -1,0 +1,104 @@
+Metadata-Version: 2.1
+Name: pinexq-client
+Version: 0.9.2.20250828.47
+Summary: A hypermedia-based client for the DataCybernetics PinexQ platform.
+Author-Email: =?utf-8?q?Sebastian_H=C3=B6fer?= <hoefer@data-cybernetics.com>, Mathias Reichardt <reichardt@data-cybernetics.com>, Jasim Ahmed <ahmed@data-cybernetics.com>, Pratik Poudel <poudel@data-cybernetics.com>
+Maintainer-Email: Mathias Reichardt <reichardt@data-cybernetics.com>, =?utf-8?q?Sebastian_H=C3=B6fer?= <hoefer@data-cybernetics.com>, Carsten Blank <blank@data-cybernetics.com>
+License: MIT
+Requires-Python: >=3.11
+Requires-Dist: pydantic<3.0.0,>=2.1.0
+Requires-Dist: httpx<1.0.0,>=0.25.0
+Description-Content-Type: text/markdown
+
+# Pine-x-Q Python Client
+
+A hypermedia-based client for the DataCybernetics PinexQ platform.
+
+This module contains the submodules:
+
+- `core`: A generic *hypermedia client* (HC) to work with siren hypermedia APIs
+[Siren on GitHub](https://github.com/kevinswiber/siren)
+
+- `job_management`: Specialized HC-object (HCO) implementations for the PinexQ *Job-Management API* (JMA).
+
+## Installation
+
+Install from PyPI by running
+
+```pip install pinexq-client```
+
+## Setup the Client
+
+The hypermedia client uses [HTTPX](https://github.com/projectdiscovery/httpx) as a backend.
+To access the API you need to provide a pre-configured HTTPX-client with a valid API key for authentication. 
+From The API key the user and permissions are derived so do not share the API key and store it securely.
+
+To initialize the client parts must be supplied:
+
+- The API key (as header)
+- The API host as URL with port if required
+
+```python
+from httpx import Client
+
+from pinexq_client.job_management.enterjma import enter_jma
+from pinexq_client.job_management.hcos.entrypoint_hco import EntryPointHco
+
+client = Client(
+    base_url="https://myapihost.com:80",
+    headers={'x-api-key': '<SECRET_PAT>'}
+)
+
+# the client is now ready to be passed to function entering the API
+entrypoint: EntryPointHco = enter_jma(client)
+```
+
+
+## Using the API
+
+
+### Job-Management Interface
+
+There is a convenience layer wrapping job-management-specific objects in interface classes for ease of use.
+
+```python
+from pinexq_client.job_management.tool import Job
+from pinexq_client.job_management.model import JobStates
+
+job = (
+    Job(client)
+    .create(name="JobName")
+    .select_processing(processing_step="step_function_name")
+    .configure_parameters(param_name="value")
+    .start()
+    .wait_for_state(JobStates.completed)
+)
+result = job.get_result()
+```
+
+### Raw Hypermedia API
+
+In the spirit of a hypermedia API you can also use low level calls to navigate the API, 
+e.g. when features are not yet exposed in the convenience wrapper.
+
+```python
+from pinexq_client.job_management.enterjma import enter_jma
+from pinexq_client.job_management.hcos.entrypoint_hco import EntryPointHco
+from pinexq_client.job_management.model import CreateJobParameters, SetJobTagsParameters
+
+entrypoint: EntryPointHco = enter_jma(client)
+# Get to jobs root
+job_root = entrypoint.job_root_link.navigate()
+# Create a new job
+parameters = CreateJobParameters(name="Test Job")
+job = job_root.create_job_action.execute(parameters).navigate()
+# Edit the job's tags
+job.edit_tags_action.execute(SetJobTagsParameters(tags=["test", ]))
+
+...
+```
+
+
+
+
+
