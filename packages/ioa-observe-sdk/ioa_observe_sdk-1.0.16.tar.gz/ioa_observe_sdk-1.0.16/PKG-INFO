@@ -1,0 +1,193 @@
+Metadata-Version: 2.4
+Name: ioa-observe-sdk
+Version: 1.0.16
+Summary: IOA Observability SDK
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Requires-Dist: colorama==0.4.6
+Requires-Dist: requests>=2.32.3
+Requires-Dist: opentelemetry-api==1.33.1
+Requires-Dist: opentelemetry-distro
+Requires-Dist: opentelemetry-exporter-otlp==1.33.1
+Requires-Dist: opentelemetry-exporter-otlp-proto-common==1.33.1
+Requires-Dist: opentelemetry-exporter-otlp-proto-grpc==1.33.1
+Requires-Dist: opentelemetry-exporter-otlp-proto-http==1.33.1
+Requires-Dist: opentelemetry-instrumentation
+Requires-Dist: opentelemetry-instrumentation-logging==0.54b1
+Requires-Dist: opentelemetry-instrumentation-openai==0.43.1
+Requires-Dist: opentelemetry-instrumentation-llamaindex==0.43.1
+Requires-Dist: opentelemetry-instrumentation-ollama==0.43.1
+Requires-Dist: opentelemetry-instrumentation-anthropic==0.43.1
+Requires-Dist: opentelemetry-instrumentation-langchain==0.43.1
+Requires-Dist: opentelemetry-instrumentation-bedrock==0.43.1
+Requires-Dist: opentelemetry-instrumentation-cohere==0.43.1
+Requires-Dist: opentelemetry-instrumentation-crewai==0.43.1
+Requires-Dist: opentelemetry-instrumentation-google-generativeai==0.43.1
+Requires-Dist: opentelemetry-instrumentation-groq==0.43.1
+Requires-Dist: opentelemetry-instrumentation-mistralai==0.43.1
+Requires-Dist: opentelemetry-instrumentation-requests==0.54b1
+Requires-Dist: opentelemetry-instrumentation-sagemaker==0.43.1
+Requires-Dist: opentelemetry-instrumentation-threading==0.54b1
+Requires-Dist: opentelemetry-instrumentation-together==0.43.1
+Requires-Dist: opentelemetry-instrumentation-transformers==0.43.1
+Requires-Dist: opentelemetry-instrumentation-urllib3==0.54b1
+Requires-Dist: opentelemetry-instrumentation-vertexai==0.43.1
+Requires-Dist: opentelemetry-proto==1.33.1
+Requires-Dist: opentelemetry-sdk==1.33.1
+Requires-Dist: opentelemetry-semantic-conventions==0.54b1
+Requires-Dist: opentelemetry-semantic-conventions-ai>=0.4.11
+Requires-Dist: opentelemetry-util-http==0.54b1
+Requires-Dist: langgraph>=0.3.2
+Requires-Dist: langchain>=0.3.19
+Requires-Dist: langchain-openai>=0.3.8
+Requires-Dist: llama-index>=0.12.34
+Requires-Dist: pytest
+Requires-Dist: pytest-vcr
+Dynamic: license-file
+
+# Observe-SDK
+
+[![PyPI version](https://img.shields.io/pypi/v/ioa-observe-sdk.svg)](https://pypi.org/project/ioa-observe-sdk/)
+
+IOA observability SDK for your multi-agentic application.
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Schema](#schema)
+- [Dev](#dev)
+- [Testing](#testing)
+- [Getting Started](#getting-started)
+- [Contributing](#contributing)
+
+## Installation
+
+To install the package via PyPI, simply run:
+
+```bash
+pip install ioa_observe_sdk
+```
+
+Alternatively, to download the SDK from git, you could also use the following command. Ensure you have `uv` installed in your environment.
+
+```bash
+uv add "git+https://github.com/agntcy/observe"
+```
+
+## Schema
+
+The AGNTCY observability schema is an extension of the OTel LLM Semantic Conventions for Generative AI systems.
+This schema is designed to provide comprehensive observability for Multi-Agent Systems (MAS).
+
+Link: [AGNTCY Observability Schema](https://github.com/agntcy/observe/blob/main/schema/)
+
+An option is made available for transforming spans attributes exported by using options via env variables (SPAN_TRANSFORMER_RULES_ENABLED, SPAN_TRANSFORMER_RULES_FILE). Please read [transform](./sdk/tracing/transform_span.py).
+
+## Dev
+
+Any Opentelemetry compatible backend can be used, but for this guide, we will use ClickhouseDB as the backend database.
+
+### Opentelemetry collector
+
+The OpenTelemetry Collector offers a vendor-agnostic implementation of how to receive, process and export telemetry data. It removes the need to run, operate, and maintain multiple agents/collectors.
+
+### Clickhouse DB
+
+ClickhouseDB is used as a backend database to store and query the collected telemetry data efficiently, enabling you to analyze and visualize observability information for your multi-agentic applications.
+
+### Grafana (optional)
+
+Grafana can be used to visualize the telemetry data collected by the OpenTelemetry Collector and stored in ClickhouseDB.
+
+To get started with development, start a Clickhouse DB and an OTel collector container locally using docker-compose like so:
+
+```
+cd deploy/
+docker compose up -d
+```
+
+Running both locally allows you to test, monitor, and debug your observability setup in a development environment before deploying to production.
+
+Ensure the contents of `otel-collector.yaml` is correct.
+
+Check the logs of the collector to ensure it is running correctly:
+
+```
+docker logs -f otel-collector
+```
+
+Viewing data in Clickhouse DB can be done using the Clickhouse client. The collector is configured to export telemetry data to Clickhouse.
+
+The clickhouse exporter creates various tables in the Clickhouse DB, including `otel_traces`, which is used to store trace data.
+
+For more info, refer to the [OpenTelemetry Clickhouse Exporter documentation](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/exporter/clickhouseexporter/README.md)
+
+```bash
+docker exec -it clickhouse-server clickhouse-client
+
+select * from otel_traces LIMIT 10;
+```
+
+Create a `.env` file with the following content:
+
+```bash
+OTLP_HTTP_ENDPOINT=http://localhost:4318
+```
+
+Install the dependencies and activate the virtual environment:
+
+```bash
+set -a
+source .env
+set +a
+
+python3 -m venv .venv
+source .venv/bin/activate
+uv sync
+```
+
+## Testing
+
+To run the unit tests, ensure you have the `OPENAI_API_KEY` set in your environment. You can run the tests using the following command:
+
+```bash
+OPENAI_API_KEY=<KEY> make test
+```
+
+## 🚀 Getting Started
+
+For getting started with the SDK, please refer to the [Getting Started](https://github.com/agntcy/observe/blob/main/GETTING-STARTED.md)
+ file. It contains detailed instructions on how to set up and use the SDK effectively.
+
+### Grafana
+
+To configure Grafana to visualize the telemetry data, follow these steps:
+
+1. Spin up Grafana locally using Docker:
+
+```bash
+docker run -d -p 3000:3000 --name=grafana grafana/grafana
+```
+2. Access Grafana by navigating to `http://localhost:3000` in your web browser.
+   - Default username: `admin`
+   - Default password: `admin`
+
+3. Add a new data source:
+   - Choose "ClickHouse" as the data source type.
+   - Set the URL to `http://0.0.0.0:8123`.
+   - Configure the authentication settings if necessary.
+   - Save and test the connection to ensure it works correctly.
+
+Refer to the [Grafana ClickHouse plugin documentation](https://grafana.com/grafana/plugins/grafana-clickhouse-datasource/) for more details on configuring ClickHouse as a data source.
+
+
+## Contributing
+
+Contributions are welcome! Please follow these steps to contribute:
+
+1. Fork the repository.
+2. Create a new branch (`git checkout -b feature-branch`).
+3. Commit your changes (`git commit -am 'Add new feature'`).
+4. Push to the branch (`git push origin feature-branch`).
+5. Create a new Pull Request.
