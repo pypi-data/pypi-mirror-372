@@ -1,0 +1,176 @@
+# complete docker compose with geovisio backend, a database, some pictures workers and OSM based authentication
+# * All is accessible through http://localhost:8080 (using a reverse proxy to dispatch to all services)
+#
+# Some key variables can be changed by providing a `.env` file or environment variables to docker compose
+# and feel free to change more configuration directly in this file if needed.
+#
+# Note: if the port 8080 is alreay binded on your system, change it in this file
+
+x-base-geovisio: &geovisio-default
+  image: panoramax/api:${GEOVISIO_IMAGE_TAG:-latest}
+  build:
+    context: ../..
+    dockerfile: Dockerfile
+    cache_from:
+      - registry.gitlab.com/panoramax/server/api:build_cache
+
+services:
+  migrations:
+    <<: *geovisio-default
+    command: db-upgrade
+    environment:
+      DB_URL: postgres://gvs:${PG_PASSWORD}@db/geovisio
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      db: {}
+
+  api:
+    <<: *geovisio-default
+    command: ssl-api
+    depends_on:
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    environment:
+      OAUTH_PROVIDER: osm
+      OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID}
+      OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET}
+      DB_URL: postgres://gvs:${PG_PASSWORD}@db/geovisio
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
+      FLASK_SESSION_COOKIE_DOMAIN: ${FLASK_SESSION_COOKIE_DOMAIN:-localhost}
+      API_FORCE_AUTH_ON_UPLOAD: True
+      API_PICTURES_LICENSE_SPDX_ID: CC-BY-SA-4.0 # default pictures's license, change it if needed
+      API_PICTURES_LICENSE_URL: https://spdx.org/licenses/CC-BY-SA-4.0.html
+      API_BLUR_URL: ${BLUR_API:-https://blur.panoramax.openstreetmap.fr}
+      API_DERIVATES_PICTURES_PUBLIC_URL: /derivatives
+      API_PERMANENT_PICTURES_PUBLIC_URL: /permanent
+      PICTURE_PROCESS_THREADS_LIMIT: 0
+      PICTURE_PROCESS_DERIVATES_STRATEGY: PREPROCESS
+      FS_URL: /data/geovisio
+      NB_API_THREADS: 10
+      INFRA_NB_PROXIES: ${INFRA_NB_PROXIES:-1}
+      # API SUMMARY regroup many metadata about the instance
+      # check the documentation on how translations are handled: https://docs.panoramax.fr/api/install/settings/#metadata
+      API_SUMMARY: >-
+        {
+          "color": "#abcdef",
+          "description": {"en": "a long description", "fr": "une description longue"},
+          "logo": "https://gitlab.com/panoramax/gitlab-profile/-/raw/main/images/logo.svg", 
+          "email": "the_administrator@mypanoramax.org",
+          "name": {"en": "${INSTANCE_NAME:-A Panoramax instance}", "fr": "Mon petit serveur des familles"},
+          "geo_coverage": {"en": "Anywhere you like", "fr": "Partout où le vent vous portera"}
+        }
+      API_REGISTRATION_IS_OPEN: True # True if the instance is open to registration, False if not, it is only used in the federation for the moment
+    ports:
+      - 5000
+    volumes:
+      - pic_data:/data/geovisio
+    healthcheck:
+      test: python -c "import requests; requests.get('http://localhost:5000/api').raise_for_status()"
+      interval: 4s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+    networks:
+      db: {}
+      geovisio: {}
+    restart: always
+
+  website:
+    image: panoramax/website:${GEOVISIO_IMAGE_TAG:-latest}
+    environment:
+      VITE_INSTANCE_NAME: ${INSTANCE_NAME:-A geovisio instance}
+      VITE_API_URL: /
+      VITE_TILES: https://panoramax.openstreetmap.fr/pmtiles/basic.json
+       # optional metadata
+      # The title for the <title> tag of the HTML
+      VITE_TITLE: "My Panoramax: The free alternative to photo-mapping territories" 
+      # The title for the meta tags.
+      VITE_META_TITLE: "My Panoramax: The free alternative to photo-mapping territories"
+      # The description for meta tags, which is useful for SEO.
+      VITE_META_DESCRIPTION: "Panoramax is a digital resource for sharing and using field photos. Anyone can take photographs of places visible from public roads and contribute them to the Panoramax database."
+    ports:
+      - 3000
+    networks:
+      geovisio: {}
+    restart: always
+  
+  # Background workers used to process pictures in the background
+  # calling the blur API and generating derivates (SD picture and tiles for faster rendering in photosphereviewer)
+  # Several background workers can run together
+  # Note: the blurring is configured to be done using the OSM-FR service, you can change the variable `API_BLUR_URL` if needed (in the API too).
+  background-worker:
+    <<: *geovisio-default
+    command: picture-worker
+    depends_on:
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    restart: always
+    environment:
+      PICTURE_PROCESS_DERIVATES_STRATEGY: PREPROCESS
+      DB_URL: postgres://gvs:${PG_PASSWORD}@db/geovisio
+      FS_URL: /data/geovisio
+      API_BLUR_URL: ${BLUR_API:-https://blur.panoramax.openstreetmap.fr}
+
+    deploy:
+      mode: replicated
+      replicas: ${PICTURE_WORKERS_REPLICATS:-5} # by default this number of workers will be run. This can be change at runtime with `docker compose up background-worker -d --scale background-worker=<VALUE>`
+    volumes:
+      - pic_data:/data/geovisio
+    networks:
+      db: {}
+
+  reverseproxy:
+    image: nginx:1.25.5
+    ports:
+      - 8080:8080
+    restart: always
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - pic_data:/data/geovisio
+      - ./robots.txt:/etc/nginx/robots.txt
+    networks:
+      geovisio: {}
+
+  db:
+    environment:
+      POSTGRES_DB: geovisio
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_USER: gvs
+    healthcheck:
+      test: pg_isready -h db -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 5
+      start_period: 5s
+    image: postgis/postgis:16-3.4
+    ports:
+      - 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      db: {}
+    restart: always
+
+volumes:
+  postgres_data:
+    name: geovisio_osm_postgres_data
+
+  pic_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${PICTURES_DIR:-./pictures_storage} # pictures are stored localy in this directory.
+
+networks:
+  db: {}
+  geovisio: {}

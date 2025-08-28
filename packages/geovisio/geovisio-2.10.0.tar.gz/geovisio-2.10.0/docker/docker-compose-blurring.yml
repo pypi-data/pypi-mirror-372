@@ -1,0 +1,70 @@
+# This docker compose is the one to use if you want to run the blurring API.
+# It should be quite close to the one defined by https://github.com/cquest/sgblur.
+# ----
+# This docker-compose needs to be used alongside a docker containing geovisio API
+# For instance with docker-compose-full.yml
+# docker compose -f docker/docker-compose-full.yml -f docker/docker-compose-blurring.yml up
+services:
+  blur:
+    # The blurring API, that calls the detection API and blurs the picture using the detected objects.
+    # This does not require a GPU, but is CPU-bound.
+    build: .
+    image: panoramax/sgblur:${BLUR_IMAGE_TAG:-latest}
+    environment:
+      WEB_CONCURRENCY: "8"  # Number of workers for the API, you can adjust this depending on your available CPU ressources.
+      DETECT_URL: "http://detect:8001"
+    restart: unless-stopped
+    depends_on:
+      detect:
+        condition: service_healthy
+    ports:
+      - 8000
+    networks:
+      blur: {}
+
+  detect:
+    # This service is the one responsible for running the detection model.
+    # It is GPU-bound
+    build: .
+    image: panoramax/sgblur:${BLUR_IMAGE_TAG:-latest}
+    entrypoint: ["uvicorn", "src.detect.detect_api:app", "--host", "0.0.0.0", "--port", "8001"]
+    #environment:
+      #MODEL_NAME: # specify a model if needed, else the one fitting the most the available GPU will be used
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia # We only support Nvidia card right now
+              count: all
+              capabilities: [gpu]
+
+    restart: unless-stopped
+    healthcheck:
+      test: python -c "import requests; requests.get('http://localhost:8001/').raise_for_status()"
+      interval: 4s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+    ports:
+      - 8001
+    networks:
+      blur: {}
+
+
+  # Add a configuration to the API/workers to tell them the location of the blurring API
+  api:
+    environment:
+      API_BLUR_URL: http://blur:8000
+
+  background-worker:
+    environment:
+      API_BLUR_URL: http://blur:8000
+    depends_on:
+      blur:
+        condition: service_healthy
+    networks:
+      blur: {}
+
+
+networks:
+  blur: {}

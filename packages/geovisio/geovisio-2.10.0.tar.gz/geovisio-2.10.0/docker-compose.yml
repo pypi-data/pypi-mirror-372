@@ -1,0 +1,113 @@
+# Sample docker compose for a quick overview of GeoVisio
+# * The API is accessible at http://localhost:5000
+#
+# Some key variables can be changed by providing a `.env` file or environment variables to docker compose
+# and feel free to change more configuration directly in this file if needed.
+#
+# Note: if the port 5000 is alreay binded on your system, change it in this file
+
+x-base-geovisio: &geovisio-default
+  image: panoramax/api:${GEOVISIO_IMAGE_TAG:-latest}
+  build:
+    context: .
+    dockerfile: Dockerfile
+    cache_from:
+      - registry.gitlab.com/panoramax/server/api:build_cache
+
+services:
+  migrations:
+    <<: *geovisio-default
+    command: db-upgrade
+    environment:
+      DB_URL: postgres://gvs:gvspwd@db/geovisio
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      db: {}
+
+  api:
+    <<: *geovisio-default
+    command: ssl-api
+    depends_on:
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    environment:
+      DB_URL: postgres://gvs:gvspwd@db/geovisio
+      PICTURE_PROCESS_THREADS_LIMIT: 0
+    ports:
+      - 5000:5000
+    volumes:
+      - pic_data:/data/geovisio
+    healthcheck:
+      test: python -c "import requests; requests.get('http://localhost:5000/api').raise_for_status()"
+      interval: 4s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+    networks:
+      db: {}
+      geovisio: {}
+
+  # Background workers used to process pictures in the background
+  # No blurring is configured in this simple docker compose, for more complex setup, check the documentation
+  background-worker:
+    <<: *geovisio-default
+    command: picture-worker
+    depends_on:
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    restart: always
+    environment:
+      PICTURE_PROCESS_DERIVATES_STRATEGY: PREPROCESS
+      DB_URL: postgres://gvs:gvspwd@db/geovisio
+      FS_URL: /data/geovisio
+      # API_BLUR_URL: https://blur.panoramax.openstreetmap.fr # uncomment this if you want to use the OpenStreetMap-France blur service
+      BD_MIN_CNX: 1
+      BD_MAX_CNX: 3
+
+    deploy:
+      mode: replicated
+      replicas: 5 # by default this number of workers will be run. This can be change at runtime with `docker compose up background-worker -d --scale background-worker=<VALUE>`
+    volumes:
+      - pic_data:/data/geovisio
+    networks:
+      db: {}
+
+  db:
+    environment:
+      POSTGRES_DB: geovisio
+      POSTGRES_PASSWORD: gvspwd
+      POSTGRES_USER: gvs
+    healthcheck:
+      test: pg_isready -h db -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 5
+      start_period: 5s
+    image: postgis/postgis:16-3.4
+    ports:
+      - 5445:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      db: {}
+
+volumes:
+  postgres_data:
+    name: geovisio_postgres_data
+
+  pic_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${PICTURES_DIR:-./pictures_storage} # pictures are stored localy in this directory.
+
+networks:
+  db: {}
+  geovisio: {}

@@ -1,0 +1,45 @@
+services:
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-05-24T17-08-30Z
+    command: server --console-address ":9001" /mnt/data
+    ports:
+      - 9000
+      - 9001
+    volumes:
+      - minio-data:/mnt/data
+    environment:
+      MINIO_ROOT_USER: geovisio
+      MINIO_ROOT_PASSWORD: SOME_VERY_SECRET_KEY
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://minio:9000/minio/health/live"]
+      interval: 2s
+      timeout: 5s
+      retries: 3
+    restart: always
+
+  create-minio-buckets:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 geovisio SOME_VERY_SECRET_KEY;
+      
+      mc mb myminio/panoramax-public;
+      mc mb myminio/panoramax-private;
+      mc anonymous set download myminio/panoramax-public;
+      "
+
+  minio-ready:
+    # hack to bypass testcontainers limitation, since it cannot wait for a job to be completed, 
+    # start a dumb service after all buckets are created
+    # and wait for it to be ready in the tests
+    image: alpine
+    depends_on:
+      create-minio-buckets:
+        condition: service_completed_successfully
+    entrypoint: "sleep infinity"
+
+volumes:
+  minio-data: {}

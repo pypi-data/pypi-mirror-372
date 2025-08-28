@@ -1,0 +1,206 @@
+variables:
+  DOCKER_BUILDKIT: 1 # use buildkit for better performance
+  DOCKER_DRIVER: overlay2 # better docker driver to avoid copying too many files on each run
+  GITLAB_REGISTRY: registry.gitlab.com # We use docker.io for official images and gitlab's registry to store temporary images
+  DOCKER_IMAGE_NAME: panoramax/api
+  REPO_NAME: panoramax/server/api
+  CI_IMAGE_CACHE: $GITLAB_REGISTRY/$REPO_NAME:build_cache
+  DOCKER_TLS_CERTDIR: ""
+
+# Pipelines will run only for MR, tag and develop/main commits
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_BRANCH == "main"
+
+code-fmt:
+  stage: test
+  only:
+      - merge_requests
+  image: python:3.10-alpine
+  script:
+    - pip install black
+    - black --fast --check .
+
+test-in-docker:
+  # run tests inside a docker only when the dockerfile changes since this test can be a bit slow
+  rules:
+    - if: $CI_DEPLOY_PASSWORD && $CI_DEPLOY_USER
+      changes:
+        - Dockerfile
+        - .dockerignore
+  stage: test
+  image: docker:latest
+  services:
+      - docker:dind
+      - postgis/postgis:15-3.4
+  variables:
+    POSTGRES_DB: geovisio_test
+    POSTGRES_USER: geovisio
+    POSTGRES_PASSWORD: geovisiopass
+    POSTGRES_HOST_AUTH_METHOD: trust
+    TMP_CI_IMAGE: $GITLAB_REGISTRY/$REPO_NAME:$CI_COMMIT_SHORT_SHA
+    FF_NETWORK_PER_BUILD: 1 # we ask gitlab to create a custom docker network, to be able to use the services inside the docker
+
+
+  before_script:
+    # login to the gitlab docker registry
+    - echo $CI_DEPLOY_PASSWORD | docker login -u $CI_DEPLOY_USER --password-stdin $GITLAB_REGISTRY
+    - docker buildx create --use --name "geovisio-image-builder" --driver=docker-container # use docker-container driver to be able to publish a full cache
+  script:
+      # create a docker image using the build_cache
+      # push the cache in the gitlab registry for the other steps
+      # Note: the cache mode is set to 'max' to cache the multi stage layers too
+      - docker buildx build
+        --cache-from "type=registry,ref=$CI_IMAGE_CACHE"
+        --cache-to "type=registry,mode=max,ref=$CI_IMAGE_CACHE"
+        --tag "$TMP_CI_IMAGE"
+        --load
+        --progress=plain
+        .
+      # run tests in docker container and mount tests files as they are not included in the dockerfile
+      - docker run --rm
+        --env DB_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgis-postgis/${POSTGRES_DB}"
+        --entrypoint "bash"
+        --network=host
+        --volume ./tests:/opt/geovisio/tests
+        $TMP_CI_IMAGE
+        -c 'pip install -e .[dev] && /home/geovisio/.local/bin/pytest -m "not skipci"'
+  after_script:
+    - docker rmi $TMP_CI_IMAGE || true # accept failure, as image creation can fail
+
+
+test:
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: on_success
+
+  stage: test
+  image: python:3.10
+  services:
+      - postgis/postgis:15-3.4
+  variables:
+      PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+      POSTGRES_DB: geovisio_test
+      POSTGRES_USER: geovisio
+      POSTGRES_PASSWORD: geovisiopass
+      POSTGRES_HOST_AUTH_METHOD: trust
+      DB_URL: "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@postgis-postgis/$POSTGRES_DB"
+      FS_TMP_URL: "/tmp/geovisio_test/tmp/"
+      FS_PERMANENT_URL: "/tmp/geovisio_test/permanent/"
+      FS_DERIVATES_URL: "/tmp/geovisio_test/derivates/"
+  script:
+      - apt update && apt install -y gettext
+      - mkdir -p /tmp/geovisio_test/tmp /tmp/geovisio_test/derivates /tmp/geovisio_test/permanent
+      - pip install -e .[dev]
+      - make i18n-po2code
+      - pytest -vv -m "not skipci"
+
+
+publish-develop:
+  rules:
+    # run job only for fork that have the credentials to pull images from the gitlab-registry
+    # and only for merge on 'develop' branch
+    - if: $CI_DEPLOY_PASSWORD == null || $CI_DEPLOY_USER == null
+      when: never
+    - if: $CI_COMMIT_REF_SLUG == "develop"
+  stage: deploy
+  image: docker:latest
+  services:
+      - docker:dind
+      - postgis/postgis:15-3.4
+  variables:
+      POSTGRES_DB: geovisio_test
+      POSTGRES_USER: geovisio
+      POSTGRES_PASSWORD: geovisiopass
+      POSTGRES_HOST_AUTH_METHOD: trust
+      FF_NETWORK_PER_BUILD: 1 # we ask gitlab to create a custom docker network, to be able to use the services inside the docker
+  before_script:
+    # login to the gitlab docker registry to use the cache and to publish
+    - echo $CI_DEPLOY_PASSWORD | docker login -u $CI_DEPLOY_USER --password-stdin $GITLAB_REGISTRY
+    - docker buildx create --use --name "geovisio-image-builder" --driver=docker-container # use docker-container driver to be able to publish a full cache
+    # login to dockerhub
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    # build image using repository as cache
+    - docker buildx build
+      --cache-from "type=registry,ref=$CI_IMAGE_CACHE"
+      --cache-to "type=registry,mode=max,ref=$CI_IMAGE_CACHE"
+      --tag "$DOCKER_IMAGE_NAME:develop"
+      --build-arg GIT_DESCRIBE=$GIT_DESCRIBE
+      --build-arg BUILD_DATE=$CI_JOB_STARTED_AT
+      --load
+      --progress=plain
+      .
+    # run tests in docker container
+    - docker run --rm
+      --env DB_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgis-postgis/${POSTGRES_DB}"
+      --entrypoint "bash"
+      --network=host
+      --volume ./tests:/opt/geovisio/tests
+      "$DOCKER_IMAGE_NAME:develop"
+      -c 'pip install -e .[dev] && /home/geovisio/.local/bin/pytest -vv -m "not skipci"'
+
+    # publish image to dockerhub with the develop tag
+    - docker push "$DOCKER_IMAGE_NAME:develop"
+
+publish-tag-and-latest:
+  # we consider that tag always land on main
+  # and they always should publish a tagged image and the `latest` docker image
+  only:
+    - tags
+  stage: deploy
+  image: docker:latest
+  services:
+      - docker:dind
+      - postgis/postgis:15-3.4
+  variables:
+      POSTGRES_DB: geovisio_test
+      POSTGRES_USER: geovisio
+      POSTGRES_PASSWORD: geovisiopass
+      POSTGRES_HOST_AUTH_METHOD: trust
+      FF_NETWORK_PER_BUILD: 1 # we ask gitlab to create a custom docker network, to be able to use the services inside the docker
+  before_script:
+    # login to the gitlab docker registry to use the cache and to publish
+    - echo $CI_DEPLOY_PASSWORD | docker login -u $CI_DEPLOY_USER --password-stdin $GITLAB_REGISTRY
+    - docker buildx create --use --name "geovisio-image-builder" --driver=docker-container # use docker-container driver to be able to publish a full cache
+    # login to dockerhub
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    # build image using repository as cache
+    - docker buildx build
+      --cache-from "type=registry,ref=$CI_IMAGE_CACHE"
+      --cache-to "type=registry,mode=max,ref=$CI_IMAGE_CACHE"
+      --tag "$DOCKER_IMAGE_NAME:$CI_COMMIT_REF_NAME"
+      --tag "$DOCKER_IMAGE_NAME:latest"
+      --build-arg GIT_DESCRIBE=$GIT_DESCRIBE
+      --build-arg BUILD_DATE=$CI_JOB_STARTED_AT
+      --load
+      --progress=plain
+      .
+    # run tests in docker container
+    - docker run --rm
+      --env DB_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgis-postgis/${POSTGRES_DB}"
+      --entrypoint "bash"
+      --network=host
+      --volume ./tests:/opt/geovisio/tests
+      "$DOCKER_IMAGE_NAME:latest"
+      -c 'pip install -e .[dev] && ~/.local/bin/pytest -vv -m "not skipci"'
+
+    # publish image to dockerhub
+    - docker push $DOCKER_IMAGE_NAME:$CI_COMMIT_REF_NAME
+    - docker push $DOCKER_IMAGE_NAME:latest
+
+publish-on-pypi:
+  only:
+    - tags
+  stage: deploy
+  image: python:3.10
+  script:
+    - apt update && apt install -y gettext
+    - pip install .[build]
+    - make i18n-po2code
+    - flit publish # use [flit](https://flit.pypa.io/) and FLIT_USERNAME/FLIT_PASSWORD env var
