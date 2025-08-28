@@ -1,0 +1,109 @@
+---
+title: Examples & Cookbook
+---
+
+Ready-to-run snippets you can drop into `examples/*.py`.
+
+## Functional style (decorators)
+
+```python
+from pybench import bench, BenchContext
+
+@bench(name="join", n=1000, repeat=10)
+def join(sep: str = ","):
+    sep.join(str(i) for i in range(100))
+
+@bench(name="concat_ctx", n=1_000, repeat=10)
+def concat_ctx(b: BenchContext):
+    pieces = [str(i) for i in range(200)]
+    b.start(); s = ""
+    for p in pieces: s += p
+    b.end()
+```
+
+Run and filter:
+
+```bash
+pybench examples/ -k join
+```
+
+## Suite style (grouping + baseline)
+
+```python
+from pybench import Bench, BenchContext
+
+suite = Bench("strings")
+
+@suite.bench(name="baseline", baseline=True, n=1_000, repeat=10)
+def baseline(b: BenchContext):
+    s = ",".join(str(i) for i in range(50))
+    b.start(); _ = ",".join([s] * 5); b.end()
+
+@suite.bench(name="join-basic", n=1_000, repeat=10)
+def join_basic(b: BenchContext):
+    s = ",".join(str(i) for i in range(50))
+    b.start(); _ = ",".join([s] * 5); b.end()
+
+@suite.bench(name="concat", n=1_000, repeat=10)
+def concat(b: BenchContext):
+    pieces = [str(i) for i in range(200)]
+    b.start(); s = ""
+    for p in pieces: s += p
+    b.end()
+```
+
+## Parameter sweeps
+
+```python
+from pybench import bench
+
+@bench(name="join_param", params={"n": [100, 1000], "sep": ["-", ":"]}, repeat=10)
+def join_param(n: int, sep: str = ","):
+    sep.join(str(i) for i in range(n))
+```
+
+Override at runtime:
+
+```bash
+pybench examples/ -k join_param -P sep=":" -P n=5000
+```
+
+## Micro-cost baselines
+
+```python
+from pybench import bench, BenchContext
+
+@bench(name="noop", baseline=True, n=1, repeat=20)
+def noop(b: BenchContext):
+    b.start(); b.end()
+
+@bench(name="call_overhead", n=1, repeat=20)
+def call_overhead(b: BenchContext):
+    b.start(); (lambda: None)(); b.end()
+```
+
+## Per-iteration setup vs hot path
+
+```python
+from pybench import bench, BenchContext
+
+DATA = list(range(1000))  # expensive to build repeatedly
+
+@bench(name="sum_slow")
+def sum_slow():
+    data = list(range(1000))  # setup noise included in timing
+    sum(data)
+
+@bench(name="sum_hot")
+def sum_hot(b: BenchContext):
+    data = DATA
+    b.start(); sum(data); b.end()  # only hot region timed
+```
+
+## CLI profiles during development
+
+```bash
+pybench examples/ --profile fast      # quick iteration
+pybench examples/ --profile thorough  # publish numbers
+pybench examples/ --profile smoke     # sanity check
+```

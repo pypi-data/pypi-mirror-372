@@ -1,0 +1,56 @@
+---
+title: Internals
+---
+
+High-level notes for maintainers and curious users.
+
+## Core components
+
+- Bench / bench decorator
+  - `Bench` holds `Case` items; `Bench(...).bench(...)` registers decorated functions.
+  - `bench(**opts)` is a shorthand for the global default suite.
+- Case
+  - Metadata: `name`, `mode` ("func" or "context"), `n`, `repeat`, `warmup`, `args/kwargs`, `params`, `group`, `baseline`.
+  - `params`→ cartesian product variants via `_make_variants`.
+- BenchContext
+  - Manual timing: `start()/end()` accumulates nanoseconds; excludes setup noise.
+- Result
+  - Aggregates per-call times (`per_call_ns`) and computes stats: `mean`, `median`, `stdev`, `min`, `max`, `p(q)`.
+
+## Discovery and execution (CLI)
+
+- `discover(paths)`: files or `**/*bench.py` under directories.
+- `load_module_from_path`: import file with a stable module name (`_module_name_for_path`).
+- `run(...)` pipeline:
+  1. Optional warmup per case.
+  2. `_prepare_variants`: detects `BenchContext` usage and calibrates `n` per variant using `--budget`/`--max-n` (or "smoke").
+  3. Execute repeats via `_run_single_repeat` and collect `Result`s.
+  4. Filter, sort, and render table.
+
+## Calibration
+
+- `_calibrate_n(...)` grows `n` exponentially toward `target_ns` and refines with ±20% probes.
+- Context mode:
+  - If `BenchContext` is actually used (detected by a probe call), only the hot region is timed.
+  - Otherwise, the whole function is timed (same as function mode).
+
+## Accuracy & robustness
+
+- Clock: `perf_counter_ns` when available.
+- GC: collect and disable around runs; CLI attempts `gc.freeze()` if present.
+- Warmup: executes untimed iterations to stabilize caches/CPU.
+- Percentiles: linear interpolation.
+- Colors: TTY-detected, opt-out with `--no-color`.
+
+## Table & baseline
+
+- Groups are rendered with a dim header.
+- Baseline chosen by `baseline=True` or name heuristic (contains "baseline"/"base").
+- `vs base` shows `≈ same` when relative mean diff ≤ 1%.
+
+## Possible extensions
+
+- Parallel workers for independent variants.
+- JSON/CSV export.
+- Regression compare against previous runs.
+- Setup/teardown hooks per case.
