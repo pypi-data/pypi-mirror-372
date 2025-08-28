@@ -1,0 +1,36 @@
+name: Beta Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+\.[0-9]+\.[0-9]+-*'
+
+jobs:
+  beta-release:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upgrade setuptools/build
+        run: |
+          python3 -m venv myenv/
+          myenv/bin/pip install setuptools --upgrade
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Release to TestPyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+
+        run: |
+          myenv/bin/python -m pip install --upgrade build
+          myenv/bin/python -m build .
+          myenv/bin/python -m pip install --upgrade twine
+          myenv/bin/python -m pip install importlib_metadata==7.2.1
+          myenv/bin/twine upload --repository testpypi dist/*
