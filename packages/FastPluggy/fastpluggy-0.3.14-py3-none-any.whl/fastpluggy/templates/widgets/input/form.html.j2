@@ -1,0 +1,45 @@
+{% from "widgets/partials/card_header.html.j2" import render_card_header %}
+
+{% macro render_field(field) %}
+    {% if field.type == 'HiddenField' %}
+        {{ field() }}
+    {% elif field.type == 'BooleanField' %}
+        <div class="form-check">
+            {{ field(class="form-check-input") }}
+            {{ field.label(class="form-check-label") }}
+            {% if field.errors %}
+                <div class="text-danger">
+                    {% for error in field.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="mb-3">
+            {{ field.label(class="form-label") }}
+            {{ field(class="form-control") }}
+            {% if field.errors %}
+                <div class="text-danger">
+                    {% for error in field.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endmacro %}
+
+{% macro render_form(widget, request, depth=0) %}
+    <div class="card">
+        {{ render_card_header(widget) }}
+        <div id="collapse-{{ widget.id }}" class="card-body collapse {% if not widget.collapsed %}show{% endif %}">
+            <form action="{{ widget.action }}" method="{{ widget.method }}">
+                {% for field in widget.form %}
+                    {{ render_field(field) }}
+                {% endfor %}
+                <button type="submit" class="btn btn-primary">{{ widget.submit_label | default('Submit') }}</button>
+            </form>
+        </div>
+    </div>
+{% endmacro %}
