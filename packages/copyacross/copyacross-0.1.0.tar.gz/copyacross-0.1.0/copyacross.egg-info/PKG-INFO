@@ -1,0 +1,193 @@
+Metadata-Version: 2.4
+Name: copyacross
+Version: 0.1.0
+Summary: Cross-platform file copy & verification tool
+Home-page: https://github.com/compilersutra/copyacross
+Author: Tiwari Abhinav Ashok Kumar
+Author-email: Compilersutra <osc@compilersutra.com>
+License: MIT
+Project-URL: Homepage, https://github.com/compilersutra/copyacross
+Project-URL: Source, https://github.com/compilersutra/copyacross
+Project-URL: Issues, https://github.com/compilersutra/copyacross/issues
+Keywords: scp,file-transfer,sync,ssh,verification,devops
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: click>=8.0
+Requires-Dist: paramiko>=3.0
+Requires-Dist: pyyaml>=6.0
+Dynamic: license-file
+
+# CopyAcross
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**CopyAcross** is a cross-platform, bi-directional file synchronization tool built in Python. It supports local-to-local, local-to-remote, remote-to-local, and remote-to-remote file and folder sync.  
+
+---
+
+## Features
+
+- One-way or bi-directional sync between sources and destinations.
+- Supports local folders and remote hosts over SSH/SFTP.
+- SHA-256 verification to ensure files are copied correctly.
+- Parallel transfers for faster synchronization.
+- Easy YAML-based configuration.
+- Logs progress and errors with optional log files.
+- Dry-run mode (planned for future release) to simulate sync without copying files.
+
+---
+
+## Limitations (Current Version)
+
+- **Dry-run not yet implemented:** Currently, all sync operations will copy files; dry-run will be supported in a future release.  
+- **Remote verification skipped:** Verification is only done for local sources.  
+- **No conflict resolution:** For bi-directional sync, conflicts (e.g., modified files on both ends) are not automatically resolved.  
+- **Large folders:** Performance for extremely large directories (>100k files) may require tuning `parallel` and system resources.  
+- **Platform-dependent path issues:** Some path inconsistencies may appear when syncing between Windows and Linux/Unix.
+
+---
+
+## Future Improvements
+
+- Full **dry-run** support for previewing sync actions.
+- Conflict resolution strategies (latest file wins, merge strategies).  
+- Incremental sync (only changed files) for large datasets.  
+- Windows UNC and SMB share support.  
+- Progress bars for file and folder transfers.  
+- Advanced logging and optional email notifications on sync completion/failure.
+
+---
+
+## Project Aim
+
+The goal of **CopyAcross** is to provide a **simple, reliable, and cross-platform file synchronization tool** that:
+
+- Can handle both local and remote directories.
+- Supports multi-threaded transfer for faster operations.
+- Provides verification to ensure file integrity.
+- Serves both **newbies** (easy config and usage) and **experienced users** (customizable, scriptable, and extendable).
+
+---
+
+## Installation
+
+```bash
+# Using pip (PyPI release coming soon)
+pip install copyacross
+````
+
+Or install from source:
+
+```bash
+git clone https://github.com/compilersutra/copyacross.git
+cd copyacross
+pip install .
+```
+
+---
+
+> For more example see example folder
+
+
+## Quick Start
+
+### 1. Create a config file (`config.yaml`):
+
+```yaml
+sync_direction: one-way
+log_config: true
+parallel: 4
+ssh_key: null
+
+sources:
+  - path: "/home/user/source_folder/"
+    type: folder
+    host: null
+
+destinations:
+  - path: "/home/user/destination_folder/"
+    type: folder
+    host: user@192.168.0.100
+```
+
+### 2. Run from Python
+
+```python
+import copyacross
+
+# Run sync with config file
+copyacross.sync("config.yaml")
+```
+
+### 3. Run from Command Line
+
+```bash
+python -m copyacross.cli --config config.yaml
+```
+
+---
+
+## Logging
+
+* By default, logs are printed to stdout.
+* Optional `log_file` parameter can write logs to a file.
+* Example:
+
+```python
+copyacross.sync("config.yaml", log_file="sync.log")
+```
+
+---
+
+## Example Usage
+
+```python
+import copyacross
+
+# One-way sync
+copyacross.sync("config.yaml")
+
+# Future dry-run (simulation without copying files)
+# copyacross.sync("config.yaml", dry_run=True)
+```
+
+---
+
+## Developer Guide
+
+### Structure
+
+```
+copyacross/
+├── copyacross/          # Main package
+│   ├── cli.py           # CLI entry point
+│   ├── config.py        # YAML config loader
+│   ├── logger.py        # Logging setup
+│   ├── sync_engine.py   # Core sync logic
+│   ├── transport.py     # Handles file transfers
+│   ├── verifier.py      # File verification
+│   ├── exceptions.py    # Custom exceptions
+├── example/             # Example scripts
+├── tests/               # Unit tests needed to be done
+├── config.yaml          # Sample configuration
+├── LICENSE
+├── README.md
+├── setup.cfg
+├── pyproject.toml
+```
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## Contact
+
+Created by [osc@compilersutra.com](mailto:osc@compilersutra.com).
+For questions or feature requests, please open an issue on GitHub.
+
+```
