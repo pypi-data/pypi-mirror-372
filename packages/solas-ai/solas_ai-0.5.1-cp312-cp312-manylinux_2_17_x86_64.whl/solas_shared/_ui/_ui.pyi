@@ -1,0 +1,29 @@
+import pandas as pd
+from ._html import Html as Html
+from ._ipython import IPython as IPython
+from ._logo import Logo as Logo
+from _typeshed import Incomplete
+from collections.abc import Generator
+from contextlib import contextmanager
+from rich.table import Table as Table
+from solas_shared import resources as resources
+from typing import Any
+
+class Ui:
+    NA_REP: str
+    html: Incomplete
+    logo: Incomplete
+    ipython: Incomplete
+    console: Incomplete
+    is_in_ipynb: Incomplete
+    def __init__(self) -> None: ...
+    def print(self, text: str | Any) -> None: ...
+    def print_debug(self, text: str | Any) -> None: ...
+    def print_markdown(self, markdown: str) -> None: ...
+    def clean_string(self, val: str) -> str: ...
+    def show(self, obj: pd.DataFrame | Any) -> None: ...
+    @staticmethod
+    @contextmanager
+    def suppress_stdout() -> Generator[None]: ...
+    def init_notebook(self) -> None: ...
+    def df_to_table(self, df: pd.DataFrame, rich_table: Table, show_index: bool = True, index_name: str | None = None) -> Table: ...

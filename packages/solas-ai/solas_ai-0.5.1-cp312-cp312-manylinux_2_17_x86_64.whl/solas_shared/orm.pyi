@@ -1,0 +1,351 @@
+from _typeshed import Incomplete
+from solas_shared._utilities import get_new_id as get_new_id
+from sqlalchemy.orm import Session as Session
+
+Base: Incomplete
+metadata: Incomplete
+
+class OrmBase(Base):
+    __abstract__: bool
+    id: Incomplete
+    __user__: Incomplete
+    __node__: Incomplete
+    __version__: Incomplete
+    def save(self, session: Session) -> None: ...
+    def as_dict(self) -> dict: ...
+
+class Benchmark(OrmBase):
+    __tablename__: str
+    name: Incomplete
+    description: Incomplete
+    version: Incomplete
+    start: Incomplete
+    end: Incomplete
+    seconds: Incomplete
+    total_benchmarks: Incomplete
+    created: Incomplete
+    updated: Incomplete
+
+class Blob(OrmBase):
+    __tablename__: str
+    data: Incomplete
+    expires: Incomplete
+    content_type: Incomplete
+    filename: Incomplete
+    extension: Incomplete
+    uri: Incomplete
+    rows: Incomplete
+    cols: Incomplete
+    column_names: Incomplete
+
+class Dataset(OrmBase):
+    __tablename__: str
+    validated: Incomplete
+    conditioned: Incomplete
+    title: Incomplete
+    description: Incomplete
+    path: Incomplete
+    parent_id: Incomplete
+    dataset_store: Incomplete
+    retain_local_data_until: Incomplete
+    created: Incomplete
+    updated: Incomplete
+
+class Disparity(OrmBase):
+    __tablename__: str
+    disparity_type: Incomplete
+    summary_table: Incomplete
+    protected_groups: Incomplete
+    reference_groups: Incomplete
+    group_categories: Incomplete
+    air_threshold: Incomplete
+    percent_difference_threshold: Incomplete
+    max_for_fishers: Incomplete
+    summary_table_hstacked: Incomplete
+    fdr_threshold: Incomplete
+    smd_threshold: Incomplete
+    residual_smd_threshold: Incomplete
+    smd_denominator: Incomplete
+    residual_smd_denominator: Incomplete
+    lower_score_favorable: Incomplete
+    odds_ratio_threshold: Incomplete
+    shift_zeros: Incomplete
+    p_value_threshold: Incomplete
+    difference_threshold: Incomplete
+    ratio_threshold: Incomplete
+    shortfall_method: Incomplete
+    created: Incomplete
+    updated: Incomplete
+
+class Explanation(OrmBase):
+    __tablename__: str
+    link: Incomplete
+    created: Incomplete
+    updated: Incomplete
+
+class FeatureSelection(OrmBase):
+    __tablename__: str
+    model_id: Incomplete
+    training_subsampling: Incomplete
+    quality_subsampling: Incomplete
+    disparity_subsampling: Incomplete
+    minimum_features: Incomplete
+    maximum_features: Incomplete
+    initial_epoch_size: Incomplete
+    epoch_size: Incomplete
+    n_epochs: Incomplete
+    combination_rate: Incomplete
+    combination_degree: Incomplete
+    keep_estimators: Incomplete
+    parallel_build: Incomplete
+    stop_time: Incomplete
+    state: Incomplete
+    baselines: Incomplete
+    job_percent: Incomplete
+    job_start: Incomplete
+    job_end: Incomplete
+    epoch: Incomplete
+    created: Incomplete
+    updated: Incomplete
+    model: Incomplete
+
+class HyperparameterTuning(OrmBase):
+    __tablename__: str
+    model_id: Incomplete
+    training_subsampling: Incomplete
+    quality_subsampling: Incomplete
+    disparity_subsampling: Incomplete
+    n_explorations: Incomplete
+    n_evaluations: Incomplete
+    stop_time: Incomplete
+    state: Incomplete
+    baselines: Incomplete
+    job_percent: Incomplete
+    job_start: Incomplete
+    job_end: Incomplete
+    epoch: Incomplete
+    created: Incomplete
+    updated: Incomplete
+    delta: Incomplete
+    model: Incomplete
+
+class Log(OrmBase):
+    __tablename__: str
+    datetime: Incomplete
+    text: Incomplete
+    log_level: Incomplete
+    solas_id: Incomplete
+    for_display: Incomplete
+    group: Incomplete
+    mimetype: Incomplete
+    created: Incomplete
+    updated: Incomplete
+
+class Model(OrmBase):
+    __tablename__: str
+    alias: Incomplete
+    model_type: Incomplete
+    training_data_id: Incomplete
+    quality_data_id: Incomplete
+    disparity_data_id: Incomplete
+    early_stopping_data_id: Incomplete
+    explained_data_id: Incomplete
+    reference_data_id: Incomplete
+    label: Incomplete
+    random_state: Incomplete
+    id_column: Incomplete
+    sample_weight: Incomplete
+    intercept: Incomplete
+    remove_multicollinearity: Incomplete
+    custom_quality_fx: Incomplete
+    outcome_method: Incomplete
+    outcome_cutoff: Incomplete
+    lower_score_favorable: Incomplete
+    custom_outcome_fx: Incomplete
+    custom_transformed_score_fx: Incomplete
+    quality_metric: Incomplete
+    protected_groups: Incomplete
+    reference_groups: Incomplete
+    group_categories: Incomplete
+    disparity_calculation: Incomplete
+    air_threshold: Incomplete
+    percent_difference_threshold: Incomplete
+    max_for_fishers: Incomplete
+    smd_threshold: Incomplete
+    smd_denominator: Incomplete
+    shortfall_method: Incomplete
+    prediction_column: Incomplete
+    quality: Incomplete
+    disparity_id: Incomplete
+    explanation_id: Incomplete
+    solas_quality: Incomplete
+    solas_disparity: Incomplete
+    model_state: Incomplete
+    build_start: Incomplete
+    build_percent: Incomplete
+    build_end: Incomplete
+    output_estimator: Incomplete
+    custom_estimator: Incomplete
+    title: Incomplete
+    description: Incomplete
+    parent_id: Incomplete
+    feature_selection_id: Incomplete
+    hyperparameter_tuning_id: Incomplete
+    model_no: Incomplete
+    epoch: Incomplete
+    group: Incomplete
+    keep_data: Incomplete
+    keep_custom_estimator: Incomplete
+    keep_output_estimator: Incomplete
+    created: Incomplete
+    updated: Incomplete
+    disparity_data: Incomplete
+    disparity: Incomplete
+    early_stopping_data: Incomplete
+    explained_data: Incomplete
+    explanation: Incomplete
+    feature_selection: Incomplete
+    hyperparameter_tuning: Incomplete
+    quality_data: Incomplete
+    reference_data: Incomplete
+    training_data: Incomplete
+
+class User(OrmBase):
+    __tablename__: str
+    username: Incomplete
+    email: Incomplete
+    full_name: Incomplete
+    disabled: Incomplete
+    created: Incomplete
+    updated: Incomplete
+
+class BenchmarkTestResult(OrmBase):
+    __tablename__: str
+    benchmark_id: Incomplete
+    name: Incomplete
+    description: Incomplete
+    version: Incomplete
+    start: Incomplete
+    end: Incomplete
+    seconds: Incomplete
+    mib: Incomplete
+    stdout: Incomplete
+    stderr: Incomplete
+    created: Incomplete
+    updated: Incomplete
+    benchmark: Incomplete
+
+class Feature(OrmBase):
+    __tablename__: str
+    model_id: Incomplete
+    name: Incomplete
+    category: Incomplete
+    description: Incomplete
+    monotonicity: Incomplete
+    aggregation: Incomplete
+    created: Incomplete
+    updated: Incomplete
+    model: Incomplete
+
+class FeatureSelectionJournal(OrmBase):
+    __tablename__: str
+    feature_selection_id: Incomplete
+    seq: Incomplete
+    timestamp: Incomplete
+    cumulative_models_built: Incomplete
+    minimum_features: Incomplete
+    maximum_features: Incomplete
+    training_subsampling: Incomplete
+    quality_subsampling: Incomplete
+    disparity_subsampling: Incomplete
+    initial_epoch_size: Incomplete
+    epoch_size: Incomplete
+    n_epochs: Incomplete
+    combination_degree: Incomplete
+    combination_rate: Incomplete
+    stop_time: Incomplete
+    state: Incomplete
+    created: Incomplete
+    updated: Incomplete
+    feature_selection: Incomplete
+
+class FeatureSelectionJournalPerf(FeatureSelectionJournal):
+    __tablename__: str
+    feature_selection_journal_id: Incomplete
+    epoch_no: Incomplete
+    evaluate: Incomplete
+    evaluate_bytes: Incomplete
+    survivors: Incomplete
+    survivors_bytes: Incomplete
+    journal: Incomplete
+    journal_bytes: Incomplete
+    proliferate: Incomplete
+    proliferate_bytes: Incomplete
+    display: Incomplete
+    display_bytes: Incomplete
+    merge: Incomplete
+    merge_bytes: Incomplete
+    write: Incomplete
+    write_bytes: Incomplete
+    total: Incomplete
+    total_bytes: Incomplete
+    memory_total_gb: Incomplete
+    memory_available_gb: Incomplete
+    memory_used_percent: Incomplete
+    memory_used_gb: Incomplete
+    memory_free_gb: Incomplete
+
+class Hyperparameter(OrmBase):
+    __tablename__: str
+    model_id: Incomplete
+    name: Incomplete
+    value: Incomplete
+    group: Incomplete
+    is_factory: Incomplete
+    tunable: Incomplete
+    lower_bound: Incomplete
+    upper_bound: Incomplete
+    step: Incomplete
+    possible_values: Incomplete
+    created: Incomplete
+    updated: Incomplete
+    model: Incomplete
+
+class HyperparameterTuningEvaluationPerf(OrmBase):
+    __tablename__: str
+    hyperparameter_tuning_id: Incomplete
+    epoch_no: Incomplete
+    proliferate: Incomplete
+    evaluate: Incomplete
+    merge: Incomplete
+    write: Incomplete
+    total: Incomplete
+    hyperparameter_tuning: Incomplete
+
+class HyperparameterTuningJournal(OrmBase):
+    __tablename__: str
+    hyperparameter_tuning_id: Incomplete
+    seq: Incomplete
+    timestamp: Incomplete
+    cumulative_models_built: Incomplete
+    training_subsampling: Incomplete
+    quality_subsampling: Incomplete
+    disparity_subsampling: Incomplete
+    stop_time: Incomplete
+    state: Incomplete
+    created: Incomplete
+    updated: Incomplete
+    hyperparameter_tuning: Incomplete
+
+class HyperparameterTuningJournalPerf(HyperparameterTuningJournal):
+    __tablename__: str
+    hyperparameter_tuning_journal_id: Incomplete
+    epoch_no: Incomplete
+    clone: Incomplete
+    build_alternative: Incomplete
+    shortfall: Incomplete
+    persist_alternative: Incomplete
+    memoize: Incomplete
+    merge: Incomplete
+    write: Incomplete
+    total: Incomplete

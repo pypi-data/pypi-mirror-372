@@ -1,0 +1,21 @@
+from ._enum_base import EnumBase as EnumBase
+
+class DisparityCalculation(EnumBase):
+    ADVERSE_IMPACT_RATIO = 'adverse_impact_ratio'
+    RELATIVE_RATE = 'relative_rate'
+    SEGMENTED_ADVERSE_IMPACT_RATIO = 'segmented_adverse_impact_ratio'
+    ADVERSE_IMPACT_RATIO_BY_QUANTILE = 'adverse_impact_ratio_by_quantile'
+    CATEGORICAL_ADVERSE_IMPACT_RATIO = 'categorical_adverse_impact_ratio'
+    STANDARDIZED_MEAN_DIFFERENCE = 'standardized_mean_difference'
+    RESIDUAL_STANDARDIZED_MEAN_DIFFERENCE = 'residual_standardized_mean_difference'
+    ODDS_RATIO = 'odds_ratio'
+    CUSTOM_DISPARITY_METRIC = 'custom_disparity_metric'
+    TRUE_POSITIVE_RATE = 'true_positive_rate'
+    TRUE_NEGATIVE_RATE = 'true_negative_rate'
+    FALSE_POSITIVE_RATE = 'false_positive_rate'
+    FALSE_NEGATIVE_RATE = 'false_negative_rate'
+    PRECISION = 'precision'
+    FALSE_DISCOVERY_RATE = 'false_discovery_rate'
+    SCORING_IMPACT_RATIO = 'scoring_impact_ratio'
+    SELECTION_IMPACT_RATIO = 'selection_impact_ratio'
+    NOT_SET = 'not_set'
