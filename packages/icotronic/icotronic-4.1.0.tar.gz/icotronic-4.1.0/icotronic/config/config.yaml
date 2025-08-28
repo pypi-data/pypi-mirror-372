@@ -1,0 +1,367 @@
+# =================
+# = Shared Values =
+# =================
+
+# We use anchors and references to use the same value in the document multiple
+# times. This has the advantage that we only have to update the value in
+# one place.
+
+# We assume that you use the same programming board for the STH (SHA) and STU.
+programming board number: &serial 440120910
+# We assume that you use the same CAN bitrate on Linux and Windows
+can bitrate: &bitrate 1000000
+
+# =================
+# = Configuration =
+# =================
+
+# The values below specify the configuration options for the
+# [python-can](https://python-can.readthedocs.io) Bus class.
+can:
+  linux:
+    bitrate: *bitrate
+    channel: can0
+    interface: socketcan
+  mac: &can_mac
+    bitrate: *bitrate
+    channel: PCAN_USBBUS1
+    interface: pcan
+  windows: *can_mac
+
+commands:
+  path:
+    # The keys below this key should contain the path to Simplicity Commander
+    # (`commander`) for different operating systems. If the list for the current
+    # OS does not do that, then the STH test will fail, unless the commands are
+    # already accessible via the path environment variable (`$Env:Path` in
+    # Windows or `$PATH` in Unix).
+    linux: []
+    mac:
+      # The path below stores the default installation path of the `commander`
+      # CLI tool, if you put the app into the directory `/Applications`.
+      - "/Applications/Simplicity Studio.app/Contents/Eclipse/developer/\
+         adapter_packs/commander/Commander.app/Contents/MacOS"
+      # Default path to Commander if you download the standalone installer:
+      # https://community.silabs.com/s/article/simplicity-commander
+      # and put put the app into the directory `/Applications`.
+      - /Applications/Commander.app/Contents/MacOS
+    windows:
+      # The paths below are the default install locations of `commander` in
+      # Windows
+      - C:\SiliconLabs\SimplicityStudio\v4\developer\adapter_packs\commander
+      - C:\SiliconLabs\SimplicityStudio\v5\developer\adapter_packs\commander
+      # We assume that you moved the unzipped Simplicity Commander directory
+      # into the standard Silicon Labs install directory
+      - C:\SiliconLabs\Simplicity Commander
+      # Standard install path for applications
+      - C:\Program Files\Simplicity Commander
+
+logger:
+  can:
+    # The value below specifies the minimum level of messages logged to
+    # `can.log`. Currently the logger only writes debug messages, which means
+    # ICOn will write CAN messages, if you specify the value `DEBUG`. If you use
+    # a different allowed value, such as `INFO` or `WARNING` no messages will be
+    # logged.
+    #
+    # To retrieve the filepath of the logging file, you can use the following
+    # code:
+    #
+    #     from icotronic.utility.log import get_log_file_handler
+    #     print(get_log_file_handler("can.log").baseFilename)
+    #
+    level: INFO
+
+measurement:
+  output:
+    # The directory where ICOn stores measurement data in HDF5 format. Relative
+    # directories will be interpreted from the current working directory.
+    #
+    # For example, if we assume that the current working directory is
+    # `Documents/Measurement` in the user’s home directory, then the value `..`
+    # means that ICOn will store the log file in the directory `Documents` in
+    # the home directory.
+    #
+    # You can also use `~` to refer to the user’s home directory. For example,
+    # you can use the value `~/Desktop` if you want to store HDF files on the
+    # Desktop of the current user.
+    directory: .
+    filename: Measurement.hdf5 # The name of the HDF5 file
+
+operator:
+  # The name of the operator that executes the hardware tests
+  name: Dummy User
+
+# Shared values for SMH/STH
+sensor_node:
+  bluetooth:
+    # Advertisement time 1 in ms
+    advertisement time 1: 1250
+    # Advertisement time 2 in ms
+    advertisement time 2: 2500
+    # Time to from disconnect or power on to sleep mode 1 in ms
+    sleep time 1: 300000
+    # Time to/from entering sleep mode 1 to sleep mode 2 in ms
+    sleep time 2: 259200000
+
+smh:
+  # This value specifies the current name of the milling head sensor
+  name: D125_001
+
+  # An ever increasing (32 bit unsigned) number that describes the current
+  # batch that this SMH was a part of.
+  batch number: 0
+
+  # Number of available sensor channels
+  channels: 8
+
+  firmware:
+    release name: Milhouse
+    location:
+      # This value should contain the path to a complete image (bootloader and
+      # application). Relative paths will be interpreted in relation to the
+      # current working directory. You can use `~` to refer to the user’s home
+      # directory.
+      flash: ~/Documents/Firmware/SMH.STH.BGM.121.-.3.0.0.hex
+
+  # Global Trade Item Number
+  gtin: 0
+
+  # The current version of the PCB design
+  hardware version: 1.0.1
+
+  # OEM specific data
+  # prettier-ignore
+  oem data: [
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     ]
+
+  # The production date of the SMH PCB in the format YYYY-MM-DD
+  production date: 2021-11-26
+
+  # Product name for the  manufacturer (maximum of 128 byte UTF-8 encoded text)
+  product name: "0"
+
+  programming board:
+    # Please store the serial number of the programming board that is connected
+    # to the SMH here. This number should be displayed in the right bottom
+    # corner of the LC display, after you connect the programmer to a power
+    # source.
+    serial number: *serial
+
+  # Serial number for the manufacturer
+  serial number: SMH
+
+sth:
+  acceleration sensor:
+    # Values for the Analog Devices ± 100g analog accelerometer sensor ADXL1001.
+    adxl1001:
+      acceleration:
+        # Maximum Acceleration of sensor in multiples of g₀ (= 9.807 m/s²)
+        maximum: 200
+        # This value stores the maximum allowed ratio of noise to maximum
+        # measurement value in dB. If the measured ratio is above this level,
+        # then the tested STH will be considered faulty.
+        ratio noise to max value: -55
+        # Tolerance to expected (stationary) acceleration value (of 0 m/s²) in
+        # multiples of g₀
+        tolerance: 5
+      # The ADC reference voltage used for the measurement
+      reference voltage: 3.3
+      self test:
+        # The dimension (x, y, z) on which the self test takes place
+        dimension: x
+        voltage:
+          # Expected voltage difference between
+          #
+          # - the measured (stationary) acceleration voltage, and
+          # - acceleration voltage when the self test is active
+          #
+          # in mV. For more information, please check the data sheet of the
+          # accelerometer.
+          difference: 90
+          # Tolerance to
+          # - the expected voltage difference and
+          # - tolerance for the measured difference between voltage before and
+          #   after the self test
+          # in mV.
+          tolerance: 20
+    # Values for the Analog Devices ± 50g digital accelerometer sensor ADXL1002.
+    # Please check the comments for sensor `ADXL1001` for a more detailed
+    # description of the config values.
+    adxl1002:
+      acceleration:
+        maximum: 100
+        ratio noise to max value: -55
+        tolerance: 4
+      reference voltage: 3.3
+      self test:
+        dimension: x
+        voltage:
+          difference: 160
+          tolerance: 30
+    # Values for the Analog Devices ± 40g digital accelerometer sensor ADXL356.
+    # Please check the comments for sensor `ADXL1001` for a more detailed
+    # description of the config values.
+    adxl356:
+      acceleration:
+        maximum: 80
+        ratio noise to max value: -55
+        tolerance: 20
+      reference voltage: 1.8
+      self test:
+        dimension: z
+        voltage:
+          # 1.25 g difference at ± 10 g ⇒ 1.25/4 at ± 40 g
+          # 1.8 V reference voltage ⇒ 1.25/(2*40*4)*1.8*1000 ≅ 7 mV
+          #
+          # In reality the difference voltage seems to
+          #
+          # - be significantly smaller and
+          # - change with the position of the PCB.
+          #
+          # We therefore set the tolerance to a very high level.
+          #
+          # More information is available here:
+          #
+          # - https://mytoolit.bitrix24.de/company/personal/user/74/tasks
+          #   /task/view/6207/
+          #
+          difference: 7
+          tolerance: 4
+    # The identifier of the accelerometer sensor (either `ADXL1001` or
+    # `ADXL1002` or `ADXL356`). The values below the key will be used for the
+    # STH test.
+    #
+    # For example, if you specify the value `ADXL1001`, then the value
+    #
+    #  `STH` → `Acceleration Sensor` → `ADXL1001` → `Acceleration` → `Maximum`
+    #
+    # will be used as maximum acceleration value for the current STH.
+    sensor: ADXL356
+
+  # An ever increasing (32 bit unsigned) number that describes the current
+  # batch that this STH was a part of.
+  batch number: 200
+
+  battery voltage:
+    average: 3.6 # Expected value of power source voltage in Volt
+    tolerance: 0.6 # Tolerance for expected power source voltage in Volt
+
+  firmware:
+    location:
+      # This value should contain the path to a complete image (bootloader and
+      # application). Relative paths will be interpreted in relation to the
+      # current working directory. You can use `~` to refer to the user’s home
+      # directory.
+      flash: ~/Documents/Firmware/manufacturingImageSthv2.1.10.hex
+    # Code name of the current firmware release
+    release name: Tanja
+
+  # Global Trade Item Number
+  gtin: 0
+
+  # The current version of the PCB design
+  # - 1.x.x for STHs with chip BGM 113
+  # - 2.x.x for STHs with chip BGM 123
+  hardware version: 1.4.0
+
+  # The type of holder that contains the SHA
+  holder type: D 10x130 HSK-A63
+
+  # This value specifies the current name of the STH unit
+  name: BBBB1111
+
+  # OEM specific data
+  # prettier-ignore
+  oem data: [
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     ]
+
+  # The production date of the STH PCB in the format YYYY-MM-DD
+  production date: 2019-07-03
+
+  # Product name for the  manufacturer (maximum of 64 byte UTF-8 encoded text)
+  product name: "0"
+
+  programming board:
+    # Please store the serial number of the programming board that is connected
+    # to the STH here. This number should be displayed in the right bottom
+    # corner of the LC display, after you connect the programmer to a power
+    # source
+    serial number: *serial
+
+  # Serial number for the manufacturer (maximum of 8 alphanumerical characters);
+  # The STH test will rename the STH (from `STH` → `NAME`) to this value, if
+  # you set the status (`STH` → `STATUS`) to `Epoxied`. Otherwise the test
+  # will use the (Base64 encoded) MAC address as new name.
+  serial number: BBBB1111
+
+  status:
+    # Describe the status of the current STH hardware. This scalar should either
+    # store the value `Bare PCB` or `Epoxied`. If you use the value `Epoxied`,
+    # then the flash test for the STH will be skipped.
+    Epoxied
+
+stu:
+  # An ever increasing (32 bit unsigned) number that describes the current
+  # batch that this STU was a part of.
+  batch number: 100
+
+  firmware:
+    location:
+      # This value should contain the path to a complete image (bootloader and
+      # application). Relative paths will be interpreted in relation to the
+      # current working directory. You can use `~` to refer to the user’s home
+      # directory.
+      flash: ~/Documents/Firmware/manufacturingImageStuv2.1.10.hex
+    release name: Valerie
+
+  # Global Trade Item Number
+  gtin: 0
+
+  # The current version of the PCB design
+  hardware version: 1.3.3
+
+  # OEM specific data
+  # prettier-ignore
+  oem data: [
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+     ]
+
+  # The production date of the STH PCB in the format YYYY-MM-DD
+  production date: 2020-08-20
+
+  # Product name for the  manufacturer (maximum of 128 byte UTF-8 encoded text)
+  product name: "0"
+
+  programming board:
+    # Please store the serial number of the programming board that is connected
+    # to the STU here. This number should be displayed in the right bottom
+    # corner of the LC display, after you connect the programmer to a power
+    # source
+    serial number: *serial
+
+  # Serial number for the manufacturer (maximum of 32 byte UTF-8 encoded text)
+  serial number: "0"
