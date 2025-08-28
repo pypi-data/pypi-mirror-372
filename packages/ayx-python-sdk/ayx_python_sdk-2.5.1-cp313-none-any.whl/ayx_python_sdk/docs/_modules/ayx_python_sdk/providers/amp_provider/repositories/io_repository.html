@@ -1,0 +1,320 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ayx_python_sdk.providers.amp_provider.repositories.io_repository &mdash; AyxPythonSdk 2.5.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../../_static/documentation_options.js?v=983e91d6"></script>
+      <script src="../../../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            AyxPythonSdk
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules.html">ayx_python_sdk</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../getting_started.html">Getting Started Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugin_lifecycle.html">Lifecycle of a Plugin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugin_code.html">Plugin Tool Execution Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../config_xml.html">Tool Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../differences_with_original_sdk.html">Differences Between the New and Old Python SDKs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../third_party_packages.html">Python 3rd-party Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../virtual_environments.html">Virtual Environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../python_embeddable_distribution.html">Python Embeddable Distribution (PED)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../example_tools.html">Example Tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">AyxPythonSdk</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../repositories.html">ayx_python_sdk.providers.amp_provider.repositories</a></li>
+      <li class="breadcrumb-item active">ayx_python_sdk.providers.amp_provider.repositories.io_repository</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ayx_python_sdk.providers.amp_provider.repositories.io_repository</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2022 Alteryx, Inc. All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the ALTERYX SDK AND API LICENSE AGREEMENT;</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    https://www.alteryx.com/alteryx-sdk-and-api-license-agreement</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Class that saves and retrieves AMP IO information.&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">WorkflowRuntimeError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.repositories</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvironmentRepository</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.repositories</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcRepository</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.repositories.singleton</span><span class="w"> </span><span class="kn">import</span> <span class="n">Singleton</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.resources.generated.output_message_data_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">OutputMessageData</span><span class="p">,</span>
+    <span class="n">OutputMessageTypes</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.resources.generated.password_data_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PasswordData</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.resources.generated.translate_message_data_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">TranslateMessageData</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="IORepository">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.io_repository.IORepository">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">IORepository</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">Singleton</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Repository that stores IO information.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the IO repository.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="IORepository.save_error">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.io_repository.IORepository.save_error">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_error</span><span class="p">(</span><span class="n">error_msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Display an error message in the Results window.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        error_msg</span>
+<span class="sd">            The error message to be output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">GrpcRepository</span><span class="p">()</span><span class="o">.</span><span class="n">get_sdk_engine_client</span><span class="p">()</span><span class="o">.</span><span class="n">OutputMessage</span><span class="p">(</span>
+            <span class="n">OutputMessageData</span><span class="p">(</span>
+                <span class="n">message_type</span><span class="o">=</span><span class="n">OutputMessageTypes</span><span class="o">.</span><span class="n">OMT_Error</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="n">error_msg</span>
+            <span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="IORepository.save_warn">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.io_repository.IORepository.save_warn">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_warn</span><span class="p">(</span><span class="n">warn_msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Display a warning message in the Results window.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        warn_msg</span>
+<span class="sd">            The warning message to be output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">GrpcRepository</span><span class="p">()</span><span class="o">.</span><span class="n">get_sdk_engine_client</span><span class="p">()</span><span class="o">.</span><span class="n">OutputMessage</span><span class="p">(</span>
+            <span class="n">OutputMessageData</span><span class="p">(</span>
+                <span class="n">message_type</span><span class="o">=</span><span class="n">OutputMessageTypes</span><span class="o">.</span><span class="n">OMT_Warning</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="n">warn_msg</span>
+            <span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="IORepository.save_info">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.io_repository.IORepository.save_info">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_info</span><span class="p">(</span><span class="n">info_msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Display an info message in the Results window.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        info_msg</span>
+<span class="sd">            The info message to be output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">GrpcRepository</span><span class="p">()</span><span class="o">.</span><span class="n">get_sdk_engine_client</span><span class="p">()</span><span class="o">.</span><span class="n">OutputMessage</span><span class="p">(</span>
+            <span class="n">OutputMessageData</span><span class="p">(</span>
+                <span class="n">message_type</span><span class="o">=</span><span class="n">OutputMessageTypes</span><span class="o">.</span><span class="n">OMT_Info</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="n">info_msg</span>
+            <span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="IORepository.get_translate_msg">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.io_repository.IORepository.get_translate_msg">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_translate_msg</span><span class="p">(</span><span class="n">msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Translate a message to the current locale.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        msg</span>
+<span class="sd">            Message to translate.</span>
+<span class="sd">        *args</span>
+<span class="sd">            Interpolation data for the string.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            The message, translated into the locale.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">interpolation_data</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">GrpcRepository</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">get_sdk_engine_client</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">TranslateMessage</span><span class="p">(</span>
+                <span class="n">TranslateMessageData</span><span class="p">(</span>
+                    <span class="n">unlocalized_string</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">interpolation_data</span><span class="o">=</span><span class="n">interpolation_data</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">translated_message</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="IORepository.update_progress">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.io_repository.IORepository.update_progress">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_progress</span><span class="p">(</span><span class="n">percent</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update tool progress.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        percent</span>
+<span class="sd">            The progress (how close the connection is to processing all records) as a percentage.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+        <span class="c1"># TODO</span>
+
+<div class="viewcode-block" id="IORepository.get_temp_file">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.io_repository.IORepository.get_temp_file">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_temp_file</span><span class="p">(</span><span class="n">extension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;tmp&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Path&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a temporary file managed by Designer.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        extension</span>
+<span class="sd">            The file extension of the temp file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Path</span>
+<span class="sd">            The path to where the temp file is.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">temp_file_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;temp-file-</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">extension</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">engine_temp_dir</span> <span class="o">=</span> <span class="n">EnvironmentRepository</span><span class="p">()</span><span class="o">.</span><span class="n">get_temp_dir</span><span class="p">()</span>
+        <span class="n">temp_file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">engine_temp_dir</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">temp_file_name</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">temp_file_path</span><span class="o">.</span><span class="n">touch</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="c1"># path does not exist</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Engine.TempFilePath (</span><span class="si">%s</span><span class="s2">) does not exist&quot;</span><span class="p">,</span> <span class="n">engine_temp_dir</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="c1"># path exists but no write permissions</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No write permissions for directory </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">engine_temp_dir</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">temp_file_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="IORepository.decrypt_password">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.io_repository.IORepository.decrypt_password">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">decrypt_password</span><span class="p">(</span><span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decrypt password.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        password</span>
+<span class="sd">            The password to decrypt.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            The decrypted password.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">decrypted</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">GrpcRepository</span><span class="p">()</span>
+                <span class="o">.</span><span class="n">get_sdk_engine_client</span><span class="p">()</span>
+                <span class="o">.</span><span class="n">DecryptPassword</span><span class="p">(</span><span class="n">PasswordData</span><span class="p">(</span><span class="n">password</span><span class="o">=</span><span class="n">password</span><span class="p">))</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">RpcError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">WorkflowRuntimeError</span><span class="p">(</span><span class="s2">&quot;Error decrypting password&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">decrypted</span><span class="o">.</span><span class="n">password</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Alteryx, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

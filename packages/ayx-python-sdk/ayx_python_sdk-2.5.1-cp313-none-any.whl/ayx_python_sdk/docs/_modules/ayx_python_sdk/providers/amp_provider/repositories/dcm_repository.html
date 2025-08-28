@@ -1,0 +1,375 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ayx_python_sdk.providers.amp_provider.repositories.dcm_repository &mdash; AyxPythonSdk 2.5.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../../_static/documentation_options.js?v=983e91d6"></script>
+      <script src="../../../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            AyxPythonSdk
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules.html">ayx_python_sdk</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../getting_started.html">Getting Started Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugin_lifecycle.html">Lifecycle of a Plugin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugin_code.html">Plugin Tool Execution Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../config_xml.html">Tool Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../differences_with_original_sdk.html">Differences Between the New and Old Python SDKs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../third_party_packages.html">Python 3rd-party Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../virtual_environments.html">Virtual Environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../python_embeddable_distribution.html">Python Embeddable Distribution (PED)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../example_tools.html">Example Tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">AyxPythonSdk</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../repositories.html">ayx_python_sdk.providers.amp_provider.repositories</a></li>
+      <li class="breadcrumb-item active">ayx_python_sdk.providers.amp_provider.repositories.dcm_repository</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ayx_python_sdk.providers.amp_provider.repositories.dcm_repository</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2022 Alteryx, Inc. All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the ALTERYX SDK AND API LICENSE AGREEMENT;</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    https://www.alteryx.com/alteryx-sdk-and-api-license-agreement</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;Class that saves and retrieves AMP DCM information.&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">DcmEError</span><span class="p">,</span> <span class="n">DcmEException</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.repositories.singleton</span><span class="w"> </span><span class="kn">import</span> <span class="n">Singleton</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.resources.generated.dcm_e_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DcmERequest</span><span class="p">,</span>
+    <span class="n">DcmEResponse</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">google.protobuf</span><span class="w"> </span><span class="kn">import</span> <span class="n">json_format</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="DCMRepository">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.dcm_repository.DCMRepository">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DCMRepository</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">Singleton</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Repository that stores DCM information.&quot;&quot;&quot;</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.resources.generated.sdk_engine_service_pb2_grpc</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+        <span class="n">SdkEngineStub</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__get_grpc_client</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="s2">&quot;SdkEngineStub&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get grpc sdk engine client.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        -</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">ayx_python_sdk.providers.amp_provider.repositories.grpc_repository</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">GrpcRepository</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">GrpcRepository</span><span class="p">()</span><span class="o">.</span><span class="n">get_sdk_engine_client</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DcmEException</span><span class="p">(</span>
+                <span class="s2">&quot;Error getting GRPC client!&quot;</span><span class="p">,</span>
+                <span class="n">DcmEError</span><span class="p">(</span><span class="s2">&quot;Error getting GRPC client!&quot;</span><span class="p">,</span> <span class="mi">10001</span><span class="p">),</span>
+            <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__handle_response</span><span class="p">(</span><span class="n">res</span><span class="p">:</span> <span class="n">DcmEResponse</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Handle DcmE response.&quot;&quot;&quot;</span>
+        <span class="n">response_dict</span> <span class="o">=</span> <span class="n">json_format</span><span class="o">.</span><span class="n">MessageToDict</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">response</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">res</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="s2">&quot;message&quot;</span> <span class="ow">in</span> <span class="n">response_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                <span class="ow">and</span> <span class="s2">&quot;errorCode&quot;</span> <span class="ow">in</span> <span class="n">response_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="p">):</span>
+                <span class="k">if</span> <span class="s2">&quot;detail&quot;</span> <span class="ow">in</span> <span class="n">response_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="k">raise</span> <span class="n">DcmEException</span><span class="p">(</span>
+                        <span class="s2">&quot;Dcm.E Error!&quot;</span><span class="p">,</span>
+                        <span class="n">DcmEError</span><span class="p">(</span>
+                            <span class="n">response_dict</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">],</span>
+                            <span class="nb">int</span><span class="p">(</span><span class="n">response_dict</span><span class="p">[</span><span class="s2">&quot;errorCode&quot;</span><span class="p">]),</span>
+                            <span class="n">response_dict</span><span class="p">[</span><span class="s2">&quot;detail&quot;</span><span class="p">],</span>
+                        <span class="p">),</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DcmEException</span><span class="p">(</span>
+                        <span class="s2">&quot;Dcm.E Error!&quot;</span><span class="p">,</span>
+                        <span class="n">DcmEError</span><span class="p">(</span>
+                            <span class="n">response_dict</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="n">response_dict</span><span class="p">[</span><span class="s2">&quot;errorCode&quot;</span><span class="p">])</span>
+                        <span class="p">),</span>
+                    <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DcmEException</span><span class="p">(</span><span class="s2">&quot;Dcm.E Error!&quot;</span><span class="p">,</span> <span class="n">DcmEError</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">response</span><span class="p">,</span> <span class="mi">10003</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">response_dict</span>
+
+<div class="viewcode-block" id="DCMRepository.get_connection">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.dcm_repository.DCMRepository.get_connection">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_connection</span><span class="p">(</span><span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve connection information including secrets by connection ID.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        connection_id</span>
+<span class="sd">            string with UUID of connection</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Getting DCM connection for &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">connection_id</span><span class="p">))</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">DCMRepository</span><span class="o">.</span><span class="n">__get_grpc_client</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">req</span> <span class="o">=</span> <span class="n">DcmERequest</span><span class="p">()</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">get_connection</span><span class="o">.</span><span class="n">connection_id</span> <span class="o">=</span> <span class="n">connection_id</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Dcm</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">RpcError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DcmEException</span><span class="p">(</span>
+                <span class="s2">&quot;Error getting DCM connection!&quot;</span><span class="p">,</span>
+                <span class="n">DcmEError</span><span class="p">(</span><span class="s2">&quot;Error getting DCM connection!&quot;</span><span class="p">),</span>
+                <span class="mi">10002</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">DCMRepository</span><span class="o">.</span><span class="n">__handle_response</span><span class="p">(</span><span class="n">res</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DCMRepository.update_connection_secret">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.dcm_repository.DCMRepository.update_connection_secret">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_connection_secret</span><span class="p">(</span>
+        <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">lock_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">secret_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">expires_on</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">],</span>
+        <span class="n">parameters</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update a single secret for role and secret_type to value as well as the optional expires_on and parameters.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        connection_id</span>
+<span class="sd">            A connection ID</span>
+<span class="sd">        lock_id</span>
+<span class="sd">            A lock ID acquired from get_write_lock()</span>
+<span class="sd">        role</span>
+<span class="sd">            A role such as ?oauth?</span>
+<span class="sd">        secret_type</span>
+<span class="sd">            A secret type such as ?oauth_token?</span>
+<span class="sd">        value</span>
+<span class="sd">            The new value to store for the secret</span>
+<span class="sd">        expires_on</span>
+<span class="sd">            (Optional) DateTime expiration of this secret</span>
+<span class="sd">        parameters</span>
+<span class="sd">            Dict of parameter values for this secret (this is arbitrary user data stored as JSON)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">google.protobuf.struct_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="n">Struct</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Updating DCM connection secret for &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">connection_id</span><span class="p">))</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">DCMRepository</span><span class="o">.</span><span class="n">__get_grpc_client</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">req</span> <span class="o">=</span> <span class="n">DcmERequest</span><span class="p">()</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">update_secret</span><span class="o">.</span><span class="n">connection_id</span> <span class="o">=</span> <span class="n">connection_id</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">update_secret</span><span class="o">.</span><span class="n">lock_id</span> <span class="o">=</span> <span class="n">lock_id</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">update_secret</span><span class="o">.</span><span class="n">credential_role</span> <span class="o">=</span> <span class="n">role</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">update_secret</span><span class="o">.</span><span class="n">secret_type</span> <span class="o">=</span> <span class="n">secret_type</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">update_secret</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">if</span> <span class="n">parameters</span><span class="p">:</span>
+                <span class="n">st</span> <span class="o">=</span> <span class="n">Struct</span><span class="p">()</span>
+                <span class="n">st</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+                <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">update_secret</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">CopyFrom</span><span class="p">(</span><span class="n">st</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">expires_on</span><span class="p">:</span>
+                <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">update_secret</span><span class="o">.</span><span class="n">expires_on</span> <span class="o">=</span> <span class="n">expires_on</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Dcm</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">RpcError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DcmEException</span><span class="p">(</span>
+                <span class="s2">&quot;Error getting DCM connection!&quot;</span><span class="p">,</span>
+                <span class="n">DcmEError</span><span class="p">(</span><span class="s2">&quot;Error getting DCM connection!&quot;</span><span class="p">),</span>
+                <span class="mi">10002</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">DCMRepository</span><span class="o">.</span><span class="n">__handle_response</span><span class="p">(</span><span class="n">res</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DCMRepository.get_write_lock">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.dcm_repository.DCMRepository.get_write_lock">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_write_lock</span><span class="p">(</span>
+        <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">secret_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">expires_in</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Attempt to acquire an exclusive write lock.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        connection_id</span>
+<span class="sd">            string with UUID of connection</span>
+<span class="sd">        role</span>
+<span class="sd">            A role such as ?oauth?</span>
+<span class="sd">        secret_type</span>
+<span class="sd">            A secret type such as ?oauth_token?</span>
+<span class="sd">        expires_in</span>
+<span class="sd">            (Optional) A DateTime value in which to ask for the lock to be held for in milliseconds.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Getting DCM write lock for &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">connection_id</span><span class="p">))</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">DCMRepository</span><span class="o">.</span><span class="n">__get_grpc_client</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">req</span> <span class="o">=</span> <span class="n">DcmERequest</span><span class="p">()</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">lock_secret</span><span class="o">.</span><span class="n">connection_id</span> <span class="o">=</span> <span class="n">connection_id</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">lock_secret</span><span class="o">.</span><span class="n">credential_role</span> <span class="o">=</span> <span class="n">role</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">lock_secret</span><span class="o">.</span><span class="n">secret_type</span> <span class="o">=</span> <span class="n">secret_type</span>
+            <span class="k">if</span> <span class="n">expires_in</span><span class="p">:</span>
+                <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">lock_secret</span><span class="o">.</span><span class="n">expires_in</span> <span class="o">=</span> <span class="n">expires_in</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Dcm</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">RpcError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DcmEException</span><span class="p">(</span>
+                <span class="s2">&quot;Error getting DCM connection!&quot;</span><span class="p">,</span>
+                <span class="n">DcmEError</span><span class="p">(</span><span class="s2">&quot;Error getting DCM connection!&quot;</span><span class="p">),</span>
+                <span class="mi">10002</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">DCMRepository</span><span class="o">.</span><span class="n">__handle_response</span><span class="p">(</span><span class="n">res</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DCMRepository.free_write_lock">
+<a class="viewcode-back" href="../../../../../ayx_python_sdk.providers.amp_provider.repositories.html#ayx_python_sdk.providers.amp_provider.repositories.dcm_repository.DCMRepository.free_write_lock">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">free_write_lock</span><span class="p">(</span>
+        <span class="n">connection_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">secret_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">lock_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Frees a lock obtained from a previous call to get_write_lock().</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        connection_id</span>
+<span class="sd">            string with UUID of connection</span>
+<span class="sd">        role</span>
+<span class="sd">            A role such as ?oauth?</span>
+<span class="sd">        secret_type</span>
+<span class="sd">            A secret type such as ?oauth_token?</span>
+<span class="sd">        lock_id</span>
+<span class="sd">            A lock_id acquired from a previous call to get_write_lock()</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Freeing DCM write lock for &quot;</span>
+            <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">connection_id</span><span class="p">)</span>
+            <span class="o">+</span> <span class="s2">&quot; lock_id: &quot;</span>
+            <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">lock_id</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">DCMRepository</span><span class="o">.</span><span class="n">__get_grpc_client</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">req</span> <span class="o">=</span> <span class="n">DcmERequest</span><span class="p">()</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">unlock_secret</span><span class="o">.</span><span class="n">connection_id</span> <span class="o">=</span> <span class="n">connection_id</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">unlock_secret</span><span class="o">.</span><span class="n">credential_role</span> <span class="o">=</span> <span class="n">role</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">unlock_secret</span><span class="o">.</span><span class="n">secret_type</span> <span class="o">=</span> <span class="n">secret_type</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">v2</span><span class="o">.</span><span class="n">unlock_secret</span><span class="o">.</span><span class="n">lock_id</span> <span class="o">=</span> <span class="n">lock_id</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Dcm</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">RpcError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DcmEException</span><span class="p">(</span>
+                <span class="s2">&quot;Error getting DCM connection!&quot;</span><span class="p">,</span>
+                <span class="n">DcmEError</span><span class="p">(</span><span class="s2">&quot;Error getting DCM connection!&quot;</span><span class="p">),</span>
+                <span class="mi">10002</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">DCMRepository</span><span class="o">.</span><span class="n">__handle_response</span><span class="p">(</span><span class="n">res</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Alteryx, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
