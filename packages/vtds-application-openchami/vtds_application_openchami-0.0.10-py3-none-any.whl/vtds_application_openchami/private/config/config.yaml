@@ -1,0 +1,182 @@
+#
+# MIT License
+#
+# (C) Copyright 2025 Hewlett Packard Enterprise Development LP
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+#
+application:
+  # The deployment section specifies which of the available deployment
+  # modes is to be used to deploy OpenCHAMI and any configuration
+  # specific to that deployment mode that might be needed.
+  #
+  # The modes are:
+  #
+  #   'quickstart' - a deployment mode using the Quickstart OpenCHAMI
+  #                  deployment recipe to deploy OpenCHAMI with Magellan
+  #                  and RIE in a Docker compose cluster, potentially
+  #                  with Virtual Compute Nodes.
+  #
+  #   'quadlet'    - a deployment mode that deploys OpenCHAMI into
+  #                  systemd managed podman quadlets loosely based on
+  #                  the OpenCHAMI 2025 Tutorial, but with support for
+  #                  a cluster of Virtual Compute Nodes running directly
+  #                  on Virtual Blade hosts and with support for
+  #                  Magellan discovery of those Virtual Compute Nodes.
+  #
+  #   'bare'       - a deployment that finishes without OpenCHAMI
+  #                  deployed at all, but with a management node
+  #                  deployed that is ready for the 2025 Tutorial to be
+  #                  run on it.
+  deployment:
+    mode: quickstart
+
+  # The host block identifies the Virtual Network on which OpenCHAMI is
+  # hosted and the Virtual Node class whose instances will run
+  # OpenCHAMI. Deployment will be done to all nodes in that class (for a
+  # single instance of OpenCHAMI the cluster configuration should
+  # specify only one instance of the host node class.
+  host:
+    # The Virtual Network (named in the Cluster layer configuration) on
+    # which OpenCHAMI will be hosted.
+    network: hostnet
+    # The node class (named in the Cluster layer configuration) on which
+    # OpenCHAMI will be deployed and run.
+    node_class: host_node
+  # The discovery_networks map is a collection of network specifications
+  # for networks on which OpenCHAMI (currently Magellan) may do
+  # discovery of RedFish endpoints. A discovery network may be either a
+  # Cluster Network, identified by a network name from the Cluster layer
+  # configuration, or an internal network, with no network name but an
+  # explicit network CIDR. Either a network CIDR or a network name must
+  # be supplied. If both or neither is supplied this is an error. If a
+  # given cluster does not contain the network named in a Cluster
+  # Network, that network will be removed from the set of discovery
+  # networks prior to deployment.
+  #
+  # All of the valid networks specified here will be used for discovery
+  # of RedFish endpoints when OpenCHAMI is deployed.
+  discovery_networks:
+    internal:
+      network_cidr: 172.25.0.0/24
+      network_name: null
+      # Username and password used by RIE for redfish emulation.  The
+      # password here is not really a secret because it does not grant
+      # actual access to anything of interest.
+      redfish_username: root
+      redfish_password: root_password
+      # On the internal network, Virtual Blades are meaningless, so no
+      # blade classes are listed here...
+      blade_classes: []
+      
+    hardware_management:
+      network_cidr: null
+      network_name: hardware_management
+      # Username and password used by RedFish on the Virtual Blades. The
+      # password here grants access to the Virtual Nodes of the cluster,
+      # so it is a bit more sensitive. It is generated and stuffed into
+      # the configuration automatically if it is null. Override it at your
+      # own risk if you want a known value.
+      redfish_username: root
+      redfish_password: null
+      # The list of Virtual Blade classes here tells the management node
+      # deployment which blade classes to include in the set of RedFish
+      # endpoints that need mappings to xnames.
+      blade_classes:
+        - host-blade
+  # The 'rie_services' section configures the RIE (Redfish Interface
+  # Emulator) instances that will be set up in the OpenCHAMI
+  # deployment. RIE instances provide simulated RedFish endpoints for
+  # discovery and node manipulation. They do not represent any actual
+  # BMCs or Node resources.  They are useful for standalone testing of
+  # OpenCHAMI without the need for actual Compute nodes and so forth.
+  #
+  # The first RIE service configuration is annotated to help with
+  # setting up an RIE service. The rest are left without annotation to
+  # avoid duplication.
+  rie_services:
+    rf-x0c0s1b0:
+      # delete tells vTDS whether or not to delete this RIE service from
+      # the configuration before bringing up RIE services. Set this to
+      # true to remove this RIE service from the OpenCHAMI system
+      delete: false
+      # container_name specifies the name of the container to be be run
+      # to start this RIE service.
+      container_name: rf-x0c0s1b0
+      # hostname provides the hostname on the RIE network of the service
+      hostname: x0c0s1b0
+      # Image specifies the RIE container image to be used to make this
+      # RIE service.
+      image: ghcr.io/openchami/csm-rie:latest
+      # The following environment variables tell RIE what to set up on
+      # this service
+      environment:
+        - MOCKUPFOLDER=EX235a
+        - MAC_SCHEMA=Mountain
+        - XNAME=x0c0s1b0
+        - PORT=443
+      # networks indicates what networks the RIE service will be present
+      # on within the OpenCHAMI cluster and provides the hostname
+      # aliases for this RIE service
+      networks:
+        internal:
+          aliases:
+            - x0c0s1b0
+    rf-x0c0s2b0:
+      delete: false
+      container_name: rf-x0c0s2b0
+      hostname: x0c0s2b0
+      image: ghcr.io/openchami/csm-rie:latest
+      environment:
+        - MOCKUPFOLDER=EX235a
+        - MAC_SCHEMA=Mountain
+        - XNAME=x0c0s2b0
+        - PORT=443
+      networks:
+        internal:
+          aliases:
+            - x0c0s2b0
+    rf-x0c0s3b0:
+      delete: false
+      container_name: rf-x0c0s3b0
+      hostname: x0c0s3b0
+      image: ghcr.io/openchami/csm-rie:latest
+      environment:
+        - MOCKUPFOLDER=EX235a
+        - MAC_SCHEMA=Mountain
+        - XNAME=x0c0s3b0
+        - PORT=443
+      networks:
+        internal:
+          aliases:
+            - x0c0s3b0
+    rf-x0c0s4b0:
+      delete: false
+      container_name: rf-x0c0s4b0
+      hostname: x0c0s4b0
+      image: ghcr.io/openchami/csm-rie:latest
+      environment:
+        - MOCKUPFOLDER=EX235a
+        - MAC_SCHEMA=Mountain
+        - XNAME=x0c0s4b0
+        - PORT=443
+      networks:
+        internal:
+          aliases:
+            - x0c0s4b0
