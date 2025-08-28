@@ -1,0 +1,49 @@
+when:
+  - event: pull_request
+  - event: [push, tag, manual]
+    branch: main
+
+steps:
+  test:
+    image: python:${PYTHON_VERSION}-bookworm
+    commands:
+      - apt-get update
+      - apt-get install -y --no-install-recommends gettext make
+      - pip install nox
+      - nox -x --session "test-${PYTHON_VERSION}"
+
+  docs:
+    image: python:3.13-bookworm
+    commands:
+      - pip install nox
+      - nox -x --session "docs"
+    depends_on: []
+    when:
+      - matrix:
+          PYTHON_VERSION: 3.13
+
+  lint:
+    image: python:3.13-bookworm
+    commands:
+      - pip install nox
+      - nox -x -t lint
+    depends_on: []
+    when:
+      - matrix:
+          PYTHON_VERSION: 3.13
+
+  standardjs:
+    image: node:22-bookworm
+    commands:
+      - make ci-install-standardjs
+      - make standardjs
+    depends_on: []
+    when:
+      - matrix:
+          PYTHON_VERSION: 3.13
+
+matrix:
+  include:
+    # To cut down on CI pipeline duration, test oldest/latest Python only.
+    - PYTHON_VERSION: 3.8
+    - PYTHON_VERSION: 3.13
