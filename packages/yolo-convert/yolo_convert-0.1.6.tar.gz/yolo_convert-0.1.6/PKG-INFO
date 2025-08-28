@@ -1,0 +1,104 @@
+Metadata-Version: 2.4
+Name: yolo-convert
+Version: 0.1.6
+Summary: YOLOv5 model conversion CLI
+Author: hankobeo
+License: MIT
+Description-Content-Type: text/markdown
+Requires-Dist: torch>=1.8
+Requires-Dist: onnx
+
+## 上传步骤
+在你的项目根目录（pyproject.toml 所在目录）执行：
+```
+python -m build
+```
+- 这个命令会生成一个 dist/ 文件夹。
+- 文件通常是:
+  - `yolo_convert-0.1.0-py3-none-any.whl`
+  - `yolo_convert-0.1.0.tar.gz`
+
+再上传包:
+```
+twine upload dist/*
+```
+
+## 本地开发
+```
+pip uninstall yolo-convert      # 卸载 PyPI 版本，避免冲突
+pip install -e .                # 安装本地 editable 版本
+yolo_convert -i yolov5s.pt
+```
+## 安装测试
+安装python环境
+
+```bash
+pip install yolo-convert
+```
+
+### 导出Yolov5模型，一个输出
+默认分辨率640x640、opset版本12
+
+```bash
+yolo_convert -i yolov5.pt
+```
+
+修改分辨率为1024x1280(h,w)，opset设置13
+
+```bash
+yolo_convert -i yolov5.pt --img 1024 1280 --opset 13
+```
+
+动态分辨率
+
+```bash
+yolo_convert -i yolov5.pt --dynamic 
+```
+
+### 导出Yolov5模型，三个输出
+固定分辨率
+
+```bash
+yolo_convert -i yolov5.pt --hisi3559 --img 1024 1280
+```
+动态分辨率
+
+```bash
+yolo_convert -i yolov5.pt --hisi3559 --dynamic
+```
+
+## Atlas
+
+Atlas动态分辨率+后处理算子导出，`--class-num`指定类别个数，`--biases`默认不变，如果改变需要重新传anchor,第一个数为float型(带点，如10.0)
+
+```bash
+yolo_convert -i yolov5.pt --atlas --dynamic --class-num 3 --biases 10.0 13 16 30 33 23 30 61 62 45 59 119 116 90 156 198 373 326
+```
+
+如果训练后的anchor保持不变，可简化为：
+
+```bash
+yolo_convert -i yolov5.pt --atlas --dynamic --class-num 3
+```
+
+## 3403
+3403后处理算子导出,只支持固定分辨率，加--dynaic会报错，只加入--img h w
+
+```bash
+yolo_convert -i yolov5.pt --hisi3403 --img 1024 1280
+```
+
+## 3519
+3519后处理算子导出,同3403，只支持固定分辨率，加--dynaic会报错，只加入--img h w
+
+```bash
+yolo_convert -i yolov5.pt --hisi3519 --img 1024 1280
+
+```
+
+## Tensorrt efficientNms
+Tensorrt导出带efficientNms plugin,只支持动态分辨率
+
+```bash
+yolo_convert -i yolov5s.pt --tensorrt --dynamic
+```
