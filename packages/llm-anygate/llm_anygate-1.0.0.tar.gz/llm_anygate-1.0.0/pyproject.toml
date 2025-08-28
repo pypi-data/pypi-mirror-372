@@ -1,0 +1,137 @@
+[project]
+name = "llm-anygate"
+version = "1.0.0"
+description = "A flexible gateway for connecting and managing multiple LLM providers"
+authors = [
+    {name = "igamenovoer", email = "igamenovoer@github.com"}
+]
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.24.0",
+    "pydantic>=2.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "pyyaml>=6.0", "omegaconf>=2.3.0,<3", "click>=8.2.1,<9",
+]
+keywords = ["llm", "gateway", "ai", "openai", "anthropic", "api"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/igamenovoer/llm-anygate"
+Repository = "https://github.com/igamenovoer/llm-anygate"
+Issues = "https://github.com/igamenovoer/llm-anygate/issues"
+
+
+[project.scripts]
+llm-anygate = "llm_anygate.cli:main"
+llm-anygate-cli = "llm_anygate.cli_tool:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Pixi configuration starts here
+[tool.pixi.workspace]
+name = "llm-anygate"
+authors = ["igamenovoer <igamenovoer@github.com>"]
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
+version = "1.0.0"
+
+[tool.pixi.dependencies]
+python = ">=3.11,<4"
+pip = "*"
+setuptools = "*"
+wheel = "*"
+types-pyyaml = ">=6.0.12.20250822,<7"
+
+[tool.pixi.pypi-dependencies]
+# Install the package in editable mode
+llm-anygate = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+# Development tasks
+install = "pip install -e ."
+test = "pytest tests/ -v"
+test-cov = "pytest tests/ --cov=src/llm_anygate --cov-report=term-missing"
+lint = "ruff check src/ tests/"
+format = "ruff format src/ tests/"
+typecheck = "mypy src/"
+build = "python -m build"
+clean = "rm -rf dist/ build/ *.egg-info/ || cmd /c \"rmdir /s /q dist build 2>nul & del /q *.egg-info 2>nul & exit /b 0\""
+
+# Documentation tasks
+docs-serve = "mkdocs serve"
+docs-build = "mkdocs build"
+docs-deploy = "mkdocs gh-deploy"
+
+# Combined workflows
+quality = { depends-on = ["lint", "typecheck", "test"] }
+dev-setup = "pixi run install"
+
+[tool.pixi.feature.dev.pypi-dependencies]
+pytest = ">=7.0"
+pytest-cov = ">=4.0"
+pytest-asyncio = ">=0.21"
+black = ">=23.0"
+ruff = ">=0.1"
+mypy = ">=1.0"
+pre-commit = ">=3.0"
+build = ">=1.0"
+
+[tool.pixi.feature.docs.pypi-dependencies]
+mkdocs = ">=1.5"
+mkdocs-material = ">=9.0"
+mkdocstrings = {extras = ["python"], version = ">=0.24"}
+
+[tool.pixi.environments]
+default = {features = [], solve-group = "default"}
+dev = {features = ["dev"], solve-group = "default"}
+docs = {features = ["docs"], solve-group = "default"}
+
+# Tool configurations
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra -q"
+
+[tool.coverage.run]
+branch = true
+source = ["src/llm_anygate"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
