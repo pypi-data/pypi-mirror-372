@@ -1,0 +1,170 @@
+Metadata-Version: 2.4
+Name: cloudnetpy_qc
+Version: 1.26.3
+Summary: Quality control routines for CloudnetPy products
+Author-email: Finnish Meteorological Institute <actris-cloudnet@fmi.fi>
+License: MIT License
+        
+        Copyright (c) 2021-2022 Finnish Meteorological Institute
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/actris-cloudnet/cloudnetpy-qc
+Project-URL: Repository, https://github.com/actris-cloudnet/cloudnetpy-qc
+Project-URL: Changelog, https://github.com/actris-cloudnet/cloudnetpy-qc/blob/main/CHANGELOG.md
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Scientific/Engineering :: Atmospheric Science
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: cfchecker
+Requires-Dist: netCDF4
+Requires-Dist: numpy
+Requires-Dist: requests
+Requires-Dist: scipy
+Provides-Extra: test
+Requires-Dist: mypy; extra == "test"
+Requires-Dist: pytest-flakefinder; extra == "test"
+Requires-Dist: types-requests; extra == "test"
+Provides-Extra: dev
+Requires-Dist: pre-commit; extra == "dev"
+Requires-Dist: release-version; extra == "dev"
+Dynamic: license-file
+
+# CloudnetPy-QC
+
+[![CloudnetPy-QC CI](https://github.com/actris-cloudnet/cloudnetpy-qc/actions/workflows/test.yml/badge.svg)](https://github.com/actris-cloudnet/cloudnetpy-qc/actions/workflows/test.yml)
+[![PyPI version](https://badge.fury.io/py/cloudnetpy-qc.svg)](https://badge.fury.io/py/cloudnetpy-qc)
+
+Software for evaluating quality of [ACTRIS-Cloudnet](https://cloudnet.fmi.fi) data products.
+
+## Installation
+
+```shell
+$ pip3 install cloudnetpy-qc
+```
+
+## Usage
+
+```python
+import json
+from cloudnetpy_qc import quality
+site_meta = {"latitude": 61.844, "longitude": 24.287, "altitude": 150}
+report = quality.run_tests('cloudnet-file.nc', site_meta)
+json_object = json.dumps(report.to_dict(), indent=2)
+print(json_object)
+```
+
+## Format of the report
+
+- `timestamp`: UTC timestamp of the test
+- `qcVersion`: `cloudnetpy-qc` version
+- `tests`: `Test[]`
+- `data_coverage`: float
+
+### `Test`
+
+- `testId`: Unique name of the test
+- `exceptions`: `Exception[]`
+
+### `Exception`
+
+- `message`: Free-form message about the exception
+- `result`: `"info"`, `"error"` or `"warning"`
+
+### Example:
+
+```json
+{
+  "timestamp": "2022-10-13T07:00:26.906815Z",
+  "qcVersion": "1.1.2",
+  "tests": [
+    {
+      "testId": "TestUnits",
+      "exceptions": []
+    },
+    {
+      "testId": "TestInstrumentPid",
+      "exceptions": [
+        {
+          "message": "Instrument PID is missing.",
+          "result": "warning"
+        }
+      ]
+    },
+    {
+      "testId": "TestTimeVector",
+      "exceptions": []
+    },
+    {
+      "testId": "TestVariableNames",
+      "exceptions": []
+    },
+    {
+      "testId": "TestCFConvention",
+      "exceptions": []
+    }
+  ]
+}
+```
+
+## Tests
+
+| Test                        | Description                                                                             |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| `FindAttributeOutliers`     | Find suspicious values in global attributes.                                            |
+| `FindFolding`               | Test for radar folding.                                                                 |
+| `FindVariableOutliers`      | Find suspicious data values.                                                            |
+| `TestBrightnessTemperature` | Test that brightness temperature data are valid.                                        |
+| `TestCFConvention`          | Test compliance with the CF metadata conventions.                                       |
+| `TestComment`               | Check that variables have expected comments.                                            |
+| `TestCoordinateVariables`   | Test dimensions of coordinate variables are correct.                                    |
+| `TestCoordinates`           | Check that file coordinates match site coordinates.                                     |
+| `TestDataCoverage`          | Test that file contains enough data.                                                    |
+| `TestDataModel`             | Test netCDF data model.                                                                 |
+| `TestDataTypes`             | Check that variables have expected data types.                                          |
+| `TestFillValue`             | Test that fill value is explicitly set for variables with missing data.                 |
+| `TestFloatingPointValues`   | Test for special floating-point values which may indicate problems with the processing. |
+| `TestGlobalAttributes`      | Check that file contains required global attributes.                                    |
+| `TestIfRangeCorrected`      | Test that beta is range corrected.                                                      |
+| `TestInstrumentPid`         | Test that valid instrument PID exists.                                                  |
+| `TestLDR`                   | Test that LDR values are proper.                                                        |
+| `TestLidarBeta`             | Test that one beta variable exists.                                                     |
+| `TestLongNames`             | Check that variables have expected long names.                                          |
+| `TestMWRMultiTemperature`   | Test that temperature data are valid.                                                   |
+| `TestMWRSingleLWP`          | Test that LWP data are valid.                                                           |
+| `TestMask`                  | Test that data are not completely masked.                                               |
+| `TestMedianLwp`             | Test that LWP data are valid.                                                           |
+| `TestModelData`             | Test that model data are valid.                                                         |
+| `TestRainfallConsistency`   | Test that precipitation rate and amount are consistent.                                 |
+| `TestStandardNames`         | Check that variable have expected standard names.                                       |
+| `TestTimeVector`            | Test that time vector is continuous.                                                    |
+| `TestUnexpectedMask`        | Test if data contain unexpected masked values.                                          |
+| `TestUnits`                 | Check that variables have expected units.                                               |
+| `TestVariableNames`         | Check that file contains required variables.                                            |
+| `TestVariableNamesDefined`  | Check that variables have expected names.                                               |
+| `TestZenithAngle`           | Test lidar zenith angle.                                                                |
+
+## License
+
+MIT
