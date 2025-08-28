@@ -1,0 +1,104 @@
+Metadata-Version: 2.4
+Name: tentris
+Version: 0.19.5b0
+Summary: Python bindings for using the RDF graph database Tentris RDF rdflib
+Author-email: Tentris GmbH <info@tentris.io>
+Maintainer-email: Tentris GmbH <info@tentris.io>
+License-Expression: LicenseRef-Tentris-EULA-Beta
+Project-URL: Homepage, https://tentris.io
+Project-URL: Documentation, https://docs.tentris.io/running_with_python.html
+Project-URL: Repository, https://github.com/tentris/tentris
+Project-URL: Issues, https://github.com/tentris/tentris/issues
+Project-URL: Changelog, https://github.com/tentris/tentris/releases
+Project-URL: License, https://tentris.io/#eula
+Keywords: tentris,knowledge graph,RDF,SPARQL,graph database,rdflib,semantic web
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: System Administrators
+Classifier: Topic :: Software Development
+Classifier: Topic :: Database :: Database Engines/Servers
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Requires-Dist: rdflib>=7
+Dynamic: license-file
+
+# Running Tentris Using Python
+
+> **Note:** Connecting to local/remote Tentris instances via HTTP is supported on all plattforms.
+> Running Tentris **within** python is only supported on Linux.
+
+## Getting Started
+
+The Tentris Python library is a plugin for [rdflib](https://rdflib.readthedocs.io/en/7.1.0/gettingstarted.html).
+
+### Native (Linux only)
+
+With the native `TentrisStore`, Tentris is embedded in Python applications.
+
+```python
+import tentris
+import rdflib
+
+# Create an RDFLib graph using Tentris as its backend
+graph = rdflib.Graph(store="Tentris")
+
+# Load the graph using the SPARQL Update operation `LOAD`
+# https://www.w3.org/TR/2013/REC-sparql11-update-20130321/#load 
+graph.update("LOAD <https://files.tentris.io/mona-lisa.ttl>")
+
+# Query the Mona Lisa knowledge graph
+query_str = """
+   PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+   PREFIX dbr: <http://dbpedia.org/resource/>
+   PREFIX dbo: <http://dbpedia.org/ontology/>
+
+   SELECT ?name WHERE {
+      dbr:Mona_Lisa dbo:author ?person .
+      ?person foaf:name ?name .
+   }
+"""
+
+for binding in graph.query(query_str):
+    print(f"{binding.name.n3()}")
+```
+
+The `TentrisStore` operates in-memory and does not persist data in the disk.
+To use a disk-based instance of Tentris, the [HTTP-based store](#http) should be used.
+
+### HTTP (Any Operating System)
+
+Remote or local instances of Tentris can be queries using the HTTP-based `TentrisHTTPStore`.
+
+#### Local
+
+Assuming a Tentris server is running on the localhost listening to the default port, it can be queried as shown in the
+example below.
+
+```python
+import tentris
+import rdflib
+
+graph = rdflib.Graph(store="TentrisHTTP")
+
+for binding in graph.query("SELECT * WHERE { ?s ?p ?o } LIMIT 10"):
+    print(f"{binding.s.n3()} {binding.p.n3()} {binding.o.n3()}")
+```
+
+#### Remote
+
+To query remote instances of Tentris, the URL needs to be explicitly stated.
+
+```python
+from tentris import TentrisHTTPStore
+import rdflib
+
+graph = rdflib.Graph(store=TentrisHTTPStore("https://dbpedia.data.dice-research.org"))
+
+for binding in graph.query("SELECT * WHERE { ?s ?p ?o } LIMIT 10"):
+    print(f"{binding.s.n3()} {binding.p.n3()} {binding.o.n3()}")
+```
+
+For more information about setting up a disk-based instance of Tentris, please refer to the
+chapter [Binary](https://docs.tentris.io/running_with_binaries.html).
