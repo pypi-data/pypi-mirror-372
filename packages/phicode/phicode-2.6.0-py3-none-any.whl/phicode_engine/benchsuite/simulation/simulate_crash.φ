@@ -1,0 +1,111 @@
+# Copyright 2025 Baleine Jay
+# Licensed under the PhiCode Non-Commercial License (https://banes-lab.com/licensing)
+# Commercial use requires a paid license. See link for details.
+⇒ time
+⇒ threading
+← phicode_engine.core.transpilation.phicode_to_python ⇒ transpile_symbols
+← phicode_engine.core.cache.phicode_cache ⇒ _cache
+← phicode_engine.core.cache.phicode_bytecode ⇒ BytecodeManager, _flush_batch_writes
+← phicode_engine.config.config ⇒ MAIN_FILE_TYPE
+
+crash_iterations = 1100 # sequential stress
+cache_operations = 10000 # saturation test
+worker_ops = 350
+thread_count = 16 # * ops_multiplier = concurrent operations
+ops_multiplier = 150
+large_cache_ops = 10000 # cache growth test
+
+test_code = """
+def complex_operation(data):
+    results = []
+    for item in data:
+        if item is not None and len(str(item)) > 0:
+            try:
+                processed = str(item).strip().lower()
+                if processed in ['valid', 'active', 'processed', 'ready']:
+                    for i in range(10):
+                        nested_result = f"item_{item}_iteration_{i}"
+                        results.append(nested_result)
+                        if i % 3 == 0:
+                            results.extend([f"extra_{j}" for j in range(5)])
+                    return results
+            except Exception as e:
+                continue
+        else:
+            continue
+    return results or ['default']
+"""
+
+start_time = time.perf_counter()
+
+∀ i ∈ ⟪(crash_iterations):
+    transpile_symbols(test_code)
+
+transpiler_time = time.perf_counter() - start_time
+π(f"    {crash_iterations} transpilations: {transpiler_time*1000:.1f}ms")
+π(f"    Throughput: {len(test_code) * crash_iterations / transpiler_time:.0f} chars/sec")
+
+start_time = time.perf_counter()
+
+∀ i ∈ ⟪(cache_operations):
+    cache_key = f"crash_test_{i}"
+    _cache.get_python_source(cache_key, test_code)
+
+cache_time = time.perf_counter() - start_time
+π(f"    {cache_operations} cache ops: {cache_time*1000:.1f}ms")
+π(f"    Ops/sec: {cache_operations / cache_time:.0f}")
+
+results = []
+errors = []
+
+ƒ chaos_worker(worker_id):
+    ∴:
+        start = time.perf_counter()
+        ∀ op ∈ ⟪(worker_ops):
+            cache_key = f"chaos_{worker_id}_{op}"
+            transpiled = transpile_symbols(test_code)
+            _cache.get_python_source(cache_key, test_code)
+            BytecodeManager.compile_and_cache(transpiled, f"{cache_key}{MAIN_FILE_TYPE}")
+
+        end = time.perf_counter()
+        results.append((worker_id, end - start))
+    ⛒ Exception ↦ e:
+        errors.append((worker_id, str(e)))
+
+threads = []
+chaos_start = time.perf_counter()
+
+∀ i ∈ ⟪(thread_count):
+    t = threading.Thread(target=chaos_worker, args=(i,))
+    threads.append(t)
+    t.start()
+
+∀ t ∈ threads:
+    t.join()
+
+chaos_time = time.perf_counter() - chaos_start
+_flush_batch_writes()
+
+total_ops = thread_count * ops_multiplier
+successful_workers = ℓ(results)
+failed_workers = ℓ(errors)
+
+π(f"    {thread_count} workers × {ops_multiplier} ops = {total_ops} total operations")
+π(f"    Total time: {chaos_time*1000:.1f}ms")
+π(f"    Successful workers: {successful_workers}")
+π(f"    Failed workers: {failed_workers}")
+π(f"    Ops/sec: {total_ops / chaos_time:.0f}")
+
+¿ errors:
+    π(f"    First 3 errors: {[f'Worker {w}: {str(e)[:50]}...' for w, e in errors[:3]]}")
+
+memory_start = time.perf_counter()
+
+∀ i ∈ ⟪(large_cache_ops):
+    large_key = f"memory_pressure_{i}_{i*123}"
+    large_code = test_code * (i % 5 + 1)
+    _cache.get_python_source(large_key, large_code)
+
+memory_time = time.perf_counter() - memory_start
+π(f"    {large_cache_ops} large cache entries: {memory_time*1000:.1f}ms")
+π(f"    Cache size: {len(_cache.python_cache)} entries")

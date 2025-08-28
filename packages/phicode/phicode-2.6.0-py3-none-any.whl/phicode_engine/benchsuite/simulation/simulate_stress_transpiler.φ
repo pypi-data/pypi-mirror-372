@@ -1,0 +1,65 @@
+# Copyright 2025 Baleine Jay
+# Licensed under the PhiCode Non-Commercial License (https://banes-lab.com/licensing)
+# Commercial use requires a paid license. See link for details.
+⇒ time
+← phicode_engine.core.transpilation.phicode_to_python ⇒ transpile_symbols
+← phicode_engine.config.config ⇒ PYTHON_TO_PHICODE
+
+symbols = list(PYTHON_TO_PHICODE.values())
+
+light_symbols = f"""
+ƒ simple_func():
+    ⟲ "hello world"
+"""
+
+medium_symbols = f"""
+ƒ process_items(data):
+    results = []
+    ∀ item ∈ data:
+        ¿ item ≡ ¬ Ø:
+            ¿ isinstance(item, str):
+                results.append(item.upper())
+            ⋄:
+                results.append(str(item))
+    ⟲ results
+"""
+
+heavy_symbols = f"""
+ƒ complex_workflow(items):
+    ∀ item ∈ items:
+        ¿ item ≡ ¬ Ø ∧ len(item) > 0:
+            ∴:
+                processed = item.strip().lower()
+                ¿ processed ∈ ['valid', 'active']:
+                    π(f"Processing: {{processed}}")
+                    ⟲ processed
+            ⛒ Exception ↦ e:
+                π(f"Error: {{e}}")
+                ⇉
+        ⋄:
+            ⇉
+    ⟲ Ø
+"""
+
+test_cases = [
+    ("Light symbols", light_symbols, 500),
+    ("Medium symbols", medium_symbols, 300),
+    ("Heavy symbols", heavy_symbols, 200)
+]
+
+∀ test_name, code, iterations ∈ test_cases:
+    start = time.perf_counter()
+
+    ∀ _ ∈ ⟪(iterations):
+        result = transpile_symbols(code)
+
+    end = time.perf_counter()
+    total_time = end - start
+
+    chars_processed = ℓ(code) * iterations
+    throughput = chars_processed / total_time
+
+    π(f"  {test_name}:")
+    π(f"    Iterations: {iterations}")
+    π(f"    Time: {total_time*1000:.1f}ms")
+    π(f"    Throughput: {throughput:.0f} chars/sec")

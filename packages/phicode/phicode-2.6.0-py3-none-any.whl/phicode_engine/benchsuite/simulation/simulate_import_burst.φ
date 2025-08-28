@@ -1,0 +1,52 @@
+# Copyright 2025 Baleine Jay
+# Licensed under the PhiCode Non-Commercial License (https://banes-lab.com/licensing)
+# Commercial use requires a paid license. See link for details.
+⇒ time
+⇒ sys
+← phicode_engine.core.importing.phicode_importer ⇒ install_phicode_importer
+← phicode_engine.core.importing.phicode_finder ⇒ PhicodeFinder
+
+start = time.perf_counter()
+
+test_paths = [f"/test/path_{i}" ∀ i ∈ ⟪(500)]
+
+∀ path ∈ test_paths:
+    install_phicode_importer(path)
+
+registration_time = time.perf_counter() - start
+
+phi_finders = [finder ∀ finder ∈ sys.meta_path ¿ isinstance(finder, PhicodeFinder)]
+
+π(f"  Importer registrations: {len(test_paths)}")
+π(f"  Registration time: {registration_time*1000:.1f}ms")
+π(f"  Avg per registration: {registration_time*1000/len(test_paths):.2f}ms")
+π(f"  PhicodeFinders ∈ meta_path: {len(phi_finders)}")
+
+start = time.perf_counter()
+
+∀ path ∈ test_paths[:10]:
+    install_phicode_importer(path)
+
+dedup_time = time.perf_counter() - start
+phi_finders_after = [finder ∀ finder ∈ sys.meta_path ¿ isinstance(finder, PhicodeFinder)]
+
+π(f"  Deduplication test: {dedup_time*1000:.1f}ms")
+π(f"  Finders after dedup: {len(phi_finders_after)}")
+π(f"  Deduplication working: {len(phi_finders_after) == len(phi_finders)}")
+
+start = time.perf_counter()
+
+test_modules = [f"nonexistent_module_{i}" ∀ i ∈ ⟪(1000)]
+
+∀ module_name ∈ test_modules:
+    ∀ finder ∈ phi_finders[:5]:
+        ∴:
+            finder.find_spec(module_name, Ø)
+        ⛒:
+            ⋯
+
+lookup_time = time.perf_counter() - start
+
+π(f"  Module lookups: {len(test_modules) * 5}")
+π(f"  Lookup time: {lookup_time*1000:.1f}ms")
+π(f"  Avg per lookup: {lookup_time*1000/(len(test_modules)*5):.2f}ms")
