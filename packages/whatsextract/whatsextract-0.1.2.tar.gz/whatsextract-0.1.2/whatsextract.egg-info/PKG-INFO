@@ -1,0 +1,192 @@
+Metadata-Version: 2.4
+Name: whatsextract
+Version: 0.1.2
+Summary: WhatsExtract API client for Python
+Author-email: WhatsExtract <dev@whatsextract.com>
+License-Expression: MIT
+Project-URL: Homepage, https://docs.whatsextract.com
+Project-URL: Repository, https://github.com/whatsextract/examples
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.31.0
+Requires-Dist: aiohttp>=3.9.0
+Provides-Extra: async
+Requires-Dist: aiohttp>=3.9.0; extra == "async"
+Provides-Extra: pandas
+Requires-Dist: pandas>=2.0.0; extra == "pandas"
+Requires-Dist: tqdm>=4.66.0; extra == "pandas"
+Provides-Extra: cli
+Requires-Dist: click>=8.1.7; extra == "cli"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23.0; extra == "dev"
+Requires-Dist: types-requests; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Dynamic: license-file
+
+
+# whatsextract
+
+WhatsExtract API client for Python — fast email/phone extraction from WhatsApp-style messages.
+
+[Docs](https://docs.whatsextract.com) • [Examples](https://github.com/whatsextract/examples) • [Issues](https://github.com/whatsextract/examples/issues)
+
+---
+
+## Installation
+
+```bash
+pip install whatsextract
+# Optional extras:
+pip install "whatsextract[pandas]"   # DataFrame helpers
+pip install "whatsextract[cli]"      # CLI: `whatsextract`
+```
+
+From source (editable dev):
+
+```bash
+git clone https://github.com/whatsextract/examples.git
+cd examples/sdk-py
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[cli,pandas,dev]"
+```
+
+## Quick start
+
+```python
+from whatsextract import WhatsExtract
+
+client = WhatsExtract(
+    api_key="YOUR_API_KEY",
+    base_url="https://whatsapp-lead-extractor-api.p.rapidapi.com",  # or your self-hosted URL
+)
+
+result = client.extract("Priya — priya@acme.com +1 415 555 0199")
+print(result.email, result.phone)
+```
+
+### Async
+
+```python
+import asyncio
+from whatsextract import WhatsExtract
+
+async def main():
+    c = WhatsExtract("YOUR_API_KEY", base_url="http://localhost:8080")
+    r = await c.extract_async("Contact me: john@example.com, (555) 123-4567")
+    print(r)
+
+asyncio.run(main())
+```
+
+### Batch
+
+```python
+from whatsextract import WhatsExtract
+
+c = WhatsExtract("YOUR_API_KEY", base_url="http://localhost:8080")
+resp = c.batch_extract(
+    ["A — a@example.com 555-0000", "B — b@example.com 555-1111"],
+)
+print(resp[0].email, resp[1].email)
+```
+
+### Pandas helper (optional)
+
+```python
+import pandas as pd
+from whatsextract import WhatsExtract
+
+df = pd.DataFrame({"msg": [
+    "Hi! jane@corp.com +1 415 555 1212",
+    "Rahul — rahul@contoso.io 9876543210",
+]})
+c = WhatsExtract("YOUR_API_KEY", base_url="http://localhost:8080")
+out = c.extract_from_dataframe(df, column="msg", add_columns=True)
+print(out.head())
+```
+
+### Webhooks
+
+Configure webhook (server must respond 2xx):
+
+```python
+c = WhatsExtract("YOUR_API_KEY", base_url="http://localhost:8080")
+resp = c.configure_webhook("https://example.com/webhook", events=["batch.completed"])
+print(resp)  # {'webhook_id': 'whk_...', 'status': 'verified', ...}
+```
+
+Validate signature in your receiver (example Flask):
+
+```python
+import hmac, hashlib
+from flask import Flask, request, abort
+
+app = Flask(__name__)
+WEBHOOK_SECRET = "replace_me"
+
+@app.post("/webhook")
+def hook():
+    sig = request.headers.get("X-WhatsExtract-Signature", "")
+    body = request.data
+    mac = "sha256=" + hmac.new(WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(mac, sig):
+        abort(401)
+    # process json
+    return {"ok": True}
+```
+
+### Usage stats
+
+```python
+c = WhatsExtract("YOUR_API_KEY", base_url="http://localhost:8080")
+print(c.get_usage())
+```
+
+## CLI
+
+Install `whatsextract[cli]` then:
+
+```bash
+# Single extraction
+whatsextract extract "Ping me at john@example.com or +1 555 123 4567"   --api-key $WE_API_KEY --base-url http://localhost:8080
+
+# Batch from file (one message per line)
+whatsextract batch messages.txt --api-key $WE_API_KEY --base-url http://localhost:8080
+
+# Usage
+whatsextract usage --api-key $WE_API_KEY --base-url http://localhost:8080
+```
+
+Set environment variables to avoid passing flags each time:
+
+```bash
+export WE_API_KEY="YOUR_API_KEY"
+export WE_BASE_URL="http://localhost:8080"
+```
+
+## Timeouts & retries
+
+- Default timeout: 30s
+- Automatic retry: up to 3 times on `429/5xx`
+- Customize via constructor: `WhatsExtract(..., timeout=20, max_retries=5)`
+
+## Development
+
+```bash
+pip install -e ".[cli,pandas,dev]"
+pytest -q
+```
+
+## Publishing (maintainers)
+
+```bash
+python -m pip install --upgrade build twine
+python -m build
+twine upload dist/*
+```
+
+## License
+
+MIT © WhatsExtract
