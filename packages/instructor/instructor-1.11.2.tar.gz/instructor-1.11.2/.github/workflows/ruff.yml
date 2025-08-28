@@ -1,0 +1,34 @@
+name: Ruff
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+env:
+  WORKING_DIRECTORY: "."
+  RUFF_OUTPUT_FILENAME: "ruff.log"
+  CUSTOM_FLAGS: ""
+  CUSTOM_PACKAGES: "instructor examples tests"
+
+jobs:
+  Ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install 3.9
+      - name: Install the project
+        run: uv sync --all-extras
+      - name: Run Continuous Integration Action
+        uses: astral-sh/ruff-action@v3
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-log
+          path: ${{ env.WORKING_DIRECTORY }}/${{ env.RUFF_OUTPUT_FILENAME }}
