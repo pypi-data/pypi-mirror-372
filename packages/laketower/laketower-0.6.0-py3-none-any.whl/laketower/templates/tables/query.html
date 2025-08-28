@@ -1,0 +1,57 @@
+{% extends "_base.html" %}
+{% import 'tables/_macros.html' as table_macros %}
+
+{% block body %}
+<div class="row">
+  <div class="col">
+    <h2 class="mb-3">SQL Query</h2>
+
+    <form action="{{ request.url.path }}" method="get">
+      <div class="mb-3">
+        <textarea name="sql" rows="5" class="form-control">{{ sql_query }}</textarea>
+      </div>
+
+      <div class="mb-3">
+        <div class="d-flex justify-content-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi-lightning" aria-hidden="true"></i> Execute
+          </button>
+        </div>
+      </div>
+    </form>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+      {{ error.message }}
+    </div>
+    {% else %}
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h3>Results</h3>
+      <a href="/tables/query/csv?sql={{ sql_query | urlencode }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi-download" aria-hidden="true"></i> Export CSV
+      </a>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered table-striped table-hover">
+        <thead>
+          <tr>
+            {% for column in table_results.columns %}
+            <th>{{ column }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody class="table-group-divider">
+          {% for row in table_results.to_numpy().tolist() %}
+          <tr>
+            {% for col in row %}
+            <td>{{ col }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
