@@ -1,0 +1,1 @@
+# Клиент для работы с API [Platform V Works::TestCulture](https://platformv.sbertech.ru/products/instrumenty-razrabotchika/works-test-culture)
