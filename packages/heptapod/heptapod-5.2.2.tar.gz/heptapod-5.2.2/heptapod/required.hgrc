@@ -1,0 +1,85 @@
+[extensions]
+heptapod=
+hggit=
+evolve=
+topic=
+loggingmod =
+share =
+clonebundles =
+configexpress =
+censor=
+
+[logging]
+# see https://dev.heptapod.net/heptapod/hgext-loggingmod/blob/branch/default/README.md
+# it is essential for proper GitLab operation that nothing ends up on
+# stderr during merges, otherwise it counts as an error.
+file = /tmp/mercurial.log
+
+[ui]
+traceback = yes
+
+[hooks]
+# the heptapod_hooks package gets installed by
+# Heptapod's version of the hg-git Python distribution
+pretxnclose.heptapod_sync=python:heptapod.hooks.gitlab_mirror.mirror
+pretxnopen.heptapod_check_write=python:heptapod.hooks.perm.check_write
+pretxnclose.heptapod_check_publish=python:heptapod.hooks.check_publish.check_publish
+precommit.heptapod_forbid_subrepos=python:heptapod.hooks.subrepos.forbid_commit
+
+# ordering: higher has more priority. We don't want to rely
+# on the order of registration because of possible overrides
+# (default value, which most user hooks would have is 0)
+
+# permissions or sanity checks go first
+priority.pretxnclose.heptapod_check_publish = 100
+# internal git sync should be last, and after any
+# user registered ones by default
+priority.pretxnclose.heptapod_sync = -100
+
+[experimental]
+evolution.bundle-obsmarker=yes
+bundle-phases=yes
+hg-git.export-named-branches = yes
+obshashrange = yes
+topic.publish-bare-branch = yes
+topic.server-gate-topic-changesets = yes
+web.full-garbage-collection-rate = 20
+server.allow-hidden-access = *
+
+[web]
+push_ssl = no
+allow_push = heptapod-write, heptapod-publish
+allow_publish = heptapod-publish
+# heptapod#705 allow serving obsolete changesets, not exposing secret ones
+view = served.hidden
+
+[phases]
+publish = false
+
+[git]
+blockdotgit = false
+
+[push]
+pushvars.server = true
+
+[configexpress]
+# Do not say anything to clients without the extension.
+# Without the configexpress:server2client, clients with
+# the extension won't see a difference either.
+enforce=ignore
+
+[format]
+use-share-safe = yes
+
+[share]
+# Heptapod uses `hg share` internally for writing operations
+# that involve a working directory (merge, direct commit creation)
+
+# useful upon introduction of `use-share-safe` (upgrade of this hgrc file)
+# if there was an ongoing operation. Not very likely to happen, due to
+# Heptapod upgrades typically involving a stop of the Rails app.
+safe-mismatch.source-safe = upgrade-allow
+
+[clone-bundles]
+auto-generate.on-change = no
+auto-generate.formats = zstd-v2
