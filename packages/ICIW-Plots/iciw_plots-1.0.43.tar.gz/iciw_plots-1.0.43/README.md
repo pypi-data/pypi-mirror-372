@@ -1,0 +1,682 @@
+# <p align="right">![](ICIW_Plots_Logo.png)</p>
+## Installation
+
+Install the package by running the following command:
+
+```bash
+pip install iciw-plots
+```
+
+or 
+    
+```bash
+pip install iciw-plots -U
+```
+
+
+```python
+pip install iciw-plots -U
+```
+
+    Requirement already satisfied: iciw-plots in c:\programdata\anaconda3\envs\ml3\lib\site-packages (1.0.40)
+    Collecting iciw-plots
+      Downloading ICIW_Plots-1.0.41-py3-none-any.whl.metadata (17 kB)
+    Requirement already satisfied: numpy in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from iciw-plots) (1.26.4)
+    Requirement already satisfied: matplotlib in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from iciw-plots) (3.8.4)
+    Requirement already satisfied: contourpy>=1.0.1 in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from matplotlib->iciw-plots) (1.2.0)
+    Requirement already satisfied: cycler>=0.10 in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from matplotlib->iciw-plots) (0.11.0)
+    Requirement already satisfied: fonttools>=4.22.0 in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from matplotlib->iciw-plots) (4.51.0)
+    Requirement already satisfied: kiwisolver>=1.3.1 in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from matplotlib->iciw-plots) (1.4.4)
+    Requirement already satisfied: packaging>=20.0 in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from matplotlib->iciw-plots) (24.1)
+    Requirement already satisfied: pillow>=8 in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from matplotlib->iciw-plots) (10.4.0)
+    Requirement already satisfied: pyparsing>=2.3.1 in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from matplotlib->iciw-plots) (3.0.9)
+    Requirement already satisfied: python-dateutil>=2.7 in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from matplotlib->iciw-plots) (2.9.0.post0)
+    Requirement already satisfied: six>=1.5 in c:\programdata\anaconda3\envs\ml3\lib\site-packages (from python-dateutil>=2.7->matplotlib->iciw-plots) (1.16.0)
+    Downloading ICIW_Plots-1.0.41-py3-none-any.whl (29 kB)
+    Installing collected packages: iciw-plots
+      Attempting uninstall: iciw-plots
+        Found existing installation: ICIW_Plots 1.0.40
+        Uninstalling ICIW_Plots-1.0.40:
+          Successfully uninstalled ICIW_Plots-1.0.40
+    Successfully installed iciw-plots-1.0.41
+    Note: you may need to restart the kernel to use updated packages.
+    
+
+## Usage
+
+Although I show the usage of the package in the context of a Jupyter notebook, the package can be used in any Python environment.
+Also, the style has to be used only once, at the beginning of the plotting file or notebook.
+**In this document I write it in nearly every box just to show th use. This is not necessary!**
+
+### Use of the default style
+The default style defines convenient presets for the following settings:
+- Font size
+- Font family
+- Line width
+- Marker size
+- Color palette
+- Grid style
+- Legend style
+
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.style.use("ICIWstyle")
+
+x = np.linspace(0, 2 * np.pi, 100)
+
+for i in range(7):
+    plt.plot(x, np.sin(x + (i * (4 * np.pi / 7))), label=f"Line {i}")
+
+plt.legend()
+plt.show()
+```
+
+
+    
+![png](examples/README_files/README_3_0.png)
+    
+
+
+In addition to the default style, the package also provides different styles to be loaded additionally. 
+These can be used to 
+- enable rendering of texts in LaTeX format by using `ICIWlatex`
+- disable the background when exporting the plot by using `ICIWnobg`
+  
+The latex style automatically imports the LaTex packages `amsmath`, `amssymb`, `siunitx` and `mchem` enabling the use of all latex math commands, SI unit rendering and chemical formulas.
+
+Note, How I use the style only temporarily with the contextmanager.
+
+
+
+```python
+import matplotlib.pyplot as plt
+
+plt.style.use("ICIWstyle")
+
+x = np.linspace(0, 2 * np.pi, 100)
+
+with plt.style.context(
+    "ICIWlatex", after_reset=False
+):  # use the latex style only for this plot
+    for i in range(7):
+        plt.plot(x, np.sin(x + (i * (4 * np.pi / 7))))
+
+    plt.xlabel(r"$t$ / \unit{\second}")  # use latex formulae and a unit
+    plt.ylabel(r"$c$ / \unit{\mole\per\metre\cubed}")
+    plt.legend(
+        [
+            r"\ce{A}",  # use chemistry symbols
+            r"\ce{B}",
+            r"\ce{AB}",
+            r"\ce{AB2}",
+            r"\ce{A2B}",
+            r"\ce{C2+}",
+        ]
+    )
+
+    plt.show()
+```
+
+
+    
+![png](examples/README_files/README_5_0.png)
+    
+
+
+### Sizes
+
+The package provides default size options for the following publishers:
+- ACS
+- Elsevier
+  
+To make conversion between default matplotlib units (inches) and european units (cm) easier, the package provides the following conversion factors:
+- `cm2inch`
+- `mm2inch`
+
+
+```python
+from ICIW_Plots.figures import Elsevier_Sizes, ACS_Sizes
+from ICIW_Plots import cm2inch
+
+print(
+    f"Width for Elsevier default single column wide plots:\n{Elsevier_Sizes.single_column}"
+)
+print(
+    f"Width for Elsevier default double column wide plots:\n{Elsevier_Sizes.double_column}"
+)
+print(
+    f"width for Elsevier defaultone and a half column wide plots:\n{Elsevier_Sizes.threehalf_column}"
+)
+
+print(f"Width for ACS default single column wide plots:\n{ACS_Sizes.single_column}")
+print(f"Width for ACS default double column wide plots:\n{ACS_Sizes.double_column}")
+
+fig = plt.figure(figsize=(Elsevier_Sizes.single_column["in"], 5 * cm2inch))
+ax = fig.add_axes([0, 0, 1, 1])
+plt.show()
+```
+
+    Width for Elsevier default single column wide plots:
+    {'mm': 90, 'in': 3.54, 'cm': 9}
+    Width for Elsevier default double column wide plots:
+    {'mm': 190, 'in': 7.48, 'cm': 19}
+    width for Elsevier defaultone and a half column wide plots:
+    {'mm': 140, 'in': 5.51, 'cm': 14}
+    Width for ACS default single column wide plots:
+    {'mm': 82.55, 'in': 3.25, 'cm': 8.255}
+    Width for ACS default double column wide plots:
+    {'mm': 177.8, 'in': 7, 'cm': 17.78}
+    
+
+
+    
+![png](examples/README_files/README_7_1.png)
+    
+
+
+### More Sizes and Axes
+Oftentimes, I like to create square axis with a fixed width in the middle of a figure with fixed width. `matplotlib` makes this hard for the user. `ICIW-Plots` provides functions `make_square_ax`, `make_rect_ax` and `make_square_subplots` that do this for you.
+
+
+```python
+plt.style.use("ICIWstyle")
+from ICIW_Plots.figures import Elsevier_Sizes
+from ICIW_Plots import make_square_ax
+
+fig = plt.figure(figsize=(Elsevier_Sizes.single_column["in"], 7 * cm2inch))
+ax = make_square_ax(
+    fig,
+    ax_width=5 * cm2inch,
+)
+ax.plot(x, np.sin(x))
+plt.show()
+```
+
+    c:\ProgramData\Anaconda3\envs\ML3\Lib\site-packages\ICIW_Plots\layout.py:77: UserWarning: Unscientific behavior. No xlabel provided.
+      warnings.warn("Unscientific behavior. No xlabel provided.")
+    c:\ProgramData\Anaconda3\envs\ML3\Lib\site-packages\ICIW_Plots\layout.py:82: UserWarning: Unscientific behavior. No ylabel provided.
+      warnings.warn("Unscientific behavior. No ylabel provided.")
+    
+
+
+    
+![png](examples/README_files/README_9_1.png)
+    
+
+
+As you can see, you even get a warning when you misbehave. Both functions take some arguments you can inspect via the mouseover in your IDE. Note, that the `kwargs` argument takes any argument, a normal `plt.add_axes` function would take. Here is just an example of what you can do although it is unreasonable to do so:
+
+
+```python
+from ICIW_Plots.figures import Elsevier_Sizes
+from ICIW_Plots import make_square_ax
+
+plt.style.use("ICIWstyle")
+
+fig = plt.figure(figsize=(Elsevier_Sizes.single_column["in"], 7 * cm2inch))
+ax = make_square_ax(
+    fig,
+    ax_width=5 * cm2inch,
+    # left_h=0.2,  # These arguments control the spacing of the axis
+    # bottom_v=0.2, # not supplying them wil place the axes in the middle of the figure
+    xlabel=r"$t$ / s",
+    ylabel=r"$U$ / V",
+    title="This is a title",
+    xscale="log",
+)
+ax.plot(x, np.sin(x))
+plt.show()
+```
+
+
+    
+![png](examples/README_files/README_11_0.png)
+    
+
+
+
+```python
+import matplotlib.pyplot as plt
+from ICIW_Plots import make_rect_ax
+
+plt.style.use("ICIWstyle")
+
+fig = plt.figure()
+
+ax = make_rect_ax(
+    fig,
+    ax_width=7.3 * cm2inch,
+    ax_height=5 * cm2inch,
+    # left_h=0.2,  # These arguments control the spacing of the axis
+    # bottom_v=0.2, # not supplying them wil place the axes in the middle of the figure
+    xlabel=r"$t$ / s",
+    ylabel=r"$U$ / V",
+    title="This is a title",
+    xscale="log",
+)
+
+ax.plot(x, np.sin(x))
+
+plt.show()
+```
+
+
+    
+![png](examples/README_files/README_12_0.png)
+    
+
+
+The `make_square_subplot` command behaves slightly different whether you want the x- or y- axes to be shared and which labels you provide. The docstring sys there are the following options:
+
+>**sharex, sharey : bool, optional**
+>
+>&emsp; whether axes on top of or next to eachother share one x or y axes, by default `False`
+>    
+>**sharelabel : bool, optional**
+>
+>&emsp;whether to share the labels of the shared axes, by default `False`
+>
+>**xlabel, ylabel : Optional[str | npt.ArrayLike], optional**
+>
+>&emsp;label or labels for the axes. Can be one of the following:
+>* `None` - no label
+>* a single `str` - every subplot will get the same x/y label
+>* a 1D `npt.ArrayLike` - every column/row will get the same x/y label
+>* a 2D `npt.ArrayLike` - every subplot will get its own x/y label
+>  
+>&emsp;If `sharex` or `sharey` is `True`, only the last row/column (the shared axis) will get the label.
+>By default None
+
+
+```python
+import matplotlib.pyplot as plt
+from ICIW_Plots import make_square_subplots
+
+plt.style.use("ICIWstyle")
+
+fig = plt.figure()
+axs = make_square_subplots(
+    fig=fig,
+    ax_width=3 * cm2inch,
+    ax_layout=(2, 3),
+    h_sep=1.5 * cm2inch,
+    v_sep=1 * cm2inch,
+    sharex=True,  # share the axis
+    sharey=True,  # share the axis
+    sharelabel=False,
+    xlabel="$x$",  # every x axis has the same label
+    ylabel=["$y_1$", "$y_2$"],  # every y axis along the rows has the same label
+)
+```
+
+
+    
+![png](examples/README_files/README_14_0.png)
+    
+
+
+
+```python
+fig = plt.figure()
+axs = make_square_subplots(
+    fig=fig,
+    ax_width=3 * cm2inch,
+    ax_layout=(2, 3),
+    h_sep=1.5 * cm2inch,
+    v_sep=1 * cm2inch,
+    sharex=True,  # share the axis
+    sharey=True,  # share the axis
+    sharelabel=True,  # ticklabels are not repeated for shared axis
+    xlabel="$x$",  # every x axis has the same label
+    ylabel=["$y_1$", "$y_2$"],  # every y axis along the rows has the same label
+)
+```
+
+
+    
+![png](examples/README_files/README_15_0.png)
+    
+
+
+
+```python
+fig = plt.figure()
+axs = make_square_subplots(
+    fig=fig,
+    ax_width=3 * cm2inch,
+    ax_layout=(2, 3),
+    h_sep=1.5 * cm2inch,
+    v_sep=1 * cm2inch,
+    sharex=False,  # because we do not share the axis, every axis is labeled
+    sharey=False,  # because we do not share the axis, every axis is labeled
+    xlabel="x",  # every x axis has the same label
+    ylabel=["$y_1$", "$y_2$"],  # every y axis along the rows has the same label
+)
+```
+
+
+    
+![png](examples/README_files/README_16_0.png)
+    
+
+
+
+```python
+fig = plt.figure()
+axs = make_square_subplots(
+    fig=fig,
+    ax_width=3 * cm2inch,
+    ax_layout=(2, 3),
+    h_sep=1.5 * cm2inch,
+    v_sep=1 * cm2inch,
+    sharex=True,
+    sharey=False,
+    xlabel=[
+        "$x_1$",
+        "$x_2$",
+        "$x_3$",
+    ],  # every x axis along one column has the same label. Because it is shared, they do not repeat.
+    ylabel=[
+        ["$y_1$", "$y_2$", "$y_3$"],
+        ["$y_4$", "$y_5$", "$y_6$"],
+    ],  # every y axis was given its own label. Only recommended for non-shared axes
+)
+```
+
+
+    
+![png](examples/README_files/README_17_0.png)
+    
+
+
+
+```python
+fig = plt.figure()
+axs = make_square_subplots(
+    fig=fig,
+    ax_width=3 * cm2inch,
+    ax_layout=(2, 3),
+    h_sep=1.5 * cm2inch,
+    v_sep=1 * cm2inch,
+    sharex=False,  # because we do not share the axis, every axis is labeled
+    sharey=False,  # because we do not share the axis, every axis is labeled
+    xlabel="x",  # every x axis has the same label
+    ylabel=["$y_1$", "$y_2$"],  # every y axis along the rows has the same label
+)
+```
+
+
+    
+![png](examples/README_files/README_18_0.png)
+    
+
+
+There is also a `make_rect_subplots` command that behaves like `make_square_subplots` but allows for rectangular subplots.
+
+
+```python
+from ICIW_Plots import make_rect_subplots
+
+fig = plt.figure()
+axs = make_rect_subplots(
+    fig=fig,
+    ax_width=6 * cm2inch,
+    ax_height=4 * cm2inch,
+    ax_layout=(2, 1),
+    h_sep=1.5 * cm2inch,
+    v_sep=1 * cm2inch,
+    sharex=True,  # share the axis
+    sharey=True,  # share the axis
+    sharelabel=False,
+    xlabel="$x$",  # every x axis has the same label
+    ylabel=["$y_1$", "$y_2$"],  # every y axis along the rows has the same label
+)
+```
+
+
+    
+![png](examples/README_files/README_20_0.png)
+    
+
+
+In jupyter notebooks the output appears cut to the "appropriate" size. In a python script, you will see the full figure with all the sizes and positions spaced correctly.
+
+### Colors
+
+`ICIW-Plots` defines the university colors. 
+
+
+```python
+import matplotlib.pyplot as plt
+import ICIW_Plots.colors as ICIWcolors
+
+plt.style.use("ICIWstyle")
+
+fig, ax = plt.subplots()
+
+ax.plot(x, np.sin(x), color=ICIWcolors.CRIMSON)
+ax.plot(x, np.cos(x), color=ICIWcolors.CERULEAN)
+ax.plot(x, np.log(x + 0.1), color=ICIWcolors.KELLYGREEN)
+ax.plot(x, np.tanh(x), color=ICIWcolors.FLAME)
+ax.plot(x, np.arcsinh(x), color=ICIWcolors.DRAB)
+
+plt.legend(["crimson", "cerulean", "kellygreen", "flame", "drab"])
+
+plt.show()
+```
+
+
+    
+![png](examples/README_files/README_22_0.png)
+    
+
+
+### Colormaps
+All university colors are available as colormaps as well.
+Here is just an example for the cerulean colormap:
+
+
+```python
+import matplotlib.pyplot as plt
+import ICIW_Plots.colors as ICIWcolors
+
+plt.style.use("ICIWstyle")
+
+N = 100
+x = np.linspace(-3.0, 3.0, N)
+y = np.linspace(-2.0, 2.0, N)
+
+X, Y = np.meshgrid(x, y)
+Z1 = -(X**2) - Y**2
+Z2 = -((X * 10) ** 2) - (Y * 10) ** 2
+z = Z1 + 50 * Z2
+
+fig, ax = plt.subplots()
+
+cs = ax.contourf(X, Y, z, cmap=ICIWcolors.cerulean_cm, levels=10)
+cbar = fig.colorbar(cs)
+
+plt.show()
+```
+
+
+    
+![png](examples/README_files/README_24_0.png)
+    
+
+
+Additionally, `ICIW-Plots` provides a way to define "nice looking" colorschemes based on the theory of [adjacent or analogous colors](https://en.wikipedia.org/wiki/Analogous_colors). You can use any color as a base and generate an appealing color scheme this way.
+
+This works great for plots where line show an increase in, e.g. temperature. 
+
+You can either create a list of these colors or use them as a cycler via the functions `adjacent_colors` or `adjacent_cycler` respectively. For cyclers see the later section.
+
+
+```python
+import matplotlib.pyplot as plt
+import ICIW_Plots.colors as ICIWcolors
+
+colors = ICIWcolors.adjacent_colors(
+    ICIWcolors.FLAME,  # any valid color as an array of three values [R,G,B], here, one of our own university colors
+    n=5,  # the number of adjacent colors you want. Must be odd.
+    phi=15,  # the "distance" of two adjacent colors. The smaller, the more similar.
+)
+print(colors)
+```
+
+    [(0.91015625, 0.02734375, 0.07031249999999899), (0.91015625, 0.20507812500000003, 0.02734375), (0.91015625, 0.42578125, 0.02734375), (0.91015625, 0.646484375, 0.02734375), (0.91015625, 0.8671875, 0.02734375)]
+    
+
+### Cyclers
+
+The package defines some functionality to do your own cyclers. Supported are:
+- color cyclers from colormaps
+  - all default matplotlib colormaps by name
+  - all custom colormaps from `ICIW-Plots` by reference
+- line style cyclers
+  - all default linestyles by abbreviation (`-`,`--`,`.-`,`:`)
+  - every custom linestyle by a dash tuple (e.g., `(0,(3,10,1,15))`)
+- marker cyclers
+  - all predefined markers by abbreviation (`o`,`s`,`^`,`v`,and so on)
+  - every custom marker by a marker reference
+  
+Custom color cyclers take a colormap and sample `num_plots` points from them equidistantly spaced. `start` and `stop` are used to prevent very light or very dark colors from being used. The `cycler` is then added as the axes `prop_cycle`.
+
+
+```python
+import matplotlib.pyplot as plt
+import ICIW_Plots.cyclers as ICIW_cyclers
+
+fig, ax = plt.subplots()
+x = np.linspace(-2 * np.pi, 2 * np.pi)
+my_green_cycler = ICIW_cyclers.ICIW_colormap_cycler(
+    "Greens",
+    7,
+    start=0.2,
+)
+ax.set_prop_cycle(my_green_cycler)
+for i in range(7):
+    ax.plot(x, np.sin(x + (i * (4 * np.pi / 7))))
+plt.show()
+```
+
+
+    
+![png](examples/README_files/README_28_0.png)
+    
+
+
+
+```python
+import matplotlib.pyplot as plt
+import ICIW_Plots.cyclers as ICIW_cyclers
+
+fig, ax = plt.subplots()
+
+my_blue_cycler = ICIW_cyclers.ICIW_colormap_cycler(
+    ICIWcolors.cerulean_cm,
+    7,
+    start=0.1,
+)
+ax.set_prop_cycle(my_blue_cycler)
+for i in range(7):
+    ax.plot(x, np.sin(x + (i * (4 * np.pi / 7))))
+plt.show()
+```
+
+
+    
+![png](examples/README_files/README_29_0.png)
+    
+
+
+
+```python
+import matplotlib.pyplot as plt
+import ICIW_Plots.colors as ICIWcolors
+
+adjacent_cyc = ICIWcolors.adjacent_cycler(
+    np.array([224, 58, 91])
+    / 256,  # any valid color as an array of three values [R,G,B], here, an arbitrary color.
+    n=5,
+    phi=25,
+)
+
+fig, ax = plt.subplots()
+ax.set_prop_cycle(adjacent_cyc)
+
+T = np.linspace(400, 500, 100)
+E_As = np.linspace(60000, 70000, 5)
+
+for E_A in E_As:
+    ax.plot(T, 1e7 * np.exp(-E_A / 8.314 / T), label=f"$E_A$= {E_A}")
+
+ax.set(xlabel="$T$", ylabel="$r$")
+
+plt.legend()
+plt.show()
+```
+
+
+    
+![png](examples/README_files/README_30_0.png)
+    
+
+
+### Linestyle cyclers
+Custom linestyle cyclers take a list of linestyles and a number of plots to cycle through. The `cycler` is then added as the axes `prop_cycle`.
+
+
+```python
+my_linestyle_cycler = ICIW_cyclers.ICIW_linestyle_cycler(3)
+
+fig, ax = plt.subplots()
+
+ax.set_prop_cycle(my_linestyle_cycler)
+for j in range(3):
+    ax.plot(x, x + j * 5)
+```
+
+
+    
+![png](examples/README_files/README_32_0.png)
+    
+
+
+Note, that all lines have the same color, since matplotlib by default cycles through its default cycler containing the colors. By overwriting the default cycler by our linestyle cycler, all lines will have the same color.
+
+We can combine different cyclers together by either
+- inner product (pairwise combinations)
+- outer product (unique combinations)
+
+
+```python
+fig, axs = plt.subplots(1, 2)
+
+custom_c_cycler = ICIW_cyclers.ICIW_colormap_cycler("Greens", 3, start=0.5)
+custom_l_cycler = ICIW_cyclers.ICIW_linestyle_cycler(3)
+
+axs[0].set_title("Inner Product")
+# this combination gives 3 different combinations of color and line style
+# linestyle 1 and color 1, linestyle 2 and color 2, linestyle 3 and color 3
+axs[0].set_prop_cycle(custom_c_cycler + custom_l_cycler)
+for i in range(3):
+    axs[0].plot(x, np.sin(x + (i * (4 * np.pi / 5))))
+
+axs[1].set_title("Outer Product")
+# this combination gives 9 different combinations of color and line style
+# linestyle 1 and color 1, linestyle 2 and color 1, linestyle 3 and color 1 and so on
+axs[1].set_prop_cycle(custom_c_cycler * custom_l_cycler)
+for i in range(3):
+    for j in range(3):
+        axs[1].plot(x, i * x + j * 5)
+```
+
+
+    
+![png](examples/README_files/README_34_0.png)
+    
+
