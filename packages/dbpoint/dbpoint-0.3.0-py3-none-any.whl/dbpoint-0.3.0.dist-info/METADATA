@@ -1,0 +1,125 @@
+Metadata-Version: 2.4
+Name: dbpoint
+Version: 0.3.0
+Summary: Single access point for multiple SQL-databases. Purpose to stream data from one to other.
+Author: Nauri Nastik
+License-File: LICENSE.txt
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.10
+Requires-Dist: jinja2
+Requires-Dist: loguru
+Requires-Dist: pyyaml
+Description-Content-Type: text/markdown
+
+# dbpoint
+
+Unified interface for data access commands for different databases (run) and having multiple databases on leash for data pump (copy or stream).
+
+Warning: VERY DRAFT!
+
+Warning: breaking change in 0.2.0 - Hub constructors second param string is interpreted as dict of dicts instead of list of dicts
+
+## Description
+The rationale behind this package is have multiple database connection at same time to transfer data or to push/pull data for application to/from different databases (logs, users and business entities can be hold in separation).
+
+Beware: This component won't help You in any way to maintain dialect differences. You have to be a SQL professional and build correct SQL commands according to product and version! And don't let Your SQL injected with data from untrusted sources (like web user interface forms).
+
+There are "drivers" for some database products. All they need some pip install command which are not included into this component (just because You usually don't need them all).
+
+Some of them may need additional supplier's drivers/software. 
+
+- oracle -> oracledb - Oracle server older then 12 needs Oracle Instant Client (follow their instructions for Your dev/prod op.system)
+- asa -> sqlanydb - Sybase Adaptive Server Anywhere (ASA) needs allways some client installation (look at SAP site for them)
+- pg -> psycopg2 - PostgreSQL 
+- maria -> mariadb - MariaDB (should work for MySQL as well) 
+- mssql -> pymssql - Microsoft SQL Server (latest info is that pymssql is compatible till python 3.11, so be cautios)
+- odbc -> pyodbc - ODBC. For Linux You need LinuxODBC. Two ways to use: via DSN (needs more work from sysadm/op) and via Driver. Code includes some tricks for MSSQL trusted connections and for Progres OpenEdge. Anyway - take this component as draft/crap.
+
+## Installation
+Reasonable way is to import via PIP
+
+```
+pip install dbpoint
+```
+
+Or copy code under Your src folder (from where?)
+
+
+## Usage
+
+Prepare the connections definition file like that (starting from 0.2.0 it should be dict instead of list):
+
+```yaml
+main:
+  driver: pg
+  host: 127.0.0.1
+  port: 5432
+  engine: ~
+  database: myapp
+  username: myuser
+  password: mypass
+  extra: 
+    application_name: MyApp
+
+previous:
+  driver: maria
+  host: 127.0.0.1
+  port: 3306
+  engine: ~
+  database: olddata
+  username: olduser
+  password: oldpass
+  
+```
+
+Keep in mind:
+- Don't keep passwords in code repos!
+- Let the deployment mechanism to create this file differently for dev/test/prod etc
+- For dev purposes You may want keep this file in You computer but outside the code/git area
+- How You keep Your connection data is out of scope of this package (file/service, yaml/json/toml/xml -- Your call)
+
+```python
+from dbpoint.hub import Hub # Hub was nice short name, but not very clear.. but Dbpoint or DbPoint or DBPoint .. ? confusing
+from dbpoint.datacapsule import DataCapsule
+# load your connection profiles from ealier yaml sample
+# or some other source  and transform this data to list of dicts with above structure
+list_of_profiles: list[dict] = [] # TODO load list of dict from configuration (connections.yaml)
+# ...
+
+hub = Hub(list_of_profiles)
+
+# if dynamically is needed more connections then add one profile data to controller
+third_profile = { "third": {, "driver": "pg", "host": "localhost", "port": 5432, "database": "third", "username": "friend", "password": "***"}}
+hub.add_profile('third', third_profile)
+
+# run SQL-command without result set (SQL world "execute"), including nonreturning insert etc
+sql = f"CREATE SCHEMA IF NOT EXISTS area"
+hub.run('main', sql, False) # last is positional and named: do_return=False
+
+# run SQL-command with response data (including returning insert etc)
+sql = f"SELECT id, name FROM area.entity WHERE id < 10"
+capsule: DataCapsule = hub.run('old', sql)
+for row in capsule:
+  print("id = " + str(row[0]) + " and name is " + row[1])
+```
+
+Function run() has some kwargs with next defaults:
+- on_success_commit = True
+- on_error_rollback = True
+- on_error_disconnect = False
+
+
+
+## License
+probably MIT ... to be determined
+
+
+## Project status
+Package can work inside other solution but is still draft, fullfilled with silly (and non-english) comments and non-pythonic code-style.
+
+Tests are missing. 
+
+Exception system must be redone. At first sight custom exceptions (including wrappers to data drivers emitted exceptions) looked as good idea, but it is quite messy now.
+
