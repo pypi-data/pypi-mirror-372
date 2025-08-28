@@ -1,0 +1,168 @@
+# .github/workflows/ci-cd.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ["v*"]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # 代码质量检查
+  quality-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+
+      - name: Format check with Ruff
+        run: |
+          uv run ruff format --check .
+        continue-on-error: true
+
+      - name: Lint with Ruff
+        run: |
+          uv run ruff check .
+        continue-on-error: true
+
+      - name: Type check with mypy
+        run: |
+          uv run --group types mypy --install-types --non-interactive src/xhs_mcp_cli tests
+        continue-on-error: true
+  # 构建包
+  build:
+    needs: quality-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 获取完整 git 历史用于版本号
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Build package
+        run: |
+          uv build
+
+      - name: Check package
+        run: |
+          uv run twine check dist/*
+
+      - name: Show package info
+        run: |
+          ls -la dist/
+          uv run python -c "import hatchling.build; print('Hatchling version:', hatchling.__version__)" || echo "Package info check"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+  # 发布到 PyPI（正式版本）
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'alpha') && !contains(github.ref, 'beta') && !contains(github.ref, 'rc')
+    environment:
+      name: pypi
+      url: https://pypi.org/project/xhs-mcp-cli
+
+    steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+
+      - name: Publish to PyPI
+        run: |
+          uv publish --token ${{ secrets.PYPI_API_TOKEN }} dist/*
+
+  # 创建 GitHub Release
+  create-release:
+    needs: [publish-pypi]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'alpha') && !contains(github.ref, 'beta') && !contains(github.ref, 'rc')
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # 获取上一个标签
+          PREV_TAG=$(git describe --abbrev=0 --tags HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "changelog=Initial release" >> $GITHUB_OUTPUT
+          else
+            echo "changelog<<EOF" >> $GITHUB_OUTPUT
+            git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## 🚀 更新内容
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## 📦 安装
+
+            ```bash
+            pip install xhs-mcp-cli==${{ github.ref_name }}
+            ```
+
+            或使用 uv:
+
+            ```bash
+            uv add xhs-mcp-cli==${{ github.ref_name }}
+            ```
+
+            ## 🔗 链接
+
+            - [PyPI 页面](https://pypi.org/project/xhs-mcp-cli/${{ github.ref_name }}/)
+            - [文档](https://github.com/${{ github.repository }})
+          draft: false
+          prerelease: false
+          generate_release_notes: true
