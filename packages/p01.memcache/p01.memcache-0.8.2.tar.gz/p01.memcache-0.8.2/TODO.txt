@@ -1,0 +1,47 @@
+====
+TODO
+====
+
+Couchbase version > 5.0 compatibility
+-------------------------------------
+
+Implement a CouchBaseClient in p01.memcache based on the Couchbase Python SDK
+and use them as new couchbase/memcache client.
+
+  https://developer.couchbase.com/documentation/server/current/sdk/python/start-using-sdk.html
+
+see deprecated memcahced compatibility (moxi/proxy required since coucbase v5.0)
+
+  https://developer.couchbase.com/documentation/server/current/release-notes/relnotes.html
+
+
+refactoring
+-----------
+
+- check if this is still relevant
+
+  - customized memcache lib (does this also belong to ultra memcache?)
+
+    - the main reason why we need a custom concept is the support for update
+      expiring values in memcache before they expire. We should use
+      a metadata container which is able to store the expire data and the
+      real data. This whould allow to set the data periodicaly back to
+      memcache before the data expires. (a meta data container whould contain
+      the real data and an additional timestamp, others?)
+
+    - other reasons why we need to merge the python memcache lib and our
+      implementation into one implementation is that we do several things twice.
+
+      a customized library whould allow to:
+
+      - convert data only once after wrapping in a metadata container
+
+      - use the "arbitrary 16-bit unsigned integer" concept as key for
+        converters. This concept is hidden in the python-memcached library
+        see: http://code.sixapart.com/svn/memcached/trunk/server/doc/protocol.txt
+
+      - implement custom get, set methods with explicit converter usage. This
+        allows to bypass the hole key and data conversion
+
+    This means the new library whould be a mix of high level API and offer some
+    base concept and more with a flexibler API
