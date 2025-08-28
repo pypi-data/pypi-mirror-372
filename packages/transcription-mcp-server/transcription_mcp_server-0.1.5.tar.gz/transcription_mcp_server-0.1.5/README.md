@@ -1,0 +1,1 @@
+"# genesys-transcription-mcp-server" 
