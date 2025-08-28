@@ -1,0 +1,1 @@
+default_app_config = 'xyz_course.apps.Config'
