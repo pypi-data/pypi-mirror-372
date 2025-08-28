@@ -1,0 +1,59 @@
+from aioredis3.client import Redis, StrictRedis
+from aioredis3.connection import (
+    BlockingConnectionPool,
+    Connection,
+    ConnectionPool,
+    SSLConnection,
+    UnixDomainSocketConnection,
+)
+from aioredis3.exceptions import (
+    AuthenticationError,
+    AuthenticationWrongNumberOfArgsError,
+    BusyLoadingError,
+    ChildDeadlockedError,
+    ConnectionError,
+    DataError,
+    InvalidResponse,
+    PubSubError,
+    ReadOnlyError,
+    RedisError,
+    ResponseError,
+    TimeoutError,
+    WatchError,
+)
+from aioredis3.utils import from_url
+
+
+def int_or_str(value):
+    try:
+        return int(value)
+    except ValueError:
+        return value
+
+
+__version__ = "2.0.1"
+VERSION = tuple(map(int_or_str, __version__.split(".")))
+
+__all__ = [
+    "AuthenticationError",
+    "AuthenticationWrongNumberOfArgsError",
+    "BlockingConnectionPool",
+    "BusyLoadingError",
+    "ChildDeadlockedError",
+    "Connection",
+    "ConnectionError",
+    "ConnectionPool",
+    "DataError",
+    "from_url",
+    "InvalidResponse",
+    "PubSubError",
+    "ReadOnlyError",
+    "Redis",
+    "RedisError",
+    "ResponseError",
+    "SSLConnection",
+    "StrictRedis",
+    "TimeoutError",
+    "UnixDomainSocketConnection",
+    "WatchError",
+]
