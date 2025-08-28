@@ -1,0 +1,58 @@
+from typing import Union
+
+from fishjam.events import (
+    ServerMessagePeerAdded,
+    ServerMessagePeerConnected,
+    ServerMessagePeerCrashed,
+    ServerMessagePeerDeleted,
+    ServerMessagePeerDisconnected,
+    ServerMessagePeerMetadataUpdated,
+    ServerMessageRoomCrashed,
+    ServerMessageRoomCreated,
+    ServerMessageRoomDeleted,
+    ServerMessageStreamConnected,
+    ServerMessageStreamDisconnected,
+    ServerMessageTrackAdded,
+    ServerMessageTrackMetadataUpdated,
+    ServerMessageTrackRemoved,
+    ServerMessageViewerConnected,
+    ServerMessageViewerDisconnected,
+)
+
+ALLOWED_NOTIFICATIONS = (
+    ServerMessageRoomCreated,
+    ServerMessageRoomDeleted,
+    ServerMessageRoomCrashed,
+    ServerMessagePeerAdded,
+    ServerMessagePeerDeleted,
+    ServerMessagePeerConnected,
+    ServerMessagePeerDisconnected,
+    ServerMessagePeerMetadataUpdated,
+    ServerMessagePeerCrashed,
+    ServerMessageStreamConnected,
+    ServerMessageStreamDisconnected,
+    ServerMessageViewerConnected,
+    ServerMessageViewerDisconnected,
+    ServerMessageTrackAdded,
+    ServerMessageTrackRemoved,
+    ServerMessageTrackMetadataUpdated,
+)
+
+AllowedNotification = Union[
+    ServerMessageRoomCreated,
+    ServerMessageRoomDeleted,
+    ServerMessageRoomCrashed,
+    ServerMessagePeerAdded,
+    ServerMessagePeerDeleted,
+    ServerMessagePeerConnected,
+    ServerMessagePeerDisconnected,
+    ServerMessagePeerMetadataUpdated,
+    ServerMessagePeerCrashed,
+    ServerMessageStreamConnected,
+    ServerMessageStreamDisconnected,
+    ServerMessageViewerConnected,
+    ServerMessageViewerDisconnected,
+    ServerMessageTrackAdded,
+    ServerMessageTrackRemoved,
+    ServerMessageTrackMetadataUpdated,
+]
