@@ -1,0 +1,115 @@
+# Makefile for {{PROJECT_NAME}}
+# Usage: make <target>
+
+.PHONY: help install install-dev format lint test test-cov clean pre-commit setup-hooks
+
+# Configuration
+PYTHON := python
+PIP := pip
+PACKAGE := {{PROJECT_NAME}}
+
+# Colors for display
+BLUE := \033[34m
+GREEN := \033[32m
+YELLOW := \033[33m
+RED := \033[31m
+RESET := \033[0m
+
+# Default help
+help:
+	@echo "$(BLUE){{PROJECT_NAME}} - Development commands$(RESET)"
+	@echo ""
+	@echo "$(GREEN)Installation:$(RESET)"
+	@echo "  install      - Install package"
+	@echo "  install-dev  - Install development dependencies"
+	@echo ""
+	@echo "$(GREEN)Formatting and quality:$(RESET)"
+	@echo "  format       - Format code (black + isort)"
+	@echo "  lint         - Check code quality"
+	@echo "  fix          - Automatically fix issues"
+	@echo ""
+	@echo "$(GREEN)Tests:$(RESET)"
+	@echo "  test         - Run unit tests"
+	@echo "  test-cov     - Tests with coverage"
+	@echo "  test-fast    - Fast tests (skip slow ones)"
+	@echo ""
+	@echo "$(GREEN)Hooks and tools:$(RESET)"
+	@echo "  setup-hooks  - Install pre-commit hooks"
+	@echo "  pre-commit   - Run pre-commit checks"
+	@echo ""
+	@echo "$(GREEN)Cleanup:$(RESET)"
+	@echo "  clean        - Clean temporary files"
+
+# Installation
+install:
+	@echo "$(BLUE)Installing package...$(RESET)"
+	$(PIP) install -e .
+
+install-dev:
+	@echo "$(BLUE)Installing development dependencies...$(RESET)"
+	$(PIP) install -e ".[dev]"
+	$(PIP) install pre-commit
+
+# Automatic formatting
+format:
+	@echo "$(BLUE)Formatting code with Black...$(RESET)"
+	black $(PACKAGE) tests
+	@echo "$(BLUE)Organizing imports with isort...$(RESET)"
+	isort $(PACKAGE) tests
+
+# Automatic correction
+fix: format
+	@echo "$(BLUE)Automatic correction with Ruff...$(RESET)"
+	ruff check --fix $(PACKAGE) tests
+	@echo "$(GREEN)Code automatically corrected!$(RESET)"
+
+# Linting
+lint:
+	@echo "$(BLUE)Checking code quality with Ruff...$(RESET)"
+	ruff check $(PACKAGE) tests
+	@echo "$(BLUE)Security verification with Bandit...$(RESET)"
+	bandit -r $(PACKAGE) -f json -o bandit-report.json || true
+	@echo "$(BLUE)Checking formatting...$(RESET)"
+	black --check $(PACKAGE) tests
+	isort --check-only $(PACKAGE) tests
+	@echo "$(GREEN)Linting completed!$(RESET)"
+
+# Tests
+test:
+	@echo "$(BLUE)Running unit tests...$(RESET)"
+	pytest
+
+test-cov:
+	@echo "$(BLUE)Tests with coverage...$(RESET)"
+	pytest --cov=$(PACKAGE) --cov-report=html --cov-report=term
+
+test-fast:
+	@echo "$(BLUE)Fast tests...$(RESET)"
+	pytest -x
+
+# Pre-commit hooks
+setup-hooks:
+	@echo "$(BLUE)Installing pre-commit hooks...$(RESET)"
+	pre-commit install
+	@echo "$(GREEN)Pre-commit hooks installed!$(RESET)"
+
+pre-commit:
+	@echo "$(BLUE)Running pre-commit checks...$(RESET)"
+	pre-commit run --all-files
+
+# Cleanup
+clean:
+	@echo "$(BLUE)Cleaning temporary files...$(RESET)"
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+	rm -rf build/ dist/ .coverage htmlcov/ .pytest_cache/ .mypy_cache/ 2>/dev/null || true
+	@echo "$(GREEN)Cleanup completed!$(RESET)"
+
+# Complete verification command
+check: format lint test
+	@echo "$(GREEN)All verifications completed!$(RESET)"
+
+# Preparation for commit
+prepare: format lint test-fast
+	@echo "$(GREEN)Code ready for commit!$(RESET)"
