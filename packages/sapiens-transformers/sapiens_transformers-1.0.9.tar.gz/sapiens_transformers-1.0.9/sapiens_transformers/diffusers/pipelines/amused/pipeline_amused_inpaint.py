@@ -1,0 +1,116 @@
+'''
+    #################################################################################################################################################################################################
+    # This code library is an adaptation of the original Transformers and was designed, developed and programmed by Sapiens Technology®.                                                            #
+    # Any alteration and/or disclosure of this code without prior authorization is strictly prohibited and is subject to legal action that will be forwarded by the Sapiens Technology® legal team. #
+    # This set of algorithms aims to download, train, fine-tune and/or infer large language models from various sources and slopes.                                                                 #
+    #################################################################################################################################################################################################
+'''
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+import torch
+from sapiens_transformers import CLIPTextModelWithProjection, CLIPTokenizer
+from ...image_processor import PipelineImageInput, VaeImageProcessor
+from ...models import UVit2DModel, VQModel
+from ...schedulers import AmusedScheduler
+from ...utils import replace_example_docstring
+from ..pipeline_utils import DiffusionPipeline, ImagePipelineOutput
+EXAMPLE_DOC_STRING = '\n    Examples:\n        ```py\n        >>> import torch\n        >>> from sapiens_transformers.diffusers import AmusedInpaintPipeline\n        >>> from sapiens_transformers.diffusers.utils import load_image\n\n        >>> pipe = AmusedInpaintPipeline.from_pretrained(\n        ...     "amused/amused-512", variant="fp16", torch_dtype=torch.float16\n        ... )\n        >>> pipe = pipe.to("cuda")\n\n        >>> prompt = "fall mountains"\n        >>> input_image = (\n        ...     load_image(\n        ...         "https://huggingface.co/datasets/diffusers/docs-images/resolve/main/open_muse/mountains_1.jpg"\n        ...     )\n        ...     .resize((512, 512))\n        ...     .convert("RGB")\n        ... )\n        >>> mask = (\n        ...     load_image(\n        ...         "https://huggingface.co/datasets/diffusers/docs-images/resolve/main/open_muse/mountains_1_mask.png"\n        ...     )\n        ...     .resize((512, 512))\n        ...     .convert("L")\n        ... )\n        >>> pipe(prompt, input_image, mask).images[0].save("out.png")\n        ```\n'
+class AmusedInpaintPipeline(DiffusionPipeline):
+    image_processor: VaeImageProcessor
+    vqvae: VQModel
+    tokenizer: CLIPTokenizer
+    text_encoder: CLIPTextModelWithProjection
+    transformer: UVit2DModel
+    scheduler: AmusedScheduler
+    model_cpu_offload_seq = 'text_encoder->transformer->vqvae'
+    _exclude_from_cpu_offload = ['vqvae']
+    def __init__(self, vqvae: VQModel, tokenizer: CLIPTokenizer, text_encoder: CLIPTextModelWithProjection, transformer: UVit2DModel, scheduler: AmusedScheduler):
+        super().__init__()
+        self.register_modules(vqvae=vqvae, tokenizer=tokenizer, text_encoder=text_encoder, transformer=transformer, scheduler=scheduler)
+        self.vae_scale_factor = 2 ** (len(self.vqvae.config.block_out_channels) - 1)
+        self.image_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor, do_normalize=False)
+        self.mask_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor, do_normalize=False, do_binarize=True, do_convert_grayscale=True, do_resize=True)
+        self.scheduler.register_to_config(masking_schedule='linear')
+    @torch.no_grad()
+    @replace_example_docstring(EXAMPLE_DOC_STRING)
+    def __call__(self, prompt: Optional[Union[List[str], str]]=None, image: PipelineImageInput=None, mask_image: PipelineImageInput=None, strength: float=1.0, num_inference_steps: int=12,
+    guidance_scale: float=10.0, negative_prompt: Optional[Union[str, List[str]]]=None, num_images_per_prompt: Optional[int]=1, generator: Optional[torch.Generator]=None,
+    prompt_embeds: Optional[torch.Tensor]=None, encoder_hidden_states: Optional[torch.Tensor]=None, negative_prompt_embeds: Optional[torch.Tensor]=None,
+    negative_encoder_hidden_states: Optional[torch.Tensor]=None, output_type='pil', return_dict: bool=True, callback: Optional[Callable[[int, int, torch.Tensor], None]]=None, callback_steps: int=1,
+    cross_attention_kwargs: Optional[Dict[str, Any]]=None, micro_conditioning_aesthetic_score: int=6, micro_conditioning_crop_coord: Tuple[int, int]=(0, 0),
+    temperature: Union[int, Tuple[int, int], List[int]]=(2, 0)):
+        """Examples:"""
+        if prompt_embeds is not None and encoder_hidden_states is None or (prompt_embeds is None and encoder_hidden_states is not None): raise ValueError('pass either both `prompt_embeds` and `encoder_hidden_states` or neither')
+        if negative_prompt_embeds is not None and negative_encoder_hidden_states is None or (negative_prompt_embeds is None and negative_encoder_hidden_states is not None): raise ValueError('pass either both `negatve_prompt_embeds` and `negative_encoder_hidden_states` or neither')
+        if prompt is None and prompt_embeds is None or (prompt is not None and prompt_embeds is not None): raise ValueError('pass only one of `prompt` or `prompt_embeds`')
+        if isinstance(prompt, str): prompt = [prompt]
+        if prompt is not None: batch_size = len(prompt)
+        else: batch_size = prompt_embeds.shape[0]
+        batch_size = batch_size * num_images_per_prompt
+        if prompt_embeds is None:
+            input_ids = self.tokenizer(prompt, return_tensors='pt', padding='max_length', truncation=True, max_length=self.tokenizer.model_max_length).input_ids.to(self._execution_device)
+            outputs = self.text_encoder(input_ids, return_dict=True, output_hidden_states=True)
+            prompt_embeds = outputs.text_embeds
+            encoder_hidden_states = outputs.hidden_states[-2]
+        prompt_embeds = prompt_embeds.repeat(num_images_per_prompt, 1)
+        encoder_hidden_states = encoder_hidden_states.repeat(num_images_per_prompt, 1, 1)
+        if guidance_scale > 1.0:
+            if negative_prompt_embeds is None:
+                if negative_prompt is None: negative_prompt = [''] * len(prompt)
+                if isinstance(negative_prompt, str): negative_prompt = [negative_prompt]
+                input_ids = self.tokenizer(negative_prompt, return_tensors='pt', padding='max_length', truncation=True, max_length=self.tokenizer.model_max_length).input_ids.to(self._execution_device)
+                outputs = self.text_encoder(input_ids, return_dict=True, output_hidden_states=True)
+                negative_prompt_embeds = outputs.text_embeds
+                negative_encoder_hidden_states = outputs.hidden_states[-2]
+            negative_prompt_embeds = negative_prompt_embeds.repeat(num_images_per_prompt, 1)
+            negative_encoder_hidden_states = negative_encoder_hidden_states.repeat(num_images_per_prompt, 1, 1)
+            prompt_embeds = torch.concat([negative_prompt_embeds, prompt_embeds])
+            encoder_hidden_states = torch.concat([negative_encoder_hidden_states, encoder_hidden_states])
+        image = self.image_processor.preprocess(image)
+        height, width = image.shape[-2:]
+        micro_conds = torch.tensor([width, height, micro_conditioning_crop_coord[0], micro_conditioning_crop_coord[1], micro_conditioning_aesthetic_score],
+        device=self._execution_device, dtype=encoder_hidden_states.dtype)
+        micro_conds = micro_conds.unsqueeze(0)
+        micro_conds = micro_conds.expand(2 * batch_size if guidance_scale > 1.0 else batch_size, -1)
+        self.scheduler.set_timesteps(num_inference_steps, temperature, self._execution_device)
+        num_inference_steps = int(len(self.scheduler.timesteps) * strength)
+        start_timestep_idx = len(self.scheduler.timesteps) - num_inference_steps
+        needs_upcasting = self.vqvae.dtype == torch.float16 and self.vqvae.config.force_upcast
+        if needs_upcasting: self.vqvae.float()
+        latents = self.vqvae.encode(image.to(dtype=self.vqvae.dtype, device=self._execution_device)).latents
+        latents_bsz, channels, latents_height, latents_width = latents.shape
+        latents = self.vqvae.quantize(latents)[2][2].reshape(latents_bsz, latents_height, latents_width)
+        mask = self.mask_processor.preprocess(mask_image, height // self.vae_scale_factor, width // self.vae_scale_factor)
+        mask = mask.reshape(mask.shape[0], latents_height, latents_width).bool().to(latents.device)
+        latents[mask] = self.scheduler.config.mask_token_id
+        starting_mask_ratio = mask.sum() / latents.numel()
+        latents = latents.repeat(num_images_per_prompt, 1, 1)
+        with self.progress_bar(total=num_inference_steps) as progress_bar:
+            for i in range(start_timestep_idx, len(self.scheduler.timesteps)):
+                timestep = self.scheduler.timesteps[i]
+                if guidance_scale > 1.0: model_input = torch.cat([latents] * 2)
+                else: model_input = latents
+                model_output = self.transformer(model_input, micro_conds=micro_conds, pooled_text_emb=prompt_embeds, encoder_hidden_states=encoder_hidden_states, cross_attention_kwargs=cross_attention_kwargs)
+                if guidance_scale > 1.0:
+                    uncond_logits, cond_logits = model_output.chunk(2)
+                    model_output = uncond_logits + guidance_scale * (cond_logits - uncond_logits)
+                latents = self.scheduler.step(model_output=model_output, timestep=timestep, sample=latents, generator=generator, starting_mask_ratio=starting_mask_ratio).prev_sample
+                if i == len(self.scheduler.timesteps) - 1 or (i + 1) % self.scheduler.order == 0:
+                    progress_bar.update()
+                    if callback is not None and i % callback_steps == 0:
+                        step_idx = i // getattr(self.scheduler, 'order', 1)
+                        callback(step_idx, timestep, latents)
+        if output_type == 'latent': output = latents
+        else:
+            output = self.vqvae.decode(latents, force_not_quantize=True, shape=(batch_size, height // self.vae_scale_factor, width // self.vae_scale_factor, self.vqvae.config.latent_channels)).sample.clip(0, 1)
+            output = self.image_processor.postprocess(output, output_type)
+            if needs_upcasting: self.vqvae.half()
+        self.maybe_free_model_hooks()
+        if not return_dict: return (output,)
+        return ImagePipelineOutput(output)
+'''
+    #################################################################################################################################################################################################
+    # This code library is an adaptation of the original Transformers and was designed, developed and programmed by Sapiens Technology®.                                                            #
+    # Any alteration and/or disclosure of this code without prior authorization is strictly prohibited and is subject to legal action that will be forwarded by the Sapiens Technology® legal team. #
+    # This set of algorithms aims to download, train, fine-tune and/or infer large language models from various sources and slopes.                                                                 #
+    #################################################################################################################################################################################################
+'''
