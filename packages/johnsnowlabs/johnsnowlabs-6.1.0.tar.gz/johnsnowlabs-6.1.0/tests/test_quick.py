@@ -1,0 +1,22 @@
+secretz = {
+    "SPARK_NLP_LICENSE": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzMzNTY3OTksImlhdCI6MTcwMTczNDQwMCwidW5pcXVlX2lkIjoiZWYxOTQ3YWEtOTM5MC0xMWVlLTk2ZTktNDY3ZTc5NmJkODRlIiwic2NvcGUiOlsibGVnYWw6aW5mZXJlbmNlIiwibGVnYWw6dHJhaW5pbmciLCJmaW5hbmNlOmluZmVyZW5jZSIsImZpbmFuY2U6dHJhaW5pbmciLCJvY3I6aW5mZXJlbmNlIiwib2NyOnRyYWluaW5nIiwiaGVhbHRoY2FyZTppbmZlcmVuY2UiLCJoZWFsdGhjYXJlOnRyYWluaW5nIl19.Oawzk29TFNGrZ2fEcyjrzJaccbBzQT64_qPtXpDezM-QipQuM3Yn1Zyb33Ky99K1nvMY8G1secjoilRvVGS5RkBYc14IQ7IcdejSng5CDxBn8-2vg3NVrnpvfc4fqVeNozaDCOPqReCeZLCteFU_Up3mkgJPPcYmpXt9ZwO52Vbi6xnOOiJO-2mM2OFrqUugyM026s3FJ0bjf9J2-f-lbPTttlSyQt1olpFSMv9TJC5wOwKMsb4mvZisCZGwJnvnv1PLJ9FpEy_Xf0qqXKgvrO7u3JZEm64hVvyY8Yj64Vg0Rc9hR6KQk_fdQo0gwnHWBxyFtDOqceWqc60w1QFKBw",
+    "SECRET": "5.5.0-a814272cdc1ab6059ba5ee1cfa79abf056d02d55",
+    "SPARK_OCR_LICENSE": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzMzNTY3OTksImlhdCI6MTcwMTczNDQwMCwidW5pcXVlX2lkIjoiZWYxOTQ3YWEtOTM5MC0xMWVlLTk2ZTktNDY3ZTc5NmJkODRlIiwic2NvcGUiOlsibGVnYWw6aW5mZXJlbmNlIiwibGVnYWw6dHJhaW5pbmciLCJmaW5hbmNlOmluZmVyZW5jZSIsImZpbmFuY2U6dHJhaW5pbmciLCJvY3I6aW5mZXJlbmNlIiwib2NyOnRyYWluaW5nIiwiaGVhbHRoY2FyZTppbmZlcmVuY2UiLCJoZWFsdGhjYXJlOnRyYWluaW5nIl19.Oawzk29TFNGrZ2fEcyjrzJaccbBzQT64_qPtXpDezM-QipQuM3Yn1Zyb33Ky99K1nvMY8G1secjoilRvVGS5RkBYc14IQ7IcdejSng5CDxBn8-2vg3NVrnpvfc4fqVeNozaDCOPqReCeZLCteFU_Up3mkgJPPcYmpXt9ZwO52Vbi6xnOOiJO-2mM2OFrqUugyM026s3FJ0bjf9J2-f-lbPTttlSyQt1olpFSMv9TJC5wOwKMsb4mvZisCZGwJnvnv1PLJ9FpEy_Xf0qqXKgvrO7u3JZEm64hVvyY8Yj64Vg0Rc9hR6KQk_fdQo0gwnHWBxyFtDOqceWqc60w1QFKBw",
+    "SPARK_OCR_SECRET": "5.4.0-f40a4114fd59c8d06434c58c9e28fa076aa4af9e",
+    "AWS_ACCESS_KEY_ID": "AKIASRWSDKBGGB5OXMWA",
+    "AWS_SECRET_ACCESS_KEY": "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",
+    "JSL_VERSION": "5.5.0",
+    "OCR_VERSION": "5.4.0",
+    "PUBLIC_VERSION": "5.5.0",
+
+
+}
+
+# Update the local environment with the secrets
+import os
+locals().update(secretz)
+os.environ.update(secretz)
+
+# Install and refresh John Snow Labs NLP and Medical NLP
+from johnsnowlabs import nlp, medical
+nlp.install(refresh_install=True)
