@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_jupytergis_jupytergis_core=self.webpackChunk_jupytergis_jupytergis_core||[]).push([[234],{20234:(e,r,o)=>{o.r(r),o.d(r,{ICollaborativeDrive:()=>s,IGlobalAwareness:()=>l});var a=o(67262);const s=new a.Token("@jupyter/collaboration-extension:ICollaborativeDrive"),l=new a.Token("@jupyter/collaboration:IGlobalAwareness")}}]);
