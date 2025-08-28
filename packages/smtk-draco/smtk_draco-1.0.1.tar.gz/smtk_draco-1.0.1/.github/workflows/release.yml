@@ -1,0 +1,117 @@
+name: Build and publish a release to PyPI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - src/**
+      - pyproject.toml
+      - CMakeLists.txt
+  push:
+    branches:
+      - main
+    paths:
+      - src/**
+      - pyproject.toml
+      - CMakeLists.txt
+  release:
+    types:
+      - published
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-2022, macos-13]
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          submodules: 'recursive'
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@c923d83ad9c1bc00211c5041d0c3f73294ff88f6 # v3.1.4 
+
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./wheelhouse/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          submodules: 'recursive'
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        with:
+          name: cibw-sdist
+          path: dist/*.tar.gz
+
+  publish_to_testpypi:
+    name: Publish distribution to TestPyPI
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    
+    # Only run when a release is published
+    if: (github.event_name == 'release' && github.event.action == 'published')
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/smtk_draco
+
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        with:
+          # unpacks all CIBW artifacts into dist/
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+  
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          print-hash: true
+          skip-existing: true
+          verbose: true
+
+  publish_to_pypi:
+    name: Publish distribution to PyPI
+    # Note that publishing to Test PyPI is a prerequisite!
+    needs: [build_wheels, build_sdist, publish_to_testpypi]
+    runs-on: ubuntu-latest
+
+    # Only run when a release is published
+    if: (github.event_name == 'release' && github.event.action == 'published')
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/smtk_draco
+
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        with:
+          # unpacks all CIBW artifacts into dist/
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+  
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+        with:
+          print-hash: true
