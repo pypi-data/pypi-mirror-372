@@ -1,0 +1,153 @@
+{% extends 'NEMO_reports/report_base.html' %}
+{% load custom_tags_and_filters %}
+{% block extra_form %}
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Show:</label>
+        <div class="radio col-sm-9">
+            <label>
+                <input type="radio" name="show_inactive_users" value="" {% if not show_inactive_users %}checked{% endif %}>
+                Only active users
+            </label>
+            <label>
+                <input type="radio" name="show_inactive_users" value="on" {% if show_inactive_users %}checked{% endif %}>
+                All users
+            </label>
+        </div>
+        <div class="radio col-sm-offset-2 col-sm-9">
+            <label>
+                <input type="radio"
+                       name="show_inactive_projects"
+                       value=""
+                       {% if not show_inactive_projects %}checked{% endif %}>
+                Only active projects
+            </label>
+            <label>
+                <input type="radio"
+                       name="show_inactive_projects"
+                       value="on"
+                       {% if show_inactive_projects %}checked{% endif %}>
+                All projects
+            </label>
+        </div>
+        <div class="radio col-sm-offset-2 col-sm-9">
+            <label>
+                <input type="radio"
+                       name="show_users_without_projects"
+                       value=""
+                       {% if not show_users_without_projects %}checked{% endif %}>
+                Only users working on at least one project
+            </label>
+            <label>
+                <input type="radio"
+                       name="show_users_without_projects"
+                       value="true"
+                       {% if show_users_without_projects == "true" %}checked{% endif %}>
+                Only users working on no projects
+            </label>
+            <label>
+                <input type="radio"
+                       name="show_users_without_projects"
+                       value="false"
+                       {% if show_users_without_projects == "false" %}checked{% endif %}>
+                Both
+            </label>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-sm-2" for="add_a_group">Filter by user group</label>
+        <div class="col-sm-4">
+            <input id="add_a_group" type="text" autocomplete="off" class="form-control" placeholder="Pick a group" />
+        </div>
+    </div>
+    <div class="form-group">
+        <div id="group-list" class="col-sm-offset-2 col-sm-4"></div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-sm-2" for="add_a_tool">Filter by tool qualification</label>
+        <div class="col-sm-4">
+            <input id="add_a_tool" type="text" autocomplete="off" class="form-control" placeholder="Pick a tool" />
+        </div>
+    </div>
+    <div class="form-group">
+        <div id="tool-list" class="col-sm-offset-2 col-sm-4"></div>
+    </div>
+    <script>
+		function add_group(jquery_event, group)
+		{
+			if(jquery_event !== null)
+            {
+				$(this).typeahead('val', '').focus();
+			}
+			add_to_list(
+				"#group-list",
+				"remove_group",
+				group.id,
+				"<span>"+group.name+"</span>",
+				"Remove this " + group.name,
+				"user_groups"
+			);
+            add_suffix_to_list_item("#group-list", " OR");
+		}
+
+		function remove_group(group_id)
+		{
+			remove_from_list("#group-list", "#user_groups_" + group_id, "");
+		}
+
+		function add_tool(jquery_event, tool)
+		{
+			if(jquery_event !== null)
+            {
+				$(this).typeahead('val', '').focus();
+			}
+			add_to_list(
+				"#tool-list",
+				"remove_tool",
+				tool.id,
+				"<span>"+tool.name+"</span>",
+				"Remove this " + tool.name,
+				"user_tools"
+			);
+            add_suffix_to_list_item("#tool-list", " OR");
+		}
+
+		function remove_tool(tool_id)
+		{
+			remove_from_list("#tool-list", "#user_tools_" + tool_id, "");
+		}
+
+        function add_suffix_to_list_item(selector, suffix)
+		{
+			$(selector + " > div").each(function(index, element)
+			{
+				if (index !== $(selector + " > div").length - 1)
+                {
+					const span_text = $(this).find("span:not([class])");
+					// Append suffix only if it doesn't already end with it already
+					if (!span_text.text().endsWith(suffix))
+                    {
+						span_text.append(suffix);
+					}
+				}
+			});
+		}
+
+
+		function init_autocomplete()
+		{
+			$('#add_a_group').autocomplete("user_groups", add_group, {{ groups|json_search_base }});
+
+			{{ selected_groups|json_search_base }}.forEach((item, index) => {
+				add_group(null, item);
+			});
+
+			$('#add_a_tool').autocomplete("user_tools", add_tool, {{ tools|json_search_base }});
+
+			{{ selected_tools|json_search_base }}.forEach((item, index) => {
+				add_tool(null, item);
+			});
+		}
+
+		$(init_autocomplete);
+    </script>
+{% endblock %}

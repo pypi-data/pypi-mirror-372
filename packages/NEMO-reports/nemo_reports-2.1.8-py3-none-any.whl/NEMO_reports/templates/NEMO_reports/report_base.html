@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags_and_filters %}
+{% block extrahead %}
+    {# Daterange picker #}
+    <script type="text/javascript" src="{% static "NEMO_reports/daterangepicker.js" %}"></script>
+    <link rel="stylesheet" type="text/css" href="{% static "NEMO_reports/daterangepicker.css" %}" />
+    {# Reports #}
+    <link rel="stylesheet" type="text/css" href="{% static "NEMO_reports/NEMO_reports.css" %}" />
+{% endblock %}
+{% block content %}
+    <div class="well well-report-dashboard">
+        <div class="pull-left hidden-xs" style="position: absolute;margin: 15px">
+            <a class="btn btn-default" href="{% url 'reporting' %}"><i class="glyphicon glyphicon-menu-left"></i> Reports</a>
+        </div>
+        <h2 class="text-center">{{ report_title }}</h2>
+        {% if report_description %}
+            <p class="text-center help-block" style="padding: 0 10px">{{ report_description|safe }}</p>
+        {% endif %}
+        <div class="report-form">
+            {% if errors %}
+                <div class="alert alert-danger">
+                    Oops! Something went wrong. Please correct the errors highlighted below:
+                    <ul>
+                        {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            {% block report_form %}
+                <form id="report_form" class="form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="start">Date range:</label>
+                        <div class="col-md-3 col-sm-4">
+                            <div class="input-group">
+                                <input class="form-control text-center" type="text" id="start" name="start" required>
+                                <div id="picker-container"
+                                     class="invisible"
+                                     style="float: left;
+                                            position: relative;
+                                            height: 0;
+                                            width: 100%"></div>
+                                <span class="daterange-calendar input-group-btn">
+                                    <button type="button"
+                                            class="btn btn-default btn-input-white"
+                                            onclick="daterange_picker.data('daterangepicker').show();">
+                                        <i class="glyphicon glyphicon-calendar"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                        <label class="col-sm-1 control-label" for="end" style="text-align: center">to</label>
+                        <div class="col-md-3 col-sm-4">
+                            <div class="input-group">
+                                <input class="form-control text-center" type="text" id="end" name="end" required>
+                                <span class="daterange-calendar input-group-btn">
+                                    <button type="button"
+                                            class="btn btn-default btn-input-white"
+                                            onclick="daterange_picker.data('daterangepicker').show();">
+                                        <i class="glyphicon glyphicon-calendar"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                        <label class="col-sm-1 control-label" style="text-align: center">(inclusive)</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Options:</label>
+                        <div class="col-sm-9">
+                            <div class="checkbox">
+                                <div class="row col-sm-12">
+                                    <label>
+                                        <input type="checkbox" id="detailed_data" name="detailed_data" {% if detailed_data %}checked{% endif %}>
+                                        Display detailed data (slower)
+                                    </label>
+                                </div>
+                                <div class="row col-sm-12">
+                                    <label>
+                                        <input type="checkbox" id="split_by_month" name="split_by_month" {% if split_by_month %}checked{% endif %}>
+                                        Split results by month
+                                    </label>
+                                </div>
+                                <div class="row col-sm-12">
+                                    <label>
+                                        <input type="checkbox"
+                                               id="cumulative_count"
+                                               name="cumulative_count"
+                                               {% if cumulative_count %}checked{% endif %}>
+                                        Display cumulative results by month
+                                    </label>
+                                </div>
+                                {% block extra_options %}{% endblock %}
+                            </div>
+                        </div>
+                    </div>
+                    {% block extra_form %}{% endblock %}
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-2">{% button id="update_button" type="save" value="Update" submit=False %}</div>
+                    </div>
+                </form>
+                <script>
+					let page_start_date = moment('{{ start|input_date_format }}', '{{ date_input_js_format }}');
+					let page_end_date = moment('{{ end|input_date_format }}', '{{ date_input_js_format }}');
+
+					function refresh_page(report_export)
+					{
+                        report_export = report_export || false;
+                        const url =  "?" + new URLSearchParams(new FormData(document.getElementById("report_form"))).toString();
+                        report_export ? window.open(url + "&export=on", "blank") : location.href = url;
+					}
+
+					{# Update dates in input fields #}
+					function set_dates(start, end)
+					{
+						$('#start').val(start.format('{{ date_input_js_format }}'));
+						$('#end').val(end.format('{{ date_input_js_format }}'));
+					}
+
+					{% with first_day_of_the_week="reports"|customization:"reports_first_day_of_week" %}
+					let daterange_picker = $('#picker-container').daterangepicker(
+					{
+						alwaysShowCalendars: true,
+						showDropdowns: true,
+						autoApply: true,
+						autoUpdateInput: false,
+						startDate: page_start_date,
+						endDate: page_end_date,
+						locale: {...this.locale, ...{firstDay: {{ first_day_of_the_week }}}},
+						ranges:
+						{
+						   'Last 24 hrs': [moment().subtract(1, 'days'), moment()],
+						   'Last 72 hrs': [moment().subtract(3, 'days'), moment()],
+						   'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+						   'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+						   'Today': [moment().startOf('day'), moment().endOf('day')],
+						   'Yesterday': [moment().subtract(1, 'days').startOf('day'), moment().subtract(1, 'days').endOf('day')],
+						   'This Week': [moment().startOf('{{ first_day_of_the_week|yesno:"isoWeek,week" }}'), moment().endOf('{{ first_day_of_the_week|yesno:"isoWeek,week" }}')],
+						   'Last Week': [moment().subtract(7, 'days').startOf('{{ first_day_of_the_week|yesno:"isoWeek,week" }}'), moment().subtract(7, 'days').endOf('{{ first_day_of_the_week|yesno:"isoWeek,week" }}')],
+						   'This Month': [moment().startOf('month'), moment().endOf('month')],
+						   'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+						   'This Year': [moment().startOf('year'), moment().endOf('year')],
+						   'Last Year': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
+						}
+					}, set_dates);
+					{% endwith %}
+
+					set_dates(page_start_date, page_end_date);
+				
+                </script>
+            {% endblock %}
+        </div>
+        <div class="panel-body">
+            {% if not data.rows and not summary.rows %}
+                <div id="no-report-data" class="tab-content panel panel-default">
+                    <div class="panel-body">
+                        {% block empty_report %}<i>There is no data to display. Try selecting a different date range</i>{% endblock %}
+                    </div>
+                </div>
+            {% else %}
+                <div id="report-data" class="tab-content panel panel-default" style="margin-bottom: 0;">
+                    <div class="tab-pane active" id="data-tab">
+                        <div class="panel-body">
+                            {% block export %}
+                                <div class="text-right">
+                                    <div>{% button id="export_button" type="export" value="Export" %}</div>
+                                </div>
+                            {% endblock %}
+                            {% block report_content %}
+                                {% if summary.rows %}<div class="table-responsive" style="margin-top: 40px">{{ summary.to_html }}</div>{% endif %}
+                                {% if data.rows %}<div class="table-responsive" style="margin-top: 40px">{{ data.to_html }}</div>{% endif %}
+                            {% endblock %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+		function get_value_for_cell(cell)
+        {
+            let value = $(cell).data("value");
+            return typeof value === "undefined" ? cell.text().trim() : value;
+		}
+
+        function sort_table(element, table_selector, rows_selector, columnIndex)
+		{
+			let descending = $(element).hasClass("descending");
+			$(element).toggleClass("descending");
+			$(element).toggleClass("ascending", descending);
+            $(element).parents("table").find("span.glyphicon.glyphicon-triangle-top, span.glyphicon.glyphicon-triangle-bottom").remove();
+            if (descending)
+            {
+                $(element).css("white-space", "nowrap").css("cursor", "s-resize");
+                $(element).append('<span style="margin-left: 5px" class="glyphicon glyphicon-triangle-top"></span>');
+            }
+            else
+            {
+                $(element).css("white-space", "nowrap").css("cursor", "n-resize");
+                $(element).append('<span style="margin-left: 5px" class="glyphicon glyphicon-triangle-bottom"></span>');
+			}
+
+            let table = $(table_selector + ' tbody');
+			// Select only the rows with the correct selector
+			let rows = table.find('tr' + rows_selector).get();
+			let row_index = $(rows[0]).index();
+			let isNumeric = $.isNumeric(get_value_for_cell($(rows[0]).children('td').eq(columnIndex)));
+	
+			rows.sort(function(a, b)
+			{
+				let A = get_value_for_cell($(a).children('td').eq(columnIndex));
+				let B = get_value_for_cell($(b).children('td').eq(columnIndex));
+
+				if (isNumeric)
+				{
+					return descending ? (Number(A) - Number(B)) : (Number(B) - Number(A));
+				}
+	
+				return descending ? A.localeCompare(B) : B.localeCompare(A);
+			});
+	
+			// Append the sorted rows back to the table body
+			$.each(rows, function(index, row)
+			{
+				// Insert the new row at the specified index
+				$(table_selector + ' tbody tr').eq(row_index + index).before(row);
+			});
+		}
+		$(document).on("click", "#update_button", function() {show_spinner();refresh_page()});
+		$(document).on("click", "#export_button", function() {refresh_page(true)});
+    </script>
+{% endblock %}

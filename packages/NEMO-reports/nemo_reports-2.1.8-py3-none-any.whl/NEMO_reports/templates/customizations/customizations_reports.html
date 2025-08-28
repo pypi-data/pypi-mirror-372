@@ -1,0 +1,142 @@
+{% load custom_tags_and_filters %}
+<div class="panel-body">
+    <h3 class="customization-section-title">Report settings</h3>
+    <form method="POST" action="{% url 'customize' 'reports' %}" class="form-horizontal">
+        {% csrf_token %}
+        <div class="form-group">
+            <label class="control-label col-md-3">First day of the week</label>
+            <div class="col-md-9">
+                <div class="radio">
+                    <label>
+                        <input type="radio"
+                               id="reports_first_day_of_week"
+                               name="reports_first_day_of_week"
+                               {% if not reports_first_day_of_week or reports_first_day_of_week == '1' %}checked{% endif %}
+                               value="1">
+                        Monday
+                    </label>
+                    <label>
+                        <input type="radio"
+                               id="reports_first_day_of_week"
+                               name="reports_first_day_of_week"
+                               {% if reports_first_day_of_week == '0' %}checked{% endif %}
+                               value="0">
+                        Sunday
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="control-label col-md-3" for="reports_default_daterange">Default daterange</label>
+            <div class="col-md-9">
+                <div class="radio">
+                    <label>
+                        <input type="radio"
+                               id="reports_default_daterange"
+                               name="reports_default_daterange"
+                               {% if not reports_default_daterange %}checked{% endif %}
+                               value="">
+                        Today
+                    </label>
+                    <label>
+                        <input type="radio"
+                               name="reports_default_daterange"
+                               {% if reports_default_daterange == 'yesterday' %}checked{% endif %}
+                               value="yesterday">
+                        Yesterday
+                    </label>
+                    <label>
+                        <input type="radio"
+                               name="reports_default_daterange"
+                               {% if reports_default_daterange == 'this_week' %}checked{% endif %}
+                               value="this_week">
+                        This week
+                    </label>
+                    <label>
+                        <input type="radio"
+                               name="reports_default_daterange"
+                               {% if reports_default_daterange == 'this_month' %}checked{% endif %}
+                               value="this_month">
+                        This month
+                    </label>
+                    <label>
+                        <input type="radio"
+                               name="reports_default_daterange"
+                               {% if reports_default_daterange == 'this_year' %}checked{% endif %}
+                               value="this_year">
+                        This year
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="form-group {% if errors.reports_timedelta_format %}has-error{% endif %}">
+            <label class="control-label col-md-3" for="reports_timedelta_format">Duration format</label>
+            <div class="col-md-7">
+                <input name="reports_timedelta_format"
+                       id="reports_timedelta_format"
+                       type="text"
+                       autocomplete="off"
+                       class="form-control"
+                       value="{{ reports_timedelta_format }}">
+            </div>
+            {% if errors.reports_timedelta_format %}
+                <div class="col-md-offset-3 col-md-9 help-block light-grey">{{ errors.reports_timedelta_format.error }}</div>
+            {% endif %}
+            <div class="col-md-offset-3 col-md-7 help-block">
+                Examples (the last field needs to be formatted as a float):
+                <pre style="white-space: pre-wrap;">{D:02}d {H:02}h {M:02}m {S:02.0f}s --> 05d 08h 04m 02s<br>{W}w {D}d {H}:{M:02}:{S:02.0f}     --> 4w 5d 8:04:02<br>{H}h {S:.0f}s                      --> 72h 800s<br>{H:.1f}h                           --> 72.2h<br>{H:.2f}h                           --> 72.25h</pre>
+            </div>
+        </div>
+        <div class="form-group {% if errors.reports_exclude_projects %}has-error{% endif %}">
+            <label class="control-label col-md-3" for="exclude_project">Excluded projects</label>
+            {% if "NEMO_billing"|app_installed %}
+                <div class="col-md-7">
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox"
+                                   id="reports_exclude_no_charge_projects"
+                                   name="reports_exclude_no_charge_projects"
+                                   {% if reports_exclude_no_charge_projects %}checked{% endif %}
+                                   value="enabled">
+                            Exclude no charge projects
+                        </label>
+                        <br>
+                        <br>
+                    </div>
+                </div>
+            {% endif %}
+            <div class="col-md-7 {% if "NEMO_billing"|app_installed %}col-md-offset-3{% endif %}">
+                <input id="exclude_project"
+                       type="text"
+                       autocomplete="off"
+                       class="form-control"
+                       placeholder="Search for a project to exclude">
+            </div>
+            {% if errors.reports_exclude_projects %}
+                <div class="col-md-offset-3 col-md-9 help-block light-grey">{{ errors.reports_exclude_projects.error }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <div id="exclude-list" class="col-md-offset-3 col-md-4">No projects are excluded.</div>
+        </div>
+        <div class="customization-separation"></div>
+        <div class="form-group">
+            <div class="text-center">{% button type="save" value="Save settings" %}</div>
+        </div>
+    </form>
+</div>
+<script>
+	function add_project(jquery_event, search_selection, dataset_name)
+	{
+        $(this).typeahead('val', '').focus();
+		add_to_list("#exclude-list", "remove_project", search_selection.id, search_selection.name, "Remove " + search_selection.name, "reports_exclude_projects_list");
+	}
+    function remove_project(project_id)
+	{
+		remove_from_list("#exclude-list", "#reports_exclude_projects_list_" + project_id, "No projects are excluded.");
+	}
+	$('#exclude_project').autocomplete('projects', add_project, {{ projects|json_search_base }});
+    {% for project in selected_projects %}
+		add_project(undefined, {name:'{{ project.name }}', id:{{ project.id }}});
+	{% endfor %}
+</script>

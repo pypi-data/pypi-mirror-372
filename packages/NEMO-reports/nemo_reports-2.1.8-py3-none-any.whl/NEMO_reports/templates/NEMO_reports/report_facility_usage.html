@@ -1,0 +1,244 @@
+{% extends 'NEMO_reports/report_base.html' %}
+{% load custom_tags_and_filters %}
+{% block extra_options %}
+    <div class="row radio col-sm-12">
+        <label>
+            <input type="radio" name="charge_count" value="" {% if not charge_count %}checked{% endif %}>
+            Show total time
+        </label>
+        <label>
+            <input type="radio" name="charge_count" value="on" {% if charge_count %}checked{% endif %}>
+            Show total charge count
+        </label>
+    </div>
+{% endblock %}
+{% block extra_form %}
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Activities:</label>
+        <div class="col-sm-9">
+            <div class="checkbox">
+                <div class="row col-lg-2 col-md-4 col-sm-5">
+                    <input type="hidden" name="tool_usage" value="off" />
+                    <label for="tool_usage">
+                        <input type="checkbox" id="tool_usage" name="tool_usage" {% if tool_usage != "off" %}checked{% endif %}>
+                        Tool usage
+                    </label>
+                </div>
+                <div class="row col-lg-2 col-md-4 col-sm-5">
+                    <input type="hidden" name="area_access" value="off" />
+                    <label for="area_access">
+                        <input type="checkbox" id="area_access" name="area_access" {% if area_access != "off" %}checked{% endif %}>
+                        Area access
+                    </label>
+                </div>
+                <div class="row col-lg-2 col-md-4 col-sm-5">
+                    <input type="hidden" name="staff_charges" value="off" />
+                    <label for="staff_charges">
+                        <input type="checkbox"
+                               id="staff_charges"
+                               name="staff_charges"
+                               {% if staff_charges != "off" %}checked{% endif %}>
+                        Staff charges
+                    </label>
+                </div>
+                <div class="row col-lg-2 col-md-4 col-sm-5">
+                    <input type="hidden" name="consumables" value="off" />
+                    <label for="consumables">
+                        <input type="checkbox" id="consumables" name="consumables" {% if consumables != "off" %}checked{% endif %}>
+                        Consumables
+                    </label>
+                </div>
+                <div class="row col-lg-2 col-md-4 col-sm-5">
+                    <input type="hidden" name="training" value="off" />
+                    <label for="training">
+                        <input type="checkbox" id="training" name="training" {% if training != "off" %}checked{% endif %}>
+                        Training
+                    </label>
+                </div>
+                <div class="row col-lg-3 col-md-4 col-sm-5">
+                    <input type="hidden" name="missed_reservations" value="off" />
+                    <label for="missed_reservations">
+                        <input type="checkbox"
+                               id="missed_reservations"
+                               name="missed_reservations"
+                               {% if missed_reservations != "off" %}checked{% endif %}>
+                        Missed reservations
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label" for="user_search">User:</label>
+        <div class="col-sm-5">
+            <input id="user_search"
+                   type="text"
+                   aria-label="Filter by user"
+                   placeholder="[Optional] Filter by user"
+                   class="form-control"
+                   autofocus>
+            <div id="user_list" style="margin-top: 5px; margin-left: 5px"></div>
+        </div>
+        <div class="col-sm-3 help-block"></div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label" for="project_search">Project:</label>
+        <div class="col-sm-5">
+            <input id="project_search"
+                   type="text"
+                   aria-label="Filter by project/{{ "projects_and_accounts"|customization:"project_application_identifier_name" }}"
+                   placeholder="[Optional] Filter by project/{{ "projects_and_accounts"|customization:"project_application_identifier_name" }}"
+                   class="form-control"
+                   autofocus>
+            <div id="project_list" style="margin-top: 5px; margin-left: 5px"></div>
+        </div>
+        <div class="col-sm-3 help-block"></div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label" for="account_search">Account:</label>
+        <div class="col-sm-5">
+            <input id="account_search"
+                   type="text"
+                   aria-label="Filter by account"
+                   placeholder="[Optional] Filter by account"
+                   class="form-control"
+                   autofocus>
+            <div id="account_list" style="margin-top: 5px; margin-left: 5px"></div>
+        </div>
+        <div class="col-sm-3 help-block"></div>
+    </div>
+    <div class="form-group" id="tool_search_container">
+        <label class="col-sm-2 control-label" for="tool_search">Tool:</label>
+        <div class="col-sm-5">
+            <input id="tool_search"
+                   type="text"
+                   aria-label="Filter by tool"
+                   placeholder="[Optional] Filter by tool"
+                   class="form-control"
+                   autofocus>
+            <div id="tool_list" style="margin-top: 5px; margin-left: 5px"></div>
+        </div>
+        <div class="col-sm-3 help-block"></div>
+    </div>
+    <div class="form-group" id="area_search_container">
+        <label class="col-sm-2 control-label" for="area_search">Area:</label>
+        <div class="col-sm-5">
+            <input id="area_search"
+                   type="text"
+                   aria-label="Filter by area"
+                   placeholder="[Optional] Filter by area"
+                   class="form-control"
+                   autofocus>
+            <div id="area_list" style="margin-top: 5px; margin-left: 5px"></div>
+        </div>
+        <div class="col-sm-3 help-block"></div>
+    </div>
+    <script>
+        function check_charge_types()
+        {
+			let tool_search_container_jq = $("#tool_search_container");
+			let area_search_container_jq = $("#area_search_container");
+
+            if ($('#tool_usage:checked, #training:checked, #missed_reservations:checked').length > 0)
+            {
+                tool_search_container_jq.show();
+			}
+            else
+            {
+                $("#tool_list").empty();
+                tool_search_container_jq.hide();
+			}
+            if ($('#area_access:checked, #missed_reservations:checked').length > 0)
+            {
+                area_search_container_jq.show();
+			}
+            else
+            {
+                $("#area_list").empty();
+                area_search_container_jq.hide();
+			}
+		}
+        function get_item(jquery_event, search_selection, dataset_name)
+		{
+            $("#" + dataset_name + "_search").typeahead('val', '');
+			add_to_list("#"+ dataset_name + "_list", "remove_" + dataset_name, search_selection.id, search_selection.name, "remove " + search_selection.name, dataset_name + "_ids");
+            if (dataset_name === "tool")
+            {
+                $("#area_access").prop("checked", false);
+                $("#staff_charges").prop("checked", false);
+                $("#consumables").prop("checked", false);
+			}
+            if (dataset_name === "area")
+            {
+                $("#tool_usage").prop("checked", false);
+                $("#training").prop("checked", false);
+                $("#staff_charges").prop("checked", false);
+                $("#consumables").prop("checked", false);
+			}
+            check_charge_types();
+        }
+        function remove_user(id)
+		{
+            remove_from_list("#user_list", "#user_ids_" +id, "")
+        }
+        function remove_project(id)
+		{
+            remove_from_list("#project_list", "#project_ids_" +id, "")
+        }
+        function remove_account(id)
+		{
+            remove_from_list("#account_list", "#account_ids_" +id, "")
+        }
+        function remove_area(id)
+		{
+            remove_from_list("#area_list", "#area_ids_" +id, "")
+        }
+        function remove_tool(id)
+		{
+            remove_from_list("#tool_list", "#tool_ids_" +id, "")
+        }
+		function on_load()
+		{
+			$("#user_search").autocomplete('user', get_item, '{% url 'reporting_facility_usage_user_search' %}', true);
+			$("#project_search").autocomplete('project', get_item, '{% url 'reporting_facility_usage_project_search' %}', true);
+			$("#account_search").autocomplete('account', get_item, '{% url 'reporting_facility_usage_account_search' %}', true);
+			$("#tool_search").autocomplete('tool', get_item, {{ tool_list|json_search_base }}, true);
+			$("#area_search").autocomplete('area', get_item, {{ area_list|json_search_base }}, true);
+            {% for selected_user in selected_users %}
+			get_item(undefined, {"id": "{{ selected_user.id }}", "name": "{{ selected_user }}"}, "user");
+            {% endfor %}
+			{% for selected_project in selected_projects %}
+			get_item(undefined, {"id": "{{ selected_project.id }}", "name": "{{ selected_project }}"}, "project");
+            {% endfor %}
+			{% for selected_account in selected_accounts %}
+			get_item(undefined, {"id": "{{ selected_account.id }}", "name": "{{ selected_account }}"}, "account");
+            {% endfor %}
+			{% for selected_tool in selected_tools %}
+			get_item(undefined, {"id": "{{ selected_tool.id }}", "name": "{{ selected_tool }}"}, "tool");
+            {% endfor %}
+			{% for selected_area in selected_areas %}
+			get_item(undefined, {"id": "{{ selected_area.id }}", "name": "{{ selected_area }}"}, "area");
+            {% endfor %}
+            check_charge_types();
+        }
+        window.addEventListener('load', on_load, true);
+        $("#tool_usage, #area_access, #staff_charges, #consumables, #training, #missed_reservations").on("click", check_charge_types);
+		/* Add some validation to prevent invalid values in autocomplete fields */
+        $(".well-report-dashboard").on("click", "#update_button, #export_button", function(event)
+		{
+            $("#user_search, #project_search, #account_search, #tool_search, #area_search").each(function(element_index, element) {
+                let element_jq = $(element);
+                if (element_jq.val().trim() !== "") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                    element_jq.closest(".form-group").addClass("has-error");
+                    element_jq.closest(".form-group").find(".help-block").html("Invalid value");
+                } else {
+                    element_jq.closest(".form-group").removeClass("has-error");
+                    element_jq.closest(".form-group").find(".help-block").html("");
+				}
+            });
+		});
+    </script>
+{% endblock %}
