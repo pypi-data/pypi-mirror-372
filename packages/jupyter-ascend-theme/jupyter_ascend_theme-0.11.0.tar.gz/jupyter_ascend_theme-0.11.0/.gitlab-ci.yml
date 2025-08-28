@@ -1,0 +1,112 @@
+# The development and release of this extension rely on a specific development and build environment.
+# Furthermore, the extension is linked to (and tested) with a specific version of JupyterLab (or a range of versions).
+# While the extension can be built and published from the local machine, this project pipeline ensures that the build environment
+# remains consistent and targets the correct JupyterLab version.
+image: node:20.12.2
+
+cache:
+  untracked: true
+  key:
+    # Files that invalidate the cache.
+    files:
+      - yarn.lock
+      - package.json
+  # Folders stored as cache.
+  paths:
+    - node_modules/
+    - .yarn/cache/
+    - .venv/
+    - .cache/pip
+  policy: pull-push
+
+stages:
+  - setup
+  - build
+  - test
+  - prepare_and_publish_release
+
+.default-before:
+  before_script:
+    - echo "⚙️ Activating Python virtual environment..."
+    # Loads the virtual environment activation script into the current shell.
+    - . .venv/bin/activate
+
+install_dependencies:
+  stage: setup
+  script:
+    - echo "🔄 Updating system packages and installing python..."
+    - apt-get update && apt-get install -y python3 python3-pip python3-venv
+    - echo "🐍 Setting up Python virtual environment..."
+    - python3 -m venv .venv
+    - . .venv/bin/activate
+    - echo "⬆️ Upgrading pip..."
+    - python -m pip install --upgrade pip
+    - echo "📦 Installing JupyterLab dependencies..."
+    - python -m pip install -U "jupyterlab>=4.0.0,<5"
+    - echo "📦 Installing JavaScript dependencies..."
+    - jlpm install
+    - echo "⬆️ Installing additional Python dependencies..."
+    - python -m pip install --upgrade hatchling hatch_jupyter_builder
+
+build:
+  stage: build
+  needs: [install_dependencies]
+  extends: .default-before
+  artifacts:
+    paths:
+      - 'dist'
+    expire_in: 1 hr
+  script:
+    - echo "🛠️ Building the extension..."
+    - jlpm build
+
+eslint:
+  stage: test
+  needs: [build]
+  extends: .default-before
+  script:
+    - jlpm run eslint:check
+
+prettier:
+  stage: test
+  needs: [build]
+  extends: .default-before
+  script:
+    - jlpm run prettier:check
+
+stylelint:
+  stage: test
+  needs: [build]
+  extends: .default-before
+  script:
+    - jlpm run stylelint:check
+
+prepare_and_publish_release:
+  stage: prepare_and_publish_release
+  needs: [eslint, prettier, stylelint]
+  extends: .default-before
+  script:
+    - echo "⬆️ Upgrading pip..."
+    - python -m pip install --upgrade pip
+    - echo "📦 Installing necessary dependencies for release..."
+    - pip install hatch build twine
+    - echo "🔧 Configuring Git for release..."
+    - git config user.email "davide.giorgiutti@cgi.com@$CI_SERVER_HOST"
+    - git config user.name "cgi-bot"
+    - echo "⬇️ Pulling latest changes and rebasing..."
+    - git pull "https://project_access_token_name:$PROJECT_VARIABLE_WITH_ACCESS_TOKEN_VALUE@$CI_SERVER_HOST/$CI_PROJECT_PATH.git" $CI_COMMIT_BRANCH --rebase --autostash
+    - echo "🔢 Bumping extension version..."
+    - hatch version minor
+    - CURRENT_VERSION=$(hatch version)
+    - python -c "import json; data = json.load(open('package.json')); data['version'] = '$CURRENT_VERSION'; json.dump(data, open('package.json', 'w'), indent=4)"
+    - git status
+    - git add package.json
+    - git commit -m "cgi-bot:release extension version to $(hatch version) [ci skip]"
+    - echo "⬆️ Pushing version bump to repository..."
+    - git push "https://project_access_token_name:$PROJECT_VARIABLE_WITH_ACCESS_TOKEN_VALUE@$CI_SERVER_HOST/$CI_PROJECT_PATH.git" HEAD:$CI_COMMIT_BRANCH -o ci.skip
+    - python -m build
+    - echo "🚀 Uploading package to PyPI..."
+    - twine upload dist/*
+    - jlpm clean:all
+    - git clean -dfX
+  when: manual
