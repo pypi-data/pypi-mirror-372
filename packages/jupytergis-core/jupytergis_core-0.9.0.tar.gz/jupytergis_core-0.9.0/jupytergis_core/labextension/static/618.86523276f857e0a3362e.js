@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_jupytergis_jupytergis_core=self.webpackChunk_jupytergis_jupytergis_core||[]).push([[618],{20618:(e,r,s)=>{s.r(r),s.d(r,{default:()=>c});var u=s(67341),t=s(74660);class c extends t.A{decodeBlock(e){return(0,u.UD)(new Uint8Array(e)).buffer}}}}]);
