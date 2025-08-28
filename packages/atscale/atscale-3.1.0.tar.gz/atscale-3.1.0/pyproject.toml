@@ -1,0 +1,108 @@
+[tool.poetry]
+name = "atscale"
+version = "3.1.0"
+description = "The AI-Link package created by AtScale"
+authors = ["The AI-Link Development Team at AtScale"]
+readme = "README.md"
+license = "Proprietary" 
+# documentation = "https://documentation.atscale.com/ailink-container/"
+packages = [
+    { include = "atscale"}
+]
+
+[tool.poetry.urls]
+"HomePage" = "https://www.atscale.com/"
+"Documentation" = "https://documentation.atscale.com/ailink-container/"
+"Release Notes" = "https://documentation.atscale.com/ailink-container/release-notes/"
+
+
+[tool.poetry.dependencies]
+python = ">=3.9, <3.13"
+pandas = ">=2.2"
+requests = ">=2.0.0"
+aenum = ">=3.1.15"
+cryptography = ">=42.0.0"
+python-keycloak = ">=5.0.0"
+psycopg = { version = ">3.2.0, <3.3.0", extras = ["binary"]}
+
+
+
+# extra dependencies
+pyspark = {version = ">=3.4.0", optional = true}
+jaydebeapi = {version = ">=1.2.3", optional = true}
+sqlalchemy = {version = ">=2.0.0", optional = true}
+pyodbc = {version = ">=4.0.27", optional = true}
+#databricks
+databricks-sql-connector = {version = ">=3.0.0", extras=["sqlalchemy"], optional = true}
+#snowflake
+snowflake-connector-python = {version = ">=3.0.0", extras=["pandas"], optional = true}
+snowflake-sqlalchemy = {version = ">=1.6", optional = true}
+#gbq
+pandas-gbq = {version = ">=0.17.6", optional = true}
+# from setup.py "google-cloud-bigquery in pandas-gqb just in case and for inspection"
+google-cloud-bigquery = {version = ">=3.25.0", optional = true}
+# redshift is not supported yet by containerized AtScale
+#sqlalchemy-redshift = {version=">=0.8.9", optional = true}
+#redshift-connector = {version=">=2.0.908", optional = true}
+numpy = {version = "^1.26.0", optional = true}
+
+
+
+
+[tool.poetry.extras]
+databricks = ["databricks-sql-connector", "numpy"]
+gbq = ["pandas-gbq", "google-cloud-bigquery"]
+iris = ["pyodbc"]
+jdbc = ["jaydebeapi"]
+# not yet supported
+#mssql = ["sqlalchemy"]
+postgres = ["sqlalchemy", "psycopg2-binary"]
+# not yet supported
+#redshift = ["sqlalchemy",
+#            "sqlalchemy-redshift",
+#            "redshift-connector"]
+snowflake = [
+    "sqlalchemy",
+    "snowflake-connector-python", 
+    "snowflake-sqlalchemy"]
+spark = ["pyspark"]
+synapse = ["pyodbc"]
+
+
+# dev dependencies
+[tool.poetry.group.dev]
+optional = true
+[tool.poetry.group.dev.dependencies]
+GitPython = "^3.1.44"
+dotenv = "^0.9.9"
+black = "*"
+pyaml = "*"
+jupyter = "^1.0.0"
+
+[tool.poetry.group.test]
+optional = true
+[tool.poetry.group.test.dependencies]
+pytest = "^8.2.2"
+pytest-random-order = "*"
+boto3 = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.pytest.ini_options]
+addopts = '--random-order -m "not (slow_redundant or spark_test or databricks_test or iris_test)"'
+markers = [
+    "db: mark a function as non reliant on other classes and hitting a database.",
+    "slow_redundant: mark a function as a slow test that we can skip over",
+    "iris_test: mark a function as a test only to be run when the iris dwh is up",
+    "databricks_test: mark a function as a test only to be run when the databricks dwh is up",
+    "spark_test: a mark for tests that require a spark instance",
+    "mock: uses mocking",
+    "revisit_with_bp: to be migrated once containerized version supports base project"
+    ]
+
+
+[tool.black]
+line-length = 100
