@@ -1,0 +1,138 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2025 Arm Ltd.
+---
+# The forgejo instance to connect to
+forgejo_url: null
+# forgejo_url: https://forge.sourceware.org/
+# forgejo_url: https://codeberg.org/
+
+# A valid API key: https://forgejo.org/docs/latest/user/api-usage/
+# The key should have the following access:
+# - issue: read and write (to post comments)
+# - repository: read (to read pull request data)
+api_key: null
+
+# The login name of the bot user
+forge_username: null
+
+# This email will be used to send patches
+mail_from: Sourceware Forge <lichenor@forge.sourceware.org>
+
+# These are used in the welcome templates
+site_name: Sourceware Forge
+site_help_resources: Or join [`#overseers`](https://web.libera.chat/#overseers) on Libera Chat, particularly if this automation is not working (stay online to get replies, IRC does not save messages if people are not online).
+
+# Users can create custom templates and put them in this path. There is no
+# guarantee that variables will remain the same.
+custom_template_path: "."
+
+# The location where the list of allowed users is kept, in addition to the redis server
+allowed_users_path: null
+# The location where patch files are stored for archiving
+pr_patch_files_path: null
+# The location where local clones of the repositories are kept
+local_git_repos: null
+
+# Email sending configuration
+smtp:
+  host: localhost
+  port: 25
+  tls: false
+  ssl: false
+  user:
+  password:
+  debug: 0
+
+# Flower can be used to monitor the event queue https://flower.readthedocs.io/en/latest/
+flower_address: 0.0.0.0
+flower_port: 4001
+
+# This value must be copied exactly in the webhook configuration in forgejo
+webhook_secret: null
+
+# Number of processes dealing with incoming webhook events
+webhook_worker_concurrency: 4
+
+webhook_task_broker_url: redis://redis:6379/0
+webhook_address: 0.0.0.0
+webhook_port: 4000
+
+loglevel: info
+log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# This is a per-repository setting that must be set to false, unless it's the gcc repo.
+# Setting this true enables calculating the gcc descr of a git commit, which counts the number
+# of changes since the last "base point". It requires linear history to work correctly.
+uses_gcc_descr: false
+
+# This is a per-repository setting providing the url of the origin
+# It should be an ssh url. The ssh_identity_file private key should be able to push changes
+# to this url.
+origin_url: null
+
+# If the main repository url points at a mirror, this url points at the upstream copy
+# This can be used to fetch more refs, in the case of gcc or sync the mirror (at some point)
+upstream_url: null
+
+# git will use the pointed file as a private key for ssh comms (per repository)
+ssh_identity_file: null
+
+# This per repository setting allows setting the schedule of mirror updates
+# it can be an interval in seconds (if it's a number), a crontab expression string or a
+# dictionary initializing a celery.schedules.crontab object.
+# For details, see:
+# https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html
+# https://docs.celeryq.dev/en/stable/reference/celery.schedules.html
+mirror_schedule: null
+
+# This per repository setting allows mirroring specific refs
+mirror_refs_mappings:
+  - "refs/heads/*:refs/heads/*"
+
+# per repository text pointing at a service that can show a posted message by message id
+# The text MESSAGEID will be replaced with the message id of the cover letter
+link_to_message: Message Id of cover message is `<MESSAGEID>`
+
+repositories:
+  - owner: gcc
+    name: gcc-TEST
+    origin_url: "ssh://git@forge.sourceware.org/gcc/gcc-TEST.git"
+    upstream_url: "https://gcc.gnu.org/git/gcc.git"
+    mirror_refs_mappings:
+      - "refs/heads/master:refs/heads/master"
+      - "refs/heads/master:refs/heads/trunk"
+    uses_gcc_descr: true
+    destination_list_name: "gcc-patches mailing list"
+    destination_list_address: "test-list@sourceware.org"
+    link_to_message: "[Cover letter](https://inbox.sourceware.org/test-list/MESSAGEID)"
+    # Used in the welcome letter
+    patch_guidelines: |
+      This project expects a specific format.
+      See [Submitting Patches](https://gcc.gnu.org/contribute.html#patches) for details
+    help_resources: |
+      Consider joining the [gcc and gcc-patches mailing lists.](https://gcc.gnu.org/lists.html).
+      For real time communication, check the [gcc irc channels](https://gcc.gnu.org/wiki/GCConIRC).
+  - owner: binutils-gdb
+    name: binutils-gdb-TEST
+    origin_url: "ssh://git@forge.sourceware.org/binutils-gdb/binutils-gdb-test.git"
+    upstream_url: "https://sourceware.org/git/binutils-gdb.git"
+    destination_list_name: "binutils mailing list"
+    destination_list_address: "test-list@sourceware.org"
+    link_to_message: "[Cover letter](https://inbox.sourceware.org/test-list/MESSAGEID)"
+    patch_guidelines: |
+      This project expects a specific format.
+      Please follow the [How To Contribute To The GNU Binutils](https://sourceware.org/binutils/wiki/HowToContribute) page.
+    help_resources: |
+      Consider joining the [binutils mailing list](https://sourceware.org/mailman/listinfo/binutils).
+  - owner: forge
+    name: forge
+    origin_url: "ssh://git@forge.sourceware.org/forge/forge.git"
+    upstream_url: "https://sourceware.org/git/forge.git"
+    destination_list_name: "Forge mailing list"
+    destination_list_address: "forge@sourceware.org"
+    link_to_message: "[Cover letter](https://inbox.sourceware.org/forge/MESSAGEID)"
+    patch_guidelines: |
+      Please use tox to run all tests and linters before submitting.
+    help_resources: |
+      Consider joining the [forge mailing list.](https://sourceware.org/mailman/listinfo/forge).
+      For real time communication about forge operation, check the [#overseers on libera.chat](https://libera.chat/) IRC channel.
