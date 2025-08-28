@@ -1,0 +1,133 @@
+Metadata-Version: 2.4
+Name: pyjudilibre
+Version: 0.7.3
+Summary: Python client for the JUDILIBRE public API
+Project-URL: Homepage, https://github.com/pauldechorgnat/pyjudilibre
+Project-URL: Issues, https://github.com/pauldechorgnat/pyjudilibre/issues
+Author-email: Paul <you@example.com>
+License: MIT License
+        
+        Copyright (c) 2025 Paul Déchorgnat
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Requires-Python: >=3.9
+Requires-Dist: httpx==0.28.1
+Requires-Dist: pydantic>=2.10.2
+Provides-Extra: build
+Requires-Dist: build; extra == 'build'
+Requires-Dist: twine<=6.0.1; extra == 'build'
+Provides-Extra: dev
+Requires-Dist: bump-my-version==1.2.1; extra == 'dev'
+Requires-Dist: isort==6.0.1; extra == 'dev'
+Requires-Dist: jupyterlab==4.4.5; extra == 'dev'
+Requires-Dist: mypy>=1.17.1; extra == 'dev'
+Requires-Dist: ruff==0.12.8; extra == 'dev'
+Provides-Extra: doc
+Requires-Dist: mkdocs-material>=9.6.16; extra == 'doc'
+Requires-Dist: mkdocs>=1.6.1; extra == 'doc'
+Requires-Dist: mkdocstrings-python>=1.16.12; extra == 'doc'
+Provides-Extra: test
+Requires-Dist: pytest==8.4.1; extra == 'test'
+Requires-Dist: python-dotenv==1.1.1; extra == 'test'
+Description-Content-Type: text/markdown
+
+# pyJudilibre
+
+`pyJudilibre` is a small Python wrapper to query the `JUDILIBRE` API from the French Supreme Court, la Cour de cassation. `JUDILIBRE` aims to give access to judiciary decisions.
+
+<div style="align=center">
+<img src="/docs/images/logo-white.svg" alt="Logo de pyjudilibre ?" width="200"/>
+</div>
+
+## Documentation
+
+The documentation is [here](https://pyjudilibre.readthedocs.io/en/latest/).
+
+
+## Requirements
+
+This library relies on `pydantic` and `httpx` to perform queries to JUDILIBRE and to validate inputs and outputs.
+You also need credentials from [PISTE](https://piste.gouv.fr).
+
+## Installation
+
+You can install it from `pyjudilibre`.
+
+```sh
+pip install pyjudilibre
+```
+
+## Simple usage
+
+To instantiate the main class, `JudilibreClient`, you need to use your JUDILIBRE API key (see [here](https://pyjudilibre.readthedocs.io/en/latest/piste-set-up/)).
+
+```python
+import logging
+from pyjudilibre import JudilibreClient
+
+JUDILIBRE_API_KEY = "***"
+client = JudilibreClient(
+    judilibre_api_key=JUDILIBRE_API_KEY,
+    logging_level=logging.DEBUG,
+)
+```
+
+To get a decision, you need to provide its ID: 
+
+```python
+DECISION_ID = "667e51a56430c94f3afa7d0e"
+decision = client.decision(decision_id=DECISION_ID)
+```
+
+## Description of the source code
+
+The code of the library is in [lib/pyjudilibre](/lib/pyjudilibre/):
+
+- the main class and its method are in `pyjudilibre.py`
+- the enums are in `enums.py`
+- the pydantic models are in `models.py`
+- spectific exceptions are defined in `exceptions.py`
+- `decorators.py` contains one decorator
+
+Other folders are as follow:
+- [tests](/tests) contains unit tests.
+- [docs](/docs) contains documentation files.
+- [scripts](/scripts/) contains useful scripts to develop the library
+
+## Development setup
+
+To set up a development environment, you should create a virtual environment named `venv`:
+
+```sh
+python3 -m venv venv
+source venv/bin/activate
+
+pip install '.[dev,build,doc,test]'
+```
+
+In `scripts`, you can use:
+
+- [refresh-lib.sh](/scripts/refresh-lib.sh): To reinstall the latest local version of the library
+- [check-files.sh](/scripts/check-files.sh): To run `isort`, `ruff` and `mypy` on the files
+- [run-doc-server.sh](/scripts/run-doc-server.sh): To serve the doc on a live local server
+- [run-lib-tests.sh](/scripts/run-lib-tests.sh): To run every unit test
+- [bump-version.sh](/scripts/bump-version.sh): To bump versions in `pyproject.toml`, in the library files and in the documentation files.
+- [build-and-test.sh](/scripts/build-and-test.sh): To build the library, push it to [Test-PyPI](https://test.pypi.org/project/pyjudilibre/), pull it in a test environment and run tests.
+- [build-and-push.sh](/scripts/build-and-push.sh): To build the library, push it to [PyPI](https://pypi.org/project/pyjudilibre/).
