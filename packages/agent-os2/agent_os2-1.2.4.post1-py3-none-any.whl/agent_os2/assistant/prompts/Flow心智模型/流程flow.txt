@@ -1,0 +1,19 @@
+*Flow心智模型-流程flow[flow,工具flow,动态编排,执行流程,内置命令]
+定义:当你的Flow属于整个流程的一部分(甚至一个子流程),则可称此Flow为"流程Flow"
+特点:这些flow可以是流程中的任意一部分,可以是第一层主流程,也可以是被嵌套调用子流程
+流程Flow的使用规范:
+1.推荐使用execute_with_visualization激活执行主流程flow
+2.不推荐依赖于execute等执行器的shared_context,extra_contexts等注入初始上下文
+因为流程Flow随时可能成为其他业务的子流程,而一个流程中不能多次使用execute等执行器执行子流程而注入上下文(只能在主流程开始前用一次激活,否则有脱离AgentOS图结构语义的风险),必须使用agent_command注入上下文和添加新的流程Flow/Agent
+3.推荐在这类Flow的开头增加一个BootstrapAgent来通过源上下文(Source Context)利用agent_command注入共享上下文和额外上下文
+example:
+class BootstrapAgent(BaseAgent):
+    def setup(self):
+        self.user_info = "{self.alias} 正在注入必要的上下文"
+        self.prompts = "" #不需要调用模型
+    async def post_process(self,source_context,model_result,shared_context,extra_contexts,observer,batch_id=None):
+        long_term_memory_system = source_context.pop("long_term_memory_system")
+        short_term_memory_system = source_context.pop("short_term_memory_system")
+        to_memory = source_context.pop("some_keys_need_to_shared_context")
+        return source_context,{"memory_modify":{"some_keys_need_to_shared_context":to_memory},"add_context":{"long_term_memory_system":long_term_memory_system,"short_term_memory_system":short_term_memory_system}}
+这样一个流程flow也可以借此实现模块化,即支持作为主流程甚至工具身份来使用,也可以随时成为一个子流程加入其他流程中

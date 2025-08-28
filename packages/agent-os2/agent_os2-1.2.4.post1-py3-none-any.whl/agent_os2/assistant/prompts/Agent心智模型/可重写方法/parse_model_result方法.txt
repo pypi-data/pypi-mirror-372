@@ -1,0 +1,15 @@
+*Agent心智模型-可重写方法-parse_model_result方法[模型请求]
+子类可选择性重写方法
+!!仅在self.strict_mode为True时有效!!
+!!现在是异步方法,需要使用async/await语法!!
+作用:
+1.自定义解析模型返回的原始数据,并对结果进行逻辑校验,如果不符合逻辑则raise ValueError用于触发重试机制
+2.子类可选择性重写
+example:
+async def parse_model_result(self,runtime_contexts:dict[str,Any],model_result:Any,batch_id:int|None=None)->Any:
+    result = await super().parse_model_result(runtime_contexts,model_result,batch_id)
+    if isinstance(result,dict) and "important_key" not in result:
+        raise ValueError("important_key is not in model_result")
+    return result
+默认实现:
+将模型返回的字符串解析为json格式,带有str2json的预防性处理(如去除```json,处理转义字符错误等)和详细的错误提示抛出机制

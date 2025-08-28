@@ -1,0 +1,9 @@
+*Agent心智模型-数据处理管线[base_agent,调度职责,批处理,setup方法,post_process方法]
+__init__方法中初始化Agent的构建时上下文self.settings,并且初始化构建属性
+_run_agent_pipeline方法中定义了Agent的数据处理管线,核心逻辑如下:
+1.运行self.setup方法,初始化运行时属性
+2.判断self.batch_field属性是否存在,如果批处理存在则将指定的列表元素依次进行下列流程,否则直接进入下一步
+3.如果self.prompts属性是非falsy值,则用提示词模板系统将上下文嵌入prompts用其运行self._call_model方法,调用模型处理数据,否则model_result为None
+4.将model_result以及运行时上下文(source_context,shared_context,extra_contexts)传入self.post_process方法,处理与整合数据,返回给下游传递的源上下文(source_context)和副作用命令(agent_command)
+5.如果agent_command存在,则运行self.apply_command方法,执行副作用命令
+6.如果批处理开启,则以**追加模式**将每个经过post_process的元素进行合并后返回最终结果

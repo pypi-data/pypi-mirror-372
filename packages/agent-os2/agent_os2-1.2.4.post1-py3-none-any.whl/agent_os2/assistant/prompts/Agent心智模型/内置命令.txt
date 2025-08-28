@@ -1,0 +1,62 @@
+*Agent心智模型-内置命令[flow构建,合并策略,post_process方法,Agent自动注册系统]
+使用方式:
+在BaseAgent的post_process的第二个返回之填写agent命令
+内置命令使用说明:
+1.memory_modify:**替换模式**修改shared_context
+借助merge_elements方法实现数据修改,合并和删除
+(1)添加新的数据:
+原数据:{"a":1,"b":2}
+命令:command = {"memory_modify":{"c":3}}
+执行命令后shared_context结果:{"a":1,"b":2,"c":3}
+(2)更新已有的数据:
+原数据:{"a":1,"b":2}
+命令:command = {"memory_modify":{"a":3}}
+执行命令后shared_context结果:{"a":3,"b":2}
+(3)删除字典中原有的数据:
+原数据:{"a":1,"b":2}
+命令:command = {"memory_modify":{"b":None}}
+执行命令后shared_context结果:{"a":1}
+(4)删除列表中已经存在的元素:
+原数据:{"a":[1,2,3]}
+命令:command = {"memory_modify":{"a":[n for n in shared_context["a"] if n > 2]}}
+执行命令后shared_context结果:{"a":[3]}
+2.memory_append:**追加模式**修改共享内存
+借助merge_elements方法实现数据追加,同上,使用append_priority=True参数
+(1)累积数字:
+原数据:{"a":1}
+命令:command = {"memory_append":{"a":2}}
+执行命令后shared_context结果:{"a":3}
+(2)拼接字符串
+原数据:{"chat_history":"system:你是一个用户需求分析分析专家\n"}
+命令:command = {"memory_append":{"chat_history":"user:我是一个用户\n"}}
+执行命令后shared_context结果:{"chat_history":"system:你是一个用户需求分析分析专家\nuser:我是一个用户\n"}
+(3)追加列表:
+原数据:{"b":[1,2]}
+命令:command = {"memory_append":{"b":[3,4]}}
+执行命令后shared_context结果:{"b":[1,2,3,4]}
+3.actions:修改该Agent连接的后驱Agent
+example:
+{"actions":[{"insert":[...]},{"add_branch":[...]}]}
+可选的action:
+actions命令
+作用：动态修改节点的后驱节点结构
+(1)添加分支：Agent/Flow(name)/Flow(dsl)
+{"add_branch": {"name": "validator", "settings": {...}}}
+{"add_branch": {"dsl": "flow:\n  agents:\n    step1:\n      name: processor"}}
+(2)链式插入：支持Agent/Flow混合,支持并行
+{"insert": [
+    {"name": "process",settings={...}}, 
+    {"dsl": "validation_flow:\n  agents:\n    validator:\n      name: data_validator"}, #dsl可以用于直接构建flow
+    [{"name": "analyze"}, {"name": "validate"}],  # 并行执行
+    {"name": "merge"}
+]}
+注:name是自动注册系统给agent的注册名,如果该Agent的parent有agents_key,则只会在该agents_key下查找Agent
+(3)中断后续步骤
+{"cancel_next_steps": True}
+4.add_context:向extra_contexts容器中添加新的接口对象
+example:
+command = {"add_context":{"external_system":external_system}}
+**命令应用顺序**:1.memory_modify,memory_append,actions,add_context,基于这个顺序,可以实现先删除再添加的逻辑
+example:
+command = {"memory_modify":{"titles":[title for title in shared_context["titles"] if title not in model_result.get("deleted_titles",[])]},"memory_append":{"titles":[model_result.get("title")]}}
+

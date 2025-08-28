@@ -1,0 +1,27 @@
+*Agent心智模型-批处理[base_agent,setup方法,提示词模板系统,运行时上下文,合并策略]
+作用:借助异步模型让Agent可以用一种方法同时处理一个列表中的同质数据
+!!填写self.batch_field属性指向某个列表类型的数据源后,会自动开启批处理!!
+开启批处理之后,batch_id将不再为None,而是当前批处理的序号,对应列表的元素索引,从0开始
+开启批处理之后,提示词模板会特别的支持%batch_index%占位符,用于动态嵌入当前批处理的序号
+example1 数据合并为一个字典:
+def setup(self):
+    self.batch_field = "src.titles" #指定待处理的数据源,必须指向一个列表
+    self.prompts = "帮我翻译一下标题为日语,直接输出内容即可。待翻译的标题为:{src.titles[%batch_index%]}"
+async def post_process(self,source_context,model_result,shared_context,extra_contexts,observer,batch_id=None):
+    return {source_context.get("titles",[])[batch_id]:model_result}
+下游Agent会收到**追加合并**后的批处理内容,例如:
+{
+    "爱之诗":"愛の詩",
+    "樱花":"桜"
+}
+example2 数据汇聚为一个列表:
+def setup(self):
+    self.batch_field = "src.titles"
+    self.prompts = "帮我翻译一下标题为日语,直接输出内容即可。待翻译的标题为:{src.titles[%batch_index%]}"
+async def post_process(self,source_context,model_result,shared_context,extra_contexts,observer,batch_id=None):
+    return [model_result]
+下游Agent会收到**追加合并**后的批处理内容,例如:
+[
+    "愛の詩",
+    "桜"
+]

@@ -1,0 +1,26 @@
+*Flow心智模型-工具flow[flow,flow构建,执行流程,动态编排]
+定义:当你设计的flow不属于业务流程本身,而被归类为类"辅助函数"的身份,则可称此Flow为"工具Flow"
+特点:这类flow总是顶层的Flow,不会成为动态编排中的**Sub-Flow**,而且所有上下文都可以在初始调用时就填写
+推荐的构建方式:
+# tool_flow.py
+class ToolAgent1(BaseAgent):
+    ...
+class ToolAgent2(BaseAgent):
+    ...
+class ToolFlow(Flow):
+    def __init__(self,name:str="tool_flow",parent:"BaseAgent|None"=None,**settings:dict[str,Any]):
+        super().__init__(name,parent,expected_shared_context_keys={"some_keys",...},**settings)
+        self.add_custom_agent_class("tool_agent1",ToolAgent1)
+        self.add_custom_agent_class("tool_agent2",ToolAgent2)
+        self.add_agent("tool_agent1")
+        self.add_agent("tool_agent2")
+        self.add_edge("tool_agent1","tool_agent2")
+这类Flow总应该被这样子调用:
+await execute(ToolFlow(),source_context={...},shared_context={...},external_system=external_system)
+example:
+假设在某个Agent中,提示词模板会解析某个SemanticSearchFlow对文本的提取结果
+async def get_context_value(self,key,runtime_contexts,default=""):
+    if key.startswith("semantic_search.") and runtime_contexts.get("semantic_search_tool"):
+        file_name = key[16:].split(":",1)[0]
+        query = key[16:].split(":",1)[1]
+        return await runtime_contexts["semantic_search_tool"].query(file_name,query)

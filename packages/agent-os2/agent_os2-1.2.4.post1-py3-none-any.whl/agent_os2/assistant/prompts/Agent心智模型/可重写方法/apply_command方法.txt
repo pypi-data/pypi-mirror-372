@@ -1,0 +1,16 @@
+*Agent心智模型-可重写方法-apply_command方法[post_process方法,内置命令,合并策略]
+子类可选择性重写方法
+apply_command方法用于执行post_process方法返回的副作用命令(agent_command)
+副作用命令的格式为:
+{
+    "memory_modify":dict[str,Any],
+    "memory_append":dict[str,Any],
+    "actions":list[dict[str,Any]],
+    "add_context":dict[str,Any]
+}
+自定义自己的副作用命令(如:修改extra_contexts接口对象中的某个属性)
+example:
+async def apply_command(self,agent_command,source_context,shared_context,extra_contexts):
+    await super().apply_command(agent_command,source_context,shared_context,extra_contexts) #继承默认命令
+    if extra_contexts.get("npc_db"):
+        await self.modify_npc_info(extra_contexts["npc_db"],agent_command.pop("modify_npc_info",{}))

@@ -1,0 +1,27 @@
+*编排必备概念-Agent自动注册系统[agent_settings,文件夹编排推荐]
+AgentOS2的Flow通过自动注册系统来加载Agent
+要注册的Agent/Flow遵守一文件对应一Agent/Flow的规则
+Agent的注册机制依赖于文件名-类名-注册名三者之间的映射关系
+Agent注册名规则:
+推荐Agent命名:example.py -> class ExampleAgent(BaseAgent) -> example(注册名)
+推荐Flow命名:example_flow.py -> class ExampleFlow(Flow) #Flow也继承BaseAgent -> example_flow(注册名)
+可用但不推荐的保守命名:example_agent.py -> class ExampleAgent(BaseAgent) -> example(注册名)
+!!总是保持CamcelCase,避免全大写缩写!!
+正确的缩写示例:IoOperateAgent,NpcThinkFlow
+错误的缩写实例:IoOperateAgent,NPCThinkFlow
+自动注册机制命名规则的核心要点：会自动去掉类名背后的Agent后缀
+!!如果待注册的Agent需要相对导入,则必须写__package__来确定该Agent动态导入时所属的父包!!e.g. __package__ = "agent_os2.assistant.flows"(必须从已有包的根路径写起)
+Agent自动注册系统原理简述:
+通过python的动态import机制,结合agent_settings.json中的注册信息,将选定域名下对应目录的所有Agent类对象进行加载
+核心辅助函数:
+from agent_os2 import get_agents_classes,参数:agents_key:str|None=None
+该函数会根据agent_settings.json中的配置,递归的获取该agents_key下所有的Agent类,返回一个dict[str,type["BaseAgent"]]
+如果agents_key=None,则获取所有agents_key下的所有Agents和Flows!!存在重名冲突风险!!
+返回值:
+agent_classes:dict[str,type["BaseAgent"]]
+该字典的键为注册名,值为Agent类对象
+2.在Flow中使用add_agent方法添加Agent
+story_continue_flow = Flow("story_continue_flow",None,agents_key="story_continue")
+story_continue_flow.add_agent("topic_select")
+story_continue_flow.add_agent("story_generate_flow")
+...

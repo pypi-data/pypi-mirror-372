@@ -1,0 +1,17 @@
+*Agent心智模型-上下文系统-运行时上下文[post_process方法,内置命令,合并策略]
+1.源上下文(source_context)
+特点：通过图结构的边单站传递,不存在"透传"
+等价对应:src
+传递方法：post_process方法的第一个返回值
+2 共享上下文(shared_context)
+特点：!!一个层级内!!Agents的共享上下文,不同层级的Agents拥有不同的共享内存
+等价对应：ctx
+跨层级自动继承办法：使用Flow(一个BaseAgent的具体实现)作为parent容器,并且填写expected_shared_context_keys:set来自动继承期望继承的上层共享内存的键
+修改本层级shared_context的方法：使用agent_command.memory_modify进行**替换模式**修改,使用agent_cmmand.memory_append进行**追加模式**修改
+类型限制：shared_context最好只存放：dict,list,str,int,float等可Json序列化的数据,不得存放接口对象
+3 额外上下文容器(extra_contexts)
+特点：用于存放"接口对象"的上下文容器,添加的上下文会全局传递(上层也会传递给下层)
+等价对应：实际内容依赖用户自定义
+修改方法：
+(1)使用agent_command.add_context命令在extra_contexts中添加新的接口对象
+(2)使用apply_command方法在Agent内添加新的command用于修改extra_contexts中的接口对象
