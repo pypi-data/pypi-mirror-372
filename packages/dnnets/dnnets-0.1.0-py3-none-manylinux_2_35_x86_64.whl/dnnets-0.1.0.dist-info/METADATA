@@ -1,0 +1,266 @@
+Metadata-Version: 2.4
+Name: dnnets
+Version: 0.1.0
+Summary: Running multilayer perceptrons on the CPU
+Project-URL: homepage, https://git.sr.ht/~hannes/dnnets
+Project-URL: documentation, https://hannesbraun.net/share/doc/dnnets/python/index.html
+Project-URL: repository, https://git.sr.ht/~hannes/dnnets
+Project-URL: changelog, https://git.sr.ht/~hannes/dnnets/refs
+Author-email: Hannes Braun <hannes@hannesbraun.net>
+License-Expression: LGPL-3.0-only
+License-File: LICENSE
+Keywords: Feedforward,Multilayer perceptron,Neural Network
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Other
+Classifier: Programming Language :: Python
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development
+Requires-Python: >=3.9
+Provides-Extra: numpy
+Requires-Dist: numpy>=2.0.0; extra == 'numpy'
+Description-Content-Type: text/markdown
+
+# dnnets
+
+This is a lightweight and dependency-free library to run multilayer perceptrons
+on the CPU.
+Given a model and an input, it will compute the output of a forward pass.
+Nothing more.
+The computation of a single pass runs in a single thread.
+Generally, the library tries to make a good trade-off between simplicity and
+performance.
+The model can be provided as a JSON file (format: see below) or created
+dynamically at runtime.
+
+> **Note:** in this library, activation functions are also modeled as
+> layers.
+
+## Installation
+
+To build and install the shared library along with the header file and a
+pkg-config file to `/usr/local` (or another location of your choice), use the
+(default) `install` target:
+
+    zig build install -Doptimize=ReleaseFast
+    zig build install -Doptimize=ReleaseFast -p /usr/local
+
+To automaticallly build a Python wheel with the provided build script, you need
+to have [Hatch](https://hatch.pypa.io/) installed.
+For bundling the Python bindings together with the shared library into a wheel,
+use `build-wheel-with-lib`:
+
+    zig build build-wheel-with-lib -Doptimize=ReleaseFast
+
+If you only want to include the bindings without the shared library, use
+`build-wheel`:
+
+    zig build build-wheel
+
+In both cases, you will find the generated wheel in `zig-out/dist`.
+
+If you'd like to use your own frontend for building the Python wheel, you can
+use the `prepare-wheel-with-lib` and `prepare-wheel` targets instead:
+
+    zig build prepare-wheel-with-lib -Doptimize=ReleaseFast
+    # or
+    zig build prepare-wheel
+
+You can then navigate to `zig-out/wheel-builds/<your target>` and invoke the
+frontend of your choice there. Note that hatchling is still used as the
+backend.
+`<your-target>` is either `any` if the wheel does not contain the shared
+library or a combination of `<CPU architecture>-<OS>-<ABI>` otherwise.
+
+If you need to cross compile/build the Python wheel, you can use
+`build-all-wheels` which builds the wheels for all available targets:
+
+    zig build build-all-wheels -Doptimize=ReleaseFast
+
+## Using from Zig
+
+This package exposes a module called `dnnets` that you can use in your own Zig
+code. Simply add this package to the dependencies in your `build.zig.zon`.
+In your build file, you can add the module as an import to your own module with
+something similar to this:
+
+```zig
+const dnnets_pkg = b.dependency("dnnets", .{});
+const dnnets_mod = dnnets_pkg.module("dnnets");
+exe_mod.addImport("dnnets", dnnets_mod);
+```
+
+The API is available as an online documentation at https://hannesbraun.net/share/doc/dnnets/zig
+
+This is a small example of its usage:
+
+```zig
+var model = try dnnets.load(allocator, "sample_model.json");
+defer model.deinit();
+var input = [_]f32{ -3.5987e-01, -4.6701e-01, 1.6226e+00, 5.3634e-02 };
+const output = model.getOutputBuffer(); // The output buffer will be reused.
+model.forwardPass(&input);
+```
+
+## C interface
+
+dnnets has a C-compatible ABI. Documentation for the C interface is available in
+the header at [include/dnnets.h](include/dnnets.h).
+
+If you don't like browsing the header file directly, there's also an online
+version of this documentation available: https://hannesbraun.net/share/doc/dnnets/c
+
+This is the example provided above adjusted for C (without error handling):
+
+```c
+dnnets_init(); // Initialize library
+
+struct dnnets_model *model;
+dnnets_load(&model, "sample_model.json");
+
+const float input[] = { -3.5987e-01, -4.6701e-01, 1.6226e+00, 5.3634e-02 };
+const float* out_buf = dnnets_get_output_buffer(model);
+const unsigned int out_len = dnnets_get_output_len(model);
+dnnets_forward_pass(model, input, 4);
+
+dnnets_free_model(model);
+
+dnnets_deinit(); // Deinitialize library
+```
+
+## Python bindings
+
+dnnets provides Python bindings. You can install the package (including the
+native library) via the PyPI:
+
+    pip install dnnets
+
+You can find a documentation of the Python API here: https://hannesbraun.net/share/doc/dnnets/python
+
+The Python bindings can optionally be used together with NumPy. This feature can
+be enabled using `dnnets.enable_numpy()`. Then, all weights, biases and inputs
+need to be NumPy arrays. Outputs will then also be NumPy arrays.
+
+Here's a quick example:
+
+```python
+import dnnets
+
+model = dnnets.load("sample_model.json")
+input = [-3.5987e-01, -4.6701e-01, 1.6226e+00, 5.3634e-02]
+output = model.forward_pass(input)
+```
+
+## JSON format
+
+Models are stored in a JSON format.
+This is simply an array of layers.
+Each layer has a `type` attribute that describes the layer type.
+A layer type can be one of the following:
+- `linear`
+- `layer_norm`
+- `elu`
+- `relu`
+- `relu6`
+- `sigmoid`
+- `tanh`
+- `clip`
+
+You can also have a view at [sample_model.json](sample_model.json) to see how
+this looks as a whole.
+
+### Linear
+
+This is an example for a linear layer where the previous layer has 2 outputs and
+this layer has 3 outputs.
+
+```json
+{
+    "type": "linear",
+    "weights": [
+        [0.1, 0.2],
+        [0.4, 0.4],
+        [0.5, 0.6]
+    ],
+    "biases": [0.1, 0.2, 0.3]
+}
+```
+
+### Layer Normalization
+
+This is an example for a layer normalization layer.
+
+```json
+{
+    "type": "layer_norm",
+    "weights": [0.1, 0.2, 0.3],
+    "biases": [0.1, 0.2, 0.3],
+    "eps": 0.00001,
+}
+```
+
+### ELU
+This is an example for an ELU layer.
+
+```json
+{
+    "type": "elu",
+    "alpha": 0.9,
+}
+```
+
+`alpha` is an optional attribute with a default value of `1.0`.
+
+### ReLU
+This is the representation of a ReLU layer.
+
+```json
+{
+    "type": "relu",
+}
+```
+
+### ReLU6
+This is the representation of a ReLU6 layer.
+
+```json
+{
+    "type": "relu6",
+}
+```
+
+### Sigmoid
+This is the representation of a sigmoid layer.
+
+```json
+{
+    "type": "sigmoid",
+}
+```
+
+### Tanh
+This is the representation of a Tanh layer.
+
+```json
+{
+    "type": "tanh",
+}
+```
+
+### Clip
+This is an example for a clipping layer.
+
+```json
+{
+    "type": "clip",
+    "min": -3.0,
+    "max": 3.0,
+}
+```
+
+## License
+
+This library is licensed under the terms of the GNU Lesser General Public
+License (version 3 only) as published by the Free Software Foundation.
+For more information, see [LICENSE](LICENSE).
+
