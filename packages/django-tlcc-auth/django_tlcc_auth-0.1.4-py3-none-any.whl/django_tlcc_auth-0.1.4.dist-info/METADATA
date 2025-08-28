@@ -1,0 +1,120 @@
+Metadata-Version: 2.4
+Name: django-tlcc-auth
+Version: 0.1.4
+Summary: TLCC reusable Django authentication app
+Author-email: Lowie <Vanhaesbroucklowie@gmail.com>
+License: MIT
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: Django>=4.2
+Requires-Dist: djangorestframework>=3.13
+Provides-Extra: jwt
+Requires-Dist: djangorestframework-simplejwt>=5.0; extra == "jwt"
+Requires-Dist: PyJWT>=2.6; extra == "jwt"
+
+# django-tlcc-auth — Quick install (branch: feature/tlcc\_auth-base)
+
+Repository branch to copy: [https://gitlab.com/vanhaesbroucklowie/django-packages/-/tree/feature/tlcc\_auth-base](https://gitlab.com/vanhaesbroucklowie/django-packages/-/tree/feature/tlcc_auth-base)
+
+This file shows short, clear commands so any user can get the `tlcc_auth` folder from that branch and use it in a project.
+
+---
+
+## Recommended (dev) — clone folder into your project and use editable install
+
+Use this when you want the real source inside your project and edit it.
+
+```bash
+cd /path/to/your/project
+# temporary sparse clone, get only tlcc_auth folder from the specific branch
+git clone --filter=blob:none --sparse https://gitlab.com/vanhaesbroucklowie/django-packages.git tmp_repo
+cd tmp_repo
+git checkout feature/tlcc_auth-base
+git sparse-checkout set tlcc_auth
+mv tlcc_auth ../
+cd ..
+rm -rf tmp_repo
+# install editable
+pip install -e ./tlcc_auth
+```
+
+Result: `./tlcc_auth` is a real folder in your project. Edit it and changes are active.
+
+---
+
+## Quick copy (no git history) — download branch archive and extract only folder
+
+Use this if you want a one-off copy without git metadata.
+
+```bash
+# download branch archive (GitLab auto-generated archive URL)
+wget -O tmp.tar.gz "https://gitlab.com/vanhaesbroucklowie/django-packages/-/archive/feature/tlcc_auth-base/django-packages-feature-tlcc_auth-base.tar.gz"
+mkdir tmp && tar -xzf tmp.tar.gz -C tmp
+# find and move the tlcc_auth folder
+mv tmp/*/tlcc_auth ./tlcc_auth
+rm -rf tmp tmp.tar.gz
+# optional: install editable
+pip install -e ./tlcc_auth
+```
+
+---
+
+## Install from Git (package install, NOT copying folder)
+
+This installs the package into `site-packages`. You cannot edit source inside project.
+
+```bash
+pip install "git+https://gitlab.com/vanhaesbroucklowie/django-packages.git@feature/tlcc_auth-base#egg=django-tlcc-auth"
+```
+
+Use this when you only need the package behavior and not to edit files.
+
+---
+
+## Minimal project setup after you have `tlcc_auth` folder or package
+
+Add to `settings.py`:
+
+```py
+INSTALLED_APPS += ["tlcc_auth.apps.TlccAuthConfig"]
+
+TLCC_AUTH = {
+    "ALLOW_REGISTRATION": True,
+    "ENABLE_JWT": False,
+    "LOGIN_REDIRECT": "/",
+    "TEMPLATES": {
+        "login": "tlcc_auth/login.html",
+        "register": "tlcc_auth/register.html",
+    },
+}
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+STATIC_URL = "/static/"
+```
+
+Include URLs in your project `urls.py`:
+
+```py
+from django.urls import path, include
+urlpatterns += [
+    path("auth/", include(("tlcc_auth.urls","tlcc_auth"), namespace="tlcc_auth")),
+]
+```
+
+Run migrations and server:
+
+```bash
+python manage.py migrate
+python manage.py runserver
+```
+
+Visit: `/auth/login/`, `/auth/register/`, `/auth/profile/`, `/auth/sessions/`.
+
+---
+
+## Short notes for different users
+
+* **Developer (edit + commit)**: use Recommended (dev) flow. Keep `tlcc_auth` as subfolder or submodule. Use `pip install -e`.
+* **Contributor (fork & PR)**: fork repository on GitLab, make changes in `tlcc_auth`, open merge request against `feature/tlcc_auth-base` or `main`.
+* **Ops / Production**: publish package and `pip install django-tlcc-auth` or install wheel. Don't copy source into project for production.
