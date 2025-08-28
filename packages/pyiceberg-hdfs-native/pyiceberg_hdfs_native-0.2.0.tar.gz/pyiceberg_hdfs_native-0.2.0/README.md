@@ -1,0 +1,54 @@
+# pyiceberg-hdfs-native
+
+Provides a `pyiceberg.io.FileIO` implementation that uses
+[`hdfs-native`](https://github.com/Kimahriman/hdfs-native) client.
+
+## How to use
+
+Install with uv:
+
+```bash
+uv tool install --with pyiceberg-hdfs-native pyiceberg
+```
+
+Configure pyiceberg via `~/.pyiceberg.yaml`:
+
+```bash
+  default:
+    uri: https://iceberg.example.com/
+    py-io-impl: pyiceberg_hdfs_native.HdfsFileIO
+```
+
+Configure hdfs-native:
+
+```bash
+export HADOOP_CONF_DIR=/opt/hadoop/conf
+```
+
+If using kerberos, run `kinit`.
+
+Now `files` command should work:
+
+```
+pyiceberg files db.table
+```
+
+## Read iceberg table with polars
+
+```bash
+uv run --with polars --with pyarrow --with pyiceberg-hdfs-native python
+```
+
+```python
+from pyiceberg.catalog import load_catalog
+import polars as pl
+
+def read_table(table_name):
+    catalog = load_catalog(name='default')  # will read config from ~/.pyiceberg.yaml
+    table = catalog.load_table(table_name)
+    metadata_location = table.metadata_location
+    storage_options = {'py-io-impl': 'pyiceberg_hdfs_native.HdfsFileIO'}
+    return pl.scan_iceberg(metadata_location, storage_options=storage_options, reader_override='pyiceberg')
+
+read_table('db.tbl').head().collect()
+```
