@@ -1,0 +1,9 @@
+from _typeshed import Incomplete
+from tqml.tqnet._base import CertainLayer as CertainLayer
+
+class Dense(CertainLayer):
+    layers_dim: Incomplete
+    net: Incomplete
+    def __init__(self, layers_dim: list, bias: bool = True, activation_function=..., bn: bool = False, dropout_p: float = 0) -> None: ...
+    def forward(self, x): ...
+    def draw_circuit(self) -> None: ...
