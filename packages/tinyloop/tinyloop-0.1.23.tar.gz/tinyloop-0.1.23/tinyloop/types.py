@@ -1,0 +1,19 @@
+from typing import Any, Dict, List, Optional
+
+from litellm.types.utils import ModelResponse
+from pydantic import BaseModel
+
+
+class ToolCall(BaseModel):
+    function_name: str
+    args: dict[str, Any]
+    id: str
+
+
+class LLMResponse(BaseModel):
+    response: Any
+    raw_response: ModelResponse
+    tool_calls: Optional[List[ToolCall]] = None
+    message_history: Optional[List[Dict[str, Any]]] = None
+    cost: float
+    hidden_fields: dict[str, Any]
