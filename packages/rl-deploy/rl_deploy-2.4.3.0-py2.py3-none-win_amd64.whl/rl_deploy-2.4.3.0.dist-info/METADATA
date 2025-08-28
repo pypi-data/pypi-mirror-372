@@ -1,0 +1,132 @@
+Metadata-Version: 2.1
+Name: rl-deploy
+Version: 2.4.3.0
+Summary: Deployment tool for ReversingLabs rl-secure project.
+Author: ReversingLabs
+Author-email: secure.software@reversinglabs.com
+Requires-Python: >=2.7
+Description-Content-Type: text/markdown
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Natural Language :: English
+Classifier: Topic :: Security
+
+# rl-deploy by ReversingLabs &middot; [![RL Status Badge](https://secure.software/pypi/badge/rl-deploy)](https://secure.software/pypi/packages/rl-deploy)
+
+rl-deploy is a tool for fast and flexible installation of rl-secure (Spectra Assure CLI) in ephemeral and cloud infrastructure, CI/CD environments, and containers.
+
+Spectra Assure is a software supply chain security platform created by ReversingLabs to help organizations develop and release software with confidence. To support automated security scanning of software releases, ReversingLabs developed the Spectra Assure CLI tool called rl-secure. 
+
+This guide explains how to use rl-deploy to install rl-secure. For more details, visit the [official Spectra Assure documentation](https://docs.secure.software/cli).
+
+
+## Installation
+
+rl-deploy requires Python 3.x. 
+
+It can be installed on the following systems and architectures:
+
+- Windows 10 and later, 64-bit
+- Linux x86 (all major distributions), 64-bit
+
+To install the latest version of rl-deploy from PyPI, run:
+
+
+```
+pip install rl-deploy
+```
+
+
+To confirm rl-deploy is successfully installed, run:
+
+
+```
+rl-deploy --version
+```
+
+
+## How to use rl-deploy
+
+After installing rl-deploy to your system, use it to install the latest version of the rl-secure CLI tool.
+
+1. Prepare your license and site key
+
+Send an email to support@reversinglabs.com with the subject "rl-secure license request". In the email, ask for a site key that you will use to deploy rl-secure.
+
+ReversingLabs Support will send you the license file and the site key. The site key is a string you can use to associate any rl-secure installation with your license. This allows you to install rl-secure on multiple ephemeral systems without having to request a separate license for each machine.
+
+2. Install rl-secure
+
+**Important note:** rl-secure implements an auto-update mechanism to keep the product up to date on every use. The user executing rl-secure commands must have write access to the installation location to facilitate the auto-update mechanism.
+
+To install rl-secure on your system, provide the installation location, license, and the site key to the rl-deploy tool. You can either provide the path to the license file, or convert the license file contents into a Base64-encoded string.
+
+**Install with encoded license key**
+
+```
+rl-deploy install --location /path/to/destination/ --encoded-key=your-license-contents-as-BASE64-encoded-string --site-key=your-site-key
+```
+
+**Install with license file path**
+
+```
+rl-deploy install --location /path/to/destination/ --license-file /path/to/license.key --site-key=your-site-key
+```
+
+3. Confirm rl-secure installation
+
+Access the location where you installed rl-secure and run the following command to confirm it's successfully installed.
+
+```
+rl-secure --version
+```
+
+
+## Configuration
+
+The rl-deploy tool supports proxy configuration in case it's required to download and install rl-secure.
+
+You can specify the proxy configuration parameters directly when installing rl-secure:
+
+```
+rl-deploy install --location /path/to/destination/ --license-file /path/to/license.key --site-key=your-site-key --proxy-server 127.0.0.1 --proxy-port 8080
+```
+
+Proxy settings used during installation are automatically saved to the rl-secure configuration file, so rl-secure can continue using them when it needs to connect to ReversingLabs servers.
+
+Note the rl-deploy proxy configuration does not support system-provided certificates, so it will not work if you have a custom certificate. 
+
+
+## Cached installation
+
+By default, `rl-deploy install` downloads the `rl-secure` package from ReversingLabs servers to perform a fresh install. When this mechanism is used in ephemeral configurations, repeated `install` invocations result in a lot of time spent on the `rl-secure` package download process. To skip the download process, `rl-deploy` can perform the installation of `rl-secure` from a local cached installation file.
+
+To utilize this mechanism in your setup, you need to perform two steps:
+
+ 1. Create a cached installation file of the latest `rl-secure` version
+ 2. Use that cached file during the installation
+
+### Generate a cached installation file
+
+To create a cached installation file, use the `rl-deploy cache` command. This command will connect to the official update servers using your provided license information, and download the cached package to a location of your choice.
+
+Note that your license information is used only for access control. It is not embedded inside the cached installation package.
+
+```
+rl-deploy cache --location /path/to/cache.file --encoded-key=your-license-contents-as-BASE64-encoded-string --site-key=your-site-key
+```
+
+### Use the cached file to perform installation
+
+To install `rl-secure` from the cached installation file, you only need to specify the `from-cache` command line parameter in your `rl-deploy install` command.
+
+```
+rl-deploy install --from-cache /path/to/cache.file --location /path/to/destination/ --encoded-key=your-license-contents-as-BASE64-encoded-string --site-key=your-site-key
+```
+
+Note that `rl-secure` performs an automatic update on each scan. This means you will have to regenerate the cached installation file when a new version of `rl-secure` is released. Otherwise you will lose all benefits of this functionality.
+
+## Support
+
+To share your feedback or report any issues with rl-deploy, send an email to support@reversinglabs.com
+
