@@ -1,0 +1,15 @@
+*Flow心智模型-flow[base_agent,merge_source_context方法,post_process方法,setup方法,agent_settings]
+Flow是AgentOS2的BaseAgent的一个具体实现,用于组织Agent的执行顺序,充当parent容器的作用
+核心观念:Flow即Agent(嵌套执行的基础)
+关键属性:
+agents_key:str|None,用于指定该Flow动态加载于哪一个agents_key下的Agents类,如果为None,则会尝试从parent中获取
+**如果agents_key最后为None,则会尝试加载所有agents_key下的Agents类,这可能导致重名问题**
+agents:dict[str,"BaseAgent"],构建时属性,用于存放alias->Agent对象的映射,运行时没用
+entry_agent:"BaseAgent",构建时属性,用于指定该Flow的入口Agent,该Agent的len(previous)必须是0
+agent_classes:dict[str,type["BaseAgent"]],用于存放agent_alias->AgentClass类对象的映射
+**agents_key用于构造agent_classes,支持热重载,当找不到对应的注册名时自动重新使用get_agents_classes(agents_key)**替换模式**合并agent_classes**
+关键参数:
+expected_shared_context_keys:set[str],用于将Flow层的shared_context中的期待键传递给Flow下的子层Agent.
+Flow重写BaseAgent的setup方法以不调用任何模型
+Flow重写BaseAgent的merge_source_context方法,调用entry_agent的merge_source_context方法以适应入口Agent的合并策略
+Flow重写BaseAgent的post_process方法,通过内部用task_queue监听entry_agent及其后续的下游Agent,来获得最后一个有*有效返回值*的*叶子*Agent的源上下文作为Flow的源上下文返回

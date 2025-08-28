@@ -1,0 +1,45 @@
+*Flow心智模型-flow构建[flow,Agent自动注册系统]
+关键构建方法:
+1.add_agent(agent_registered_name,alias=None,**settings)
+参数:
+(1)在agents_key下对应Agent的注册名
+(2)alias:str|None,用于指定该Agent的别名,如果为None,则使用agent_registered_name作为别名
+(3)settings:dict[str,Any],用于传递给Agent的构建参数
+注:默认第一个被添加的agent会被设置为Flow的entry_agent
+2.add_edge(src_alias,*dest_aliases)
+参数:
+(1)src_alias:str,源Agent的别名
+(2)dest_aliases:str,目标Agent的别名
+3.entrance(agent_alias)
+设置一个被添加的Agent为Flow的入口Agent
+构建示例:
+-直接创建
+flow = Flow("name", expected_shared_context_keys={"key1", "key2"},agents_key=...,custom_param=...)
+a1 = flow.add_agent("type1", alias="a1")
+a2 = flow.add_agent("type2")
+flow.add_edge("a1", "type2")
+-继承Flow提高可复用性(在构造函数中静态编排,flow的调度逻辑在post_process中不建议重写)
+class MyFlow(Flow):
+    def __init__(name,parent,**settings):
+        super().__init__(name,parent,agents_key=...,expected_shared_context_keys={...},**settings)
+        self.add_agent("type1",alias="a1")
+        self.add_agent("type2")
+        self.add_edge("a1","type2")
+-DSL方式创建用于序列化
+yaml_content = """flow_name:
+    agents_key: ... # 可选,用于指定加载的agent命名空间,不写则加载所有注册表中的agent
+    expected_shared_context_keys: #如果不写,子层的SharedContext初始为空字典
+        - ...
+    agents:
+        agent1:
+            name: agent_type
+            settings: {key: value}
+    edges:
+        - agent1 -> agent2
+    entry_agent: agent1"""
+Flow.construct_from_dsl(yaml_content)
+注:如果一个Agent与该Flow强绑定,则可以绕过注册系统让Flow找到Agent!!仅适用于该Agent与该Flow强绑定或者测试环境!!
+核心方法:flow.add_custom_agent_class(agent_type_name,agent_class)
+原理:会将指定的agent_type添加到self.agent_classes中
+后续利用command动态修改下游结构也能据此找到自定义添加的Agent类
+如果flow有被dsl创建的需求,则不能用此方法绕过注册系统

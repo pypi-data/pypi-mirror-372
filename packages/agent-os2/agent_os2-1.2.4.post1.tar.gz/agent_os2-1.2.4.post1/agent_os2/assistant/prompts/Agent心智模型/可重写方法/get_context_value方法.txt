@@ -1,0 +1,18 @@
+*Agent心智模型-可重写方法-get_context_value方法[base_agent,运行时上下文,提示词模板系统]
+子类可选择性重写方法
+对应辅助函数：from agent_os import get_context_value,参数source,path,default=None
+辅助函数支持对任意字典/列表数据源进行解析,支持多层级嵌套解析
+注：1.当解析路径出现语法错误时,应直接报错2.当不存在对应的前缀时,返回None3.当找不到对应数据源的内容时,不推荐默认值为None,推荐的默认值是""
+默认实现:
+支持对源上下文(source_context)和共享上下文(shared_context)进行解析,其中src是source_context的前缀,ctx是shared_context的前缀
+重写example:
+async def get_context_value(self,key,runtime_contexts,default=""):
+    if key.startswith("rag.") and isinstance(runtime_contexts.get("rag_client"),MyRagClient):
+        return await runtime_contexts["rag_client"].query(key[4:])
+    if key == "chat.history" and isinstance(runtime_contexts["ctx"].get("chat_history"),list):
+        #该例子将字典+列表形式的多轮对话历史转换为内置处理器支持的的连续对话字符串解析形式
+        chats = ""
+        for infos in runtime_contexts["chat_history"]:
+            chats += f"{infos.get("role","unknown")}:{infos.get("contents","")}\n"
+        return chats
+    return super().get_context_value(key,runtime_contexts,default=default) #继承默认实现

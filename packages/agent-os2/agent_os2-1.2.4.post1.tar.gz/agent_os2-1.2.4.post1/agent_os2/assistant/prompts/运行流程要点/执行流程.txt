@@ -1,0 +1,25 @@
+*运行流程要点-执行流程[构建时上下文,运行时上下文,base_agent]
+在AgentOS2中,提供了两种内置的"点火器"用于启动一个流程
+导入:from agent_os2 import execute,execute_with_visualization
+1.execute:
+参数:
+-agent:BaseAgent,需要执行的Agent/Flow
+-source_context:Any=None,传给执行对象的初始源上下文
+-shared_context:dict[str,Any]=None,贯穿本层流程的共享上下文
+-concurrent_limit:int|None=None,并发限制,控制同时执行的Agent数量,None则表示无限制
+-observer:list[tuple[asyncio.Task[tuple[Any,bool]],"BaseAgent"]]|None=None,用于监控全局执行状态的列表
+-**extra_ctxs:dict[str,Any]=None,外部接口对象容器,可传入全局可用的接口对象
+(1)直接用execute获得返回值
+result = await execute(agent,source_context=...,shared_context=...,concurrent_limit=...,**extra_ctxs)
+(2)获得observer来手动监听内部流程,适合满足外部断点跟踪内部流程的需求
+observer:list = await execute(agent,observer=[],source_context=...,shared_context=...,concurrent_limit=...,**extra_ctxs)
+2.execute_with_visualization(当运行流程时的推荐方式):
+内置执行结构追踪逻辑,执行结束后会在log_dir/visualization下生成一个可视化HTML文件
+参数:
+-agent:BaseAgent,需要执行的Agent/Flow
+-source_context:Any=None,传给执行对象的初始源上下文
+-shared_context:dict[str,Any]=None,贯穿本层流程的共享上下文
+-concurrent_limit:int|None=None,并发限制,控制同时执行的Agent数量,None则表示无限制
+-**extra_ctxs:dict[str,Any]=None,外部接口对象容器,可传入全局可用的接口对象
+(1)直接用execute_with_visualization获得返回值
+result = await execute_with_visualization(agent,source_context=...,shared_context=...,concurrent_limit=...,**extra_ctxs)

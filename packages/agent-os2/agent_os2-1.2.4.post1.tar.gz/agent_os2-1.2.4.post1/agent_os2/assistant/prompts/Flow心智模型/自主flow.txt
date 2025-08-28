@@ -1,0 +1,39 @@
+*Flow心智模型-自主flow[流程flow,提示词模板系统,外部输入,流式输出实时消息]
+定义:当一个flow中存在一个拥有多轮决策(不仅限于多轮对话)能力的Agent,并且该工作流的流程基本由该Agent动态决定,而其他的Agent/Sub-Flow作为该Agent的辅助工具角色,则可称此Flow为"自主Flow"
+1.多轮对话能力:
+借助提示词模板系统实现多轮对话
+(1)更新模型对话:
+def parse_model_result(self,model_result:str)->dict[str,Any]:
+    super().parse_model_result(model_result)
+    if "response" not in model_result:
+        raise ValueError("response must be in model_result")
+async def post_process(self,source_context,model_result,shared_context,extra_contexts,observer,batch_id=None):
+        command = {}
+        ...
+        record_user_info(self,"模型回答:"+model_result["response"]+"\n",batch_id,tag="model_response") #向外部输出模型回答
+        command["memory_append"] = {"chat_history":"assistant:model_result["response"]\n"}
+        return ...,command
+(2)更新用户消息:
+async def post_process(self,source_context,model_result,shared_context,extra_contexts,observer,batch_id=None):
+    command = {}
+    user_input = await self.get_input("请输入你的问题:")
+    command["memory_append"] = {"chat_history":"user:"+user_input+"\n"}
+    return ...,command
+2.流程由LLM自主决定:
+def parse_model_result(self,model_result:str)->dict[str,Any]:
+    super().parse_model_result(model_result)
+    if "response" not in model_result:
+        raise ValueError("response must be in model_result")
+    if "next_step" not in model_result:
+        raise ValueError("action must be in model_result")
+    if model_result["action"] not in [...]:
+        raise ValueError("action must be in [...]")
+    return model_result
+async def post_process(self,source_context,model_result,shared_context,extra_contexts,observer,batch_id=None):
+    command = {}
+    ...
+    if model_result["next_step"] == ...:
+        command["actions"] = ...
+    elif ...
+    return ...,command
+3.所有其他Agent/Sub-Flow作为辅助角色,在运行完毕后总是会指回多轮决策Agent,让该Agent自主决定下一步

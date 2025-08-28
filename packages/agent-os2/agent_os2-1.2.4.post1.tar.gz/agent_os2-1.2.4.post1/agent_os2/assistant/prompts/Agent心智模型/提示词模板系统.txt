@@ -1,0 +1,57 @@
+*Agent心智模型-提示词模板系统[setup方法,内置模型处理器,get_context_value方法,批处理]
+当填写self.prompts属性时,可使用特别的占位符{prefix.key_path}来动态嵌入运行时上下文的数据
+注:1.当解析路径出现语法错误时,内部会保留该解析块原样2.当不存在对应的前缀时,内部会保留该解析块原样3.当找不到对应数据源的内容时,会替换为""
+智能解析占位符对应的辅助函数:parse_multi_string_context_embed
+当开启批处理时,提示词模板会特别的支持%batch_index%占位符,用于动态嵌入当前批处理的序号(详见批处理)
+模板解析原理:
+使用最小惰性解析,循环从里到外的一层层解析{prefix.key_path},直到字符串不变为止退出
+支持{{}}转义能力,例如{{src.user_input}}会被解析为{src.user_input},用于显示原始文本
+example1:
+用于单次大语言模型任务请求
+设source_context = {"user_input":"樱花"}
+self.prompts = {"system":"你是一位翻译大师,你需要根据用户给你的输入文本,翻译成日语。用户的输入是一段纯文本,你的输出是翻译后的日文文本,不要输出任何无关内容","user":"用户输入:{src.user_input}"}
+最终的解析结果为:
+---
+{
+    "system":"你是一位翻译大师,你需要根据用户给你的输入文本,翻译成日语。用户的输入是一段纯文本,你的输出是翻译后的日文文本,不要输出任何无关内容",
+    "user":"用户输入:樱花"
+}
+---
+example2:
+用于图像生成
+设shared_context = {"title":"Summerland","slogan":"Summer never felt so good"}
+self.prompts = "A poster with the text \"{ctx.title}\" in bold font as a title, underneath this text is the slogan \"{ctx.slogan}\""
+最终的解析结果为:
+---
+A poster with the text "Summerland" in bold font as a title, underneath this text is the slogan "Summer never felt so good"
+---
+example3:
+用于构建多轮对话
+设shared_context = {"chat_history":"user:你好,你叫什么?\nassistant:我是Gemini,很高兴认识你!\n"}
+self.prompts = """system:你是一位聊天助手,负责解决问题。
+{ctx.chat_history}"""
+最终解析结果为:
+---
+system:你是一位聊天助手,负责解决问题。
+user:你好,你叫什么?
+assistant:我是Gemini,很高兴认识你!
+user:你好,你叫什么?
+---
+example4:
+模板动态引用字典键
+设shared_context = {"npcs":{"Alice":{"age":20},"Bob":{"age":21}}}
+设source_context = {"current_npc_name":"Alice"}
+self.prompts = "当前NPC是{src.current_npc_name},他的年龄是{ctx.npcs.{src.current_npc_name}.age}"
+最终解析结果为:
+---
+当前NPC是Alice,他的年龄是20
+---
+example5:
+模板动态引用列表索引
+设shared_context = {"npcs":[{"name":"Alice","age":20},{"name":"Bob","age":21}]}
+设source_context = {"current_npc_index":0}
+self.prompts = "当前NPC是{ctx.npcs[{src.current_npc_index}].name},他的年龄是{ctx.npcs[{src.current_npc_index}].age}"
+最终解析结果为:
+---
+当前NPC是Alice,他的年龄是20
+---
