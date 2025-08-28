@@ -1,0 +1,91 @@
+## Functional Tests env vars
+#
+# PIFPAF_DAEMON:
+#   The binary to be installed by bindep filtered with
+#   [tests-functional-{PIFPAF_DAEMON}] and executed by pifpaf.
+#
+# OSLO_BACKEND:
+#   The functional test directory to pass to STESTR_TEST_PATH
+
+- job:
+    name: oslo.cache-functional
+    parent: openstack-tox
+    abstract: true
+    pre-run: playbooks/tests/functional/pre.yml
+    vars:
+      tox_envlist: functional
+
+- job:
+    name: oslo.cache-functional-etcd3gw
+    parent: oslo.cache-functional
+    vars:
+      tox_environment:
+        PIFPAF_DAEMON: etcd
+        OSLO_BACKEND: etcd3gw
+
+- job:
+    name: oslo.cache-functional-memcached
+    parent: oslo.cache-functional
+    vars:
+      tox_environment:
+        PIFPAF_DAEMON: memcached
+
+- job:
+    name: oslo.cache-functional-dogpile.cache.bmemcached
+    parent: oslo.cache-functional-memcached
+    vars:
+      tox_environment:
+        OSLO_BACKEND: dogpile_cache_bmemcached
+
+- job:
+    name: oslo.cache-functional-dogpile.cache.pymemcache
+    parent: oslo.cache-functional-memcached
+    vars:
+      tox_environment:
+        OSLO_BACKEND: dogpile_cache_pymemcache
+
+- job:
+    name: oslo.cache-functional-memcache_pool
+    parent: oslo.cache-functional-memcached
+    vars:
+      tox_environment:
+        OSLO_BACKEND: memcache_pool
+
+- job:
+    name: oslo.cache-functional-redis
+    parent: oslo.cache-functional
+    vars:
+      tox_environment:
+        PIFPAF_DAEMON: redis
+
+- job:
+    name: oslo.cache-functional-dogpile.cache.redis
+    parent: oslo.cache-functional-redis
+    vars:
+      tox_environment:
+        OSLO_BACKEND: dogpile_cache_redis
+
+- job:
+    name: oslo.cache-functional-dogpile.cache.redis_sentinel
+    parent: oslo.cache-functional-redis
+    vars:
+      tox_environment:
+        OSLO_BACKEND: dogpile_cache_redis_sentinel
+        PIFPAF_OPTS: --sentinel
+
+- project:
+    templates:
+      - check-requirements
+      - lib-forward-testing-python3
+      - openstack-python3-jobs
+      - periodic-stable-jobs
+      - publish-openstack-docs-pti
+      - release-notes-jobs-python3
+    check:
+      jobs:
+        - oslo.cache-functional-etcd3gw
+        - oslo.cache-functional-dogpile.cache.bmemcached
+        - oslo.cache-functional-dogpile.cache.pymemcache
+        - oslo.cache-functional-memcache_pool
+        - oslo.cache-functional-dogpile.cache.redis
+        - oslo.cache-functional-dogpile.cache.redis_sentinel
