@@ -1,0 +1,16 @@
+from ._base import SpeedyLayer as SpeedyLayer
+from ._speedy_qml import rz_eigenvals as rz_eigenvals
+from _typeshed import Incomplete
+
+class SpeedySoft(SpeedyLayer):
+    embedding_layers: Incomplete
+    reuploads: Incomplete
+    variational_layers: Incomplete
+    embed_rot: Incomplete
+    weights_r: Incomplete
+    weights_i: Incomplete
+    def __init__(self, in_features, n_qubits, reuploads: int = 1, measurement_mode: str = 'None', rotation: str = 'Z', measure: str = 'Y', device: Incomplete | None = None) -> None: ...
+    def get_soft_unitaries(self): ...
+    def is_unitary_model(self, atol: float = 0.0001): ...
+    def regularization(self, scaler: int = 1): ...
+    def forward(self, x): ...

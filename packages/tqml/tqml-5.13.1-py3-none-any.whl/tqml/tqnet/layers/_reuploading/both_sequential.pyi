@@ -1,0 +1,20 @@
+from _typeshed import Incomplete
+from tqml.tqnet._base import QuantumLayer as QuantumLayer
+
+class BothSequentialLayer(QuantumLayer):
+    reuploading_mode: Incomplete
+    reuploading_order: Incomplete
+    n_reuploadings: Incomplete
+    encoding_size: Incomplete
+    embedding_layers: Incomplete
+    n_qubits: Incomplete
+    weights: Incomplete
+    encoding_weights: Incomplete
+    trainable_frequency: Incomplete
+    qnode: Incomplete
+    def __init__(self, in_features, reuploading_mode: str = 'linear', reuploading_order: str = 'repeating', n_reuploadings: int = 1, encoding_size: int = 4, depth: int = 1, measurement_mode: str = 'None', rotation: str = 'Z', entangling: str = 'basic', measure: str = 'Y', diff_method: str = 'adjoint', qubit_type: str = 'lightning.qubit', interface: str = 'torch', learn_frequency: bool = False, ranges: str = 'default') -> None: ...
+    def extra_repr(self) -> str: ...
+    def trainable_layer(self, weights, step: int = 0) -> None: ...
+    def circuit(self, weights, x: Incomplete | None = None, measurement_basis: Incomplete | None = None): ...
+    def draw_circuit(self, x: Incomplete | None = None) -> None: ...
+    def forward(self, x): ...
