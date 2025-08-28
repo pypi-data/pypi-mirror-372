@@ -1,0 +1,64 @@
+[build-system]
+requires = [
+    "scikit-build-core>=0.9",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "panda3d-interrogate"
+version = "0.6.1"
+description = "Binding generator designed for Panda3D"
+readme = "README.md"
+requires-python = ">=3.2"
+license = { "file" = "LICENSE" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: C++",
+]
+
+[project.urls]
+Source = "https://github.com/panda3d/interrogate"
+Tracker = "https://github.com/panda3d/interrogate/issues"
+Funding = "https://opencollective.com/panda3d"
+
+[project.scripts]
+interrogate = "interrogate:main"
+interrogate_module = "interrogate_module:main"
+
+[tool.scikit-build]
+cmake.version = ">=3.13"
+cmake.args = ["-DBUILD_SHARED_LIBS=OFF", "-DHAVE_PYTHON=ON", "-DPYTHON_ARCH_INSTALL_DIR=."]
+wheel.py-api = "cp33"
+install.components = ["tools", "python_modules"]
+
+[tool.scikit-build.wheel.packages]
+interrogate = "python/interrogate"
+interrogate_module = "python/interrogate_module"
+
+[tool.cibuildwheel]
+build = "cp38-* cp313t-*"
+free-threaded-support = true
+
+[tool.cibuildwheel.linux]
+repair-wheel-command = [
+  "auditwheel repair -w {dest_dir} {wheel}",
+]
+
+[tool.cibuildwheel.macos]
+archs = ["universal2"]
+repair-wheel-command = [
+  "cp {wheel} {dest_dir}",
+]
+
+[tool.cibuildwheel.windows]
+repair-wheel-command = [
+  "copy {wheel} {dest_dir}",
+]
+
+[[tool.cibuildwheel.overrides]]
+select = "cp38-*"
+inherit.repair-wheel-command = "append"
+repair-wheel-command = "pipx run abi3audit --strict --report {wheel}"
