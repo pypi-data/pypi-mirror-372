@@ -1,0 +1,206 @@
+name: Build & Publish to PyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        type: boolean
+        description: Run in dry_run mode
+        default: true
+
+  push:
+    branches: [main]
+    paths:
+      - 'autopkg_wrapper/**'
+      - 'uv.lock'
+      - 'pyproject.toml'
+
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, edited]
+    paths:
+      - 'autopkg_wrapper/**'
+      - 'uv.lock'
+      - 'pyproject.toml'
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      dry_run: ${{ steps.check-inputs.outputs.dry_run}}
+      version: ${{ steps.format-version.outputs.version}}
+    permissions:
+      contents: write
+
+    steps:
+      # - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - id: check-inputs
+        env:
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          echo "dry_run=${INPUT_DRY_RUN:-false}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate build number
+        id: generate-build
+        uses: onyxmueller/build-tag-number@4a0c81c9af350d967032d49204c83c38e6b0c8e4 # v1.0.3
+        if: github.ref_name != 'main'
+        with:
+          token: ${{ secrets.github_token }}
+
+      - name: Generate Next Version
+        uses: reecetech/version-increment@a29aa752dc3b8118a2dc2ed93faf0e95a73a9c7e # 2024.10.1
+        id: version-increment
+        with:
+          scheme: calver
+          use_api: true
+          pep440: true
+
+      - name: Format Version Number
+        id: format-version
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_BRANCH: ${{ github.ref_name }}
+          BUILD: ${{ steps.generate-build.outputs.build_number }}
+          MAJOR: ${{ steps.version-increment.outputs.major-version }}
+          MINOR: ${{ steps.version-increment.outputs.minor-version }}
+          PATCH: ${{ steps.version-increment.outputs.patch-version }}
+        run: |
+          if [[ "$GITHUB_BRANCH" == "main" ]]; then
+            VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          else
+            VERSION="${MAJOR}.${MINOR}.${PATCH}-${BUILD}"
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_BRANCH: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ steps.format-version.outputs.version }}
+        if: steps.check-inputs.outputs.dry_run == 'false'
+        run: |
+          GH_RELEASE_FLAGS=(
+            "$RELEASE_VERSION"
+            --repo "$GITHUB_REPO"
+            --generate-notes
+          )
+
+          if [[ "$GITHUB_BRANCH" == "main" ]]; then
+            GH_RELEASE_FLAGS+=(--latest)
+          else
+            GH_RELEASE_FLAGS+=(--prerelease)
+          fi
+
+          gh release create "${GH_RELEASE_FLAGS[@]}"
+
+  build:
+    name: Build Package 📦
+    runs-on: ubuntu-latest
+    needs: [release]
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+        with:
+          activate-environment: true
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version-file: pyproject.toml
+
+      - name: Build Package with UV
+        run: |
+          uv version ${{ needs.release.outputs.version }}
+          uv build
+      - name: Upload Package Artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  deploy_test:
+    name: Deploy Package to TestPyPI 🚀
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/autopkg-wrapper
+    permissions:
+      id-token: write
+
+    if: github.ref_name != 'main'
+
+    steps:
+      - name: Download Package Artifacts
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  deploy_prod:
+    name: Deploy Package to PyPI 🚀
+    runs-on: ubuntu-latest
+    needs: [release, build]
+    environment:
+      name: pypi
+      url: https://pypi.org/p/autopkg-wrapper
+    permissions:
+      id-token: write
+
+    if: github.ref_name == 'main' && needs.release.outputs.dry_run == 'false'
+
+    steps:
+      - name: Download Package Artifacts
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+
+  update_release:
+    name: Upload Assets to GitHub Release
+    runs-on: ubuntu-latest
+    needs: [release, build]
+    permissions:
+      id-token: write
+      contents: write
+
+    if: needs.release.outputs.dry_run == 'false'
+
+    steps:
+      - name: Download Package Artifacts
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: python-package-distributions
+          path: dist/
+      - uses: sigstore/gh-action-sigstore-python@f7ad0af51a5648d09a20d00370f0a91c3bdf8f84 # v3.0.1
+        with:
+          inputs: |
+            dist/*.whl
+            dist/*.tar.gz
+      - name: Upload artifact signatures to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_BRANCH: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ needs.release.outputs.version }}
+        run: >-
+          gh release upload
+          "$RELEASE_VERSION" dist/**
+          --repo "$GITHUB_REPO"
