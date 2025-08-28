@@ -1,0 +1,141 @@
+name: Build and Publish AutoReportV2
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:  # 允许手动触发
+
+permissions:
+  contents: write
+  id-token: write  # 用于PyPI可信发布
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 获取完整的Git历史，确保标签可见
+        
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'  # 推荐版本
+        
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install build twine setuptools-scm[toml]
+        
+    - name: Verify Git and version info
+      run: |
+        echo "Current Git tag: ${{ github.ref_name }}"
+        echo "Git tags:"
+        git tag --list
+        echo "Package version detection:"
+        python -c "from setuptools_scm import get_version; print(f'Detected version: {get_version()}')"
+        
+    - name: Build package
+      run: |
+        echo "Building package..."
+        python -m build
+        echo "Build artifacts:"
+        ls -la dist/
+        
+    - name: Verify package metadata
+      run: |
+        echo "Checking package distribution..."
+        python -m twine check dist/*
+        echo "Package contents:"
+        python -c "
+        import tarfile
+        import glob
+        for f in glob.glob('dist/*.tar.gz'):
+            print(f'Contents of {f}:')
+            with tarfile.open(f, 'r:gz') as tar:
+                tar.list()
+        "
+        
+    - name: Test local installation
+      run: |
+        echo "Testing local installation..."
+        python -m pip install dist/*.whl
+        python -c "
+        import autoreport
+        print(f'Installed version: {autoreport.__version__}')
+        print(f'Package name: aerospot-autoreport')
+        print('Installation test passed!')
+        "
+    
+    - name: Publish to PyPI
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        # 可选：使用可信发布
+        # skip-existing: true
+        
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: AutoReport ${{ github.ref_name }}
+        body: |
+          ## 🎉 AutoReport ${{ github.ref_name }} 发布
+          
+          ### 📦 安装方式
+          
+          ```bash
+          # 从PyPI安装
+          pip install aerospot-autoreport==${{ github.ref_name }}
+          
+          # 或者安装最新版本
+          pip install aerospot-autoreport
+          ```
+          
+          ### 🚀 使用方法
+          
+          #### 命令行使用：
+          ```bash
+          autoreport --config config.json
+          ```
+          
+          #### Python API使用：
+          ```python
+          from autoreport import get_aerospotreportgenerator
+          
+          # 创建报告生成器
+          generator_class = get_aerospotreportgenerator()
+          generator = generator_class()
+          
+          # 生成报告
+          result = generator.generate_report({
+              "file_url": "your_data.zip",
+              "measure_data": "your_measure.csv",
+              "output_dir": "./reports"
+          })
+          ```
+          
+          ### 📋 主要功能
+          - ✅ 自动化数据处理和分析
+          - ✅ 生成专业的Word报告
+          - ✅ 支持多种数据格式
+          - ✅ 可配置的报告模板
+          - ✅ 跨平台兼容（Windows/Linux/macOS）
+          
+          ### 🔗 相关链接
+          - 📖 [文档](https://autoreport-v2.readthedocs.io/)
+          - 🐛 [问题反馈](https://github.com/1034378361/AutoReportV2/issues)
+          - 💬 [讨论区](https://github.com/1034378361/AutoReportV2/discussions)
+          
+          ---
+          
+          **完整更新日志:** 请查看 [CHANGELOG.md](https://github.com/1034378361/AutoReportV2/blob/${{ github.ref_name }}/CHANGELOG.md)
+        files: |
+          dist/*
+        draft: false
+        prerelease: false
