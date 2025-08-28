@@ -1,0 +1,338 @@
+Metadata-Version: 2.4
+Name: proxmox-cloud-importer
+Version: 0.1.7
+Summary: CLI tool for importing cloud images to Proxmox server
+Project-URL: Homepage, https://github.com/yurzs/proxmox-cloud-importer
+Project-URL: Repository, https://github.com/yurzs/proxmox-cloud-importer
+Project-URL: Issues, https://github.com/yurzs/proxmox-cloud-importer/issues
+Author-email: Yury Sokov <me@yurzs.dev>
+License: MIT License
+        
+        Copyright (c) 2025 Yury Sokov
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Keywords: cli,cloud,images,proxmox
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: System Administrators
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.8
+Requires-Dist: click>=8.0.0
+Requires-Dist: plumbum>=1.8.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: requests>=2.28.0
+Requires-Dist: rich>=13.0.0
+Provides-Extra: dev
+Requires-Dist: black>=22.0.0; extra == 'dev'
+Requires-Dist: flake8>=5.0.0; extra == 'dev'
+Requires-Dist: mypy>=1.0.0; extra == 'dev'
+Requires-Dist: pytest-cov>=4.0.0; extra == 'dev'
+Requires-Dist: pytest>=7.0.0; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# Proxmox Cloud Image Importer
+
+A CLI tool for importing cloud images to Proxmox server with support for multiple distributions and automatic VM template creation.
+
+## Features
+
+- **Rich CLI Interface**: Beautiful command-line interface with progress bars, tables, and colored output using Rich library
+- **Multiple OS Support**: Pre-configured support for Ubuntu, Debian, CentOS Stream, and Rocky Linux cloud images
+- **Checksum Verification**: Automatic verification of downloaded images using published checksums
+- **Automatic VM Template Creation**: Creates ready-to-use VM templates with proper cloud-init configuration
+- **Process Management**: Uses Plumbum library for robust process execution instead of subprocess
+- **YAML Configuration**: Flexible configuration system for managing image metadata
+- **Download Management**: Intelligent download caching and cleanup options
+
+## Requirements
+
+- Python 3.8+
+- Proxmox VE server with CLI access (`qm`, `qemu-img` commands)
+- Internet access for downloading cloud images
+
+## Installation
+
+This project uses `uv` for dependency management. Install it first:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then clone and install the project:
+
+```bash
+git clone <repository-url>
+cd proxmox-cloud-image-importer
+uv sync
+```
+
+## Quick Start with uvx
+
+If you want to try the tool without installing it, you can use `uvx` (part of the `uv` toolchain) to run it directly:
+
+```bash
+# Install uv first if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Run the tool directly from PyPI (once published)
+uvx proxmox-cloud-importer list
+
+# Or run from a local directory
+uvx --from . proxmox-cloud-importer list
+
+# Or from a git repository
+uvx --from git+https://github.com/yurzs/proxmox-cloud-image-importer proxmox-cloud-importer list
+```
+
+This approach creates a temporary isolated environment and runs the tool without permanently installing it on your system.
+
+## Configuration
+
+The tool uses a YAML configuration file (`images.yaml`) to define available cloud images and settings. The default configuration includes:
+
+- **Ubuntu 22.04 LTS** and **20.04 LTS**
+- **Debian 12** (Bookworm) and **11** (Bullseye)
+- **CentOS Stream 9**
+- **Rocky Linux 9**
+
+### Configuration Structure
+
+```yaml
+images:
+  ubuntu_22_04:
+    name: "Ubuntu 22.04 LTS"
+    description: "Ubuntu 22.04 LTS (Jammy Jellyfish) Cloud Image"
+    url: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+    format: "qcow2"
+    os_type: "ubuntu"
+    version: "22.04"
+    architecture: "amd64"
+    checksum_url: "https://cloud-images.ubuntu.com/jammy/current/SHA256SUMS"
+    cloud_init: true
+
+proxmox:
+  default_storage: "local-lvm"
+  default_vm_id_start: 9000
+  temp_download_path: "/tmp/cloud-images"
+
+settings:
+  verify_checksums: true
+  cleanup_downloads: true
+  default_disk_size: "20G"
+  qemu_guest_agent: true
+```
+
+## Usage
+
+You can run the tool in two ways:
+
+1. **Traditional installation** (after running `uv sync`):
+   ```bash
+   proxmox-cloud-importer <command>
+   ```
+
+2. **Using uvx** (no installation required):
+   ```bash
+   uvx --from . proxmox-cloud-importer <command>
+   # Or from git repository:
+   uvx --from git+https://github.com/example/proxmox-cloud-image-importer proxmox-cloud-importer <command>
+   ```
+
+### List Available Images
+
+```bash
+# Traditional approach
+proxmox-cloud-importer list
+
+# Using uvx
+uvx --from . proxmox-cloud-importer list
+```
+
+### Show Image Information
+
+```bash
+# Traditional approach
+proxmox-cloud-importer info ubuntu_22_04
+
+# Using uvx
+uvx --from . proxmox-cloud-importer info ubuntu_22_04
+```
+
+### Download an Image Only
+
+```bash
+# Traditional approach
+proxmox-cloud-importer download ubuntu_22_04 --output-dir ./downloads
+
+# Using uvx
+uvx --from . proxmox-cloud-importer download ubuntu_22_04 --output-dir ./downloads
+```
+
+### Import Image to Proxmox
+
+```bash
+# Traditional approach - Import with auto-generated VM ID
+proxmox-cloud-importer import-image ubuntu_22_04
+
+# Using uvx - Import with auto-generated VM ID
+uvx --from . proxmox-cloud-importer import-image ubuntu_22_04
+
+# Traditional approach - Import with specific VM ID and storage
+proxmox-cloud-importer import-image ubuntu_22_04 --vm-id 100 --storage local-lvm --template-name "Ubuntu-22.04-Template"
+
+# Using uvx - Import with specific VM ID and storage
+uvx --from . proxmox-cloud-importer import-image ubuntu_22_04 --vm-id 100 --storage local-lvm --template-name "Ubuntu-22.04-Template"
+
+# Traditional approach - Download only without importing
+proxmox-cloud-importer import-image ubuntu_22_04 --download-only
+
+# Using uvx - Download only without importing
+uvx --from . proxmox-cloud-importer import-image ubuntu_22_04 --download-only
+```
+
+### Custom Configuration File
+
+```bash
+# Traditional approach
+proxmox-cloud-importer --config /path/to/custom-images.yaml list
+
+# Using uvx
+uvx --from . proxmox-cloud-importer --config /path/to/custom-images.yaml list
+```
+
+## Commands
+
+- `list` - List all available cloud images
+- `info <image_id>` - Show detailed information about a specific image
+- `download <image_id>` - Download a cloud image
+- `import-image <image_id>` - Download and import image to Proxmox
+
+## How It Works
+
+1. **Download**: Downloads cloud images from official sources with progress tracking
+2. **Verify**: Validates downloaded images against published checksums
+3. **Convert**: Converts images to qcow2 format if necessary using qemu-img
+4. **Import**: Uses `qm importdisk` to import the disk image to Proxmox storage
+5. **Configure**: Creates VM with appropriate settings (memory, CPU, network)
+6. **Template**: Converts the VM to a template for easy deployment
+
+## VM Template Configuration
+
+The imported templates are configured with:
+- 2 GB RAM (configurable)
+- 2 CPU cores (configurable)
+- VirtIO network adapter on vmbr0
+- VirtIO SCSI controller
+- Cloud-init support (IDE2 drive)
+- Serial console access
+- QEMU guest agent (if enabled)
+
+## Error Handling
+
+The tool includes comprehensive error handling:
+- Network connectivity issues
+- Checksum verification failures
+- Proxmox command execution errors
+- Automatic cleanup of failed imports
+
+## Development
+
+### Project Structure
+
+```
+proxmox-cloud-image-importer/
+├── proxmox_cloud_importer/
+│   ├── __init__.py
+│   ├── cli.py          # CLI interface with Rich
+│   ├── config.py       # Configuration handling
+│   └── importer.py     # Core import functionality
+├── tests/
+├── images.yaml         # Default image configuration
+├── pyproject.toml      # Project configuration
+└── README.md
+```
+
+### Running Tests
+
+```bash
+# With traditional installation
+uv run pytest
+
+# With uvx (from local directory)
+uvx --from . --with pytest pytest
+
+# With uvx (from git repository)
+uvx --from git+https://github.com/example/proxmox-cloud-image-importer --with pytest pytest
+```
+
+### Code Formatting
+
+```bash
+# With traditional installation
+uv run black .
+
+# With uvx
+uvx --from . --with black black .
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Run the test suite
+6. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Permission Denied**: Ensure you have sudo access on the Proxmox server
+2. **Storage Not Found**: Verify the storage name in your configuration exists in Proxmox
+3. **Network Issues**: Check internet connectivity for image downloads
+4. **Checksum Failures**: May indicate network issues or corrupted downloads
+
+### Logging
+
+Enable debug logging:
+
+```bash
+# With traditional installation
+proxmox-cloud-importer --log-level DEBUG <command>
+
+# With uvx
+uvx --from . proxmox-cloud-importer --log-level DEBUG <command>
+
+# Alternative approach using Python module
+export PYTHONPATH=.
+python -m proxmox_cloud_importer.cli --help
+```
+
+For verbose output, check the system logs on the Proxmox server after import failures.
