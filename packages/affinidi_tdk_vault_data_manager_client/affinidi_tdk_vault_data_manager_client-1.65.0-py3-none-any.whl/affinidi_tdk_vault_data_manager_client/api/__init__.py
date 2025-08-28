@@ -1,0 +1,10 @@
+# flake8: noqa
+
+# import apis into api package
+from affinidi_tdk_vault_data_manager_client.api.accounts_api import AccountsApi
+from affinidi_tdk_vault_data_manager_client.api.configuration_api import ConfigurationApi
+from affinidi_tdk_vault_data_manager_client.api.files_api import FilesApi
+from affinidi_tdk_vault_data_manager_client.api.nodes_api import NodesApi
+from affinidi_tdk_vault_data_manager_client.api.profile_data_api import ProfileDataApi
+from affinidi_tdk_vault_data_manager_client.api.well_known_api import WellKnownApi
+
