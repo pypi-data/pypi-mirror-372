@@ -1,0 +1,53 @@
+from setuptools import setup, find_packages
+
+setup(
+    name='IndianConstitution',
+    version='0.6.1',
+    description='A Python module for accessing and managing Constitution data.',
+    long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
+    author='Vikhram S',
+    author_email="vikhrams@saveetha.ac.in",
+    email="vikhrams@saveetha,ac,in",
+    maintainer='Vikhram S',
+    maintainer_email="vikhrams@saveetha.ac.in",
+    url='https://github.com/Vikhram-S/IndianConstitution',
+    requires= [],
+    license='Apache License 2.0',
+    packages=find_packages(),
+    include_package_data=True,
+    python_requires='>=3.6',
+
+
+    classifiers=[
+    'Development Status :: 5 - Production/Stable',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Education',
+    'Intended Audience :: Legal Industry',
+    'License :: OSI Approved :: Apache Software License',
+    'Natural Language :: English',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Topic :: Software Development :: Libraries',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Education',
+    'Topic :: Text Processing :: General',
+    'Topic :: Text Processing :: Linguistic',
+],
+
+    project_urls={
+        'Documentation': 'https://pypi.org/project/IndianConstitution/',
+        'Source': 'https://github.com/Vikhram-S/IndianConstitution',
+        'Issue Tracker': 'https://github.com/Vikhram-S/IndianConstitution/issues',
+    },
+    zip_safe=False,
+)
