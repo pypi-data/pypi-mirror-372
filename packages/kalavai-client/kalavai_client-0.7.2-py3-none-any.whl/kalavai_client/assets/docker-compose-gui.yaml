@@ -1,0 +1,30 @@
+services:
+  kalavai_gui:
+    container_name: kalavai_gui
+    image: bundenth/kalavai-gui:{{gui_version}}
+    platform: linux/amd64
+    extra_hosts:
+    - "host.docker.internal:host-gateway"
+    networks:
+    - kalavai-net
+    environment:
+    - KALAVAI_BRIDGE_URL=http://host.docker.internal
+    - KALAVAI_BRIDGE_PORT={{bridge_port}}
+    {% if protected_access %}
+    - ACCESS_KEY={{protected_access}}
+    {% endif %}
+    entrypoint: ["reflex"]
+    command: >
+      run
+      --backend-port {{gui_backend_port}}
+      --frontend-port {{gui_frontend_port}}
+    ports:
+    - "{{gui_backend_port}}:{{gui_backend_port}}"
+    - "{{gui_frontend_port}}:{{gui_frontend_port}}"
+    volumes:
+      - "{{path}}:/root/.cache/kalavai"
+    restart: always
+
+networks:
+  kalavai-net:
+    driver: bridge
