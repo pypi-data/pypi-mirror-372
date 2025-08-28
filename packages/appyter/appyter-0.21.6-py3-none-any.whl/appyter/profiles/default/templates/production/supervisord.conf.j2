@@ -1,0 +1,35 @@
+[supervisord]
+logfile = {{ str(_tmp_dir/'supervisord.log') }}
+pidfile = {{ str(_tmp_dir/'supervisord.pid') }}
+
+[program:nginx]
+process_name=%(program_name)s_%(process_num)d
+numprocs=1
+startsecs=1
+startretries=3
+autostart=true
+command=/usr/sbin/nginx -c {{ str(_tmp_dir/'nginx.conf') }}
+autorestart=true
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+
+[program:appyter]
+process_name=%(program_name)s_%(process_num)d
+{#- nuprocs={{ _config.N_PROCS }} #}
+numprocs=1
+numprocs_start=1
+startsecs=1
+startretries=3
+autostart=true
+autorestart=true
+command={{ sys.executable }} -u -m appyter --socket={{ str(_tmp_dir/'%(program_name)s_%(process_num)d.sock') }}
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+
+[eventlistener:quit_on_failure]
+command=bash -c "printf 'READY\n' && while read line; do kill -SIGQUIT $PPID; done < /dev/stdin"
+events=PROCESS_STATE_FATAL
