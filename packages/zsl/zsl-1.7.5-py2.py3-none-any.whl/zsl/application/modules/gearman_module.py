@@ -1,0 +1,48 @@
+"""
+:mod:`zsl.application.modules.gearman_module`
+---------------------------------------------
+"""
+import click
+from injector import ClassProvider, Module, singleton
+
+from zsl import inject
+from zsl.application.modules.cli_module import ZslCli
+from zsl.interface.gearman.task_filler import exec_task_filler
+from zsl.interface.gearman.worker import GearmanTaskQueueWorker
+from zsl.interface.task_queue import TaskQueueWorker, run_worker
+from zsl.utils.injection_helper import simple_bind
+
+
+class GearmanCli:
+    @inject(zsl_cli=ZslCli)
+    def __init__(self, zsl_cli):
+        # type: (ZslCli)->GearmanCli
+
+        @zsl_cli.cli.group(help="Gearman related tasks.")
+        def gearman():
+            pass
+
+        @gearman.command(help="run worker")
+        def worker():
+            # type: () -> None
+            run_worker()
+
+        @gearman.command(help="send task to queue")
+        @click.argument('task_path', metavar='task')
+        @click.argument('data', default=None, required=False)
+        def task_filler(task_path, data):
+            exec_task_filler(task_path, data)
+
+        self._gearman = gearman
+
+    @property
+    def gearman(self):
+        return self._gearman
+
+
+class GearmanModule(Module):
+    """Adds gearman to current configuration."""
+
+    def configure(self, binder):
+        binder.bind(TaskQueueWorker, to=ClassProvider(GearmanTaskQueueWorker), scope=singleton)
+        simple_bind(binder, GearmanCli, singleton)
