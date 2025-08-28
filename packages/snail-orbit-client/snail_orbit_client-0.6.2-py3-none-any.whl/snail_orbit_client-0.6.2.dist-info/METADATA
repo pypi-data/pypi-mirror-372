@@ -1,0 +1,244 @@
+Metadata-Version: 2.4
+Name: snail-orbit-client
+Version: 0.6.2
+Summary: Type-safe Python client for Snail Orbit project management system with read operations and issue management
+Author-email: Snail Orbit Team <dev@snorbit.app>
+Keywords: api-client,project-management,snail-orbit,task-tracking
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.11
+Requires-Dist: httpx>=0.25.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: pyjwt[crypto]>=2.8.0
+Description-Content-Type: text/markdown
+
+# Snail Orbit Python Client Library
+
+A modern, type-safe Python client for the Snail Orbit project management system. Focused on data access and read operations with comprehensive error handling and automatic schema validation.
+
+## 🚀 Features
+
+- **Dual Client Architecture**: Full-featured synchronous and asynchronous clients
+- **Type Safety**: Complete type hints with Pydantic v2 models and mypy compatibility
+- **Authentication**: Bearer token and JWT authentication support
+- **Error Handling**: Comprehensive exception hierarchy with context
+- **Pagination**: Automatic pagination with iterator pattern
+- **Search & Filtering**: Advanced search and filtering capabilities
+
+## 📦 Installation
+
+```bash
+# Using uv (recommended)
+uv add snail-orbit-client
+
+# Using pip
+pip install snail-orbit-client
+```
+
+## 🔧 Quick Start
+
+### Basic Usage
+
+```python
+from snail_orbit_client import SnailOrbitClient
+
+# Initialize client
+client = SnailOrbitClient(
+    base_url="https://your-snail-orbit.example.com",
+    token="your-api-token"
+)
+
+# Get user profile
+profile = client.auth.get_profile()
+print(f"Logged in as: {profile.name} ({profile.email})")
+
+# List users with search
+for user in client.users.list(search="john"):
+    print(f"User: {user.name} ({user.email})")
+
+# List projects with filtering
+for project in client.projects.list(filter="is_active___eq:true"):
+    print(f"Active project: {project.name}")
+
+# List issues with query language
+for issue in client.issues.list(q="priority:high and status:open"):
+    print(f"Urgent issue: {issue.id_readable} - {issue.subject}")
+    print(f"Time spent: {issue.hours_spent} hours")
+
+# Get specific records
+user = client.users.get("user-id")
+project = client.projects.get("project-id")
+specific_issue = client.issues.get("issue-id")
+
+# Access custom fields
+priority_field = specific_issue.fields.get('priority')
+if priority_field:
+    print(f"Priority: {priority_field.value}")
+```
+
+### Async Usage
+
+```python
+import asyncio
+from snail_orbit_client import SnailOrbitAsyncClient
+
+async def main():
+    async with SnailOrbitAsyncClient(
+        base_url="https://your-snail-orbit.example.com",
+        token="your-api-token"
+    ) as client:
+
+        # Get user profile
+        profile = await client.auth.get_profile()
+        print(f"Logged in as: {profile.name} ({profile.email})")
+
+        # List projects
+        projects = []
+        async for project in client.projects.list():
+            projects.append(project)
+
+        # Search issues
+        urgent_issues = []
+        async for issue in client.issues.list(q="priority:high and status:open"):
+            urgent_issues.append(issue)
+
+asyncio.run(main())
+```
+
+## 💪 Available Operations
+
+### **Authentication**
+- ✅ `auth.get_profile()` - Get current user profile
+
+### **Users**
+- ✅ `users.list(search=None, filter=None)` - List/search users
+- ✅ `users.get(user_id)` - Get user by ID
+
+### **Projects**
+- ✅ `projects.list(search=None, filter=None)` - List/search projects
+- ✅ `projects.get(project_id)` - Get project by ID
+
+### **Issues**
+- ✅ `issues.list(q=None, search=None)` - List/query issues
+- ✅ `issues.get(issue_id)` - Get issue by ID
+- ✅ `issues.get_by_readable_id(readable_id)` - Get issue by readable ID (e.g., "PRJ-123")
+- ✅ `issues.create(issue_data)` - Create new issue
+- ✅ `issues.update(issue_id, issue_data)` - Update issue
+- ✅ `issues.delete(issue_id)` - Delete issue
+- ✅ `issues.subscribe(issue_id)` - Subscribe to notifications
+- ✅ `issues.unsubscribe(issue_id)` - Unsubscribe from notifications
+
+### **Issue Comments**
+- ✅ `issues.get_comments(issue_id)` - List comments for issue
+- ✅ `issues.get_comment(issue_id, comment_id)` - Get specific comment
+- ✅ `issues.create_comment(issue_id, comment_data)` - Create comment
+- ✅ `issues.update_comment(issue_id, comment_id, comment_data)` - Update comment
+- ✅ `issues.delete_comment(issue_id, comment_id)` - Delete comment
+
+### **Issue Tags**
+- ✅ `issues.add_tag(issue_id, tag_id)` - Add tag to issue
+- ✅ `issues.remove_tag(issue_id, tag_id)` - Remove tag from issue
+
+### **Custom Fields**
+- ✅ `custom_fields.list_groups()` - List custom field groups
+- ✅ `custom_fields.get_group(group_gid)` - Get custom field group
+- ✅ `custom_fields.get_field(field_id)` - Get custom field
+
+### **Activity Tracking**
+- ✅ `activity.list(start, end, user_id=None)` - List activities by time range
+
+## 🎯 Search & Filtering
+
+### Users & Projects
+Use `search` and `filter` parameters:
+
+```python
+# Text search
+client.users.list(search="john doe")
+client.projects.list(search="api project")
+
+# Query language filtering
+client.users.list(filter="is_active___eq:true and name___contains:developer")
+client.projects.list(filter="created_at___gte:2024-01-01")
+
+# Combined search and filter
+client.users.list(search="john", filter="is_admin___eq:false")
+```
+
+### Issues
+Use `q` (query language) and `search` parameters:
+
+```python
+# Query language (structured queries)
+client.issues.list(q="priority:high and status:open")
+client.issues.list(q="assignee:me and project:myproject")
+
+# Text search
+client.issues.list(search="database bug")
+
+# Combined query and search
+client.issues.list(q="status:open", search="authentication")
+```
+
+## 🔧 Advanced Configuration
+
+```python
+from snail_orbit_client import SnailOrbitClient, ClientConfig
+
+config = ClientConfig(
+    timeout=30.0,                    # Request timeout in seconds
+    max_retries=3,                   # Maximum retry attempts
+    retry_delay=1.0,                 # Base delay between retries
+    user_agent="MyApp/1.0.0"         # Custom user agent
+)
+
+client = SnailOrbitClient(
+    base_url="https://your-snail-orbit.example.com",
+    token="your-token",
+    config=config
+)
+```
+
+### JWT Authentication
+
+```python
+# JWT signing with service credentials
+# Requires backend configuration in API_SERVICE_TOKEN_KEYS
+client = SnailOrbitClient(
+    base_url="https://api.snail-orbit.com",
+    token=("test", "test", "user-id")  # (kid, secret, user_id)
+)
+```
+
+
+## 🏗️ Architecture
+
+### **Pure API Client Design**
+- **Direct API Access**: Models mirror API responses without abstraction
+- **Generated Models**: Auto-synchronized with OpenAPI schema
+- **Type-Safe**: Full mypy compatibility with strict type checking
+- **Iterator Pattern**: Efficient pagination for large datasets
+
+### **Resource Organization**
+```python
+client.auth            # Authentication and profile management
+client.users           # User read operations
+client.projects        # Project read operations
+client.issues          # Issue management (full CRUD)
+client.custom_fields   # Custom field read operations
+client.activity        # Activity tracking and audit logs
+```
+
+## 🔒 Security & Reliability
+
+- **Secure Token Handling**: Safe storage and transmission of credentials
+- **JWT Signing**: Request-specific JWT with method/path hashing
+- **Structured Exceptions**: Comprehensive error hierarchy with context
+- **HTTP Status Mapping**: Specific exceptions for 401, 403, 404, 422, 429, 5xx
+- **Retry Logic**: Exponential backoff with configurable limits
+- **Schema Validation**: Automatic validation against API schema

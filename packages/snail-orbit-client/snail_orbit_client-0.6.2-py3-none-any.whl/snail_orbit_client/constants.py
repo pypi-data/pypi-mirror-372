@@ -1,0 +1,2 @@
+SERVICE_TOKEN_IAT_DELTA = 10  # 10 seconds
+SERVICE_TOKEN_EXP_DELTA = 60  # 1 minute
