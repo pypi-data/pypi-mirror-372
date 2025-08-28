@@ -1,0 +1,21 @@
+stages:
+  - build
+
+build_and_publish:
+  image: python:3.9-alpine
+  stage: build
+  script:
+    - python3 -m pip install uv
+    - uv build
+    - uv publish --token $PYPI_PASSWORD
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 2 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "master"'
+      changes:
+        - pyproject.toml
+        - .gitlab-ci.yml
+      when: always
+    - when: never
