@@ -1,0 +1,477 @@
+#!/bin/bash
+# Thunderbird Duplicate Folder Checker
+# Author: WF 2024-08-09 supported by Claude 3.5 Sonnet (Anthropic AI) v3.5
+#
+# Purpose:
+# This script checks for duplicate folders in Thunderbird profiles after moving folders
+# locally and using rsync to sync them to a server.
+#
+# Features:
+# - Checks for duplicate .sbd and .msf files in Thunderbird profiles
+# - Works with multiple profiles or a specific profile
+# - Provides detailed information about duplicates, including size and last modified date
+# - Suggests removal commands for duplicates in verbose mode
+# - Checks for empty .sbd folders
+# - Cross-platform compatibility (macOS, Linux, Windows with Cygwin)
+#
+# Usage: ./thunderbird_duplicate_checker.sh [OPTIONS]
+# Options:
+#   -a, --all      Check all Thunderbird profiles
+#   -d, --debug    Enable debug mode
+#   -h, --help     Show help message
+#   -l, --list     List all Thunderbird profiles
+#   -p, --profile  Check a specific Thunderbird profile
+#   -v, --verbose  Enable verbose output
+#
+# Required input:
+# - Thunderbird profile information, typically stored in $HOME/.thunderbird/thunderbird.yaml
+#   If not found, the script will attempt to locate profiles in the OS-specific default location
+#
+# Example thunderbird.yaml content:
+# johndoe:
+#   db: /home/johndoe/.thunderbird/9thuz5md.tbmaildemo/global-messages-db.sqlite
+#   profile: /home/johndoe/.thunderbird/9thuz5md.tbmaildemo
+# janedoe:
+#   db: /home/janedoe/.thunderbird/a1b2c3d4.default/global-messages-db.sqlite
+#   profile: /home/janedoe/.thunderbird/a1b2c3d4.default
+#
+# Notes:
+# - Requires sudo access to change group ownership and permissions of Thunderbird profile directories
+# - Uses ANSI colors for output formatting
+# - Timestamps are displayed in YYYY-MM-DD HH:MM format
+# - In verbose mode, suggests removal commands for duplicate files, with special handling for .sbd directories
+#
+
+#  global variables
+verbose=false
+version=1.0
+
+#ansi colors
+blue='\033[0;34m'
+red='\033[0;31m'
+green='\033[0;32m'
+endColor='\033[0m'
+
+# Display a colored message
+# params:
+#   1: l_color - the color of the message
+#   2: l_msg - the message to display
+color_msg() {
+  local l_color="$1"
+  local l_msg="$2"
+  echo -e "${l_color}$l_msg${endColor}"
+}
+
+# Display an error message and exit
+# params:
+#   1: l_msg - the error message to display
+error() {
+  local l_msg="$1"
+  color_msg $red "Error:" 1>&2
+  color_msg $red "\t$l_msg" 1>&2
+  exit 1
+}
+
+# Display a negative message
+# params:
+#   1: l_msg - the message to display
+negative() {
+  local l_msg="$1"
+  color_msg $red "❌:$l_msg"
+}
+
+# Display a positive message
+# params:
+#   1: l_msg - the message to display
+positive() {
+  local l_msg="$1"
+  color_msg $green "✅:$l_msg"
+}
+
+# Show usage information
+usage() {
+  echo "Usage: $0 [OPTIONS]"
+  echo "Options:"
+  echo "  -a, --all      Check all Thunderbird profiles"
+  echo "  -d, --debug    Enable debug mode"
+  echo "  -h, --help     Show this help message"
+  echo "  -l, --list     List all Thunderbird profiles"
+  echo "  -p, --profile  Check a specific Thunderbird profile"
+  echo "  -v, --verbose  Enable verbose output"
+  echo "  -V, --version  show the version"
+  exit 1
+}
+
+set -e
+
+# Get profile paths from the YAML file
+get_profile_paths() {
+    local yaml_file="$HOME/.thunderbird/thunderbird.yaml"
+    [ -f "$yaml_file" ] || { error "YAML file $yaml_file not found."; }
+    awk '/^[a-zA-Z0-9_]+:/ {profile=$1; sub(/:$/, "", profile)} /profile:/ {print profile " " $2}' "$yaml_file"
+}
+
+# Set permissions for the given directory
+set_permissions() {
+    local dir="$1"
+    sudo chgrp -R $(id -gn) "$dir"
+    sudo chmod -R g+rX "$dir"
+}
+
+# Convert between timestamp and seconds since epoch in a cross-platform manner
+# params:
+#   mode: 'to_seconds' or 'from_seconds'
+#   value: The timestamp (YYYY-MM-DD HH:MM) or seconds since epoch, depending on mode
+# returns:
+#   Seconds since epoch or formatted timestamp, depending on mode
+timestamp_convert() {
+    local mode="$1"
+    local value="$2"
+    if [[ "$(uname)" == "Darwin" ]]; then
+        if [[ "$mode" == "to_seconds" ]]; then
+            date -j -f "%Y-%m-%d %H:%M" "$value" "+%s"
+        else
+            date -r "$value" "+%Y-%m-%d %H:%M"
+        fi
+    else
+        if [[ "$mode" == "to_seconds" ]]; then
+            date -d "$value" "+%s"
+        else
+            date -d "@$value" "+%Y-%m-%d %H:%M"
+        fi
+    fi
+}
+
+# Function to return either the last modified time or size of a file based on the specified mode.
+#
+# Parameters:
+#   file (string): The path to the file whose information you want to retrieve.
+#   mode (string): The type of information to retrieve. Accepts two values:
+#                  "modified" - to get the last modified time of the file in seconds since epoch.
+#                  "size" - to get the size of the file in bytes.
+#
+# Returns:
+#   The last modified time in seconds since epoch or the size of the file in bytes, depending on the mode specified.
+#   If an invalid mode is provided, the function will output "Invalid mode" and return 1.
+# Function to return either the last modified time or size based on the mode
+get_file_info() {
+    local file="$1"
+    local mode="$2"
+    local stat_cmd
+    local stat_option
+
+    case "$(uname)" in
+        "Darwin")
+            stat_cmd="stat -f"
+            case "$mode" in
+                "modified") stat_option="%m" ;;
+                "size") stat_option="%z" ;;
+                *) echo "Invalid mode" && return 1 ;;
+            esac
+            ;;
+        *)
+            stat_cmd="stat -c"
+            case "$mode" in
+                "modified") stat_option="%Y" ;;
+                "size") stat_option="%s" ;;
+                *) echo "Invalid mode" && return 1 ;;
+            esac
+            ;;
+    esac
+
+    # Execute the stat command with the appropriate option
+    $stat_cmd "$stat_option" "$file"
+}
+
+# Function to return the last modified time of a file in seconds since epoch.
+#
+# Parameters:
+#   file (string): The path to the file whose last modified time you want to retrieve.
+#
+# Returns:
+#   The last modified time of the specified file in seconds since epoch.
+get_last_modified_time() {
+    get_file_info "$1" "modified"
+}
+
+# Function to return the size of a file in bytes.
+#
+# Parameters:
+#   file (string): The path to the file whose size you want to retrieve.
+#
+# Returns:
+#   The size of the specified file in bytes.
+get_size() {
+    get_file_info "$1" "size"
+}
+
+
+# Update the list_profiles function
+list_profiles() {
+    profiles=$(get_profile_paths)
+    if [ -z "$profiles" ]; then
+        negative "No Thunderbird profiles found."
+        exit 1
+    fi
+    echo "Available Thunderbird profiles:"
+    while IFS=' ' read -r profile_name profile_path; do
+        echo "  $profile_name: $profile_path"
+    done <<< "$profiles"
+}
+
+
+# Suggest appropriate removal commands for duplicate files
+# Provides different suggestions for .sbd directories and regular files
+#   params:
+#     file: The full path of the file or directory to be removed
+#     older_size: the size of the file to be removed
+#     newer_size: the size of the duplicate that stays
+#
+# Output:
+#   Prints suggested removal command(s) to stdout
+suggest_removal_command() {
+    local file="$1"
+    local older_size="$2"
+    local newer_size="$3"
+
+    if [[ "$file" == *.sbd ]]; then
+        local item_count=$(find "$file" -mindepth 1 | wc -l)
+        if [ "$item_count" -eq 0 ]; then
+            echo "rmdir '$file'"
+        elif [ "$item_count" -gt 2 ]; then
+            negative "'$file' still has $item_count files and folders"
+            echo "# Please review the contents before removing:"
+            echo "ls -la '$file'"
+            echo "# If you're sure you want to remove it, use:"
+            echo "rm -rf '$file'"
+        else
+            echo "rm -rf '$file'"
+        fi
+    else
+      if [ "$older_size" -gt "$newer_size" ]; then
+        negative "older $older_size larger than newer $newer_size"
+      else
+        positive "older $older_size smaller than or equal to newer $newer_size"
+      fi
+      echo "rm '$file'"
+    fi
+}
+
+# Check for empty .sbd folders and suggest removal
+# params:
+#   root_path: The root path to start the search e.g. Mail/Local Folders in the Thunderbird profile path
+check_empty_sbd_folders() {
+    local root_path="$1"
+    if $verbose; then
+      color_msg $blue "checking for empty folders in $root_path"
+    fi
+    local empty_folders=()
+
+    while IFS= read -r -d '' folder; do
+        if [ -z "$(ls -A "$folder")" ]; then
+            empty_folders+=("$folder")
+        fi
+    done < <(find "$root_path" -type d -name "*.sbd" -print0)
+
+    if [ ${#empty_folders[@]} -gt 0 ]; then
+        negative "Found ${#empty_folders[@]} empty .sbd folders:"
+        for folder in "${empty_folders[@]}"; do
+            echo "  $folder"
+            if $verbose; then
+              suggest_removal_command "$folder" 0 0
+            fi
+        done
+    else
+       positive "No empty .sbd folders found"
+    fi
+}
+
+# Add this function to detect the OS and set the appropriate profile path
+get_thunderbird_profile_path() {
+    case "$(uname -s)" in
+        Darwin*)    echo "$HOME/Library/Thunderbird/Profiles" ;;
+        Linux*)     echo "$HOME/.thunderbird" ;;
+        CYGWIN*|MINGW32*|MSYS*|MINGW*) echo "$APPDATA/Thunderbird/Profiles" ;;
+        *)          echo "UNKNOWN:$(uname -s)"
+    esac
+}
+
+# Modify the get_profile_paths function
+get_profile_paths() {
+    local yaml_file="$HOME/.thunderbird/thunderbird.yaml"
+    if [ -f "$yaml_file" ]; then
+        awk '/^[a-zA-Z0-9_]+:/ {profile=$1; sub(/:$/, "", profile)} /profile:/ {print profile " " $2}' "$yaml_file"
+    else
+        local profile_dir=$(get_thunderbird_profile_path)
+        if [ -d "$profile_dir" ]; then
+            for dir in "$profile_dir"/*; do
+                if [ -d "$dir" ] && [[ "$(basename "$dir")" == *.default ]]; then
+                    echo "default $dir"
+                fi
+            done
+        else
+            error "Unable to locate Thunderbird profiles."
+        fi
+    fi
+}
+
+
+# Find thunderbird duplicates
+# Searches for duplicate .sbd and .msf files in the given Thunderbird profile
+# Counts the number of duplicates and provides a summary
+#   params:
+#     profile_name: The name of the Thunderbird profile (e.g., "wf")
+#     profile_path: The full path to the Thunderbird profile (e.g., "/backup/hosts/fix.bitplan.com/wf/Library/Thunderbird/Profiles/kio48bfn.default")
+# Modify the find_thunderbird_duplicates function:
+# Modify the find_all_thunderbird_duplicates function:
+find_thunderbird_duplicates() {
+    local profile_name="$1"
+    local profile_path="$2"
+    local duplicate_count=0
+
+    [ -d "$profile_path" ] || { negative "Profile path $profile_path does not exist."; return 1; }
+
+    set_permissions "$profile_path"
+
+    while read -r file; do
+        rel_path="${file#$profile_path/}"
+        base_name=$(basename "$file")
+        dir_name=$(dirname "$file")
+        duplicates=$(find "$dir_name" -name "$base_name")
+        count=$(echo "$duplicates" | wc -l)
+        if [ "$count" -gt 1 ]; then
+            duplicate_count=$((duplicate_count + 1))
+            negative "Duplicate pair: $rel_path"
+            local older_file=""
+            local newer_file=""
+            local older_size=""
+            local newer_size=""
+            local older_time=""
+            local newer_time=""
+            while read -r dup; do
+              size_human=$(du -sh "$dup" | cut -f1)
+              size=$(get_size "$dup")
+              timestamp_seconds=$(get_last_modified_time "$dup")
+              timestamp=$(timestamp_convert from_seconds "$timestamp_seconds")
+              echo "    Path: ${dup#$profile_path/}"
+              echo "    Size: $size"
+              echo "    Last modified: $timestamp"
+              if [ -z "$older_file" ] || [ "$timestamp_seconds" -lt "$older_time_seconds" ]; then
+                  newer_file="$older_file"
+                  newer_size="$older_size"
+                  newer_time_seconds="$older_time_seconds"
+                  older_file="$dup"
+                  older_size="$size"
+                  older_time_seconds="$timestamp_seconds"
+              else
+                  newer_file="$dup"
+                  newer_size="$size"
+                  newer_time_seconds="$timestamp_seconds"
+              fi
+          done <<< "$duplicates"
+          echo
+          if $verbose; then
+            echo "Suggested fix:"
+            suggest_removal_command "$older_file" "$older_size"  "$newer_size"
+          fi
+        fi
+    done < <(find "$profile_path" \( -name "*.sbd" -o -name "*.msf" \))
+    check_empty_sbd_folders "$profile_path/Mail/Local Folders"
+
+    if [ $duplicate_count -eq 0 ]; then
+        positive "No duplicate folders found in profile: $profile_name"
+    else
+        negative "Found $duplicate_count duplicate folder(s) in profile: $profile_name"
+    fi
+}
+
+# find all thunderbird duplicates for all profiles
+find_all_thunderbird_duplicates() {
+    profiles=$(get_profile_paths)
+   local temp_file=$(mktemp)
+   local total_duplicate_count=0
+
+   if [ -z "$profiles" ]; then
+       negative "No Thunderbird profiles found."
+       rm -f "$temp_file"
+       exit 1
+   fi
+
+    while IFS=' ' read -r profile_name profile_path; do
+        color_msg $blue "Checking profile: $profile_name"
+        find_thunderbird_duplicates "$profile_name" "$profile_path" >> "$temp_file"
+        echo >> "$temp_file"  # Add a blank line between profiles
+    done <<< "$profiles"
+
+    # Count total duplicates
+    total_duplicate_count=$(grep -c "Duplicate pair:" "$temp_file")
+
+    # Display results
+    cat "$temp_file"
+
+    if [ $total_duplicate_count -eq 0 ]; then
+        positive "No duplicate folders found across all profiles."
+    else
+        negative "Found a total of $total_duplicate_count duplicate folder(s) across all profiles."
+    fi
+
+    # Clean up
+    rm -f "$temp_file"
+}
+
+# Modify the find_thunderbird_duplicates function to return its result instead of printing:
+
+# Find duplicates for a specific Thunderbird profile
+find_specific_thunderbird_duplicates() {
+    local profile_name="$1"
+    profiles=$(get_profile_paths)
+    profile_path=$(echo "$profiles" | awk -v profile="$profile_name" '$1 == profile {print $2}')
+
+    if [ -z "$profile_path" ]; then
+        negative "Profile $profile_name not found in the YAML file."
+        exit 1
+    fi
+    color_msg $blue "Checking profile: $profile_name"
+    find_thunderbird_duplicates "$profile_name" "$profile_path"
+}
+
+# Main execution
+if [ $# -lt 1 ]; then
+    usage
+else
+    while [ "$1" != "" ]; do
+        case $1 in
+            -d|--debug)
+                set -x
+                ;;
+            -h|--help)
+                usage
+                ;;
+            -a|--all)
+                find_all_thunderbird_duplicates
+                exit 0
+                ;;
+            -l|--list)
+                list_profiles
+                exit 0
+                ;;
+            -p|--profile)
+                shift
+                [ -z "$1" ] && { error "Profile name is required for -p/--profile option."; }
+                find_specific_thunderbird_duplicates "$1"
+                exit 0
+                ;;
+            -v|--verbose)
+               verbose=true
+               ;;
+            -V|--version)
+               echo "$version"
+               exit 1
+               ;;
+            *)
+                error "Unknown option $1"
+                ;;
+        esac
+        shift
+    done
+fi
