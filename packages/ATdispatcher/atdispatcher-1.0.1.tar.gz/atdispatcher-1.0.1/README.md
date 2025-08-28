@@ -1,0 +1,178 @@
+
+# ATdispatcher
+
+**ATdispatcher** is a flexible Python dispatcher library for creating functions and methods with **multiple options** (overloads), **default arguments**, **type checking**, and **automatic handling of instance attributes** for methods. It allows a simple API to manage multiple variations of the same function or method.
+
+---
+
+## Features
+
+* Dispatch multiple **function variations** under the same name.
+* Support for **default arguments**.
+* Support for **type hints** to select the correct variant.
+* Dispatch **methods** with automatic `self` and `SelfAttr` handling.
+* Simple API with `@dispatcher` for functions and `@method_dispatcher` for methods.
+* Easily extendable with multiple registrations using `.reg()`.
+
+---
+
+## Installation
+
+Currently, ATdispatcher is a standalone module. You can include it in your project directly:
+
+```bash
+git clone https://github.com/avitwil/ATdispatcher.git
+```
+
+Or copy `ATdispatcher.py` into your project directory.
+
+---
+
+## Usage
+
+### Importing
+
+```python
+from ATdispatcher import dispatcher, method_dispatcher, SelfAttr
+```
+
+---
+
+### 1. Function Dispatching
+
+```python
+@dispatcher
+def func(a: int, b: int):
+    return a + b
+
+@func.reg()
+def _(a: int, b: int, c: int):
+    return a + b + c
+
+@func.reg()
+def _(a: int, b: int, c: int = 3):
+    return a * b * c
+
+print(func(5, 6))        # Output: 11  (matches first variant)
+print(func(5, 6, 7))     # Output: 18  (matches second variant)
+print(func(5, 6, 3))     # Output: 90  (matches third variant with default)
+```
+
+✅ Notes:
+
+* You can register multiple variants with different signatures using `.reg()`.
+* Type hints are used to select the correct variant.
+* Default arguments are supported.
+
+---
+
+### 2. Method Dispatching with `SelfAttr`
+
+`SelfAttr` allows method defaults to refer to instance attributes automatically.
+
+```python
+class MyClass:
+    def __init__(self):
+        self.mult = 2
+
+    @method_dispatcher
+    def method(self, x: int, y: int = SelfAttr("mult")):
+        return x * y
+
+obj = MyClass()
+
+print(obj.method(10))     # Output: 20  (y defaults to obj.mult)
+print(obj.method(10, 5))  # Output: 50  (y explicitly passed)
+```
+
+✅ Notes:
+
+* `SelfAttr("attr_name")` automatically fetches `self.attr_name` as the default.
+* Works with multiple method registrations using `.reg()` as well.
+
+---
+
+### 3. Multiple Method Variants
+
+```python
+class MyClass:
+    def __init__(self):
+        self.mult = 3
+
+    @method_dispatcher
+    def calc(self, x: int):
+        return x * 2
+
+    @calc.reg()
+    def _(self, x: int, y: int = SelfAttr("mult")):
+        return x * y
+
+obj = MyClass()
+
+print(obj.calc(5))        # Output: 10  (first variant)
+print(obj.calc(5, 4))     # Output: 20  (second variant with y=4)
+print(obj.calc(5, 3))     # Output: 15  (second variant, y defaults to obj.mult)
+```
+
+---
+
+### 4. Error Handling
+
+If no matching signature is found:
+
+```python
+try:
+    func("a", 5)
+except TypeError as e:
+    print(e)  # Output: No matching function signature found
+```
+
+✅ Type checking ensures invalid calls raise `TypeError`.
+
+---
+
+### 5. API Reference
+
+| Class / Function          | Description                                                         |
+| ------------------------- | ------------------------------------------------------------------- |
+| `dispatcher(func)`        | Create a function dispatcher.                                       |
+| `.reg()`                  | Register a new variant for the same dispatcher.                     |
+| `method_dispatcher(func)` | Create a method dispatcher for instance methods.                    |
+| `SelfAttr("attr")`        | Used for method default arguments that reference `self` attributes. |
+
+---
+
+### 6. Example: Combined Usage
+
+```python
+from ATdispatcher import dispatcher, method_dispatcher, SelfAttr
+
+@dispatcher
+def add(a: int, b: int):
+    return a + b
+
+@add.reg()
+def _(a: int, b: int, c: int = 10):
+    return a + b + c
+
+class Calc:
+    def __init__(self):
+        self.multiplier = 5
+
+    @method_dispatcher
+    def multiply(self, x: int, y: int = SelfAttr("multiplier")):
+        return x * y
+
+calc = Calc()
+
+print(add(1, 2))          # 3
+print(add(1, 2, 3))       # 6
+print(calc.multiply(4))   # 20
+print(calc.multiply(4, 2))# 8
+```
+
+---
+
+### License
+
+MIT License – free to use, modify, and distribute.
