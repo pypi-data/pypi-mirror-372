@@ -1,0 +1,227 @@
+{%- macro cache(name) -%}
+  proxy_cache_path "{{ str(_tmp_dir / (name + '.cache.d')) }}"
+    levels=1:2 keys_zone={{ name }}:10m max_size=1g
+    inactive=60m use_temp_path=off;
+{%- endmacro -%}
+{%- macro proxy(remote, ws, cache) -%}
+      {%- if _config.PROXY %}
+      proxy_set_header Host $http_x_forwarded_host;
+      proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+      {% else %}
+      proxy_set_header Host $http_host;
+      proxy_set_header X-Forwarded-For $remote_addr;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      {%- endif %}
+      {%- if ws %}
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
+      proxy_read_timeout 900s;
+      proxy_send_timeout 900s;
+      proxy_connect_timeout 900s;
+      {%- endif %}
+      proxy_pass {{ remote }};
+      proxy_force_ranges on;
+      {%- if cache %}
+      proxy_cache {{ cache }};
+      proxy_cache_revalidate on;
+      proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504;
+      proxy_cache_lock on;
+      {%- endif %}
+      proxy_buffers 512 256M;
+      proxy_buffer_size 256M;
+{%- endmacro -%}
+
+pid {{ str(_tmp_dir/'nginx.pid') }};
+worker_processes 1;
+daemon off;
+
+events {
+  worker_connections  1024;
+}
+
+http {
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+
+  resolver 127.0.0.11 127.0.0.1 ipv6=off;
+
+  log_format main '\$remote_addr:\$http_x_forwarded_for - \$remote_user [\$time_local] '
+                  '"\$request" \$status \$body_bytes_sent "\$http_referer" '
+                  '"\$http_user_agent"' ;
+
+  access_log /dev/stdout;
+  error_log stderr info;
+
+  gzip              on;
+  gzip_http_version 1.0;
+  gzip_proxied      any;
+  gzip_min_length   500;
+  gzip_disable      "MSIE [1-6]\.";
+  gzip_types        text/plain text/xml text/css
+                    text/comma-separated-values
+                    text/javascript
+                    application/x-javascript
+                    application/atom+xml;
+
+  client_body_buffer_size     16k;
+  client_max_body_size        200M;
+
+  {{ cache('appyter-core') }}
+  {{ cache('appyter-data') }}
+  {{ cache('appyter-export') }}
+  {{ cache('appyter-ga4gh') }}
+
+  upstream appyter {
+    {#- {% for n in range(1, _config.N_PROCS+1) %} #}
+    {%- with n=1 %}
+    server "unix:{{ str(_tmp_dir/('appyter_' + str(n) + '.sock')) }}" fail_timeout=0;
+    {%- endwith %}
+    {#- {% endfor %} #}
+  }
+
+  {%- if _config.PROXY %}
+  map $http_x_forwarded_for_proto $proxied_proto {
+    default $http_x_forwarded_for_proto;
+    ''      "http";
+  }
+  map $http_x_forwarded_host $proxied_host {
+    default $http_x_forwarded_host;
+    ''      $http_host;
+  }
+  {%- endif %}
+
+  map $http_upgrade $connection_upgrade {
+    default Upgrade;
+    '' close;
+  }
+
+  server {
+    listen {{ _config.PORT }};
+    server_name {{ _config.HOST }};
+    include /etc/nginx/mime.types;
+    charset utf-8;
+    sendfile on;
+    keepalive_timeout 0;
+    absolute_redirect off;
+
+    set $parsed_method "${request_method}:${http_accept}";
+
+    location = {{ _config.PREFIX }}/ {
+      if ($parsed_method = 'GET:text/html') {
+        rewrite ^(.*)/$ "$1/index.html";
+      }
+      if ($parsed_method = 'GET:application/json') {
+        rewrite ^(.*)/$ "$1/index.json";
+      }
+      if ($parsed_method = 'GET:application/vnd.jupyter') {
+        rewrite ^(.*)/$ "$1/{{ _config.IPYNB }}";
+      }
+      {{ proxy('http://appyter', False, 'appyter-core') }}
+    }
+
+    location = {{ join_routes(_config.PREFIX, 'index.html') }} {
+      root "{{ str(_tmp_dir) }}";
+      try_files /index.html =404;
+    }
+
+    location = {{ join_routes(_config.PREFIX, 'index.json') }} {
+      root "{{ str(_tmp_dir) }}";
+      try_files /index.json =404;
+    }
+
+    location = "{{ join_routes(_config.PREFIX, _config.IPYNB) }}" {
+      root "{{ _config.CWD }}";
+      try_files "/{{ _config.IPYNB }}" =404;
+    }
+
+    location = {{ join_routes(_config.PREFIX, 'favicon.ico') }} {
+      root {{ _config.STATIC_DIR }};
+      try_files /favicon.ico =404;
+    }
+
+    location ~ ^{{ join_routes(_config.PREFIX, '[^/]+') }}$ {
+      {% if _config.PROXY %}
+      rewrite ^(.*)$ $proxied_proto://$proxied_host$1/ redirect;
+      {% else %}
+      rewrite ^(.*)$ $1/ redirect;
+      {% endif %}
+    }
+
+    location ^~ {{ join_routes(_config.PREFIX, 'socket.io') }}/ {
+      {{ proxy('http://appyter', True) }}
+    }
+
+    location ^~ {{ join_routes(_config.PREFIX, 'ssr') }}/ {
+      {{ proxy('http://appyter', False) }}
+    }
+
+    location ^~ {{ join_routes(_config.PREFIX, 'check') }}/ {
+      {{ proxy('http://appyter', False) }}
+    }
+
+    location ^~ {{ join_routes(_config.PREFIX, 'ga4gh') }}/ {
+      {{ proxy('http://appyter', False, 'appyter-ga4gh') }}
+    }
+
+    location ~ ^{{ join_routes(_config.PREFIX, 'static') }}/(.*)$ {
+      root "{{ _config.STATIC_DIR }}";
+      try_files "/$1" @profile_static;
+    }
+
+    location @profile_static {
+      root "{{ get_appyter_directory('static') }}";
+      try_files
+        "/$1"
+        {%- if _config.PROFILE != 'default' %}
+        "/profiles/{{ _config.PROFILE }}/$1"
+        {%- endif %}
+        "/profiles/default/$1"
+        =404;
+    }
+
+    location ~ ^{{ join_routes(_config.PREFIX, 'export') }}/(.*)$ {
+      {{ proxy('http://appyter', False, 'appyter-export') }}
+    }
+
+    {%- for blueprint_name in find_blueprints(config=_config).keys() %}
+    location ~ ^{{ join_routes(_config.PREFIX, blueprint_name) }}/(.*)$ {
+      {{ proxy('http://appyter', False, False) }}
+    }
+    {%- endfor %}
+
+    location ~ ^{{ join_routes(_config.PREFIX, '[^/]+') }}/$ {
+      if ($parsed_method = 'GET:application/vnd.jupyter') {
+        rewrite ^(.*)/$ "$1/{{ _config.IPYNB }}";
+      }
+      if ($parsed_method = 'GET:application/json') {
+        rewrite ^(.*)/$ "$1/{{ _config.IPYNB }}";
+      }
+      root "{{ str(_tmp_dir) }}";
+      try_files /landing.html =404;
+    }
+
+    location ~ ^{{ join_routes(_config.PREFIX, '([^/]+)', '(.+)') }}$ {
+      {%- if _config.DATA_DIR.startswith('/') %}
+      root "{{ join_routes(_config.DATA_DIR, 'output') }}";
+      try_files "/$1/$2" =404;
+      {%- endif %}
+      {{ proxy('http://appyter', False, 'appyter-data') }}
+    }
+
+    location {{ join_routes(_config.PREFIX) }} {
+      {{ proxy('http://appyter', False, 'appyter-core') }}
+    }
+
+    {%- if _config.PREFIX %}
+    location / {
+      {%- if _config.PROXY %}
+      rewrite ^/?(.*)$ $proxied_proto://$proxied_host{{ _config.PREFIX }}$1 redirect;
+      {% else %}
+      rewrite ^/?(.*)$ {{ _config.PREFIX }}$1 redirect;
+      {%- endif %}
+    }
+    {%- endif %}
+  }
+}
