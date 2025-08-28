@@ -1,0 +1,329 @@
+Metadata-Version: 2.4
+Name: line-works-board
+Version: 0.1.1
+Summary: LINE WORKS掲示板APIのPython SDK
+Requires-Python: >=3.10
+Requires-Dist: cryptography>=41.0.0
+Requires-Dist: dotenv>=0.9.9
+Requires-Dist: pandas>=2.3.2
+Requires-Dist: pyjwt>=2.8.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: requests>=2.31.0
+Description-Content-Type: text/markdown
+
+# LINE WORKS Board API SDK
+
+LINE WORKS掲示板APIのPython SDKです。掲示板への投稿、コメント、更新、削除などの操作を簡単に行うことができます。
+
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+## 🚀 特徴
+
+- **簡単な操作**: シンプルなAPIで掲示板操作が可能
+- **型安全**: TypeHintによる型安全なコード
+- **JWT認証**: LINE WORKS APIの公式認証方式をサポート
+- **包括的**: 投稿の作成・更新・削除・取得・検索をフルサポート
+- **エラーハンドリング**: 詳細なエラー情報とステータスコード
+
+## 📦 インストール
+
+```bash
+uv add line-works-board
+```
+
+## 🔧 セットアップ
+
+### 1. LINE WORKS Developer Console設定
+
+1. [LINE WORKS Developer Console](https://developers.worksmobile.com/jp/console)にアクセス
+2. 新しいアプリを作成
+3. 掲示板APIの権限（`board`, `board.read`）を有効化
+4. クライアントID、クライアントシークレットを取得
+
+### 2. サービスアカウント設定
+
+1. LINE WORKS管理画面でサービスアカウントを作成
+2. RSA秘密鍵を生成・ダウンロード
+3. 秘密鍵をPEM形式で保存
+
+### 3. 環境変数設定
+
+`.env`ファイルを作成（推奨）：
+
+```bash
+# .env
+LINE_WORKS_CLIENT_ID=your_client_id
+LINE_WORKS_CLIENT_SECRET=your_client_secret
+LINE_WORKS_SERVICE_ACCOUNT=your_service_account@your-domain
+LINE_WORKS_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA...
+-----END RSA PRIVATE KEY-----"
+LINE_WORKS_BOARD_ID=your_board_id
+LINE_WORKS_DOMAIN=your-domain.worksmobile.com
+```
+
+## 🔥 クイックスタート
+
+```python
+import os
+from dotenv import load_dotenv
+from line_works_board import Board, BoardBody, ComposeBody
+
+# 環境変数を読み込み
+load_dotenv()
+
+# 掲示板設定
+board_body = BoardBody(
+    client_id=os.getenv('LINE_WORKS_CLIENT_ID'),
+    client_secret=os.getenv('LINE_WORKS_CLIENT_SECRET'),
+    service_account=os.getenv('LINE_WORKS_SERVICE_ACCOUNT'),
+    private_key=os.getenv('LINE_WORKS_PRIVATE_KEY'),
+    domain=os.getenv('LINE_WORKS_DOMAIN')
+)
+
+# 掲示板インスタンス作成
+board = Board(board_body, os.getenv('LINE_WORKS_BOARD_ID'))
+
+# 投稿作成
+compose_body = ComposeBody(
+    title="Hello, LINE WORKS!",
+    body="これは最初の投稿です。",
+    enableComment=True,
+    sendNotifications=True
+)
+
+response = board.compose(compose_body)
+if response.success:
+    print(f"投稿作成成功！ID: {response.data.get('id')}")
+else:
+    print(f"エラー: {response.error}")
+```
+
+## 📖 使用方法
+
+### 🗣️ 投稿の作成
+
+```python
+from line_works_board.types import ComposeBody
+from datetime import datetime, timedelta
+
+# 通常の投稿
+compose_body = ComposeBody(
+    title="通常の投稿",
+    body="投稿内容をここに書きます。",
+    enableComment=True,        # コメント許可
+    sendNotifications=True     # 通知送信
+)
+
+# 必読投稿（7日間）
+end_date = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
+must_read_body = ComposeBody(
+    title="【必読】重要なお知らせ",
+    body="必ずお読みください。",
+    mustReadEndDate=end_date,  # 必読終了日
+    enableComment=False,       # コメント無効
+    sendNotifications=True
+)
+
+response = board.compose(compose_body)
+```
+
+### ✏️ 投稿の更新
+
+```python
+updated_body = ComposeBody(
+    title="更新されたタイトル",
+    body="更新された内容です。",
+    enableComment=True,
+    sendNotifications=False    # 更新通知は送信しない
+)
+
+response = board.modify(updated_body, post_id="YOUR_POST_ID")
+```
+
+### 💬 コメントの投稿
+
+```python
+from line_works_board.types import ReplyBody
+
+reply_body = ReplyBody(
+    content="これはコメントです。"
+)
+
+response = board.reply(reply_body, post_id="YOUR_POST_ID")
+```
+
+### 🗑️ 投稿の削除
+
+```python
+response = board.delete(post_id="YOUR_POST_ID")
+```
+
+### 📄 データの取得
+
+```python
+# 特定の投稿を取得
+post = board.get_post(post_id="YOUR_POST_ID")
+
+# 投稿一覧を取得（最新20件）
+posts = board.get_posts(limit=20, offset=0)
+
+# コメント一覧を取得
+comments = board.get_replies(post_id="YOUR_POST_ID", limit=10)
+
+# 投稿を検索
+results = board.search_posts(query="重要", limit=10)
+
+# 掲示板情報を取得
+board_info = board.get_board_info()
+```
+
+## 🔍 テストスクリプト
+
+完全なテストスクリプトが含まれています：
+
+```bash
+# 認証テスト
+cd src/example
+uv run test_auth.py
+
+# 投稿作成テスト
+uv run compose_test.py
+
+# 投稿更新テスト
+uv run modify_posts.py
+
+# 投稿削除テスト
+uv run delete_posts.py
+
+# コメント機能テスト
+uv run reply_posts.py
+
+# 統合テスト
+uv run test_with_dotenv.py
+```
+
+## 📝 データ型
+
+### ComposeBody（投稿データ）
+
+```python
+@dataclass
+class ComposeBody:
+    title: str                              # 件名（必須、1-200文字）
+    body: str                               # 内容（必須、1-716800文字）
+    enableComment: Optional[bool] = True    # コメント許可フラグ
+    mustReadEndDate: Optional[str] = None   # 必読終了日（YYYY-MM-DD）
+    sendNotifications: Optional[bool] = True # 投稿通知送信フラグ
+```
+
+### ReplyBody（コメントデータ）
+
+```python
+@dataclass
+class ReplyBody:
+    content: str                            # コメント内容（必須）
+    attachments: Optional[List[Dict]] = None # 添付ファイル情報
+```
+
+### ApiResponse（レスポンス）
+
+```python
+@dataclass
+class ApiResponse:
+    success: bool                           # 成功フラグ
+    data: Optional[Any] = None              # レスポンスデータ
+    error: Optional[str] = None             # エラーメッセージ
+    status_code: Optional[int] = None       # HTTPステータスコード
+```
+
+## ⚡ パフォーマンス
+
+- **JWT認証**: 自動トークン管理・更新
+- **効率的なリクエスト**: 必要最小限のAPIコール
+- **エラー回復**: 適切なリトライとエラーハンドリング
+
+## 🛡️ エラーハンドリング
+
+```python
+response = board.compose(compose_body)
+
+if response.success:
+    # 成功時
+    post_id = response.data.get('id')
+    print(f"投稿作成成功: {post_id}")
+else:
+    # エラー時
+    print(f"エラーコード: {response.status_code}")
+    print(f"エラー内容: {response.error}")
+    
+    # 具体的なエラー対応
+    if response.status_code == 401:
+        print("認証エラー: 設定を確認してください")
+    elif response.status_code == 404:
+        print("掲示板IDが見つかりません")
+    elif response.status_code == 400:
+        print("リクエストパラメータに問題があります")
+```
+
+## 🎯 対応機能
+
+| 機能 | メソッド | 説明 |
+|------|----------|------|
+| ✅ 投稿作成 | `compose()` | 新しい投稿を作成 |
+| ✅ 投稿更新 | `modify()` | 既存の投稿を更新 |
+| ✅ 投稿削除 | `delete()` | 投稿を削除 |
+| ✅ 投稿取得 | `get_post()` | 特定の投稿を取得 |
+| ✅ 投稿一覧 | `get_posts()` | 投稿一覧を取得 |
+| ✅ コメント投稿 | `reply()` | 投稿にコメント |
+| ✅ コメント一覧 | `get_replies()` | コメント一覧を取得 |
+| ✅ 投稿検索 | `search_posts()` | キーワードで投稿を検索 |
+| ✅ 掲示板情報 | `get_board_info()` | 掲示板の基本情報を取得 |
+| ✅ 認証テスト | `test_auth()` | 認証状態をテスト |
+
+## 🔗 依存関係
+
+```toml
+[project]
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31.0",
+    "PyJWT>=2.8.0",
+    "cryptography>=41.0.0",
+    "python-dotenv>=1.0.0",
+]
+```
+
+## 📚 参考資料
+
+- [LINE WORKS Developer Guide](https://developers.worksmobile.com/jp/docs)
+- [LINE WORKS Board API](https://developers.worksmobile.com/jp/docs/board)
+- [JWT認証](https://developers.worksmobile.com/jp/docs/auth-jwt)
+
+## 🤝 コントリビューション
+
+1. このリポジトリをフォーク
+2. フィーチャーブランチを作成 (`git checkout -b feature/AmazingFeature`)
+3. 変更をコミット (`git commit -m 'Add some AmazingFeature'`)
+4. ブランチにプッシュ (`git push origin feature/AmazingFeature`)
+5. プルリクエストを作成
+
+## 📄 ライセンス
+
+このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。
+
+## 🆘 サポート
+
+問題が発生した場合は、以下をお試しください：
+
+1. **認証エラー**: クライアントID、シークレット、秘密鍵の設定を確認
+2. **404エラー**: 掲示板IDが正しいか確認
+3. **権限エラー**: LINE WORKS管理画面でAPI権限が有効になっているか確認
+
+## 💡 Tips
+
+- `.env`ファイルは`.gitignore`に追加してリポジトリにコミットしないでください
+- 秘密鍵は改行を含めて正確にコピーしてください
+- 必読投稿の日付は`YYYY-MM-DD`形式で指定してください
+- コメント無効の投稿にはコメントできません
