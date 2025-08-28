@@ -1,0 +1,335 @@
+# input at each level: a cypher.Entity (from previous level) and a token
+# choice of path at given level: the key that 'matches' the token
+
+# keys match the input token exactly, unless key starts with $, which
+# says to set the parameter ${parameter} to the value of the token.
+
+# The convention should be that the symbol is the handle of a Property,
+# and the value of that Property should be set to its contents:
+# $weight => P(handle="weight", value=$weight)
+
+# operations at each level - keys beginning with '_'
+# _node: name says, build a node N() with label 'name' to pass to next step
+# _prop: pname says, build a property P() with handle 'pname' and value =
+#        input token
+#  whose property? That of the node coming in to that level as the input
+#  entity; _not_ of a node defined at that level.
+#  For a _node definition that needs a property, expand the value of the
+#  _node key:
+#  _node:
+#    _label: <label>
+#    _prop: <prop handle> or { _handle: <prop handle>, _value: <value> }
+# _edge: rname says, build a triple between input (node) and _node
+#   _edge: { _type: rname, _dir: [_from|_to} } says, build triple from|to _node
+# _func: fname says, wrap the input entity in function fname and pass along
+# _return: ... says if this is the last token,
+#          walk complete, create condition clause from input entity and
+#          return clause as specified
+#   _return: _item(s)  says, return the input entity "verbatim" (_return(E)),
+#           after applying _func and other directives in the level
+# _return: _query: ... says, execute the following string of minicypher clauses inside
+#           a Statement() clause (with use_params=True)
+#
+# this file specifies the following valid paths:
+# /models
+# /models/count
+# /model/$model/nodes
+# /model/$model/nodes/count
+# /model/$model/node
+# /model/$model/node/$handle
+# /model/$model/node/$handle/properties
+# /model/$model/node/$handle/properties/count
+# /model/$model/node/$handle/property/$handle
+# /model/$model/node/$handle/property/$handle/terms
+# /model/$model/node/$handle/property/$handle/terms/count
+# /model/$model/node/$handle/property/$handle/term/$value
+# /tags
+# /tags/count
+# /tag/$key/$value
+# /tag/$key/$value/count
+# /term/$value
+# /term/$value/count
+# /terms/model-pvs/$model/$version/pvs
+# /terms/cde-pvs/$origin_id/$origin_version/pvs
+# /id/$nanoid
+
+paths:
+  models:
+    _node: model # m = N(label="model")
+    _return:
+      _nodes:
+        - model@models
+    count:
+      _return:
+        _nodes:
+          - "*"
+        _func: count@count
+  model:
+    _node: node # m = N(label="node")
+    $model: # ->m._add_props(P(handle="model",value=$model))
+      nodes:
+        _return:
+          _nodes:
+            - node@nodes
+        count:
+          _return:
+            _nodes:
+              - node
+            _func: count@count
+      node:
+        $handle: # -> m._add_props(P(handle="handle", value=$handle)
+          properties:
+            _node: property # n = N(label="property") - return this
+            _edge: has_property # t = R(type="has_property",m,n) - is a condition
+            _return:
+              _nodes:
+                - property@properties # _return(n)
+
+            count:
+              _return:
+                _nodes:
+                  - property # _return( count(n) )
+                _func: count@count
+          property:
+            _edge: has_property # t = R(type="has_property",m,n)
+            _node: property # n = N(label="property")
+            $handle:
+              _node: property # -> n._add_props(P(handle="handle", value=$handle))
+              terms: # incoming entity is t
+                _edge:
+                  _type: has_value_set # G(t, w) - path of 2 triples
+                  _join:
+                    - property
+                    - value_set
+                _node: # -> a Triple: w
+                  _label: term # z = N(label="term") is the "incoming" ent
+                  _node: value_set # v = N(label="value_set")
+                  _edge:
+                    _type: has_term
+                    _dir: _left # w = R(type="has_term").relate(z,v)
+                _return:
+                  _nodes:
+                    - term@terms
+                count:
+                  _return:
+                    _nodes:
+                      - "*"
+                    _func: count@count
+              term:
+                _node: term
+                $value:
+                  #_prop: value
+                  _return:
+                    _nodes:
+                      - term@term
+              _return:
+                _nodes:
+                  - property@property
+          _return:
+            _nodes:
+              - node@node
+      version:
+        $version:
+          nodes:
+            _return:
+              _nodes:
+                - node@nodes
+            count:
+              _return:
+                _nodes:
+                  - node
+                _func: count@count
+          node:
+            $handle: # -> m._add_props(P(handle="handle", value=$handle)
+              properties:
+                _node: property # n = N(label="property") - return this
+                _edge: has_property # t = R(type="has_property",m,n) - is a condition
+                _return:
+                  _nodes:
+                    - property@properties # _return(n)
+
+                count:
+                  _return:
+                    _nodes:
+                      - property # _return( count(n) )
+                    _func: count@count
+              property:
+                _edge: has_property # t = R(type="has_property",m,n)
+                _node: property # n = N(label="property")
+                $handle:
+                  _node: property # -> n._add_props(P(handle="handle", value=$handle))
+                  terms: # incoming entity is t
+                    _edge:
+                      _type: has_value_set # G(t, w) - path of 2 triples
+                      _join:
+                        - property
+                        - value_set
+                    _node: # -> a Triple: w
+                      _label: term # z = N(label="term") is the "incoming" ent
+                      _node: value_set # v = N(label="value_set")
+                      _edge:
+                        _type: has_term
+                        _dir: _left # w = R(type="has_term").relate(z,v)
+                    _return:
+                      _nodes:
+                        - term@terms
+                    count:
+                      _return:
+                        _nodes:
+                          - "*"
+                        _func: count@count
+                  term:
+                    _node: term
+                    $value:
+                      #_prop: value
+                      _return:
+                        _nodes:
+                          - term@term
+                  _return:
+                    _nodes:
+                      - property@property
+              _return:
+                _nodes:
+                  - node@node
+  tags:
+    _node: tag # g = N(label="tag")
+    _return:
+      _nodes:
+        - tag@tags
+    count:
+      _return:
+        _nodes:
+          - "*"
+        _func: count@count
+  tag:
+    _node: tag # g = N(label="tag")
+    $key: # -> g._add_props(P(handle="key", value=$key))
+      values:
+        _return:
+          _nodes:
+            - tag@tags
+          _path_id: tag_values
+        count:
+          _return:
+            _nodes:
+              - "*"
+            _func: count@count
+      $value: # g._add_props(P(handle="value",value=<_value>)); i = N(); R0(i, g)
+        entities:
+          _node: _var
+          _edge:
+            _type: has_tag
+            _dir: _left
+          _return:
+            _nodes:
+              - _var@entities
+            _path_id: tag_entities
+          count:
+            _return:
+              _nodes:
+                - "*"
+              _func: count@count
+  term:
+    _node: term # x = N(label="term")
+    $value:
+      _prop: value # x._add_prop(P(handle="value", value=$value))
+      _return:
+        _nodes:
+          - term@terms
+      count:
+        _return:
+          _nodes:
+            - "*"
+          _func: count@count
+    by-origin:
+      $origin_name:
+        $origin_id:
+          _return: _items
+          $origin_version:
+            _return: _items
+  terms:
+    model-pvs:
+      _node: node
+      $model:
+        $version:
+          pvs:
+            _node: property
+            _edge: has_property
+            _return:
+              _query: |
+                Match( ent ),
+                With( ''.join(['collect(',ent._to.var,') AS props'])),
+                Unwind('props AS prop'),
+                OptionalMatch( '(prop)-[:has_concept]->(c:concept)<-[:represents]-(cde:term)'),
+                Where('toLower(cde.origin_name) CONTAINS "cadsr"' ), 
+                OptionalMatch( '(prop)-[:has_value_set]->(:value_set)-[:has_term]->(t:term)'),
+                With( 'prop, cde.origin_id AS CDECode, cde.origin_version AS CDEVersion, cde.value AS CDEFullName, cde.origin_id + "|" + COALESCE(cde.origin_version, "") AS cde_hdl, collect(t) AS model_pvs, CASE WHEN cde IS NOT NULL THEN true ELSE false END AS has_cde'),
+                OptionalMatch('(v:value_set {handle: cde_hdl})-[:has_term]->(cde_pv:term)'),
+                With( 'prop, CDECode, CDEVersion, CDEFullName, model_pvs, has_cde, collect(cde_pv) AS cde_pvs'),
+                With( 'prop, CDECode, CDEVersion, CDEFullName, model_pvs, has_cde, cde_pvs, CASE WHEN has_cde AND size(cde_pvs) > 0 AND NONE(p in cde_pvs WHERE p.value =~ "https?://.*") THEN cde_pvs WHEN has_cde and size(cde_pvs) > 0 AND ANY(p in cde_pvs WHERE p.value =~ "https?://.*") AND size(model_pvs) > 0 THEN model_pvs WHEN NOT has_cde AND size(model_pvs) > 0 THEN model_pvs ELSE [null] END AS pvs'),
+                Unwind('pvs AS pv'),
+                OptionalMatch('(pv)-[:represents]->(c_cadsr:concept)<-[:represents]-(ncit_term:term {origin_name: "NCIt"}), (c_cadsr)-[:has_tag]->(:tag {key: "mapping_source", value: "caDSR"})'),
+                OptionalMatch('(ncit_term)-[:represents]->(c_ncim:concept)<-[:represents]-(syn:term), (c_ncim)-[:has_tag]->(:tag {key: "mapping_source", value: "NCIm"})'),
+                Where( 'pv <> syn and pv.value <> syn.value' ),
+                With( 'prop, CDECode, CDEVersion, CDEFullName, model_pvs, pv.value AS pv_val, ncit_term.origin_id AS ncit_oid, ncit_term.value AS ncit_value, collect(DISTINCT syn.value) AS distinct_syn_vals' ),
+                With( 'prop, CDECode, CDEVersion, CDEFullName, model_pvs, pv_val, ncit_oid, CASE WHEN ncit_value IS NOT NULL THEN distinct_syn_vals + [ncit_value] ELSE distinct_syn_vals END AS syn_vals' ),
+                With( 'prop, CDECode, CDEVersion, CDEFullName, model_pvs, collect({value: pv_val, synonyms: syn_vals, ncit_concept_code: ncit_oid}) AS formatted_pvs'),
+                Return( '$'+list(ent._from.props['model'].param)[0] + ' AS dataCommons', '$'+list(ent._from.props['version'].param)[0] + ' AS version, prop AS property, CDECode, CDEVersion, CDEFullName, formatted_pvs AS permissibleValues' )
+              _params: |
+                Match(ent)
+    cde-pvs:
+      _node: term
+      $origin_id:
+        $origin_version:
+          pvs:
+            _return:
+              _query: |
+                Match(f"({ent.var}:{ent.label} {{origin_id: ${list(ent.props['origin_id'].param)[0]} }})"),
+                Where("".join(["$",list(ent.props['origin_version'].param)[0]," = 'none'"]),
+                  ent.props['origin_version'], op='OR'),
+                OptionalMatch('(vs:value_set)-[:has_term]->(pv:term)'),
+                Where( "".join([
+                  'vs.handle = $', list(ent.props['origin_id'].param)[0],
+                  ' + \'|\' +', ' coalesce(',
+                  ent.var, '.origin_version', ', "")' ]) ),
+                With( "".join([ent.var, ', vs.url as value_set_url, COLLECT(pv) as pvs']) ),
+                With( "".join([ent.var, ', value_set_url, pvs, CASE WHEN size(pvs) > 0 THEN pvs ELSE [null] END as pvs_to_process']) ),
+                Unwind('pvs_to_process AS pv'),
+                OptionalMatch('(pv)-[:represents]->(c_cadsr:concept)<-[:represents]-(ncit_term:term {origin_name: "NCIt"}), (c_cadsr)-[:has_tag]->(:tag {key: "mapping_source", value: "caDSR"})'),
+                Where( 'pv IS NOT NULL' ),
+                OptionalMatch('(ncit_term)-[:represents]->(c_ncim:concept)<-[:represents]-(syn:term), (c_ncim)-[:has_tag]->(:tag {key: "mapping_source", value: "NCIm"})'),
+                Where( 'pv IS NOT NULL AND pv <> syn and pv.value <> syn.value' ),
+                With( "".join([ent.var, ', value_set_url, pvs, CASE WHEN pv IS NULL THEN null ELSE pv.value END as pv_val, CASE WHEN pv IS NULL THEN null ELSE ncit_term.origin_id END AS ncit_oid, CASE WHEN pv IS NULL THEN null ELSE ncit_term.value END AS ncit_value, collect(DISTINCT syn.value) AS distinct_syn_vals']) ),
+                With( "".join([ent.var, ', value_set_url, pvs, CASE WHEN pv_val IS NULL THEN [] ELSE COLLECT({value: pv_val, synonyms: CASE WHEN ncit_value IS NOT NULL THEN distinct_syn_vals + [ncit_value] ELSE distinct_syn_vals END, ncit_concept_code: ncit_oid}) END AS permissibleValues']) ),
+                Return( "".join([ent.var, '.origin_id AS CDECode, ', ent.var, '.origin_version AS CDEVersion, ', ent.var, '.value AS CDEFullName, permissibleValues']) )
+              _params: |
+                Match(ent)
+    all-pvs:
+      _return:
+        _query: |
+          Match('(cde:term)'),
+          Where('toLower(cde.origin_name) CONTAINS "cadsr"'),
+          With('cde'),
+          Match('(ent)-[:has_property]->(p:property)-[:has_concept]->(:concept)<-[:represents]-(cde)'),
+          Where('p.model IS NOT NULL AND p.version IS NOT NULL'),
+          With('cde, COLLECT(DISTINCT {model: p.model, version: p.version, property: ent.handle + "." + p.handle}) AS models'),
+          With('cde, models, cde.origin_id + "|" + COALESCE(cde.origin_version, "") AS cde_hdl'),
+          OptionalMatch('(prop:property)-[:has_concept]->(c:concept)<-[:represents]-(cde)'),
+          OptionalMatch('(prop)-[:has_value_set]->(:value_set)-[:has_term]->(model_pv:term)'),
+          With('cde, models, cde_hdl, COLLECT(DISTINCT model_pv) AS model_pvs'),
+          OptionalMatch('(vs:value_set {handle: cde_hdl})-[:has_term]->(cde_pv:term)'),
+          With('cde, models, model_pvs, COLLECT(DISTINCT cde_pv) AS cde_pvs'),
+          With('cde, models, model_pvs, cde_pvs, CASE WHEN size(cde_pvs) > 0 AND NONE(p in cde_pvs WHERE p.value =~ "https?://.*") THEN cde_pvs WHEN size(cde_pvs) > 0 AND ANY(p in cde_pvs WHERE p.value =~ "https?://.*") AND size(model_pvs) > 0 THEN model_pvs ELSE [null] END AS pvs'),
+          Where('size(pvs) > 0'),
+          Unwind('pvs AS pv'),
+          OptionalMatch('(pv)-[:represents]->(c_cadsr:concept)<-[:represents]-(ncit_term:term {origin_name: "NCIt"}), (c_cadsr)-[:has_tag]->(:tag {key: "mapping_source", value: "caDSR"})'),
+          OptionalMatch('(ncit_term)-[:represents]->(c_ncim:concept)<-[:represents]-(syn:term), (c_ncim)-[:has_tag]->(:tag {key: "mapping_source", value: "NCIm"})'),
+          Where('pv IS NOT NULL AND pv <> syn AND pv.value <> syn.value'),
+          With('cde, pv, models, pv.value as pv_val, ncit_term.origin_id AS ncit_oid, ncit_term.value AS ncit_value, COLLECT(DISTINCT syn.value) AS distinct_syn_vals'),
+          With('cde, models, pv_val, ncit_oid, CASE WHEN ncit_value IS NOT NULL THEN distinct_syn_vals + [ncit_value] ELSE distinct_syn_vals END AS syn_vals'),
+          With('cde, models, CASE WHEN pv_val IS NOT NULL THEN COLLECT({value: pv_val, synonyms: syn_vals, ncit_concept_code: ncit_oid}) ELSE [] END AS formatted_pvs'),
+          Return('cde.origin_id AS CDECode, cde.origin_version AS CDEVersion, cde.value AS CDEFullName, models, formatted_pvs AS permissibleValues')
+  id:
+    _node: _var
+    $nanoid:
+      _return: _items
