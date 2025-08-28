@@ -1,0 +1,120 @@
+{% load i18n %}
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+<style type="text/css">
+
+.media-select {
+    width: 600px;
+}
+
+
+.media-select input[type='text']{
+    width: 90%;
+}
+
+.media-select-item {
+    text-overflow: ellipsis;
+    white-space:  nowrap;
+    overflow: hidden;
+    width: 100%;
+    display: inline-block;
+}
+
+.media-select-item-wrapper {
+    width: 90%;
+    height: 250px;
+    overflow: auto;
+    border: 1px solid #ccc;
+}
+
+</style>
+
+<script type="text/javascript">
+  var generateMediaRow = function(name, value, thumb, label, checked) {
+    var template = [
+        "<li class='media-select-item checkbox-row'>",
+            "<label for='id_<<name>>_<<value>>'>",
+                "<img src='<<thumb>>' width='50' height='50' />",
+                "<input style='display: inline-block;' id='id_<<name>>_<<value>>' name='<<name>>' type='checkbox' value='<<value>>' required='' <<checked>> > <span> <<label>> </span>",
+            "</label>",
+        "</li>"
+    ].join('\n');
+    template = template.replace(/<<name>>/g, name);
+    template = template.replace(/<<value>>/g, value);
+    template = template.replace(/<<thumb>>/g, thumb);
+    template = template.replace(/<<label>>/g, label);
+    template = template.replace(/<<checked>>/g, checked);
+    return template
+  };
+</script>
+
+<div class='media-select'>
+    <div>
+        <input type="text" name="" id="id_search_checkbox_{{name}}" placeholder="{% trans 'Search image...' %}">
+    </div>
+    <div>
+        <ul id="id_checkbox_{{name}}" class="media-select-multiple media-select-item-wrapper">
+
+        </ul>
+    </div>
+</div>
+<input type="hidden" id="id_{{name}}">
+
+<script type="text/javascript">
+    setTimeout(function() {
+      (function($) {
+
+        {% for choice in choices %}
+        var row = generateMediaRow(
+          '{{name}}', '{{choice.value}}',
+          '{{choice.thumb}}', '{{choice.label}}',
+          {% if choice.selected %}'checked'{%else%}''{% endif %}
+        );
+        $("#id_checkbox_{{name}}").append(row);
+        {% endfor %}
+
+        if (!window._dismissAddRelatedObjectPopup) {
+            window._dismissAddRelatedObjectPopup = window.dismissAddRelatedObjectPopup;
+        }
+
+        window.dismissAddRelatedObjectPopup = function (win, newId, newRepr) {
+          var name = windowname_to_id(win.name);
+          var elem = document.getElementById(name);
+          if (elem) {
+              $(elem).data('repr', JSON.parse(newRepr));
+          }
+          window._dismissAddRelatedObjectPopup(win, newId, newRepr);
+        }
+
+        console.log($('#id_search_checkbox_{{name}}'));
+
+        $('#id_search_checkbox_{{name}}').on('keyup', function() {
+          $('#id_checkbox_{{name}} li').hide();
+          $('#id_checkbox_{{name}} li:contains(' + $(this).val() + ')').show();
+        });
+
+        $('#id_{{name}}').on('change', function(e) {
+          var data = $(this).data().repr;
+          var row = generateMediaRow('{{name}}', data.id, data.thumbnail, data.label, 'checked');
+          var row_not_checked = generateMediaRow('{{name}}', data.id, data.thumbnail, data.label, '');
+          $("#id_checkbox_{{name}}").append(row)
+          $(".media-select-multiple").each(function () {
+            if ($(this).attr('id') != 'id_checkbox_{{name}}') {
+              $(this).append(row_not_checked);
+            }
+          });
+        });
+
+        $( function() {
+          $( "#id_checkbox_{{name}}" ).sortable();
+          $( "#id_checkbox_{{name}}" ).disableSelection();
+        });
+
+      })($);
+    }, 50);
+</script>
+<script>
+
+</script>
