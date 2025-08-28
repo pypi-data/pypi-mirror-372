@@ -1,0 +1,75 @@
+# AIAuto - Hyperparameter Optimization Client Library
+
+AIAuto는 Kubernetes 기반의 분산 HPO(Hyperparameter Optimization) 시스템을 위한 클라이언트 라이브러리입니다.
+사용자 python lib <-> Next.js 서버 사이 gRPC 통신 담당
+
+## lib build
+- `make build push` 
+  
+## 설치
+- `uv add aiauto-client`
+
+## 빠른 시작
+
+### Study 생성 및 Ask/Tell 패턴
+```python
+import aiauto
+
+# StudyWrapper 생성 (JWT 토큰 필요)
+studyWrapper = aiauto.create_study(
+    study_name='my_optimization',
+    token='your_jwt_token',
+    direction='maximize'
+)
+
+# 실제 optuna.Study 객체 획득 (로컬에서 ask/tell 가능)
+study = studyWrapper.get_study()
+
+# Ask/Tell 패턴으로 최적화
+trial = study.ask()
+params = trial.params
+
+# 사용자 모델 학습
+accuracy = train_model(params)
+
+# 결과 보고
+study.tell(trial, accuracy)
+```
+
+### 분산 최적화 (Pod 실행)
+```python
+import aiauto
+
+def objective(trial):
+    tc = aiauto.TrialController(trial)
+    
+    # 하이퍼파라미터 샘플링
+    lr = trial.suggest_float('lr', 1e-5, 1e-1, log=True)
+    batch_size = trial.suggest_int('batch_size', 16, 128)
+    
+    # 모델 학습 로직
+    accuracy = train_model(lr, batch_size)
+    
+    tc.log(f'lr: {lr}, batch_size: {batch_size}, accuracy: {accuracy}')
+    
+    return accuracy
+
+# StudyWrapper 생성
+studyWrapper = aiauto.create_study(
+    study_name='distributed_optimization',
+    token='your_jwt_token',
+    direction='maximize'
+)
+
+# 분산 최적화 실행 (Kubernetes Pod에서 실행)
+studyWrapper.optimize(
+    objective=objective,
+    n_trials=100,
+    parallelism=4,
+    requirements_list=['torch==2.0.0', 'torchvision==0.15.0']
+)
+
+# 실시간 상태 모니터링
+status = studyWrapper.get_status()
+print(f"Active: {status['count_active']}, Completed: {status['count_completed']}")
+```
