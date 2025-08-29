@@ -1,0 +1,1 @@
+#Plot the bid-ask curves of 'EUR_GBP_FxForward' LSEG curve with valuation date as of today
