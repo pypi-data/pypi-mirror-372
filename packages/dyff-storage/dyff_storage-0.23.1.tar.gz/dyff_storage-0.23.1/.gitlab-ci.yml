@@ -1,0 +1,77 @@
+# SPDX-FileCopyrightText: 2024 UL Research Institutes
+# SPDX-License-Identifier: Apache-2.0
+
+stages:
+  - test
+  - build
+  - deploy
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - when: always
+
+variables:
+  PYTHON_REQUIREMENTS: .
+  # prettier-ignore
+  PYTHON_VERSION: '3.12'
+  PYTHON_PACKAGE: dyff/storage
+
+include:
+  - project: saferatday0/library/gitlab
+    ref: 0.17.0
+    file:
+      - gitlab-release.yml
+  - project: saferatday0/library/detect-secrets
+    ref: 0.7.1
+    file:
+      - detect-secrets.yml
+  - project: saferatday0/library/prettier
+    ref: 0.6.0
+    file:
+      - prettier.yml
+  - project: saferatday0/library/python
+    ref: 0.21.1
+    file:
+      - python-autoflake.yml
+      - python-isort.yml
+      - python-black.yml
+      - python-pytest.yml
+      - python-pyroma.yml
+      - python-build-sdist.yml
+      - python-build-wheel.yml
+      - python-twine-upload.yml
+      - python-vulture.yml
+      - python-docformatter.yml
+  - project: saferatday0/library/skywalking-eyes
+    ref: 0.7.0
+    file:
+      - license-eye-header-check.yml
+
+dyff-audit-install-test:
+  stage: test
+  image: ${CONTAINER_PROXY}python:3.12-bookworm
+  cache: {}
+  dependencies: []
+  variables:
+    # prettier-ignore
+    GIT_DEPTH: '1'
+    GIT_SUBMODULE_STRATEGY: none
+  script:
+    - pip install .
+    - python3 -c 'from dyff.storage.backend.s3.storage import S3StorageBackend'
+    - python3 -c 'from dyff.schema.platform import InferenceService'
+
+python-pytest:
+  parallel:
+    # prettier-ignore
+    matrix:
+      - PYTHON_VERSION: ['3.10', '3.11', '3.12']
+
+python-twine-upload-pypi:
+  extends: python-twine-upload
+  variables:
+    TWINE_USERNAME: __token__
+    TWINE_PASSWORD: $PYPI_API_TOKEN
+    TWINE_REPOSITORY_URL: https://upload.pypi.org/legacy/
