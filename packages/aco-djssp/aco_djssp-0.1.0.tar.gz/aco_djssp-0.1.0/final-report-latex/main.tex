@@ -1,0 +1,372 @@
+% Document class `report-template` accepts either project-plan or final-report option in
+% []. This will change the title page as necessary.
+\documentclass[final-report]{report-template}
+% \documentclass[final-report]{report-template}
+
+% Packages I use in my report.
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{algpseudocode, algorithm}
+\usepackage[backend=biber, style=numeric, sorting=nyt]{biblatex}
+\addbibresource{references.bib}
+\usepackage{tabularx}
+
+
+% Directory where I saved my figures.
+\graphicspath{{./figures/}}
+
+% Metadata used for the title page
+\university{Imperial College London}
+\department{Department of Earth Science and Engineering}
+\course{MSc in Environmental Data Science and Machine Learning}
+\title{Dynamic Fault-Tolerant Job Shop Scheduling using Ant Colony Optimisation}
+\author{Benjamin Gorrie}
+\email{bg721@ic.ac.uk}
+\githubusername{esemsc-bg721}
+\supervisors{Dr Marijan Beg\\
+             Dr Parastoo Salah}
+\repository{https://github.com/ese-ada-lovelace-2024/irp-bg721}
+
+\begin{document}
+
+\maketitlepage  % generate title page
+
+% Abstract
+\section*{Abstract}
+In this project plan, we aim to describe how Ant Colony Optimisation (ACO) can be applied to a Dynamic Job Shop Scheduling Problem (DJSSP), particularly one in which faults may occur. We outline why ACO is well-suited to this task and why this is an important problem to solve. We will compare the results to a naive greedy rescheduling algorithm.
+
+\tableofcontents
+
+% Introduction section
+\section{Introduction}
+Ant Colony Optimisation (ACO) is a technique which is inspired by how ants forage for food. ACO can be used to find ``good" paths through graphs by simulating many digital agents (ants) and letting them traverse the graph, leaving behind trails of pheromones of different intensities depending on how good the final path is. As the ants are more attracted to paths with higher pheromone levels, this leads to ants converging on the path with the strongest pheromone trail, usually a near-optimal path.
+
+ACO can be used to solve problems which can therefore be reduced to finding paths through graphs. There are many applications of this in practice (see \cite{enwiki:1292514538}), with the most notable perhaps being vehicle routing and scheduling. These are not new problems, and there already exists extensive literature covering both of them. There are also excellent Python packages available for both of these applications \cite{Wouda_Lan_Kool_PyVRP_2024} \cite{jobshoplib}. However, most of the existing literature covers static problems, where the edges and vertices of the graph we wish to find a path through are known in advance and do not change. Similarly, there does not appear to be a widely used Dynamic Job Shop Scheduling (scheduling where the set of jobs can change in real time) or dynamic routing Python package. 
+
+Thus, the aim of the project will be to create a Python package that addresses the Dynamic Job Shop Scheduling Problem (DJSSP) using ACO. As the pheromone trails that ants leave behind can be reused, ACO should be a particularly efficient way of finding a new schedule as good connections between vertices do not need to be recalculated, and a new schedule does not need to be computed from scratch. 
+
+
+\section{Problem Description}
+\subsection{Ant Colony Optimisation} \label{ACO}
+As previously described, ACO is a metaheuristic introduced by Marco Dorigo \cite{484436} used to find paths through graphs. Assuming we start with $m$ ants, the $k$\textsuperscript{th} ant starts at a vertex $i$ and moves to a previously unvisited vertex $j$ at time $t$ with probability 
+\begin{equation*}
+    p_{ij}^k(t) = \frac{\left[\tau_{ij}(t)\right]^\alpha \cdot \left[\eta_{ij}\right]^\beta}{\sum_{k \in \text{allowed}_k}\left[\tau_{ik}(t)\right]^\alpha \cdot \left[\eta_{ik}\right]^\beta}
+\end{equation*}
+where we assume that $j\in \text{allowed}_k$, else the above quantity is 0. $\tau_{ij}(t)$ and $\eta_{ij}$ are at the core of the algorithm and require a bit of explaining.
+
+$\tau_{ij}(t)$ is the strength of pheromone deposited from vertex $i$ to $j$ at time $t$, which is updated each time the ants complete a cycle through the graph (every $n$ iterations of the algorithm) according to the following formula:
+\begin{equation*}
+    \tau_{ij}(t + n) = \rho\cdot\tau_{ij}(t) + \sum_{k=1}^m\Delta\tau_{ij}^k
+\end{equation*}
+where $\rho$ is a coefficient which determines how quickly pheromones evaporate along edges\footnote{Note that $\rho$ must be less than 1 to prevent unlimited accumulation of pheromones.} and $\Delta\tau_{ij}^k$ is the amount per unit length of pheromone left on edge $(i, j)$ by ant $k$ between time $t$ and $t + n$ which is given by
+\[
+\Delta\tau_{ij}^k = 
+\begin{cases}
+    \frac{Q}{L_k} & \text{if ant $k$ uses edge $(i, j)$ in its cycle}\\
+    0 & \text{otherwise}
+\end{cases}
+\]
+where $Q$ is a constant and $L_k$ is the cycle length of the ant. Note that ``length" depends on what the application of ACO is, for example in the case of the Traveling Salesman Problem \cite{enwiki:1292600322} we are simply considering the Euclidean distance between vertices, but in the DJSSP we could be considering time between vertices (jobs).
+
+$\eta_{ij}$ is a quantity known as the visibility from vertex $i$ to vertex $j$. It is defined as $\frac{1}{d_{ij}}$, where $d_{ij}$ is the Euclidean distance between vertex $i$ and vertex $j$ in the case of a routing problem like the TSP, but could be the time between job $i$ and job $j$ in the case of the DJSSP. 
+
+Finally, $\alpha$ and $\beta$ are constants which determine the relative importance of pheromone strength and visibility when an ant has to choose to move to a different vertex. For example, setting $\alpha = 0$ will lead to pheromones being ignored and the result is a stochastic greedy algorithm. Optimal parameters are hard to determine for a particular problem, and are normally found experimentally \cite{ant_parameters}.
+
+Thus, as we can see, each ant chooses a new node based on a combination of pheromone strength and visibility. As the result is a probability, it is possible for ants to explore new paths even if a good path has already been found. However, premature convergence (whereby ants settle on a locally optimal path too early) is still an issue to watch out for, and we discuss later how we mitigate this.
+
+We show below an example on the Oliver30 nodes \cite{oliver30} where we use ACO to solve the TSP. We start off with our non-trivial nodes as shown in Figure \ref{fig:oliver30-nodes} and the ants produce a closed path shown in Figure \ref{fig:oliver30-path}, which is very close to the known optimal (shortest) path.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/oliver30_nodes.png}
+    \caption{Oliver30 nodes}
+    \label{fig:oliver30-nodes}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/oliver30_path.jpg}
+    \caption{ACO-produced path on Oliver30}
+    \label{fig:oliver30-path}
+\end{figure}
+
+
+\subsection{Dynamic Job Shop Scheduling Problem}
+
+The Dynamic Job Shop Scheduling Problem (DJSSP) extends the classic Job Shop Scheduling Problem (JSSP), whereby a set of jobs (a sequence of operations), must be scheduled on a finite set of machines. Each operation requires exclusive access to a specific machine for a known duration, and must be performed in a strict order. The goal is typically to minimise some metric of interest, such as makespan (total completion time), total tardiness, or machine idle time, while satisfying all operational constraints.
+
+In the DJSSP, the scheduling environment can change over time. For example, new jobs may arrive unpredictably (e.g. emergency surgeries in a hospital), machines may break down, or previously scheduled operations may be delayed (e.g. an operation overruns). This introduces considerable complexity, as a previously valid schedule may become infeasible or suboptimal. The DJSSP thus requires rescheduling capabilities that are both fast and minimally disruptive.
+
+\subsection{ACO applied to DJSSP}
+
+Ant Colony Optimisation can be naturally extended to the DJSSP by interpreting the graph as a dynamic state space of partial schedules. Each vertex represents a possible operation assignment (job, machine, time), and ants construct feasible schedules by selecting valid next operations based on pheromone strength and heuristic information (operation priority, remaining slack time). When a disruption occurs, the affected corresponding operations are temporarily removed from the feasible set, and the ants go over the remaining schedule. Importantly, the pheromone trails left by previous solutions will be preserved, allowing ants to reuse previously computed good partial schedules and adapt quickly to the new constraints. This mechanism of distributed, memory-guided rescheduling makes ACO a promising method for solving DJSSP instances in environments where flexibility and reliability are essential, such as healthcare logistics.
+
+\section{Significance}
+There are many applications of DJSSP, spanning manufacturing, logistics \cite{jssp-manufacturing} and healthcare \cite{jssp-healthcare}. In static environments, traditional solvers and heuristics such as branch and bound, tabu search, and genetic algorithms perform well \cite{Wouda_Lan_Kool_PyVRP_2024}. However, most real-world applications tend to be dynamic, and we can never be certain if, in the context of a hospital, an emergency may arise or a ward might be full.
+
+In certain scenarios, dynamic rescheduling after a disruption can unfortunately have life-changing consequences. A scheduling algorithm that is robust to change, adaptive to new constraints, and fast enough to produce feasible re-optimisations on the fly is of high practical value.
+
+ACO should be well-suited to such dynamic scenarios, as it is fast and has natural memory in its pheromone trails. By building a Python package for solving the DJSSP (with an emphasis placed on faults, the goal is not to reinvent SLURM \cite{slurm}), this project aims to fill a tooling gap in the applied scheduling community.
+
+\section{Review of Existing Work}
+As aforementioned, the static JSSP has been extensively studied \cite{jssp}\cite{jssp-healthcare}\cite{jssp-manufacturing}, and there exist Python packages that solve it \cite{jobshoplib}, usually using metaheuristic approaches like Genetic Algorithms. The DJSSP has been less thoroughly examined, although there are a few papers where ACO is used to solve DJSSP (\cite{ELCOCK2023100280}\cite{acodjssp}). However, these papers are proof of concept, with no open-source code or packages.
+To the best of our knowledge, there is no widely used, open-source Python package specifically targeting DJSSP with an ACO-based solver that can dynamically adjust schedules in real-time, which is where this project's novelty lies. Moreover, Genetic Algorithms are unsuitable for DJSSP as they need complete reinitialisation upon change, and Tabu search lacks memory reuse from past schedules, while ACO allows adaptive reuse of partial paths, making it better suited for dynamic scheduling environments.
+
+\section{Implementation}
+Our implementation aims to translate the Dynamic Job Shop Scheduling Problem into a construction graph that ants can traverse, while preserving enough structural information to react quickly to disruptions. We first formalise the dynamic problem and describe the decoder that turns a sequence of operations into a concrete schedule. We then explain how the construction graph, heuristic visibility, priority system, and MMAS update rules interact to produce candidate schedules. Finally, we define the composite objective, detail how dynamic events are handled, and outline the use of local search and stagnation control mechanisms.
+
+\subsection{Formal model of the DJSSP}
+We consider a set of jobs $\mathcal{J}$, each job $J$ being an ordered list of operations $\mathcal{O}_J = (o_{J,1},\dots,o_{J,k_J})$. Each operation $o$ requires a specific machine $m(o)$ for a processing time $p(o)$. Precedence constraints enforce $o_{J,\ell}$ precedes $o_{J,\ell+1}$, and machine constraints enforce that a machine processes
+at most one operation at a time.
+
+At decision time $t$, the environment may change, as new jobs may arrive or some operations may overrun. We let $\mathcal{O}^{\le t}$ denote all operations which have already started before $t$. These are \emph{frozen} as they have already started, and therefore cannot be rescheduled. A schedule is a mapping $s: \mathcal{O} \to \mathbb{N}$ with start times $s(o)$ and finish times $f(o) = s(o) + p(o)$, ensuring correct operation precedence and machine exclusivity. The makespan is $M = \max_{o\in\mathcal{O}} f(o)$.
+
+\subsection{Sequence decoder}
+We represent a possible solution as a sequence of operations, this is what the ants will traverse. A decoder maps a sequence to start times by scanning operations and assigning each to the earliest feasible time respecting constraints. Operations in $\mathcal{O}^{\le t}$ are fixed at their initial times and are skipped during placement.
+
+We now specify the construction graph and the heuristic information that guide ants to build those sequences.
+
+\subsection{Construction graph and heuristic visibility}
+At any iteration of the algorithm, ants only consider operations whose predecessors already are scheduled and whose machines are free. Ant $k$ selects the next feasible operation $j$ after operation $i$ with probability
+\begin{equation*}
+    p_{ij}^k(t) = \frac{\left[\tau_{ij}(t)\right]^\alpha \cdot \left[\eta_{ij}\right]^\beta}{\sum_{k \in \text{allowed}_k}\left[\tau_{ik}(t)\right]^\alpha \cdot \left[\eta_{ik}\right]^\beta}
+\end{equation*}
+as previously described.
+
+We defined visibility as a function of the candidate operation only. We combined inverse processing time of the candidate operation, a priority weight and the number of remaining operations in the job. This gave the following:
+\[
+\eta_{ij} = \text{prio score} \cdot \frac{1}{\varepsilon + w_1p(o_j) + w_2 (k_J - j)}
+\]
+where $p(o_j)$ is the processing time of operation $j$ and $(k_J - j)$ is the number of remaining operations in the job after operation $j$. Prio score is simply a priority score which we assign to each operation (higher meaning higher priority), and $\varepsilon$ is just a small positive constant to prevent divisions by 0. The weights $w_1$ and $w_2$ are a personal choice. Not only are they problem specific (which make them hard to tune anyway \cite{ant_parameters}), but they represent a different prioritisation, with higher $w_1$ giving more importance to processing times, and higher $w_2$ focusing more on the number of remaining operations. Both approaches may be useful in different contexts. In our case, we chose $w_1 = 0.8$ and $w_2 = 0.2$.
+
+
+\subsection{Priority system}
+In order to model new jobs needing immediate attention (such as emergencies in a hospital), we implemented a way to prioritise operations. Each operation is given a priority number in $[0, \infty)$, with 0 being maximum priority, meaning these are scheduled immediately without fail. Note that if these operations land on the critical path, this will certainly have a large impact on the cost of the schedule. Operations with a higher priority are seen as more desirable candidates to the ants as the priority score impacts the visibility of a specific operation, so they are more likely to be chosen over other candidates (although the operation is only guaranteed to be chosen if the priority is set to maximum).
+
+This enables us to be fairly smart about how we model certain events. For example, a job overrunning can now simply be represented as an operation with maximum priority scheduled immediately after the current operation ends. If an urgent new job comes, it will be given high/maximum priority. Similarly, we can be smart about things like padding (for example, if we require 15 minutes of rest after an operation is finished, we can simply add that time into the processing time for the operation).
+
+\subsection {Cost function}
+Looking back at our previous TSP example, the idea of a cost which we aim to minimise is well defined: we aim to find the shortest possible path connecting all of the nodes, so we aim to minimise the total distance of the path produced by the algorithm.
+
+In the case of a static JSSP, this idea is also fairly intuitive: we have a known set of operations which require a specific machine for a predetermined amount of time, and we therefore (usually) aim to minimise the makespan of the schedule.
+
+In the case of the DJSSP, there are more options due to the dynamic nature of the problem. We could choose to still simply minimise makespan, but a more useful metric in practical terms will likely involve some measure of ``disruptiveness". By this, we mean that once a schedule has been decided upon, it is likely that, when a new job is added or a job overruns, we wish to find a new schedule in such a way that the existing schedule is minimally modified. Of course, we will also want to take makespan into account as simply adding new jobs to the end of the schedule, while effective in the sense that the existing schedule is not changed at all, is sometimes not practical in real world applications. For example, if a hospital finds that a new patient needs immediate attention, we cannot simply schedule him at the end of the day.
+
+We define ``disruptiveness" more concretely here as it will be a core part of our cost function. We will let "disruptiveness" be the sum of absolute deviations in start times for previously scheduled operations that have not yet started. This means that if we had previously defined a schedule and we wish to schedule a new job at $t=25$, then operations which started before $t=25$ cannot be modified, as they would have already happened. Thus, we have disruptiveness $D$ defined as 
+\[
+D = \sum |s_i^{\text{new}} - s_i^{\text{old}}|
+\]
+where $s_i^{\text{new}}$ is the new start time of operation $i$ and $s_i^{\text{old}}$ is the old start time of operation $i$. 
+
+Using this metric, we can combine it with makespan $M$, which is simply the length of time that elapses from the start of the schedule until the end, and create our cost function, which we define as 
+\[
+f = M + \lambda \cdot D,
+\]
+where $\lambda \in [0, \infty)$ is a parameter which determines how much to prioritise disruptiveness over makespan. By default, this is set to one, so both components are given equal weight. Moving forward, whenever we refer to a ``cost", we will be talking about this metric.
+
+\subsection{Pheromone Matrix}
+A key component of any ACO algorithm is the pheromone matrix. In the context of the TSP, the pheromone matrix is a two dimensional array $\tau \in \mathbb{R}^{n \times n}$ where $\tau_{ij}$ represents the pheromone strength on the edge from city $i$ to city $j$. We use a similar structure for the DJSSP: each entry $\tau_{ij}$ corresponds to the pheromone level associated with scheduling operation $j$ immediately after operation $i$.
+
+Formally, given a set of operations $\mathcal{O} = \{o_1, o_2, \dots, o_n\}$, we define the pheromone matrix as
+\[
+\tau = 
+\begin{bmatrix}
+\tau_{11} & \tau_{12} & \cdots & \tau_{1n} \\
+\tau_{21} & \tau_{22} & \cdots & \tau_{2n} \\
+\vdots & \vdots & \ddots & \vdots \\
+\tau_{n1} & \tau_{n2} & \cdots & \tau_{nn} \\
+\end{bmatrix}.
+\]
+When an ant constructs a schedule, it effectively generates a path through this matrix by repeatedly selecting the next operation according to the probabilistic transition rule discussed in \ref{ACO}. High values of $\tau_{ij}$ indicate that placing operation $j$ after operation $i$ has led to high-quality schedules. 
+
+\subsubsection{Information retention}
+As previously mentioned, one of the most appealing features of ACO in the dynamic setting is that the pheromone matrix retains information across rescheduling events. When a disruption occurs (e.g., a new job arrives, or a machine breaks down), the pheromone trails from the previous optimisation are not discarded. This means that good local structures (sub-sequences of operations that were effective in the old schedule) are still favoured when constructing the new schedule.
+
+For example, suppose operations $o_4 \rightarrow o_7 \rightarrow o_{12}$ formed a high-quality partial schedule before a new urgent job was introduced at $t = 25$. Even though the global schedule is no longer valid, the corresponding pheromone levels $\tau_{4,7}$ and $\tau_{7,12}$ will remain high. Thus, ants constructing the new solution will tend to preserve this subsequence, significantly reducing search time compared to methods that restart optimisation from scratch, such as Genetic Algorithms \cite{8502560}.
+
+Figure \ref{fig:pheromone-matrix} shows a schematic pheromone matrix before and after a rescheduling event. The high values along the $o_4 \rightarrow o_7 \rightarrow o_{12}$ subsequence are preserved, guiding ants towards reusing these building blocks when adapting to the new constraints.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figures/pheromone_matrix_example.png}
+    \caption{Illustration of the pheromone matrix before (left) and after (right) a rescheduling event. The darker entries correspond to higher pheromone levels, which are reused when new jobs are added.}
+    \label{fig:pheromone-matrix}
+\end{figure}
+
+This ability to carry forward partial solutions distinguishes ACO from many other metaheuristics. Genetic Algorithms, for instance, rely on evolving a population of candidate solutions; when the problem instance changes, these solutions often become infeasible, requiring full reinitialisation. Tabu search similarly lacks a persistent memory of reusable subsequences. In contrast, ACO's pheromone matrix encodes structural information about good schedules that is robust to moderate changes in the problem, making it particularly well-suited to dynamic scheduling.
+
+In practice, the pheromone matrix is initialised to a uniform value $\tau_{\max} + \epsilon$, where $\epsilon > 0$ is a small constant ensuring that exploration dominates in early iterations. After each cycle, only the best solution (global best or iteration best, depending on the update rule) contributes to pheromone reinforcement, as we will discuss later. This gradually skews the matrix toward high-quality sequences, while still allowing exploration of alternatives through the stochastic transition rule.
+
+\subsection{Pheromone Resetting and Stagnation Control}
+
+While the pheromone matrix provides a mechanism that enables reuse of high-quality partial schedules, it also introduces a risk of \emph{search stagnation}. This occurs when a subset of edges accumulates disproportionately high pheromone levels, causing nearly all ants to follow the same path. Once this happens, exploration of new solutions is drastically reduced, and the colony may become trapped in a local optimum \cite{484436}.
+
+In the context of the DJSSP, this issue is particularly pronounced: after a disruption, the optimal schedule may be structurally different from the previous one. If the pheromone matrix remains overly biased toward outdated subsequences, ants may continue to reinforce suboptimal patterns, failing to adapt to the new constraints. 
+
+There are several ways that we can deal with this. The most obvious way of dealing with this is by reducing the $\alpha$ parameter in \ref{ACO}, which would give less importance to pheromone strength when an ant chooses a path. However, this means that the decisions of the ants at any given stage are now mostly guided by the visibility $\eta_{ij}$, which does not change over time. This therefore leads to a situation where the ants will in fact likely converge even faster than before as their behaviour is now less influenced by a changing pheromone trail and is now mostly dependent on static visibility values.
+
+
+We can also try to change $\rho$ in \ref{ACO}. This ensures that unused edges gradually lose influence over time. In the Max–Min Ant System (MMAS), pheromone values are further restricted to lie within $[\tau_{\min}, \tau_{\max}]$, preventing any edge from becoming overwhelmingly dominant (more on this later). However, even with these safeguards, long runs or sudden changes in the scheduling environment can still cause the search to become biased. Moreover, finding an optimal combination of parameters is highly problem-dependent, as described in \cite{ant_parameters}. In a situation where we are trying to deal with potentially rapidly changing schedules, we do not want to have to recompute which parameters we should be using.
+
+
+
+\subsubsection{Explicit Resetting Strategy}
+To address this, we periodically reset the pheromone matrix to its initial uniform value $\tau_{\max}$. This is triggered when the colony fails to improve upon the global best solution for a user-defined number of iterations, which we denote $N_{\text{stagnation}}$. 
+
+Formally, we have:
+\[
+\text{if } \Delta f^{\text{global}} = 0 \quad \forall \text{ iterations in } [t, t+N_{\text{stagnation}}], \quad \tau_{ij}(t+1) \gets \tau_{\max}, \; \forall (i,j).
+\]
+Here $\Delta f^{\text{global}}$ denotes the improvement in the global best cost function across consecutive iterations. If no improvement is observed for $N_{\text{stagnation}}$ iterations, all pheromone values are reinitialised. This reinitialisation restores exploration, allowing ants to investigate previously neglected parts of the solution space.
+
+
+In practice, we set $N_{\text{stagnation}}$ as a fraction of the total number of cycles (e.g. $0.1 \times$ max\_cycles). This ensures that resets occur neither too frequently (which would prevent exploitation) nor too rarely (which would risk stagnation).
+
+Figure \ref{fig:reset-comparison} illustrates the effect of pheromone resetting in a DJSSP instance with a job arrival at $t=25$. Without resets, the colony converges prematurely on a solution that preserves outdated subsequences, resulting in high disruption. With resets, the search is re-diversified, allowing ants to discover more balanced solutions that trade off makespan and disruptiveness more effectively.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/reset_effect.png}
+    \caption{Effect of pheromone resetting on solution quality over time. The reset (vertical dashed line) triggers renewed exploration, leading to a lower overall cost after rescheduling.}
+    \label{fig:reset-comparison}
+\end{figure}
+
+\subsubsection{Pheromone Trail Smoothing}
+An alternative to full resetting is \emph{pheromone smoothing}, where extreme pheromone values are pulled toward the mean instead of being completely reinitialised \cite{STUTZLE2000889}. While smoothing can be less disruptive, in our experiments with DJSSP it proved slower to adapt to abrupt changes such as emergency job arrivals or overruns. For this reason, we favoured full resetting, despite its more radical nature.
+
+\subsection{Local search via critical-block swaps}
+Although the pheromone matrix combined with an ACO algorithm is effective at guiding ants towards promising regions of the search space, it still suffers from the drawback that small, local improvements are often difficult to exploit. Once a solution is constructed, its quality is determined by the order of operations across machines, but not all parts of the schedule contribute equally to the overall performance metric. In particular, the concept of the \emph{critical path} is fundamental in the JSSP and its dynamic variants \cite{naderi2022critical}.
+
+The makespan $M$ of a schedule is equal to the length of the longest chain of operations, and operations that lie on the longest path $\pi^*$ are called the \emph{critical path operations}. Any delay to one of these operations directly increases the makespan, while rearranging non-critical operations will have no effect on $M$.
+
+Because the critical path dictates the makespan, it makes clear sense to try and improve it as much as possible. If two adjacent operations $o_i$ and $o_j$ on the same machine both appear on the critical path, their order may greatly affect the schedule's makespan. Swapping their order may shorten machine idle times or better align with precedence constraints of their respective jobs, thereby reducing the overall makespan without altering other parts of the schedule. 
+
+To exploit this property, we implement a local search heuristic applied after each ant constructs a solution:
+
+\begin{enumerate}
+    \item Decode the ant's operation sequence into a full schedule with start and finish times.
+    \item Identify the critical path $\pi^*$.
+    \item Group the operations of $\pi^*$ by machine.
+    \item For each critical block, attempt to swap adjacent operations $o_i, o_j$. 
+    \item If the swap yields a strictly lower cost $f$, accept the swap and update the schedule.
+\end{enumerate}
+
+In practice, this local search mechanism significantly improves both solution quality and stability. The MMAS alone is good at converging to high-quality solutions but may plateau prematurely. Adding local search allows the algorithm to refine schedules more effectively, especially after disruptions where only small modifications are required. This hybrid approach (global search via pheromone trails, local refinement via swaps) is consistent with the broader metaheuristics literature, where hybridisation often yields state-of-the-art performance on difficult combinatorial optimisation problems \cite{jssp-manufacturing}. However, for larger problems, there is a fairly significant processing time penalty.
+
+\subsection{Handling dynamic events}
+When events occur we:
+\begin{enumerate}
+\item Freeze $\mathcal{O}^{\le t}$ at prior start times.
+\item Augment the operation set (new jobs, overruns, remove operations on failed machines).
+\item Expand the pheromone matrix to the new dimension; existing $\tau_{ij}$ are preserved, new rows/cols are initialised at $\tau_{\max}$.
+\item Recompute the feasible set and continue with unchanged hyperparameters.
+\end{enumerate}
+This preserves high-value subsequences while allowing fresh exploration around changed parts.
+
+\subsection{Rough solution space and MMAS}
+The main issue that an ACO implementation as previously described faces when solving the DJSSP is premature convergence. This is because the solution space is not smooth. If we consider the TSP, when the ants go down a path and deposit pheromones along it, it is reasonable to expect that better solutions might exist if we slightly deviate from this path. However, it is also very likely that significantly better solutions exist that are completely different from the current path. However, such solutions are very unlikely to be found as the ants are disincentivised to go down paths which have little to no pheromones. This makes ACO good at finding slight improvements to the current best path until none exist, at which point all the ants will go down the same path repeatedly, a situation described in \cite{484436} as search stagnation.
+
+The use of an Elitist Ant System (EAS) was initially considered, in which the globally best ant from previous iterations deposits extra pheromone along its path \cite{ABUHAMDAH2021107293}. This can be tweaked so that only the best $n$ performing ants in any given cycle deposit pheromone, which reduces the noise created by other ants depositing pheromone. The aim was to bias exploration towards paths that had already been proven to perform well, thereby accelerating convergence towards high-quality solutions. However, in practice this led to a situation where the initial high-performing path, often found early in the run by chance, exerted a disproportionate influence over the rest of the search process. This meant that if the first few iterations happened to yield a suboptimal but moderately good solution, the algorithm would reinforce it heavily, effectively locking the colony into exploring only minor variants of that path. As a result, performance between runs became inconsistent, and the underlying issue of the rough solution space remained unresolved.
+
+This led to the discovery of the Max-Min Ant System (MMAS) \cite{STUTZLE2000889}, which aims to solve both these problems. The MMAS differs from the basic ACO in 3 key aspects:
+\begin{itemize}
+    \item Similarly to the EAS, only one ant may deposit pheromone in any given iteration. This may be along the best found path so far or the iteration best path. This promotes exploitation of the best solutions by encouraging future ants to go down similar paths.
+    \item To avoid search stagnation, the range of possible pheromone values is limited to some dynamically changing interval $[\tau_{\text{min}}, \tau_{\text{max}}]$. This interval changes each time a new best solution is found.
+    \item Pheromone trails are all initialised as $\tau_{\text{max}}$. This enables a higher exploration of solutions at the beginning of the algorithm.
+\end{itemize}
+The use of the MMAS made scheduling much more consistent, and aided the issue of a rough solution space, although further techniques had to be employed to further promote exploration of different solutions (like pheromone resetting).
+
+
+\subsection{MMAS pheromone mechanics}
+As only one ant is used to update pheromone trails, we must modify the update rule. We define our new pheromone updating rule as 
+\begin{equation*}
+    \tau_{ij}(t + n) = \rho\cdot\tau_{ij}(t) + \Delta\tau_{ij}^{\text{best}},
+\end{equation*}
+where we let $\Delta\tau_{ij}^{\text{best}} = 1 / f(s^{\text{best}})$ and $f(s^{\text{best}})$ is the solution cost of either the iteration best or global best solution.
+
+\section{Results}
+This section evaluates our MMAS-based DJSSP solver on a real hospital day schedule provided by a clinician (anonymised). We first validate performance in the static setting against the hospital's original plan, then demonstrate adaptive rescheduling under realistic disruptions (emergency arrival and operation overrun). We report makespan ($M$), disruption ($D$), and composite cost $f = M + \lambda D$.
+
+\subsection{Data and experimental setup}
+We model four doctors as four machines. Each patient pathway is a job comprising one or more ordered operations, each requiring exclusive use of a specific doctor (machine) for a known processing time. The original hospital schedule is treated as the initial feasible schedule.
+
+We evaluate:
+\begin{itemize}
+  \item \textbf{Static optimisation:} starting from the original day plan, we run MMAS (no dynamic events) and compare the resulting schedule to the original.
+  \item \textbf{Dynamic adaptation:} (i) injection of an emergency case at time $t{=}25$, (ii) overrun of an ongoing procedure. We reschedule using MMAS with trail reuse and the priority system.
+\end{itemize}
+
+\subsection{Static validation on the hospital schedule}
+Figure \ref{fig:gantt-static-original} shows the original hospital schedule. Figure \ref{fig:gantt-static-mmas} shows the optimised schedule.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/gantt_static_original.png}
+  \caption{Original hospital schedule (static baseline). Doctors are machines; blocks are operations (patients).}
+  \label{fig:gantt-static-original}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/gantt_static_mmas.png}
+  \caption{MMAS-optimised schedule (static).}
+  \label{fig:gantt-static-mmas}
+\end{figure}
+
+We also show below how our cost changes as our algorithm progresses.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/cost_static_single_replan.png}
+  \caption{Cost changing as the algorithm cycles}
+  \label{fig:cost-static-mmas}
+\end{figure}
+As we can see from the time axis on the schedules shown in Figure \ref{fig:gantt-static-original} and Figure \ref{fig:gantt-static-mmas}, the makespan has reduced from 428 to 371. This is a fairly significant reduction for what should be an already optimised schedule.
+
+\subsection{Dynamic adaptation: emergency arrival at $t=25$}
+We inject an urgent job at $t=25$ with maximum priority. Figure \ref{fig:gantt-emergency-before} shows the pre-event schedule, and Figure \ref{fig:gantt-emergency-after} shows the MMAS reschedule with trail reuse.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/gantt_emergency_before.png}
+  \caption{Schedule immediately before the emergency arrival ($t=25$).}
+  \label{fig:gantt-emergency-before}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/gantt_emergency_after.png}
+  \caption{Rescheduled plan after emergency insertion.}
+  \label{fig:gantt-emergency-after}
+\end{figure}
+
+
+As we can see, adding an emergency event has added a job to the list of jobs on the right (from 16 to 17 jobs) and our makespan has increased.
+
+
+\section{Discussion}
+
+Our experiments demonstrate that MMAS is capable of both optimising static hospital schedules and adapting effectively to dynamic events. In the static setting, the optimiser consistently reduced makespan relative to the original plan, primarily by eliminating idle times and reordering non-critical operations. This confirms that the construction-graph representation combined with MMAS pheromone mechanics can exploit structural patterns in real scheduling data.
+
+Under dynamic events, such as emergency arrivals and overruns, the colony reused high-value subsequences via its pheromone matrix, enabling faster recovery than naive rescheduling. The disruption metric $D$ provided a meaningful measure of stability: operations already close to execution remained minimally perturbed, while flexibility was concentrated in later parts of the day. This behaviour aligns with practical hospital requirements, where minimising disruption is often as important as minimising makespan.
+
+Pheromone resetting proved critical for robustness. Without resets, the colony tended to preserve outdated subsequences even when they no longer led to low-cost schedules, resulting in stagnation. Explicit resets reintroduced exploration, allowing the algorithm to escape local optima at the cost of some short-term volatility. This trade-off between stability and adaptability is central to dynamic optimisation, and highlights the need for careful design of stagnation control mechanisms.
+
+Local search via critical-block swaps further improved performance, especially after disruptions. By refining critical path orderings, it reduced makespan without significant extra disruption. However, the computational overhead became noticeable for larger instances, suggesting that more selective or approximate local search strategies may be necessary in practice.
+
+Overall, the results support the hypothesis that MMAS is well-suited for dynamic job shop scheduling.
+
+
+
+\section{AI Acknowledgement Statement}
+Used \href{https://chatgpt.com/}{ChatGPT-4o} by OpenAI to help animate pheromone trails.
+
+I confirm that all submitted work is my own, despite assistance received from genAI tools.
+
+
+% References
+\printbibliography[title = References, heading=bibintoc]
+
+\end{document}          
