@@ -1,0 +1,7 @@
+file(GLOB examples CONFIGURE_DEPENDS *.c)
+foreach(EXAMPLE ${examples})
+  get_filename_component(exe_name ${EXAMPLE} NAME_WE)
+  add_executable(${exe_name} ${EXAMPLE})
+  target_link_libraries(${exe_name} SpeakEasy2)
+  target_compile_options(${exe_name} PRIVATE -Wall -pedantic)
+endforeach()
