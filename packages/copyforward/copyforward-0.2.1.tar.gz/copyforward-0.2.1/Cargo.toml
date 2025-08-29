@@ -1,0 +1,51 @@
+[package]
+name = "copyforward"
+version = "0.2.1"
+edition = "2024"
+description = "Fast copy-forward compression for threads: detect repeated substrings across messages and replace with references."
+license = "MIT"
+readme = "README.md"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+ahash = "0.8.12"
+rand = "0.8"
+rand_chacha = "0.3"
+smallvec = "1.15.1"
+
+# Python bindings (optional; enabled by the `python` feature)
+pyo3 = { version = "0.20", features = ["extension-module"], optional = true }
+numpy = { version = "0.20", optional = true }
+
+# Optional tokenizer support for Python auto-tokenization
+# Note: keep feature-gated to avoid heavy deps for Rust-only users
+tokenizers = { version = "0.15", optional = true }
+cffi = { version = "0.1.7", optional = true }
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "bench_copyforward"
+harness = false
+path = "benches/bench_copyforward.rs"
+
+[features]
+default = []
+
+# Enable PyO3 + numpy bindings for Python users
+python = ["dep:pyo3", "dep:numpy", "dep:cffi"]
+
+# Enable tokenizer support (HuggingFace tokenizers)
+tokenizers = ["dep:tokenizers"]
+
+# Convenience bundle: Python bindings + tokenizers together
+python-tokenizers = ["python", "tokenizers"]
+
+# Enable loading tokenizers by model name from HuggingFace Hub
+hf-hub = ["tokenizers", "tokenizers/hf-hub"]
+
+# Convenience bundle: Python + tokenizers + HF Hub
+python-tokenizers-hub = ["python-tokenizers", "hf-hub"]
