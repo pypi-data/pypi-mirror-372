@@ -1,0 +1,41 @@
+image: docker.nix-community.org/nixpkgs/nix-flakes:nixos-24.11
+
+definitions:
+  steps:
+    - step: &build-and-check
+        name: "Build and check"
+        script:
+          - export PDM_BUILD_SCM_VERSION=${BITBUCKET_TAG:-v0.0.0}
+          - ./.ci/bin/runner just
+        caches:
+          - nix-store
+
+    - step: &publish
+        name: "Publish"
+        script:
+          - export UV_PUBLISH_USERNAME=$PDM_PUBLISH_USERNAME
+          - export UV_PUBLISH_PASSWORD=$PDM_PUBLISH_PASSWORD
+          - ./.ci/bin/runner just publish
+
+  caches:
+    nix-store: .ci/.cache/nix-store
+
+pipelines:
+  branches:
+    master:
+      - step: *build-and-check
+
+  pull-requests:
+    "**":
+      - step: *build-and-check
+
+  tags:
+    "v*":
+      - step:
+          <<: *build-and-check
+          artifacts:
+            - src/fundamentum_edge_proto/*
+            - dist/**
+      - step:
+          <<: *publish
+          trigger: manual

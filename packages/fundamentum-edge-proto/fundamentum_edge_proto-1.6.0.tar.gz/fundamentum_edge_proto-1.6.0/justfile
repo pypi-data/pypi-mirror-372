@@ -1,0 +1,53 @@
+src_dir := justfile_directory() / 'src'
+
+default: build-proto validate
+
+build-proto: compile-proto patch-proto
+
+compile-proto:
+    uv run python \
+        -m grpc_tools.protoc \
+        --proto_path ./proto \
+        --python_out ./src/fundamentum_edge_proto \
+        --pyi_out ./src/fundamentum_edge_proto \
+        --grpc_python_out ./src/fundamentum_edge_proto \
+        --mypy_grpc_out ./src/fundamentum_edge_proto \
+        actions.proto \
+        configuration.proto \
+        provisioning.proto \
+        qos.proto \
+        states.proto \
+        telemetry.proto \
+        update.proto
+
+patch-proto:
+    uv run protol \
+        --in-place \
+        --python-out ./src/fundamentum_edge_proto \
+        protoc \
+        --proto-path ./proto \
+        actions.proto \
+        configuration.proto \
+        provisioning.proto \
+        qos.proto \
+        states.proto \
+        telemetry.proto \
+        update.proto
+  
+lint:
+    uv run ruff check src/fundamentum_edge_proto/__init__.py
+
+type-check:
+    uv run mypy src/fundamentum_edge_proto/__init__.py
+
+check-imports $PYTHONPATH=src_dir:
+    uv run python -c "import fundamentum_edge_proto"
+
+validate: lint type-check check-imports
+
+build: build-proto validate
+    uv build
+
+publish: build 
+    uv publish \
+        --publish-url https://artifactory.dimonoff.com/artifactory/api/pypi/doopy

@@ -1,0 +1,71 @@
+syntax = "proto3";
+package com.fundamentum.edge.v1;
+
+import "google/protobuf/empty.proto";
+import "qos.proto";
+
+// Fundamentum Edge's actions service.
+service Actions {
+  // Subscribe to actions stream.
+  rpc Subscribe(google.protobuf.Empty) returns (stream ActionRequest);
+  // Update the status of an action.
+  rpc UpdateStatus(ActionResponse) returns (google.protobuf.Empty);
+}
+
+// Action definition.
+message ActionRequest {
+  // Unique ID of the action.
+  uint64 id = 1;
+  // A list of serial numbers for devices targeted by this request.
+  // Specifies the devices on which the action should be applied, allowing for batch operations across multiple devices.
+  repeated string target_devices = 2;
+  // Version of the protocol used to encode the data in the payload.
+  uint32 version = 3;
+  // Type of the action.
+  uint32 type = 4;
+  // Payload of the action.
+  bytes payload = 5;
+}
+
+// ActionResponse definition.
+message ActionResponse {
+  // Status message defining an action that completed successfully.
+  message SuccessStatus {}
+  // Status message defining an action that failed to complete.
+  message FailureStatus {}
+  // Status message defining an action that takes some time to complete and is ongoing.
+  message OngoingStatus {
+    // Progress of the action from 0-100% in increment of 1%.
+    uint32 progress = 1;
+  }
+  // Status message defining an action that has been received but can't be processed right now.
+  message DeferredStatus {}
+
+  // Unique ID of the action.
+  uint64 id = 1;
+  // Status of the action.
+  oneof status {
+    // The action completed successfully.
+    SuccessStatus success = 2;
+    // The action failed to complete.
+    FailureStatus failure = 3;
+    // The action takes some time to complete and is ongoing.
+    // Another status shall be sent to signal its completion.
+    OngoingStatus ongoing = 4;
+    // The action has been received but can't be processed right now.
+    // Another status shall be sent to signal its completion.
+    DeferredStatus deferred = 5;
+  }
+  // A list of serial numbers representing the devices that share the same response.
+  // This field allows to send a collective response to Fundamentum for multiple devices simultaneously.
+  // Defaults to the current device if unspecified.
+  repeated string serial_numbers = 12;
+  // Response message to display in Fundamentum's UI.
+  string message = 13;
+  // Optional action user response payload.
+  // Default to an empty bytearray if unspecified.
+  bytes payload = 14;
+  // The QoS level to use when publishing the message.
+  // Defaults to 2 (QOS_EXACTLY_ONCE) if unspecified.
+  optional Qos qos = 15;
+}

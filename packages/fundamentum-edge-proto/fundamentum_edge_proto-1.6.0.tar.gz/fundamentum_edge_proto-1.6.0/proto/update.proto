@@ -1,0 +1,81 @@
+syntax = "proto3";
+package com.fundamentum.edge.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "qos.proto";
+
+// Fundamentum Edge's firmware update service.
+service FirmwareUpdate {
+  // Subscribe to firmware update stream.
+  rpc Subscribe(google.protobuf.Empty) returns (stream FirmwareUpdateRequest);
+  // Update the status of the firmware update.
+  rpc UpdateStatus(FirmwareUpdateResponse) returns (google.protobuf.Empty);
+}
+
+// Firmware update request definition.
+message FirmwareUpdateRequest {
+  // Definition for a single update.
+  message Update {
+    // Name of the firmware.
+    string name = 1;
+    // Identifier of the firmware.
+    string identifier = 2;
+    // A list of serial numbers for devices targeted by this update request.
+    // Specifies the devices on which the update should be applied, allowing for batch operations across multiple devices.
+    repeated string target_devices = 3;
+    // Client specific data providing more context on the firmware.
+    google.protobuf.Struct metadata = 4;
+    // URLs where the firmware files included in this update can be downloaded.
+    repeated string urls = 5;
+  }
+  // Unique ID of the update request.
+  uint64 id = 1;
+  // List of all unique updates of this request.
+  repeated Update updates = 2;
+}
+
+// Firmware update response definition.
+message FirmwareUpdateResponse {
+  // Status message defining a successful firmware update.
+  message SuccessStatus {}
+  // Status message defining a firmware update error.
+  message ErrorStatus {
+    // Error code definition.
+    enum Code {
+      // Generic error code.
+      CODE_UNSPECIFIED = 0;
+      // The provided firmware URL has expired and the cloud must regenerate a new one.
+      CODE_EXPIRED_RESOURCE = 1;
+    }
+    // Error code.
+    Code code = 1;
+  }
+  // Status message defining an ongoing firmware update.
+  message OngoingStatus {
+    // Progress of the firmware update from 0-100% in increment of 1%.
+    uint32 progress = 1;
+  }
+
+  // Unique ID of the update request.
+  uint64 id = 1;
+  // Status of the update.
+  oneof status {
+    // The firmware update completed successfully.
+    SuccessStatus success = 2;
+    // The firmware update failed to complete.
+    ErrorStatus error = 3;
+    // The firmware update is taking some time to complete and is ongoing.
+    // Another status shall be sent to signal its completion.
+    OngoingStatus ongoing = 4;
+  }
+  // A list of serial numbers representing the devices that share the same response.
+  // This field allows to send a collective response to Fundamentum for multiple devices simultaneously.
+  // Defaults to the current device if unspecified.
+  repeated string serial_numbers = 12;
+  // Response message to display in Fundamentum's UI.
+  string message = 13;
+  // The QoS level to use when publishing the message.
+  // Defaults to 2 (QOS_EXACTLY_ONCE) if unspecified.
+  optional Qos qos = 15;
+}

@@ -1,0 +1,40 @@
+syntax = "proto3";
+package com.fundamentum.edge.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "qos.proto";
+
+// Fundamentum Edge's states event service.
+service StatesEvent {
+  // Publishes device-specific JSON data to the `state` topic.
+  // Can be used to send state of a device's sub-devices.
+  rpc PublishJson(StateJsonData) returns (google.protobuf.Empty);
+}
+
+// State message.
+message StateJsonData {
+  // Timestamp indicating when the state event occured.
+  // Defaults to the system current time if unspecified.
+  google.protobuf.Timestamp timestamp = 1;
+  // Current device states in JSON format.
+  // Defaults to `null` if unspecified.
+  google.protobuf.Struct states = 2;
+  // List of sub-devices controlled by the current device.
+  // Defaults to an empty list if unspecified.
+  repeated SubDevice sub_devices = 3;
+  // The QoS level to use when publishing the message.
+  // Defaults to 2 (QOS_EXACTLY_ONCE) if unspecified.
+  optional Qos qos = 4;
+
+  // Sub-device message.
+  message SubDevice {
+    // Sub-device serial number.
+    // This field is mandatory.
+    string serial_number = 1;
+    // Sub-device states in JSON format.
+    // Defaults to `null` if unspecified.
+    google.protobuf.Struct states = 2;
+  }
+}

@@ -1,0 +1,63 @@
+syntax = "proto3";
+package com.fundamentum.edge.v1;
+
+// Fundamentum Edge's provisioning service.
+service Provisioning {
+  // Provision this device against cloud-side.
+  //
+  // On successful provisioning, amongst other things, the edge daemon will be
+  // granted MQTT connectivity to the cloud-side broker thus enabling more
+  // features.
+  rpc Provision(ProvisionRequest) returns (ProvisionResponse);
+
+  // Register this device as a shelf device against cloud-side.
+  //
+  // Once registered as a shelf device, Edge will periodically check with Fundamentum
+  // if the device has been assigned to a registry. Until then, the device is not fully
+  // provisionned to Fundamentum and most functionnalities will not be available.
+  rpc RegisterShelfDevice(RegisterShelfRequest) returns (RegisterShelfResponse);
+}
+
+// Request for the `Provisioning.Provision` endpoint.
+message ProvisionRequest {
+  // API base URL to use for provisioning.
+  string api_base_url = 1;
+  // Project ID to provision against.
+  uint32 project_id = 2;
+  // Region ID to provision against.
+  uint32 region_id = 3;
+  // Registry ID to provision against.
+  uint32 registry_id = 4;
+  // Serial number of the device to provision.
+  string serial_number = 5;
+  // Asset type ID of the device to provision.
+  int32 asset_type_id = 6;
+  // Access token to use for provisioning.
+  string access_token = 7;
+  // Whether to replace an existing device with the same serial number.
+  bool replace_existing = 8;
+}
+
+// Response for the `Provisioning.Provision` endpoint.
+message ProvisionResponse {}
+
+// Request for the `Provisioning.RegisterShelfDevice` endpoint.
+message RegisterShelfRequest {
+  // API base URL to use to register the device.
+  string api_base_url = 1;
+  // Project ID to register against.
+  uint32 project_id = 2;
+  // Region ID to register against.
+  uint32 region_id = 3;
+  // Serial number of the device to register.
+  string serial_number = 4;
+  // Asset type ID of the device to register.
+  int32 asset_type_id = 5;
+  // Access token used for authenticating with the shelf devices API.
+  // Must be a valid UUID v4 provisioningKey obtained through:
+  // GET /api/v3/projects/{project_id}/regions/{region_id}/provisioning-keys
+  string access_token = 6;
+}
+
+// Response for the `Provisioning.RegisterShelfDevice` endpoint.
+message RegisterShelfResponse {}
