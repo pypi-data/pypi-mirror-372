@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css"
+    integrity="sha384-IDaX67uymf7bFJTnGqJdas2mKfz+0XonrvcR/ZLiQBW4NCINz7BMJYwX+6tlg9y0" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css"
+    integrity="sha384-MD0va0y3Bm+8L7HRwQWups6Tp3t09vaPmoiCXr0ryaSG71f54HUHY0Z4H5eklygp" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.0/css/responsive.dataTables.min.css"
+    integrity="sha384-cWgz6YKDgXz/mTomsnOIXd/1s0iivK+FhwVdmzN0ErdazMmt4RieKmZXMWdwScEm" crossorigin="anonymous">
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"
+    integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g=" crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.js"
+    integrity="sha384-Ac/mQjmhtk+4qELB13f2LKT/9Uj31QqaXFKrEbmLtueYjPwTG6AXdzXqZSWWwUW1"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.7/build/pdfmake.min.js"
+    integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
+    integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"
+    integrity="sha384-POmQLDS+gc6Qd3ZalIVuutsaZQkTDU8foo3J6egQy4YmrNhxcGuIlKXsas5XaZNG"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"
+    integrity="sha384-HTrhO6m5QbXzKQm/28HT6tYIdf/GeCK8xucgDpUbyrlqDwVh5AN5il4gcRxyIF51"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"
+    integrity="sha384-h/SRPFzc2+BE+XfOqlAqiHb43fnY8jzXhQ0fI1JBfgrjbxUokMr9To2eLbSWEt1g"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.0/js/dataTables.responsive.min.js" 
+    integrity="sha384-yYqZ2Jue83rlzHS23Jp/xwZjRZ9KQCACGR5lhhWFtDIQeBMwAuav+irRqSKrucSP"
+    crossorigin="anonymous"></script>
+
+
+
+{% endblock %}
+
+
+{% block content %}
+{% if PAGE_HEADER %}<h1>{{PAGE_HEADER}}</h1>{% endif %}
+
+{% block before_table %}{% endblock %}
+
+<div>
+    <table id="datatable" class="display cell-border compact">
+        <tfoot>
+            <tr>
+                {% for column in datatable_config.columns %}
+                <th>{{column.title}}</th>
+                {% endfor %}
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+{% block after_table %}{% endblock %}
+{% block column_defs %}{% endblock %}
+<script>
+    $(document).ready(function () {
+        // Setup - add a text input to each footer cell
+        $('#datatable tfoot th').each(function () {
+            var title = $('#datatable tfoot th').eq($(this).index()).text();
+            $(this).html('<input type="text" placeholder="Search ' + title + '" />');
+        });
+
+        // Default to log msg instead of alert dialog
+        $.fn.dataTableExt.sErrMode = 'throw';
+
+        // Define reload button
+        $.fn.dataTable.ext.buttons.reload = {
+            text: 'Reload',
+            action: function (e, dt, node, config) {
+                dt.ajax.reload();
+            }
+        };
+
+        var configs = {{datatable_config | tojson }};
+        // If column_defs are defined from the column_defs block, add to configs
+        if (typeof column_defs !== 'undefined') {
+            configs['columnDefs'] = column_defs;
+        }
+        // Also check to see if column_defs are being provided from the python side. This will override the column_defs block, if it exists. 
+        {% if column_defs %}
+        configs['columnDefs'] = {{column_defs | safe }}
+        {% endif %}
+
+        // Check if dt_config exists, if so, merge with configs
+        if (typeof dt_config !== 'undefined') {
+            configs = {...configs, ...dt_config};
+        }
+
+        // Construct the table
+        var table = $('#datatable').DataTable(configs);
+
+        // Apply the search
+        table.columns().eq(0).each(function (colIdx) {
+            $('input', table.column(colIdx).footer()).on('keyup change', function () {
+                if (this.value.startsWith('-') || this.value.includes(' -')) {
+                    var terms = this.value.split(' ');
+                    var adds = [];
+                    var dels = [];
+                    var regex_str = '^';
+
+                    terms.forEach(function (term) {
+                        if (term.length) {
+                            if (term.startsWith('-')) {
+                                if (term.length > 1) {
+                                    var val = $.fn.DataTable.util.escapeRegex(term.substring(1));
+                                    dels.push('.*' + val);
+                                }
+                            }
+                            else {
+                                var val = $.fn.DataTable.util.escapeRegex(term);
+                                adds.push('.*' + val);
+                            }
+                        }
+                    });
+
+                    if (dels.length) {
+                        regex_str += '(?!' + dels.join('|') + ')';
+                    }
+
+                    if (adds.length) {
+                        regex_str += '(' + adds.join('|') + ')';
+                    }
+                    regex_str += '.*$';
+
+                    if (adds.length || dels.length) {
+                        table
+                            .column(colIdx)
+                            .search(regex_str, true, false, true)
+                            .draw();
+                    }
+                }
+                else {
+                    table
+                        .column(colIdx)
+                        .search(this.value)
+                        .draw();
+                }
+            });
+        });
+
+    });
+</script>
+
+<style>
+    tfoot input {
+        width: 100%;
+        padding: 3px;
+        box-sizing: border-box;
+    }
+
+    #v3l__content {
+        max-width: 1px;
+        margin-right: 0px;
+        padding-top: 0px;
+        margin-block-start: 0px;
+        margin-inline-start: 0px;
+    }
+</style>
+{% endblock content %}
