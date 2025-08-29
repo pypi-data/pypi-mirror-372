@@ -1,0 +1,28 @@
+stages:
+  - test
+  - release
+
+services: []
+
+include:
+  - component: gitlab.com/thelabnyc/thelab-ci-components/precommit@0.4.0
+  - component: gitlab.com/thelabnyc/thelab-ci-components/publish-gitlab-release@0.4.0
+  - component: gitlab.com/thelabnyc/thelab-ci-components/publish-to-pypi@0.4.0
+
+test:
+  stage: test
+  image: "registry.gitlab.com/thelabnyc/python:${IMAGE}"
+  services:
+    - name: postgres:17@sha256:29e0bb09c8e7e7fc265ea9f4367de9622e55bae6b0b97e7cce740c2d63c2ebc0
+      alias: db
+  script:
+    - uv sync --all-extras
+    - uv run tox
+  parallel:
+    matrix:
+      - IMAGE: py311
+        TOX_SKIP_ENV: "^(?!py311-)"
+      - IMAGE: py312
+        TOX_SKIP_ENV: "^(?!py312-)"
+      - IMAGE: py313
+        TOX_SKIP_ENV: "^(?!py313-)"
