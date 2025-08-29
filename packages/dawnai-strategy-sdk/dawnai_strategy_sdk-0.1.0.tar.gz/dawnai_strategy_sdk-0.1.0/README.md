@@ -1,0 +1,301 @@
+# DawnAI Strategy SDK
+
+A Python SDK for building efficient trading strategies with strong typing and decorator-based triggers.
+
+## Installation
+
+Using UV (recommended):
+```bash
+uv pip install -e .
+```
+
+Or using pip:
+```bash
+pip install -e .
+```
+
+## Quick Start
+
+```python
+from dawnai.strategy import (
+    Strategy,
+    cron,
+    get_news,
+    fetch_current_price,
+    read_portfolio,
+    buy_polymarket,
+    sell_polymarket,
+    configure,
+)
+
+# Configure the SDK (optional - can also use env vars or config file)
+configure(
+    base_url="http://localhost:3000",
+    api_key="your-api-key"
+)
+
+class MyStrategy(Strategy):
+    def __init__(self):
+        super().__init__()
+        self.position_open = False
+        self.market_id = "0x..."  # Your market ID
+    
+    @cron(interval="5m")
+    def trade_on_signals(self):
+        """Runs every 5 minutes"""
+        # Read portfolio for position sizing
+        portfolio = read_portfolio()
+        position_size = float(portfolio["available_balance"] * 0.1)  # 10% of portfolio
+        
+        # Update state and make trading decisions
+        news = get_news(query="bitcoin")
+        # Trading logic here
+```
+
+## Example Strategies
+
+The `examples/` folder contains several strategy implementations:
+
+### Core Examples:
+- **Simple Example** (`simple_example.py`) - Basic sentiment-based trading
+- **Simple Strategy** (`simple_strategy.py`) - Clean minimal implementation
+- **Example Strategy** (`example_strategy.py`) - Full-featured example
+
+### Advanced Examples:
+- **Sentiment Trader** (`sentiment_trader.py`) - News sentiment analysis trading
+- **Momentum Trader** (`momentum_trader.py`) - Price momentum indicators
+- **Portfolio-Aware Trader** (`portfolio_aware_trader.py`) - Risk management with position sizing
+- **Multi-Signal Trader** (`multi_signal_trader.py`) - Combines multiple signals
+
+### Utility Examples:
+- **Basic Monitor** (`basic_monitor.py`) - Market monitoring without trading
+- **Simple Cron Example** (`simple_cron_example.py`) - Demonstrates cron triggers
+- **Extract Example** (`extract_example.py`) - Shows strategy analysis capabilities
+
+## Strategy Analysis Commands
+
+### Analyze a Strategy File
+
+```python
+from dawnai.strategy import analyze_strategy_file
+
+# Analyze any strategy file
+info = analyze_strategy_file("examples/sentiment_trader.py")
+print(info)
+```
+
+### Extract Triggers from a Strategy Class
+
+```python
+from dawnai.strategy import StrategyAnalyzer, extract_triggers
+from examples.sentiment_trader import SentimentTrader
+
+# Using StrategyAnalyzer for detailed information
+analyzer = StrategyAnalyzer(SentimentTrader)
+triggers = analyzer.get_triggers()
+trigger_map = analyzer.get_trigger_map()
+cron_triggers = analyzer.get_cron_triggers()
+
+# Simple extraction
+triggers = extract_triggers(SentimentTrader)
+```
+
+### Validate a Strategy
+
+```python
+from examples.momentum_trader import MomentumTrader
+
+# Check for configuration errors
+errors = MomentumTrader.validate()
+if errors:
+    print("Validation errors:", errors)
+else:
+    print("Strategy is valid!")
+```
+
+### Run Strategy Analysis from Command Line
+
+```bash
+# Analyze a specific strategy file
+python -c "from dawnai.strategy import analyze_strategy_file; import json; print(json.dumps(analyze_strategy_file('examples/sentiment_trader.py'), indent=2))"
+
+# Extract triggers from a strategy
+python -c "from examples.momentum_trader import MomentumTrader; from dawnai.strategy import extract_triggers; print(extract_triggers(MomentumTrader))"
+
+# Validate all example strategies
+python -c "
+import os
+from importlib import import_module
+from dawnai.strategy import StrategyAnalyzer
+
+for file in os.listdir('examples'):
+    if file.endswith('.py') and not file.startswith('_'):
+        module_name = file[:-3]
+        module = import_module(f'examples.{module_name}')
+        for attr_name in dir(module):
+            attr = getattr(module, attr_name)
+            if isinstance(attr, type) and attr.__name__ != 'Strategy':
+                try:
+                    analyzer = StrategyAnalyzer(attr)
+                    errors = attr.validate()
+                    if errors:
+                        print(f'{attr.__name__}: ERRORS - {errors}')
+                    else:
+                        print(f'{attr.__name__}: Valid ✓')
+                        print(f'  Triggers: {len(analyzer.get_triggers())}')
+                except: pass
+"
+```
+
+### Interactive Strategy Exploration
+
+```python
+# Start interactive Python session
+python
+
+>>> from examples.portfolio_aware_trader import PortfolioAwareTrader
+>>> from dawnai.strategy import StrategyAnalyzer
+>>> 
+>>> # Create analyzer
+>>> analyzer = StrategyAnalyzer(PortfolioAwareTrader)
+>>> 
+>>> # Get all triggers
+>>> triggers = analyzer.get_triggers()
+>>> for t in triggers:
+...     print(f"{t.method_name}: {t.interval}")
+>>> 
+>>> # Get detailed trigger map
+>>> trigger_map = analyzer.get_trigger_map()
+>>> for method, details in trigger_map.items():
+...     print(f"{method}:")
+...     print(f"  Interval: {details['interval']}")
+...     print(f"  Signature: {details['method_signature']}")
+...     print(f"  Docs: {details['docstring']}")
+>>> 
+>>> # Validate strategy
+>>> errors = PortfolioAwareTrader.validate()
+>>> print("Valid!" if not errors else f"Errors: {errors}")
+```
+
+## Features
+
+### Trigger Decorators
+
+- `@cron(interval="5m")` - Schedule periodic execution
+
+### Tool Functions
+
+Core functions with strong typing:
+
+- `configure()` - Configure SDK with API endpoints and credentials
+- `get_news()` - Fetch news articles using browser search
+- `fetch_current_price()` - Get current Polymarket prices
+- `read_portfolio()` - Get portfolio balance and positions
+- `buy_polymarket()`/`sell_polymarket()` - Execute trades on Polymarket
+- `get_polymarket_market_details()` - Get detailed market information
+- `get_polymarket_order_book()` - Get order book data
+- `get_polymarket_prices()` - Get current market prices
+- `get_polymarket_timeseries()` - Get historical price data
+- `polymarket_smart_search()` - Search Polymarket markets
+- `browser_search()` - Web search functionality
+- `tweet_finder()` - Find tweets
+
+### Type Safety
+
+The SDK uses strong typing throughout:
+
+```python
+from dawnai.strategy.functions import (
+    MarketPrice, 
+    PolymarketMarket, 
+    PolymarketOrder,
+    OrderBook,
+    TimeSeries,
+    NewsItem
+)
+from decimal import Decimal
+
+price_data: MarketPrice = fetch_current_price("0x...")
+portfolio: dict[str, Any] = read_portfolio()
+available_balance: Decimal = portfolio["available_balance"]
+```
+
+## Best Practices
+
+1. **State Management**: Use instance variables to track state between trigger executions
+2. **Position Sizing**: Always use `read_portfolio()` before trading to ensure proper position sizing
+3. **Risk Management**: Implement position limits as a percentage of portfolio (e.g., 5-10%)
+4. **Error Handling**: Wrap trading logic in try-except blocks
+5. **Validation**: Always validate strategies before deployment using `.validate()`
+
+## Development
+
+### Type Checking
+
+```bash
+mypy dawnai/
+```
+
+### Linting
+
+```bash
+ruff check dawnai/
+```
+
+### Formatting
+
+```bash
+black dawnai/
+```
+
+## Architecture
+
+The SDK consists of:
+
+1. **Configuration** (`config.py`) - Configuration management with support for env vars and config files
+2. **Triggers** (`triggers.py`) - Decorators for defining when methods run
+3. **Functions** (`functions.py`) - Strongly-typed API client functions  
+4. **Base Strategy** (`base.py`) - Abstract base class with metaclass magic
+5. **Engine** (`engine.py`) - Analysis and extraction utilities
+
+All components use strong typing with full mypy strict mode compliance.
+
+## Configuration
+
+The SDK can be configured in multiple ways (in priority order):
+
+1. **Environment Variables** (highest priority):
+   ```bash
+   export DAWNAI_BASE_URL="http://localhost:3000"
+   export DAWNAI_API_KEY="your-api-key"
+   export DAWNAI_USER_ID="your-user-id"
+   export DAWNAI_STRATEGY_ID="your-strategy-id"
+   export DAWNAI_SESSION_ID="your-session-id"
+   export DAWNAI_IS_PAPER="true"
+   ```
+
+2. **Config File** (`.dawnai` in current or home directory):
+   ```json
+   {
+     "base_url": "http://localhost:3000",
+     "api_key": "your-api-key",
+     "user_id": "your-user-id",
+     "strategy_id": "your-strategy-id",
+     "is_paper": true
+   }
+   ```
+
+3. **Programmatic Configuration**:
+   ```python
+   from dawnai.strategy import configure
+   
+   configure(
+       base_url="http://localhost:3000",
+       api_key="your-api-key"
+   )
+   ```
+
+4. **Interactive Config Creation**:
+   ```bash
+   python -m dawnai.config create
+   ```# GitHub Action fix
