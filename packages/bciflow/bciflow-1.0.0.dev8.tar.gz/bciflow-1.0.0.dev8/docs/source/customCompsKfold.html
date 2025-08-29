@@ -1,0 +1,322 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creating custom functions or classes for the kfold pipeline &mdash; bciflow 1.0.0.dev7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=ab0224cc"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="How to use a custom dataset with bciflow library" href="ownDataset.html" />
+    <link rel="prev" title="Introduction to Data Processing using bciflow" href="data_processing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #2980B9" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/logo_2.jpg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Project Links</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://pypi.org/project/bciflow/">PyPI</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/Lab-HC/bciflow">GitHub</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/Lab-HC/bciflow/issues">Issues</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Package</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bciflow.datasets.html">Datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bciflow.modules.html">Modules</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_files.html">Data Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorial</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="exploring_cbcic.html">Loading and Exploring CBCIC dataset using bciflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_processing.html">Introduction to Data Processing using bciflow</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Creating custom functions or classes for the <code class="docutils literal notranslate"><span class="pre">kfold</span></code> pipeline</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-usage-pattern">Basic Usage Pattern</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#component-naming-conventions">Component Naming Conventions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pipeline-structure-considerations">Pipeline Structure Considerations</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-requirements">Basic Requirements</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#if-you-use-a-function">1. If You Use a Function</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#if-you-use-a-class">2. If You Use a Class</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ownDataset.html">How to use a custom <code class="docutils literal notranslate"><span class="pre">dataset</span></code> with <code class="docutils literal notranslate"><span class="pre">bciflow</span></code> library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Links</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="download_datasets.html">Download EEG Datasets</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #2980B9" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">bciflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Creating custom functions or classes for the <code class="docutils literal notranslate"><span class="pre">kfold</span></code> pipeline</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/source/customCompsKfold.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="creating-custom-functions-or-classes-for-the-kfold-pipeline">
+<h1>Creating custom functions or classes for the <code class="docutils literal notranslate"><span class="pre">kfold</span></code> pipeline<a class="headerlink" href="#creating-custom-functions-or-classes-for-the-kfold-pipeline" title="Link to this heading"></a></h1>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h2>
+<p>In EEG decoding pipelines, it is common to evaluate model performance using cross-validation techniques such as <code class="docutils literal notranslate"><span class="pre">kfold</span></code>, which is our case. To ensure proper modularity and prevent data leakage across folds, the pipeline is typically divided into two main transformation stages: <code class="docutils literal notranslate"><span class="pre">pre-folding</span></code> and <code class="docutils literal notranslate"><span class="pre">post-folding</span></code>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Pre-folding</span></code> refers to all operations that are applied to the data <em>before</em> the fold split. These transformations are shared across all folds and must be strictly independent of the training/testing process. Common examples include filtering, artifact rejection, or epoch extraction.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Post-folding</span></code> transformations, defined through the <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code> dictionary, are applied <em>within each fold</em>, only after the data has been split into training and testing sets. This guarantees that feature extraction, normalization, or classifier training is done independently for each fold, which is essential to avoid information leakage and obtain reliable cross-validation results.</p></li>
+</ul>
+<p>The separation between these two stages is crucial. Applying operations like scaling or feature extraction globally before folding would cause the test data to influence the learned transformations—this violates cross-validation assumptions and leads to overly optimistic performance estimates.</p>
+<p>This tutorial focuses on creating custom <code class="docutils literal notranslate"><span class="pre">pre_folding</span></code> and <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code> components—either functions or classes—that can be seamlessly integrated into the <code class="docutils literal notranslate"><span class="pre">kfold</span></code> pipeline. For the <em>bciflow</em> package, we have a distinction from <code class="docutils literal notranslate"><span class="pre">pre_folding</span></code> and <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code>. Only the <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code> can have custom classes, while both can have custom functions.</p>
+</section>
+<section id="basic-usage-pattern">
+<h2>Basic Usage Pattern<a class="headerlink" href="#basic-usage-pattern" title="Link to this heading"></a></h2>
+<p>An example usage within the <code class="docutils literal notranslate"><span class="pre">kfold</span></code> pipeline looks like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tf</span> <span class="o">=</span> <span class="n">function</span> <span class="c1">#because it is only used on pre_folding</span>
+<span class="n">tf2</span> <span class="o">=</span> <span class="n">function</span> <span class="c1">#because it can be used on both</span>
+<span class="n">sf</span> <span class="o">=</span> <span class="n">Class</span><span class="p">()</span> <span class="ow">or</span> <span class="n">function</span> <span class="c1">#because it is only used on pos_folding</span>
+<span class="n">fe</span> <span class="o">=</span>  <span class="n">Class</span><span class="p">()</span> <span class="ow">or</span> <span class="n">function</span>
+<span class="n">fs</span> <span class="o">=</span>  <span class="n">Class</span><span class="p">()</span> <span class="ow">or</span> <span class="n">function</span>
+<span class="n">pre_folding</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;tf&#39;</span><span class="p">:(</span><span class="n">tf</span><span class="p">,{})}</span>
+<span class="n">pos_folding</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;tf2&#39;</span><span class="p">:(</span><span class="n">tf2</span><span class="p">,</span> <span class="p">{}),</span>
+    <span class="s1">&#39;sf&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">sf</span><span class="p">,</span> <span class="p">{}),</span>
+    <span class="s1">&#39;fe&#39;</span><span class="p">:(</span><span class="n">fe</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;flattening&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}),</span>
+    <span class="s1">&#39;fs&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">fs</span><span class="p">,{})</span>
+    <span class="s1">&#39;clf&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">lda</span><span class="p">(),</span> <span class="p">{})</span>
+<span class="p">}</span>
+
+<span class="n">results</span> <span class="o">=</span> <span class="n">kfold</span><span class="p">(</span>
+    <span class="n">target</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+    <span class="n">start_window</span><span class="o">=</span><span class="n">dataset</span><span class="p">[</span><span class="s1">&#39;events&#39;</span><span class="p">][</span><span class="s1">&#39;cue&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">pre_folding</span><span class="o">=</span><span class="n">pre_folding</span><span class="p">,</span>
+    <span class="n">pos_folding</span><span class="o">=</span><span class="n">pos_folding</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Each key in the <code class="docutils literal notranslate"><span class="pre">pre_folding</span></code> and <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code> dictionary must map to a tuple <code class="docutils literal notranslate"><span class="pre">(object,</span> <span class="pre">kwargs)</span></code>, where:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">object</span></code> is a function or class instance</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">kwargs</span></code> is a dictionary of keyword arguments passed to its <code class="docutils literal notranslate"><span class="pre">transform</span></code> method or function call</p></li>
+</ul>
+<section id="component-naming-conventions">
+<h3>Component Naming Conventions<a class="headerlink" href="#component-naming-conventions" title="Link to this heading"></a></h3>
+<p>The dictionary keys typically follow standardized abbreviations to identify the type of transformation being applied:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">sf</span></code>: <strong>Spatial Filter</strong> — e.g., CSP, xDAWN, or ICA. Can be applied in both <code class="docutils literal notranslate"><span class="pre">pre_folding</span></code> and <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code>, depending on whether it requires supervision.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tf</span></code>: <strong>Temporal Filter</strong> — e.g., bandpass or notch filters. Usually appears in <code class="docutils literal notranslate"><span class="pre">pre_folding</span></code>, but can also be applied in <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code> if it requires adaptation to training data.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fs</span></code>: <strong>Feature Selection</strong> — selects relevant features (e.g., variance threshold, mutual information). Must appear only in <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code> to avoid data leakage.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fe</span></code>: <strong>Feature Extraction</strong> — transforms the data into a feature space (e.g., mean amplitude, power spectral density). Always performed in <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clf</span></code>: <strong>Classifier</strong> — the final predictive model (e.g., LDA, SVM). Defined in <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code>.</p></li>
+</ul>
+</section>
+<section id="pipeline-structure-considerations">
+<h3>Pipeline Structure Considerations<a class="headerlink" href="#pipeline-structure-considerations" title="Link to this heading"></a></h3>
+<p>Filters (<code class="docutils literal notranslate"><span class="pre">sf</span></code>, <code class="docutils literal notranslate"><span class="pre">tf</span></code>) may be safely applied in both <code class="docutils literal notranslate"><span class="pre">pre_folding</span></code> and <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code>, depending on whether the transformation is unsupervised (e.g., FIR filters) or supervised (e.g., CSP). In contrast, operations such as <code class="docutils literal notranslate"><span class="pre">fs</span></code> (feature selection) and <code class="docutils literal notranslate"><span class="pre">fe</span></code> (feature extraction) must be strictly placed in the <code class="docutils literal notranslate"><span class="pre">pos_folding</span></code> stage to ensure that only training data is used for parameter estimation, thereby preserving the validity of the cross-validation protocol.</p>
+</section>
+</section>
+<section id="basic-requirements">
+<h2>Basic Requirements<a class="headerlink" href="#basic-requirements" title="Link to this heading"></a></h2>
+<section id="if-you-use-a-function">
+<h3>1. If You Use a Function<a class="headerlink" href="#if-you-use-a-function" title="Link to this heading"></a></h3>
+<p>The function must have the following signature:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">my_function</span><span class="p">(</span><span class="n">eegdata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="k">return</span> <span class="n">eegdata_transformed</span>
+</pre></div>
+</div>
+<p><strong>Requirements:</strong></p>
+<ul class="simple">
+<li><p>Inputs: <code class="docutils literal notranslate"><span class="pre">eegdata</span></code>, and optional keyword arguments</p></li>
+<li><p>Output: modified version of <code class="docutils literal notranslate"><span class="pre">eegdata</span></code></p></li>
+</ul>
+<p><strong>Example:</strong></p>
+<p>This function removes the mean of the EEG signal along the time dimension, effectively centering the signal for each trial, band, and electrode.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">removeEEGSignalMean</span><span class="p">(</span><span class="n">eegdata</span><span class="p">):</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">eegdata</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="c1"># Compute mean over time axis</span>
+    <span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># shape: (trials, bands, electrodes, 1)</span>
+
+    <span class="c1"># Subtract mean from signal</span>
+    <span class="n">X_</span> <span class="o">=</span> <span class="n">X</span> <span class="o">-</span> <span class="n">mean</span>
+    <span class="n">eegdata</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">X_</span> <span class="c1"># shape: (trials, bands, electrodes, time)</span>
+    <span class="k">return</span> <span class="n">eegdata</span>
+</pre></div>
+</div>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pre_folding</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">pos_folding</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;tf&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">removeEEGSignalMean</span><span class="p">,</span> <span class="p">{}),</span>
+    <span class="o">...</span>
+    <span class="s1">&#39;clf&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">lda</span><span class="p">(),</span> <span class="p">{})</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Or</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pre_folding</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;tf&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">removeEEGSignalMean</span><span class="p">,</span> <span class="p">{}),}</span>
+<span class="n">pos_folding</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="o">...</span>
+    <span class="s1">&#39;clf&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">lda</span><span class="p">(),</span> <span class="p">{})</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="if-you-use-a-class">
+<h3>2. If You Use a Class<a class="headerlink" href="#if-you-use-a-class" title="Link to this heading"></a></h3>
+<p>Your class must implement the following methods:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MyTransformer</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eegdata</span><span class="p">:</span><span class="nb">dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="o">...</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eegdata</span><span class="p">:</span><span class="nb">dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="o">...</span>
+        <span class="k">return</span> <span class="n">eegdata_transformed</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eegdata</span><span class="p">:</span><span class="nb">dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="o">...</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">eegdata</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">eegdata</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Expected Return Types</strong></p>
+<p>All custom steps must comply with the return format expected by the pipeline:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">fit()</span></code> method of a class should return <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">transform()</span></code> method of a class and any standalone function must return a <code class="docutils literal notranslate"><span class="pre">dict</span></code>-like object with the structure of <code class="docutils literal notranslate"><span class="pre">eegdata</span></code>.</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">eegdata</span></code> dictionary typically includes a key <code class="docutils literal notranslate"><span class="pre">'X'</span></code>, which contains the EEG data in a 4D array of shape <code class="docutils literal notranslate"><span class="pre">(trials,</span> <span class="pre">bands,</span> <span class="pre">electrodes,</span> <span class="pre">time)</span></code> or its flattened variant if <code class="docutils literal notranslate"><span class="pre">flattening=True</span></code> is passed.</p>
+<p><strong>Note:</strong> You must always return the updated <code class="docutils literal notranslate"><span class="pre">eegdata</span></code> dictionary <em>even if you perform operations in-place</em> to ensure the pipeline remains functional and modular.</p>
+<p><strong>Example:</strong></p>
+<p>This class performs standardization (Z-score) across the EEG time domain, considering the shape <code class="docutils literal notranslate"><span class="pre">(trials,</span> <span class="pre">bands,</span> <span class="pre">electrodes,</span> <span class="pre">time)</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">StandardScalerEEG</span><span class="p">:</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eegdata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">eegdata</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span>
+
+        <span class="n">bands</span><span class="p">,</span> <span class="n">electrodes</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">X_reshaped</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">bands</span><span class="p">,</span> <span class="n">electrodes</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">X_reshaped</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1">#shape (bands, electrodes, 1)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">X_reshaped</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1">#shape (bands, electrodes, 1)</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eegdata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">eegdata</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>  <span class="c1">#(trials, bands, electrodes, time)</span>
+        <span class="n">X_trans</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>  <span class="c1">#(bands, electrodes, trials, time)</span>
+        <span class="n">X_scaled</span> <span class="o">=</span> <span class="p">(</span><span class="n">X_trans</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">])</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">std_</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="c1">#(bands, electrodes, trials, time)</span>
+        <span class="n">X_scaled</span> <span class="o">=</span> <span class="n">X_scaled</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="c1"># volta para (trials, bands, electrodes, time)</span>
+
+        <span class="n">eegdata</span><span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">X_scaled</span>
+        <span class="k">return</span> <span class="n">eegdata</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eegdata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">eegdata</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">eegdata</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pre_folding</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">pos_folding</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;sf&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">StandardScalerEEG</span><span class="p">(),</span> <span class="p">{}),</span>
+    <span class="o">...</span>
+    <span class="s1">&#39;clf&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">lda</span><span class="p">(),</span> <span class="p">{})</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>These examples demonstrate how both object-oriented and functional styles can be effectively integrated into the pipeline.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="data_processing.html" class="btn btn-neutral float-left" title="Introduction to Data Processing using bciflow" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ownDataset.html" class="btn btn-neutral float-right" title="How to use a custom dataset with bciflow library" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Gabriel Henrique de Souza.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
