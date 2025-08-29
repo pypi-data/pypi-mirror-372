@@ -1,0 +1,69 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  release:
+    types:
+    - published
+
+jobs:
+  build_wheels:
+    name: Wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-13, macos-14, windows-latest, ubuntu-24.04-arm]
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        submodules: recursive
+
+    - name: Install OpenMP (macOS)
+      if: runner.os == 'macOS'
+      run: brew install libomp
+
+    - name: Set MACOSX_DEPLOYMENT_TARGET for macOS 13
+      if: matrix.os == 'macos-13'
+      run: echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> $GITHUB_ENV
+
+    - name: Set MACOSX_DEPLOYMENT_TARGET for macOS 14
+      if: matrix.os == 'macos-14'
+      run: echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
+
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v3.1.4
+      env:
+        PIP_ONLY_BINARY: "numpy"
+
+    - name: Show files
+      run: ls -lh wheelhouse
+      shell: bash
+
+    - uses: actions/upload-artifact@v4
+      with:
+        path: ./wheelhouse/*.whl
+        name: artifact-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        submodules: recursive
+
+    - uses: actions/setup-python@v4
+      name: Install Python
+      with:
+        python-version: "3.12"
+
+    - name: Build sdist
+      run: |
+        python -m pip install build
+        python -m build -s
+
+    - uses: actions/upload-artifact@v4
+      with:
+        path: dist/*.tar.gz
+        name: artifact-${{ github.run_id }}-${{ github.run_attempt }}
