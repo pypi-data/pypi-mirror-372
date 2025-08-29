@@ -1,0 +1,540 @@
+import pytest
+import pandas as pd
+import polars as pl
+from unittest.mock import Mock, patch
+
+from pointblank._interrogation import (
+    ColValsCompareOne,
+    ColValsCompareTwo,
+    ColValsCompareSet,
+    ColValsRegex,
+    ColExistsHasType,
+    RowsDistinct,
+    _safe_modify_datetime_compare_val,
+    _modify_datetime_compare_val,
+    _column_has_null_values,
+    ConjointlyValidation,
+)
+
+
+@pytest.fixture
+def tbl_pd():
+    return pd.DataFrame({"x": [1, 2, 3, 4], "y": ["4", "5", "6", "7"], "z": [8, 8, 8, 8]})
+
+
+@pytest.fixture
+def tbl_pl():
+    return pl.DataFrame({"x": [1, 2, 3, 4], "y": ["4", "5", "6", "7"], "z": [8, 8, 8, 8]})
+
+
+@pytest.fixture
+def tbl_pd_distinct():
+    return pd.DataFrame(
+        {
+            "col_1": ["a", "b", "c", "d"],
+            "col_2": ["a", "a", "c", "d"],
+            "col_3": ["a", "a", "d", "e"],
+        }
+    )
+
+
+@pytest.fixture
+def tbl_pl_distinct():
+    return pl.DataFrame(
+        {
+            "col_1": ["a", "b", "c", "d"],
+            "col_2": ["a", "a", "c", "d"],
+            "col_3": ["a", "a", "d", "e"],
+        }
+    )
+
+
+COLUMN_LIST = ["x", "y", "z", "pb_is_good_"]
+
+COLUMN_LIST_DISTINCT = ["col_1", "col_2", "col_3", "pb_is_good_"]
+
+
+@pytest.mark.parametrize(
+    "tbl_fixture, assertion_method",
+    [
+        ("tbl_pd", "gt"),
+        ("tbl_pd", "lt"),
+        ("tbl_pd", "eq"),
+        ("tbl_pd", "ne"),
+        ("tbl_pd", "ge"),
+        ("tbl_pd", "le"),
+        ("tbl_pl", "gt"),
+        ("tbl_pl", "lt"),
+        ("tbl_pl", "eq"),
+        ("tbl_pl", "ne"),
+        ("tbl_pl", "ge"),
+        ("tbl_pl", "le"),
+    ],
+)
+def test_col_vals_compare_one(request, tbl_fixture, assertion_method):
+    tbl = request.getfixturevalue(tbl_fixture)
+
+    col_vals_compare_one = ColValsCompareOne(
+        data_tbl=tbl,
+        column="x",
+        value=1,
+        na_pass=True,
+        threshold=10,
+        assertion_method=assertion_method,
+        allowed_types=["numeric"],
+    )
+
+    assert isinstance(
+        col_vals_compare_one.test_unit_res,
+        pd.DataFrame if tbl_fixture == "tbl_pd" else pl.DataFrame,
+    )
+
+    if tbl_fixture == "tbl_pd":
+        assert col_vals_compare_one.test_unit_res.columns.tolist() == COLUMN_LIST
+        assert col_vals_compare_one.get_test_results().columns.tolist() == COLUMN_LIST
+    else:
+        assert col_vals_compare_one.test_unit_res.columns == COLUMN_LIST
+        assert col_vals_compare_one.get_test_results().columns == COLUMN_LIST
+
+    assert col_vals_compare_one.test() is True
+
+
+def test_col_vals_compare_one_invalid_assertion_method(tbl_pd):
+    with pytest.raises(ValueError):
+        ColValsCompareOne(
+            data_tbl=tbl_pd,
+            column="x",
+            value=1,
+            na_pass=True,
+            threshold=10,
+            assertion_method="invalid",
+            allowed_types=["numeric"],
+        )
+
+
+@pytest.mark.parametrize(
+    "tbl_fixture, assertion_method",
+    [
+        ("tbl_pd", "between"),
+        ("tbl_pd", "outside"),
+        ("tbl_pl", "between"),
+        ("tbl_pl", "outside"),
+    ],
+)
+def test_col_vals_compare_two(request, tbl_fixture, assertion_method):
+    tbl = request.getfixturevalue(tbl_fixture)
+
+    col_vals_compare_two = ColValsCompareTwo(
+        data_tbl=tbl,
+        column="x",
+        value1=1,
+        value2=2,
+        inclusive=(True, True),
+        na_pass=True,
+        threshold=10,
+        assertion_method=assertion_method,
+        allowed_types=["numeric"],
+    )
+
+    assert isinstance(
+        col_vals_compare_two.test_unit_res,
+        pd.DataFrame if tbl_fixture == "tbl_pd" else pl.DataFrame,
+    )
+
+    if tbl_fixture == "tbl_pd":
+        assert col_vals_compare_two.test_unit_res.columns.tolist() == COLUMN_LIST
+        assert col_vals_compare_two.get_test_results().columns.tolist() == COLUMN_LIST
+    else:
+        assert col_vals_compare_two.test_unit_res.columns == COLUMN_LIST
+        assert col_vals_compare_two.get_test_results().columns == COLUMN_LIST
+
+    assert col_vals_compare_two.test() is True
+
+
+def test_col_vals_compare_two_invalid_assertion_method(tbl_pd):
+    with pytest.raises(ValueError):
+        ColValsCompareTwo(
+            data_tbl=tbl_pd,
+            column="x",
+            value1=1,
+            value2=2,
+            inclusive=(True, True),
+            na_pass=True,
+            threshold=10,
+            assertion_method="invalid",
+            allowed_types=["numeric"],
+        )
+
+
+@pytest.mark.parametrize(
+    "tbl_fixture, inside",
+    [
+        ("tbl_pd", True),
+        ("tbl_pd", False),
+        ("tbl_pl", True),
+        ("tbl_pl", False),
+    ],
+)
+def test_col_vals_compare_set(request, tbl_fixture, inside):
+    tbl = request.getfixturevalue(tbl_fixture)
+
+    col_vals_compare_set = ColValsCompareSet(
+        data_tbl=tbl,
+        column="x",
+        values=[1, 2, 3],
+        threshold=10,
+        inside=inside,
+        allowed_types=["numeric"],
+    )
+
+    assert isinstance(
+        col_vals_compare_set.test_unit_res,
+        pd.DataFrame if tbl_fixture == "tbl_pd" else pl.DataFrame,
+    )
+
+    if tbl_fixture == "tbl_pd":
+        assert col_vals_compare_set.test_unit_res.columns.tolist() == COLUMN_LIST
+        assert col_vals_compare_set.get_test_results().columns.tolist() == COLUMN_LIST
+    else:
+        assert col_vals_compare_set.test_unit_res.columns == COLUMN_LIST
+        assert col_vals_compare_set.get_test_results().columns == COLUMN_LIST
+
+    assert col_vals_compare_set.test() is True
+
+
+@pytest.mark.parametrize(
+    "tbl_fixture",
+    ["tbl_pd", "tbl_pl"],
+)
+def test_col_vals_regex(request, tbl_fixture):
+    tbl = request.getfixturevalue(tbl_fixture)
+
+    col_vals_regex = ColValsRegex(
+        data_tbl=tbl,
+        column="y",
+        pattern=r"^[0-9]$",
+        na_pass=True,
+        threshold=10,
+        allowed_types=["str"],
+    )
+
+    assert isinstance(
+        col_vals_regex.test_unit_res,
+        pd.DataFrame if tbl_fixture == "tbl_pd" else pl.DataFrame,
+    )
+
+    if tbl_fixture == "tbl_pd":
+        assert col_vals_regex.test_unit_res.columns.tolist() == COLUMN_LIST
+        assert col_vals_regex.get_test_results().columns.tolist() == COLUMN_LIST
+    else:
+        assert col_vals_regex.test_unit_res.columns == COLUMN_LIST
+        assert col_vals_regex.get_test_results().columns == COLUMN_LIST
+
+    assert col_vals_regex.test() is True
+
+
+@pytest.mark.parametrize(
+    "tbl_fixture, assertion_method",
+    [
+        ("tbl_pd", "exists"),
+        ("tbl_pl", "exists"),
+    ],
+)
+def test_column_exists_has_type(request, tbl_fixture, assertion_method):
+    tbl = request.getfixturevalue(tbl_fixture)
+
+    col_exists_has_type = ColExistsHasType(
+        data_tbl=tbl,
+        column="x",
+        threshold=1,
+        assertion_method=assertion_method,
+    )
+
+    assert isinstance(col_exists_has_type.test_unit_res, int)
+    assert col_exists_has_type.test_unit_res == 1
+
+
+@pytest.mark.parametrize("tbl_fixture", ["tbl_pd_distinct", "tbl_pl_distinct"])
+def test_rows_distinct(request, tbl_fixture):
+    tbl = request.getfixturevalue(tbl_fixture)
+
+    rows_distinct = RowsDistinct(
+        data_tbl=tbl,
+        columns_subset=["col_1", "col_2", "col_3"],
+        threshold=1,
+    )
+
+    assert isinstance(
+        rows_distinct.test_unit_res,
+        pd.DataFrame if tbl_fixture == "tbl_pd_distinct" else pl.DataFrame,
+    )
+
+    if tbl_fixture == "tbl_pd_distinct":
+        assert rows_distinct.test_unit_res.columns.tolist() == COLUMN_LIST_DISTINCT
+        assert rows_distinct.get_test_results().columns.tolist() == COLUMN_LIST_DISTINCT
+    else:
+        assert rows_distinct.test_unit_res.columns == COLUMN_LIST_DISTINCT
+        assert rows_distinct.get_test_results().columns == COLUMN_LIST_DISTINCT
+
+    assert rows_distinct.test() is True
+
+
+def test_safe_modify_datetime_with_collect_schema():
+    """Test using collect_schema method."""
+    # Create a mock dataframe with collect_schema
+    mock_df = Mock()
+    mock_schema = {"date_col": "datetime64[ns]"}
+    mock_df.collect_schema.return_value = mock_schema
+
+    # Mock the _modify_datetime_compare_val function
+    with patch("pointblank._interrogation._modify_datetime_compare_val") as mock_modify:
+        mock_modify.return_value = "modified_value"
+
+        result = _safe_modify_datetime_compare_val(mock_df, "date_col", "2023-01-01")
+
+        assert result == "modified_value"
+        mock_modify.assert_called_once()
+
+
+def test_safe_modify_datetime_with_schema_attribute():
+    """Test using schema attribute."""
+    # Create a mock dataframe with schema attribute
+    mock_df = Mock()
+    del mock_df.collect_schema  # Remove collect_schema
+    mock_df.schema = {"date_col": "datetime64[ns]"}
+
+    with patch("pointblank._interrogation._modify_datetime_compare_val") as mock_modify:
+        mock_modify.return_value = "modified_value"
+
+        result = _safe_modify_datetime_compare_val(mock_df, "date_col", "2023-01-01")
+
+        assert result == "modified_value"
+
+
+def test_safe_modify_datetime_fallback_sample_collect():
+    """Test fallback to sample collection."""
+    # Create mock dataframe without schema methods
+    mock_df = Mock()
+    del mock_df.collect_schema
+    del mock_df.schema
+
+    # Mock head().collect() scenario
+    mock_sample = Mock()
+    mock_sample.dtypes = {"date_col": "datetime64[ns]"}
+    mock_sample.columns = ["date_col"]
+    mock_df.head.return_value.collect.return_value = mock_sample
+
+    with patch("pointblank._interrogation._modify_datetime_compare_val") as mock_modify:
+        mock_modify.return_value = "modified_value"
+
+        result = _safe_modify_datetime_compare_val(mock_df, "date_col", "2023-01-01")
+
+        assert result == "modified_value"
+
+
+def test_safe_modify_datetime_fallback_sample_exception():
+    """Test exception in sample collection."""
+    mock_df = Mock()
+    del mock_df.collect_schema
+    del mock_df.schema
+    mock_df.head.side_effect = Exception("Cannot collect")
+
+    # Should not crash and fall through to next fallback
+    result = _safe_modify_datetime_compare_val(mock_df, "date_col", "2023-01-01")
+    assert result == "2023-01-01"  # Original value returned
+
+
+def test_safe_modify_datetime_direct_access_fallback():
+    """Test direct dtypes access fallback."""
+    mock_df = Mock()
+    del mock_df.collect_schema
+    del mock_df.schema
+    mock_df.head.side_effect = Exception("Cannot collect")
+
+    # Set up direct access
+    mock_df.dtypes = {"date_col": "datetime64[ns]"}
+    mock_df.columns = ["date_col"]
+
+    with patch("pointblank._interrogation._modify_datetime_compare_val") as mock_modify:
+        mock_modify.return_value = "modified_value"
+
+        result = _safe_modify_datetime_compare_val(mock_df, "date_col", "2023-01-01")
+
+        assert result == "modified_value"
+
+
+def test_safe_modify_datetime_direct_access_exception():
+    """Test exception in direct access."""
+    mock_df = Mock()
+    del mock_df.collect_schema
+    del mock_df.schema
+    mock_df.head.side_effect = Exception("Cannot collect")
+    # Make dtypes access raise exception
+    type(mock_df).dtypes = Mock(side_effect=Exception("No dtypes"))
+
+    result = _safe_modify_datetime_compare_val(mock_df, "date_col", "2023-01-01")
+    assert result == "2023-01-01"  # Original value returned
+
+
+def test_safe_modify_datetime_outer_exception():
+    """Test outer exception handling."""
+    mock_df = Mock()
+    # Make the entire try block raise an exception
+    mock_df.collect_schema.side_effect = Exception("Major failure")
+
+    result = _safe_modify_datetime_compare_val(mock_df, "date_col", "2023-01-01")
+    assert result == "2023-01-01"  # Original value returned
+
+
+@patch("pointblank._interrogation._get_tbl_type")
+def test_pyspark_expression_handling_with_error(mock_get_tbl_type):
+    """Test PySpark expression error handling."""
+    mock_get_tbl_type.return_value = "pyspark"
+
+    # Create a mock PySpark DataFrame
+    mock_df = Mock()
+
+    # Create ConjointlyValidation instance with expression functions
+    conjointly = ConjointlyValidation(
+        data_tbl=mock_df,
+        expressions=[],
+        threshold=1.0,
+        tbl_type="pyspark",
+    )
+
+    # Mock expression functions that will fail
+    def failing_expr_fn(df):
+        raise Exception("PySpark error")
+
+    def failing_col_expr_fn(df):
+        # Mock a column expression that also fails conversion
+        mock_col_expr = Mock()
+        mock_col_expr.to_pyspark_expr.side_effect = Exception("Conversion error")
+        return mock_col_expr
+
+    conjointly.expressions = [failing_expr_fn, failing_col_expr_fn]
+
+    # Mock the PySpark imports and methods
+    with patch("pyspark.sql.functions.lit") as mock_lit:
+        lit_result = Mock()
+        mock_lit.return_value = lit_result
+        mock_df.withColumn.return_value = "results_table"
+
+        # This should handle the errors gracefully and return default case
+        result = conjointly._get_pyspark_results()
+
+        # Should fall back to default case
+        assert result == "results_table"
+        # Just verify it was called, don't check the exact mock object
+        mock_df.withColumn.assert_called_once()
+        args, kwargs = mock_df.withColumn.call_args
+        assert args[0] == "pb_is_good_"
+
+
+def test_pyspark_results_table_creation_default_case():
+    """Test default case in PySpark results."""
+    mock_df = Mock()
+
+    conjointly = ConjointlyValidation(
+        data_tbl=mock_df,
+        expressions=[],
+        threshold=1.0,
+        tbl_type="pyspark",
+    )
+
+    # Mock PySpark F.lit for the default case
+    with patch("pyspark.sql.functions.lit") as mock_lit:
+        mock_lit.return_value = "lit_true"
+        mock_df.withColumn.return_value = "results_table"
+
+        result = conjointly._get_pyspark_results()
+
+        assert result == "results_table"
+        mock_df.withColumn.assert_called_with("pb_is_good_", "lit_true")
+
+
+def test_pyspark_nested_exception_print():
+    """Test the nested exception print statement."""
+    mock_df = Mock()
+
+    conjointly = ConjointlyValidation(
+        data_tbl=mock_df,
+        expressions=[],
+        threshold=1.0,
+        tbl_type="pyspark",
+    )
+
+    def failing_expr_fn(df):
+        raise Exception("First error")
+
+    def failing_nested_expr_fn(df):
+        if df is None:
+            raise Exception("Second error")
+        raise Exception("First error")
+
+    conjointly.expressions = [failing_expr_fn, failing_nested_expr_fn]
+
+    # Mock print to capture the error message
+    with patch("builtins.print") as mock_print:
+        with patch("pyspark.sql.functions.lit") as mock_lit:
+            mock_lit.return_value = "lit_true"
+            mock_df.withColumn.return_value = "results_table"
+
+            result = conjointly._get_pyspark_results()
+
+            # Should have printed the error messages
+            assert mock_print.call_count >= 1
+
+
+def test_check_column_has_nulls_attribute_error():
+    """Test AttributeError handling in null checking."""
+    # Create a mock table without null_count method
+    mock_table = Mock()
+    del mock_table.select().null_count  # Remove null_count method
+
+    # Mock the select().collect() scenario for LazyFrames
+    mock_collected = Mock()
+    mock_collected.null_count.return_value = {"test_col": [1]}
+    mock_table.select.return_value.collect.return_value = mock_collected
+
+    result = _column_has_null_values(mock_table, "test_col")
+    assert result is True
+
+
+def test_check_column_has_nulls_nested_exceptions():
+    """Test nested exception handling in null checking."""
+    # Create a mock that raises AttributeError for null_count
+    mock_table = Mock()
+
+    # Make standard null_count() method fail
+    mock_select_result = Mock()
+    del mock_select_result.null_count  # Remove null_count method to trigger AttributeError
+    mock_table.select.return_value = mock_select_result
+
+    # Make collect() also fail
+    mock_select_result.collect.side_effect = Exception("Collect failed")
+
+    # Mock narwhals scenario that also fails
+    with patch("pointblank._interrogation.nw") as mock_nw:
+        mock_nw.col.return_value.is_null.return_value.sum.return_value.alias.return_value = (
+            "null_expr"
+        )
+        mock_table.select.side_effect = [mock_select_result, Exception("Select failed")]
+
+        result = _column_has_null_values(mock_table, "test_col")
+        assert result is False  # Last resort returns False
+
+
+def test_modify_datetime_column_isinstance_check():
+    """Test the isinstance check that's currently not covered."""
+    from pointblank.column import Column
+
+    mock_column = Mock()
+    mock_column.dtype = "datetime64[ns]"
+
+    # Create a Column instance to test the isinstance check
+    column_instance = Column("test")
+
+    # This should return the column instance itself
+    result = _modify_datetime_compare_val(mock_column, column_instance)
+    assert result == column_instance
