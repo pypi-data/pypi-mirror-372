@@ -1,0 +1,33 @@
+# -*- coding: utf-8 -*-
+from setuptools import setup
+from Cython.Build import cythonize
+
+long_description = open("README.md", encoding="utf-8").read()
+
+setup(
+    name= "LibKaleidoscope",
+    version= "1.4.2",
+    description= "A library to create kaleidoscope effect on images.",
+    long_description= long_description,
+    long_description_content_type= "text/markdown",
+    author= "egecetin",
+    author_email = "egecetin@hotmail.com.tr",
+    maintainer= "egecetin",
+    maintainer_email= "egecetin@hotmail.com.tr",
+    url= "https://egecetin.github.io/libKaleidoscope/",
+    download_url= "https://github.com/egecetin/libKaleidoscope/releases",
+    license= "MIT License",
+    keywords= ['image-processing', 'video-processing', 'image-manipulation', 'image-filtering', 'video-filtering'],
+    platforms= ['any'],
+    classifiers= [
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: MacOS',
+        'Operating System :: Microsoft',
+        'Operating System :: OS Independent',
+        'Operating System :: Unix',
+        'Programming Language :: C',
+        'Programming Language :: Cython',
+        'Topic :: Scientific/Engineering :: Image Processing'],
+    options={'bdist_wheel':{'universal':True}},
+    ext_modules=cythonize('kaleidoscope.pyx')
+    )
