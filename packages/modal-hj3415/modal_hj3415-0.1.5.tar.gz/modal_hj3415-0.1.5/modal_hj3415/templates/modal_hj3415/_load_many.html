@@ -1,0 +1,61 @@
+{# modal_hj3415/_load_many.html #}
+{% load static %}
+{% if items %}
+<style>
+.modal-title{color:#777;line-height:1;transition:.3s;text-decoration:none;}
+.modal .modal-dialog .modal-footer .popup-check{color:#777;line-height:1;transition:.3s;text-decoration:none;}
+.modal-body{padding:0;}
+</style>
+
+{% for item in items %}
+<div class="modal fade" id="{{ item.modal_id }}" tabindex="-1" aria-labelledby="{{ item.modal_id }}_label" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="{{ item.modal_id }}_label">{{ item.title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% include item.template_name with popup=item.popup %}
+      </div>
+      <div class="modal-footer justify-content-start">
+        <div class="popup-check">
+          <input type="checkbox" class="epopup_suppress" data-modal-id="{{ item.modal_id }}" id="epopup_suppress_{{ forloop.counter }}" />
+          <label for="epopup_suppress_{{ forloop.counter }}" data-id="checkbox_text">
+            {{ dont_show_again }}
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+  jQuery(function($){
+    var ids = [{% for item in items %}'{{ item.modal_id }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+    var queue = ids.filter(function(id){ return !$.cookie('ecacher-modal_' + id); });
+
+    function openNext(){
+      if(queue.length === 0) return;
+      var id = queue.shift();
+      $('#' + id).modal('show').one('hidden.bs.modal', openNext);
+    }
+
+    $(document).on('click', '.epopup_suppress', function(){
+      var modalId = $(this).data('modalId');
+      if($(this).is(':checked')){
+        $('#' + modalId).modal('hide');
+        $.cookie('ecacher-modal_' + modalId, true);
+      }else{
+        $.cookie('ecacher-modal_' + modalId, false);
+      }
+    });
+
+    var autoOpen = {{ auto_open|yesno:"true,false" }};
+    if(autoOpen){ openNext(); }
+  });
+</script>
+{% endif %}
