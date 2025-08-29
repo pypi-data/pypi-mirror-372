@@ -1,0 +1,99 @@
+
+# Getting Started with AWS S3
+
+## Install the Package
+
+The package is compatible with Python versions `3.7+`.
+Install the package from PyPi using the following pip command:
+
+```bash
+pip install aws-s3-sdk==1.0.0
+```
+
+You can also view the package at:
+https://pypi.python.org/pypi/aws-s3-sdk/1.0.0
+
+## Test the SDK
+
+You can test the generated SDK and the server with test cases. `unittest` is used as the testing framework and `pytest` is used as the test runner. You can run the tests as follows:
+
+Navigate to the root directory of the SDK and run the following commands
+
+
+pip install -r test-requirements.txt
+pytest
+
+
+## Initialize the API Client
+
+**_Note:_** Documentation for the client can be found [here.](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/client.md)
+
+The following parameters are configurable for the API Client:
+
+| Parameter | Type | Description |
+|  --- | --- | --- |
+| environment | `Environment` | The API environment. <br> **Default: `Environment.PRODUCTION`** |
+| http_client_instance | `HttpClient` | The Http Client passed from the sdk user for making requests |
+| override_http_client_configuration | `bool` | The value which determines to override properties of the passed Http Client from the sdk user |
+| http_call_back | `HttpCallBack` | The callback value that is invoked before and after an HTTP call is made to an endpoint |
+| timeout | `float` | The value to use for connection timeout. <br> **Default: 60** |
+| max_retries | `int` | The number of times to retry an endpoint call if it fails. <br> **Default: 0** |
+| backoff_factor | `float` | A backoff factor to apply between attempts after the second try. <br> **Default: 2** |
+| retry_statuses | `Array of int` | The http statuses on which retry is to be done. <br> **Default: [408, 413, 429, 500, 502, 503, 504, 521, 522, 524]** |
+| retry_methods | `Array of string` | The http methods on which retry is to be done. <br> **Default: ['GET', 'PUT']** |
+
+The API client can be initialized as follows:
+
+```python
+from awss3.awss_3_client import Awss3Client
+from awss3.configuration import Environment
+
+client = Awss3Client(
+    environment=Environment.PRODUCTION
+)
+```
+
+## List of APIs
+
+* [Legal Hold](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/legal-hold.md)
+* [Public Access Block](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/public-access-block.md)
+* [Accelerate](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/accelerate.md)
+* [ACL](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/acl.md)
+* [Analytics](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/analytics.md)
+* [CORS](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/cors.md)
+* [Encryption](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/encryption.md)
+* [Inventory](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/inventory.md)
+* [Lifecycle](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/lifecycle.md)
+* [Location](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/location.md)
+* [Logging](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/logging.md)
+* [Metrics](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/metrics.md)
+* [Notifications](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/notifications.md)
+* [Payments](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/payments.md)
+* [Policy](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/policy.md)
+* [Replication](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/replication.md)
+* [Tagging](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/tagging.md)
+* [Versioning](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/versioning.md)
+* [Website](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/website.md)
+* [Buckets](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/buckets.md)
+* [Lock](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/lock.md)
+* [Retention](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/retention.md)
+* [Torrent](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/torrent.md)
+* [Uploads](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/uploads.md)
+* [Versions](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/versions.md)
+* [Objects](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/objects.md)
+* [Misc](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/controllers/misc.md)
+
+## SDK Infrastructure
+
+### HTTP
+
+* [HttpResponse](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/http-response.md)
+* [HttpRequest](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/http-request.md)
+
+### Utilities
+
+* [ApiHelper](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/api-helper.md)
+* [HttpDateTime](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/http-date-time.md)
+* [RFC3339DateTime](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/rfc3339-date-time.md)
+* [UnixDateTime](https://www.github.com/MuHamza30/aws-s-3-python-sdk/tree/1.0.0/doc/unix-date-time.md)
+
