@@ -1,0 +1,20 @@
+# Static OneRoster sourcedID Values
+GUID_ONEROSTER_CURRENT_GRADE_CATEGORY_ID: str = "4b9a9d38-ac45-447f-8733-51aeb6d988ad"
+GUID_ONEROSTER_FINAL_GRADE_CATEGORY_ID: str = "0cff2c81-f135-49dc-989b-6ce2dfe81e0a"
+
+# Dependency Names
+UNKNOWN = "Unknown"
+IDENTITY_SERVER = "IdentityServer"
+USER_CREATION = "UserCreation"
+EVENTS_API = "EventsApi"
+
+ONEROSTER_DATA_STORE = "OneRosterDataStore"
+STRONGMIND_CENTRAL = "StrongMindCentral"
+
+# OneRoster Types
+ONEROSTER_SINGLE_TYPE_NAME_CLASS = "class"
+
+# Default Types
+DEFAULT_UUID: str = "00000000-0000-0000-0000-000000000000"
+DEFAULT_START_DATE: str = "2000-01-01T00:00:00"
+DEFAULT_END_DATE: str = "3000-01-01T00:00:00"
