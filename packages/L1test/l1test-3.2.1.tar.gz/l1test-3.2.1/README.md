@@ -1,0 +1,1 @@
+This is a plugin for the IDE Thonny, that provides a basic literate testing tool for novice programmers (hence the name, L1 = CS1). For teaching purpose. Alpha status.
