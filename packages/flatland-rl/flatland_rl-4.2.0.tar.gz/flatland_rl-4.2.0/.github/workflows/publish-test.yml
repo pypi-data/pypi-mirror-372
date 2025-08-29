@@ -1,0 +1,47 @@
+name: Publish package to Test PyPI
+
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: "Version number"
+                required: true
+                type: string
+
+jobs:
+    publish:
+        runs-on: ubuntu-22.04
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v4
+                with:
+                    fetch-depth: 0
+            -   name: Set up Python
+                uses: actions/setup-python@v5
+                with:
+                    python-version: "3.13"
+            -   name: Download episodes
+                run: |
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    mkdir -p episodes
+                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Tag commit with version
+                env:
+                    VERSION: ${{ inputs.version }}
+                run: git tag v$VERSION
+            -   name: Build new package
+                run: tox run -e build
+            -   name: Publish package to PyPI
+                uses: pypa/gh-action-pypi-publish@release/v1
+                with:
+                    password: ${{ secrets.PYPI_TEST_API_TOKEN }}
+                    repository-url: https://test.pypi.org/legacy/
+            -   name: Archive package
+                uses: actions/upload-artifact@v4
+                with:
+                    name: python-package
+                    path: dist/
