@@ -1,0 +1,58 @@
+{% set pyproject = load_file_data('../../../pyproject.toml', from_recipe_dir=True) %}
+{% set buildsystem = pyproject['build-system'] %}
+{% set project = pyproject['project'] %}
+
+{% set name = project['name'] %}
+{% set version = VERSION %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: ../../../dist/{{ name }}-{{ version }}.tar.gz
+
+build:
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+
+requirements:
+  build:
+    - python {{ project['requires-python'] }}
+    - pip
+    {% for dep in buildsystem['requires'] %}
+    - {{ dep }}
+    {% endfor %}
+  run:
+    - python {{ project['requires-python'] }}
+    {% for dep in project['dependencies'] %}
+    - {{ dep }}
+    {% endfor %}
+
+test:
+  requires:
+    - pip
+    {% for dep in project['optional-dependencies']['tests-core'] %}
+    {% if 'dask[dataframe]' in dep %}
+    - {{ dep | replace("[dataframe]", "") }}
+    {% elif 'bokeh_sampledata' in dep %}
+    - {{ dep | replace("; python_version >= '3.10'", "") }}
+    {% else %}
+    - {{ dep }}
+    {% endif %}
+    {% endfor %}
+  source_files:
+    - pyproject.toml
+  imports:
+    - hvplot
+    - hvplot.pandas
+  commands:
+    - python -c "import hvplot; ver = hvplot.__version__; assert ver != '0.0.0' and ver != 'unknown'"
+    - pip check
+    - pytest hvplot
+
+about:
+  home: {{ project['urls']['Homepage'] }}
+  summary: {{ project['description'] }}
+  license: {{ project['license']['text'] }}
+  license_file: LICENSE
