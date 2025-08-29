@@ -1,0 +1,45 @@
+Metadata-Version: 2.4
+Name: anydbx
+Version: 0.1.1
+Summary: Agnostic SQLAlchemy helper with engine registry, safe transactions, and pandas I/O.
+Project-URL: Homepage, https://github.com/nargotik/anydbx
+Author: Daniel Torres
+License-Expression: MIT
+Keywords: database,duckdb,mssql,mysql,pandas,sqlalchemy
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Database
+Requires-Python: >=3.9
+Requires-Dist: pandas>=1.5
+Requires-Dist: sqlalchemy<3,>=1.4
+Provides-Extra: duckdb
+Requires-Dist: duckdb-engine>=0.11; extra == 'duckdb'
+Requires-Dist: duckdb>=1.0; extra == 'duckdb'
+Provides-Extra: mssql
+Requires-Dist: pymssql>=2.2; extra == 'mssql'
+Provides-Extra: mysql
+Requires-Dist: pymysql>=1.0; extra == 'mysql'
+Provides-Extra: postgres
+Requires-Dist: psycopg[binary]>=3.1; extra == 'postgres'
+Description-Content-Type: text/markdown
+
+# anydbx
+
+Agnostic SQLAlchemy helper with engine registry, safe transactions, and pandas I/O.
+
+```python
+from pathlib import Path
+from anydbx import load_config, fetch_df, write_df, execute
+
+cfg = load_config(Path("credentials.cfg"), "wms")  # INI section
+
+# DDL / DML
+execute("CREATE TABLE t (id INT)", name="wms", cfg=cfg)
+
+# pandas -> SQL
+import pandas as pd
+df = pd.DataFrame({"id": [1,2,3]})
+write_df(df, "t", name="wms", cfg=cfg)
+
+# SQL -> pandas
+rows = fetch_df("SELECT * FROM t", name="wms", cfg=cfg)
