@@ -1,0 +1,362 @@
+# Email Template Review MCP Server
+
+一个基于 Model Context Protocol (MCP) 的邮件模板自动化审核和管理服务器。
+
+## 项目简介
+
+此 MCP 服务器提供自动化获取和更新邮件模板信息的功能，支持邮件模板的审核流程管理。服务器通过 MCP 协议与 Claude Desktop 集成，提供三个核心工具：
+
+- `get_email_template_info` - 获取邮件模版信息
+- `update_email_template_status` - 更新邮件模版状态（是否审核通过）
+- `fetch_review_rules` - 获取审核规则
+
+## 项目结构
+
+```
+email_template_review_mcp/
+├── src/
+│   └── email_template_review_mcp/
+│       ├── __init__.py          # 包初始化文件，定义版本信息
+│       ├── server.py            # MCP 服务器主程序，实现三个核心工具
+│       ├── client.py            # API 客户端，处理认证和 API 调用
+│       └── review_rules.py      # 审核规则模块，定义邮件模板审核标准
+├── pyproject.toml              # 项目配置文件，包含依赖和构建配置
+├── setup.py                    # 安装脚本，支持 PyPI 发布
+├── MANIFEST.in                 # 打包配置，指定包含的文件
+├── LICENSE                     # MIT 许可证文件
+└── README.md                   # 项目文档
+```
+
+### 核心文件说明
+
+- **`server.py`**: MCP 服务器的主要实现，包含三个工具的处理逻辑，负责环境变量验证和工具调用分发
+- **`client.py`**: 邮件模板 API 的客户端实现，处理 Laravel CSRF 认证和 HTTP 请求
+- **`review_rules.py`**: 定义邮件模板的审核规则，包括变量使用规范和敏感词检测规则
+- **`pyproject.toml`**: 现代 Python 项目配置，定义依赖关系、构建工具和包元数据
+
+## 安装和使用
+
+### 通过 pip 安装
+
+```bash
+pip install email-template-review-mcp
+```
+
+### 从源码安装
+
+```bash
+# 克隆项目
+git clone https://github.com/example/email-template-review-mcp.git
+cd email-template-review-mcp
+
+# 安装包
+pip install -e .
+```
+
+## 环境变量配置
+
+**重要提醒**: 所有配置参数都必须通过环境变量提供，服务器不再包含任何默认值。
+
+### 必需的环境变量
+
+| 变量名 | 说明 |
+|--------|------|
+| `EMAIL_TEMPLATE_BASE_URL` | 邮件管理系统的基础URL（例如：https://your-email-system.com） |
+| `EMAIL_TEMPLATE_USERNAME` | 登录用户名（邮箱格式） |
+| `EMAIL_TEMPLATE_PASSWORD` | 登录密码 |
+
+## Claude Desktop 配置
+
+### 1. 安装服务器
+
+```bash
+pip install email-template-review-mcp
+```
+
+### 2. 配置 Claude Desktop
+
+编辑 Claude Desktop 配置文件：
+
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+添加以下配置：
+
+**方法一：使用Python模块（推荐，命令最短）**
+```json
+{
+  "mcpServers": {
+    "email-template-review": {
+      "command": "python",
+      "args": ["-m", "email_template_review_mcp"],
+      "env": {
+        "EMAIL_TEMPLATE_BASE_URL": "https://your-email-system.com",
+        "EMAIL_TEMPLATE_USERNAME": "your-username@example.com",
+        "EMAIL_TEMPLATE_PASSWORD": "your-password"
+      }
+    }
+  }
+}
+```
+
+**方法二：使用短脚本命令**
+```json
+{
+  "mcpServers": {
+    "email-template-review": {
+      "command": "etr-mcp",
+      "args": [],
+      "env": {
+        "EMAIL_TEMPLATE_BASE_URL": "https://your-email-system.com", 
+        "EMAIL_TEMPLATE_USERNAME": "your-username@example.com",
+        "EMAIL_TEMPLATE_PASSWORD": "your-password"
+      }
+    }
+  }
+}
+```
+
+### 3. 重启 Claude Desktop
+
+配置完成后：
+1. 完全关闭 Claude Desktop 应用程序
+2. 重新启动 Claude Desktop
+3. 等待几秒钟让MCP服务器完成初始化
+
+### 4. 验证配置
+
+启动后，在 Claude Desktop 中你可以：
+
+1. **检查MCP服务器状态**：询问："显示当前可用的MCP工具"
+2. **可用的工具**：
+   - ✅ `get_email_template_info` - 获取邮件模版信息
+   - ✅ `update_email_template_status` - 更新邮件模版状态
+   - ✅ `fetch_review_rules` - 获取审核规则
+3. **测试工具**：请求获取指定模板ID的信息
+
+### 5. 使用示例
+
+```
+用户: 请获取邮件模板1500的详细信息
+Claude: [使用 get_email_template_info 工具获取信息]
+
+用户: 请获取邮件模板的审核规则
+Claude: [使用 fetch_review_rules 工具获取规则]
+```
+
+## API 接口说明
+
+### get_email_template_info
+
+获取邮件模版信息
+
+**输入参数：**
+- `id` (integer, 必填): 邮件模板 ID
+
+**输出：**
+- 完整的邮件模板信息，包含验证结果
+
+### update_email_template_status
+
+更新邮件模版状态
+
+**输入参数：**
+- `email_template_id` (integer, 必填): 邮件模板 ID
+- `subject` (string, 必填): 邮件标题
+- `text_body` (string, 必填): 邮件正文（纯文本）
+- `html_body` (string, 必填): 邮件正文（HTML 格式）
+- `is_public` (integer, 可选): 是否公开，默认 0
+- `remark` (string, 可选): 备注信息
+- `status` (integer, 可选): 模板状态，默认 1
+
+**输出：**
+- 更新结果和验证信息
+
+### fetch_review_rules
+
+获取审核规则
+
+**输出：**
+- 结构化的审核规则信息
+
+## PyPI 发布流程
+
+### 开发者发布步骤
+
+#### 1. 准备发布环境
+
+```bash
+# 安装构建和发布工具
+pip install build twine
+
+# 确保项目目录干净
+git status
+```
+
+#### 2. 更新版本号
+
+在 `src/email_template_review_mcp/__init__.py` 中更新版本：
+```python
+__version__ = "0.1.2"  # 更新版本号
+```
+
+**注意**: 项目使用动态版本管理，版本号由 `__init__.py` 中的 `__version__` 变量控制。
+
+#### 3. 构建发布包
+
+```bash
+# 清理之前的构建产物
+rm -rf dist/ build/ src/*.egg-info/
+
+# 构建包
+python -m build
+```
+
+构建完成后会在 `dist/` 目录生成：
+- `email_template_review_mcp-0.1.1.tar.gz` - 源代码包
+- `email_template_review_mcp-0.1.1-py3-none-any.whl` - 轮子包
+
+#### 4. 上传到 PyPI
+
+```bash
+# 上传到 PyPI（需要 PyPI 账号和 API token）
+twine upload dist/*
+```
+
+#### 5. 验证发布
+
+```bash
+# 在新环境中测试安装
+pip install email-template-review-mcp
+
+# 验证命令可用
+email-template-review-mcp
+```
+
+### 用户安装和使用
+
+#### 通过 pip 安装
+
+```bash
+pip install email-template-review-mcp
+```
+
+#### 在 Claude Desktop 中配置
+
+1. **安装包后**，编辑 Claude Desktop 配置文件
+2. **添加服务器配置**（推荐使用Python模块方式）：
+   ```json
+   {
+     "mcpServers": {
+       "email-template-review": {
+         "command": "python",
+         "args": ["-m", "email_template_review_mcp.server"],
+         "env": {
+           "EMAIL_TEMPLATE_BASE_URL": "https://your-email-system.com",
+           "EMAIL_TEMPLATE_USERNAME": "your-username",
+           "EMAIL_TEMPLATE_PASSWORD": "your-password"
+         }
+       }
+     }
+   }
+   ```
+3. **重启 Claude Desktop** 即可使用
+
+## 故障排除
+
+### 常见问题
+
+1. **显示"No tools or prompts"或可用tools为0**
+   - **原因**: MCP服务器启动失败，通常是环境变量问题
+   - **诊断步骤**:
+     1. 确认包已正确安装：`pip show email-template-review-mcp`
+     2. 测试服务器是否正常工作：
+        ```bash
+        # 下载诊断工具并运行
+        python debug_mcp.py
+        ```
+     3. 验证配置文件JSON格式正确（使用JSON验证器）
+     4. 确认所有必需的环境变量都已设置
+     5. **完全关闭并重启Claude Desktop**（重要！）
+
+2. **MCP服务器无法启动**
+   - 确认使用了正确的命令格式：
+     - ✅ `"command": "python", "args": ["-m", "email_template_review_mcp"]`
+     - ✅ `"command": "etr-mcp", "args": []`
+     - ❌ `"command": "email-template-review-mcp"`
+
+3. **环境变量未设置错误**
+   - **症状**: `EMAIL_TEMPLATE_BASE_URL environment variable is required`
+   - **解决**: 在Claude Desktop配置的`env`部分添加所有必需的环境变量：
+     ```json
+     "env": {
+       "EMAIL_TEMPLATE_BASE_URL": "https://your-email-system.com",
+       "EMAIL_TEMPLATE_USERNAME": "your-username@example.com",
+       "EMAIL_TEMPLATE_PASSWORD": "your-password"
+     }
+     ```
+
+4. **认证失败**
+   - 检查环境变量中的用户名和密码是否正确
+   - 确认网络连接正常，可访问指定的URL
+
+5. **模块导入错误**
+   ```bash
+   pip install --upgrade email-template-review-mcp
+   ```
+
+### 完整配置检查清单
+
+如果仍然显示"No tools or prompts"，请逐一检查：
+
+1. **包安装检查**:
+   ```bash
+   pip show email-template-review-mcp
+   # 应该显示版本信息
+   ```
+
+2. **命令测试**:
+   ```bash
+   # 设置环境变量后测试
+   set EMAIL_TEMPLATE_BASE_URL=https://test.com
+   set EMAIL_TEMPLATE_USERNAME=test@test.com  
+   set EMAIL_TEMPLATE_PASSWORD=test123
+   python -m email_template_review_mcp
+   # 应该启动但等待输入（按Ctrl+C退出）
+   ```
+
+3. **配置文件位置**:
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Linux: `~/.config/Claude/claude_desktop_config.json`
+
+4. **配置文件内容** (确保JSON格式正确):
+   ```json
+   {
+     "mcpServers": {
+       "email-template-review": {
+         "command": "python",
+         "args": ["-m", "email_template_review_mcp"],
+         "env": {
+           "EMAIL_TEMPLATE_BASE_URL": "https://your-email-system.com",
+           "EMAIL_TEMPLATE_USERNAME": "your-username@example.com",
+           "EMAIL_TEMPLATE_PASSWORD": "your-password"
+         }
+       }
+     }
+   }
+   ```
+
+5. **重启Claude Desktop**:
+   - 完全关闭Claude Desktop（确保进程已终止）
+   - 重新启动
+   - 等待几秒钟让MCP服务器初始化
+
+6. **验证工具可用**:
+   - 在Claude Desktop中询问："显示当前可用的工具"
+   - 应该看到3个工具：`get_email_template_info`, `update_email_template_status`, `fetch_review_rules`
+
+## 许可证
+
+本项目采用 MIT 许可证。详情请参见 [LICENSE](LICENSE) 文件。
