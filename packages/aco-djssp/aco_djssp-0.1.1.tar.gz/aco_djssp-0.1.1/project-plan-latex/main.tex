@@ -1,0 +1,165 @@
+% Document class `report-template` accepts either project-plan or final-report option in
+% []. This will change the title page as necessary.
+\documentclass[project-plan]{report-template}
+% \documentclass[final-report]{report-template}
+
+% Packages I use in my report.
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage[backend=biber, style=numeric, sorting=nyt]{biblatex}
+\addbibresource{references.bib}
+\usepackage{tabularx}
+
+
+% Directory where I saved my figures.
+\graphicspath{{./figures/}}
+
+% Metadata used for the title page
+\university{Imperial College London}
+\department{Department of Earth Science and Engineering}
+\course{MSc in Environmental Data Science and Machine Learning}
+\title{Dynamic Fault-Tolerant Job Shop Scheduling using Ant Colony Optimisation}
+\author{Benjamin Gorrie}
+\email{bg721@ic.ac.uk}
+\githubusername{esemsc-bg721}
+\supervisors{Dr Marijan Beg\\
+             Dr Parastoo Salah}
+\repository{https://github.com/ese-ada-lovelace-2024/irp-bg721}
+
+\begin{document}
+
+\maketitlepage  % generate title page
+
+% Abstract
+\section*{Abstract}
+In this project plan, we aim to describe how Ant Colony Optimisation (ACO) can be applied to a Dynamic Job Shop Scheduling Problem (DJSSP), particularly one in which faults may occur. We outline why ACO is well-suited to this task and why this is an important problem to solve. We describe our plan for the rest of this project, and any challenges we may face along the way. Success will be defined by the ability of our code to adapt quickly and maintain feasible solutions under disruptions.
+
+\tableofcontents
+
+% Introduction section
+\section{Introduction}
+Ant Colony Optimisation (ACO) is a technique which is inspired by how ants forage for food. ACO can be used to find ``good" paths through graphs by simulating many digital agents (ants) and letting them traverse the graph, leaving behind trails of pheromones of different intensities depending on how good the final path is. As the ants are more attracted to paths with higher pheromone levels, this leads to ants converging on the path with the strongest pheromone trail, usually a near-optimal path.
+
+ACO can be used to solve problems which can therefore be reduced to finding paths through graphs. There are many applications of this in practice (see \cite{enwiki:1292514538}), with the most notable perhaps being vehicle routing and scheduling. These are not new problems, and there already exists extensive literature covering both of them. There are also excellent Python packages available for both of these applications \cite{Wouda_Lan_Kool_PyVRP_2024} \cite{jobshoplib}. However, most of the existing literature covers static problems, where the edges and vertices of the graph we wish to find a path through are known in advance and do not change. Similarly, there does not appear to be a widely used Dynamic Job Shop Scheduling (scheduling where the set of jobs can change in real time) or dynamic routing Python package. 
+
+Thus, the aim of the project will be to create a Python package that addresses the Dynamic Job Shop Scheduling Problem (DJSSP) using ACO. As the pheromone trails that ants leave behind can be reused, ACO should be a particularly efficient way of finding a new schedule as good connections between vertices do not need to be recalculated, and a new schedule does not need to be computed from scratch. 
+
+
+\section{Problem Description}
+\subsection{Ant Colony Optimisation}
+As previously described, ACO is a metaheuristic introduced by Marco Dorigo \cite{484436} used to find paths through graphs. Assuming we start with $m$ ants, the $k$\textsuperscript{th} ant starts at a vertex $i$ and moves to a previously unvisited vertex $j$ at time $t$ with probability 
+\begin{equation*}
+    p_{ij}^k(t) = \frac{\left[\tau_{ij}(t)\right]^\alpha \cdot \left[\eta_{ij}\right]^\beta}{\sum_{k \in \text{allowed}_k}\left[\tau_{ik}(t)\right]^\alpha \cdot \left[\eta_{ik}\right]^\beta}
+\end{equation*}
+where we assume that $j\in \text{allowed}_k$, else the above quantity is 0. $\tau_{ij}(t)$ and $\eta_{ij}$ are at the core of the algorithm and require a bit of explaining.
+
+$\tau_{ij}(t)$ is the strength of pheromone deposited from vertex $i$ to $j$ at time $t$, which is updated each time the ants complete a cycle through the graph (every $n$ iterations of the algorithm) according to the following formula:
+\begin{equation*}
+    \tau_{ij}(t + n) = \rho\cdot\tau_{ij}(t) + \sum_{k=1}^m\Delta\tau_{ij}^k
+\end{equation*}
+where $\rho$ is a coefficient which determines how quickly pheromones evaporate along edges\footnote{Note that $\rho$ must be less than 1 to prevent unlimited accumulation of pheromones.} and $\Delta\tau_{ij}^k$ is the amount per unit length of pheromone left on edge $(i, j)$ by ant $k$ between time $t$ and $t + n$ which is given by
+\[
+\Delta\tau_{ij}^k = 
+\begin{cases}
+    \frac{Q}{L_k} & \text{if ant $k$ uses edge $(i, j)$ in its cycle}\\
+    0 & \text{otherwise}
+\end{cases}
+\]
+where $Q$ is a constant and $L_k$ is the cycle length of the ant. Note that ``length" depends on what the application of ACO is, for example in the case of the Traveling Salesman Problem \cite{enwiki:1292600322} we are simply considering the Euclidean distance between vertices, but in the DJSSP we would be considering time between vertices (jobs).
+
+$\eta_{ij}$ is a quantity known as the visibility from vertex $i$ to vertex $j$. It is defined as $\frac{1}{d_{ij}}$, where $d_{ij}$ is the Euclidean distance between vertex $i$ and vertex $j$ in the case of a routing problem like the TSP, but could be the time between job $i$ and job $j$ in the case of the DJSSP. 
+
+Finally, $\alpha$ and $\beta$ are constants which determine the relative importance of pheromone strength and visibility when an ant has to choose to move to a different vertex. For example, setting $\alpha = 0$ will lead to pheromones being ignored and the result is a stochastic greedy algorithm. Optimal parameters are hard to determine for a particular problem, and are normally found experimentally \cite{ant_parameters}.
+
+Thus, as we can see, each ant chooses a new node based on a combination of pheromone strength and visibility. As the result is a probability, it is possible for ants to explore new paths even if a good path has already been found. 
+
+We show below a current working example on the Oliver30 nodes \cite{oliver30} where we use ACO to solve the TSP. We start off with our non-trivial nodes as shown in Figure \ref{fig:oliver30-nodes} and the ants produce a closed path shown in Figure \ref{fig:oliver30-path}, which is very close to the known optimal (shortest) path.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/oliver30_nodes.png}
+    \caption{Oliver30 nodes}
+    \label{fig:oliver30-nodes}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/oliver30_path.jpg}
+    \caption{ACO-produced path on Oliver30}
+    \label{fig:oliver30-path}
+\end{figure}
+
+
+\subsection{Dynamic Job Shop Scheduling Problem}
+
+The Dynamic Job Shop Scheduling Problem (DJSSP) extends the classic Job Shop Scheduling Problem (JSSP), whereby a set of jobs (a sequence of operations), must be scheduled on a finite set of machines. Each operation requires exclusive access to a specific machine for a known duration, and must be performed in a strict order. The goal is typically to minimise some metric of interest, such as makespan (total completion time), total tardiness, or machine idle time, while satisfying all operational constraints.
+
+In the DJSSP, the scheduling environment can change over time. For example, new jobs may arrive unpredictably (e.g. emergency surgeries in a hospital), machines may break down, or previously scheduled operations may be delayed (e.g. an operation overruns). This introduces considerable complexity, as a previously valid schedule may become infeasible or suboptimal. The DJSSP thus requires rescheduling capabilities that are both fast and minimally disruptive.
+
+\subsection{ACO applied to DJSSP}
+
+Ant Colony Optimisation can be naturally extended to the DJSSP by interpreting the graph as a dynamic state space of partial schedules. Each vertex represents a possible operation assignment (job, machine, time), and ants construct feasible schedules by selecting valid next operations based on pheromone strength and heuristic information (operation priority, remaining slack time). When a disruption occurs, the affected corresponding operations are temporarily removed from the feasible set, and the ants go over the remaining schedule. Importantly, the pheromone trails left by previous solutions will be preserved, allowing ants to reuse previously computed good partial schedules and adapt quickly to the new constraints. This mechanism of distributed, memory-guided rescheduling makes ACO a promising method for solving DJSSP instances in environments where flexibility and reliability are essential, such as healthcare logistics.
+
+\section{Significance}
+There are many applications of DJSSP, spanning manufacturing, logistics \cite{jssp-manufacturing} and healthcare \cite{jssp-healthcare}. In static environments, traditional solvers and heuristics such as branch and bound, tabu search, and genetic algorithms perform well \cite{Wouda_Lan_Kool_PyVRP_2024}. However, most real-world applications tend to be dynamic, and we can never be certain if, in the context of a hospital, an emergency may arise or a ward might be full.
+
+In certain scenarios, dynamic rescheduling after a disruption can unfortunately have life-changing consequences. A scheduling algorithm that is robust to change, adaptive to new constraints, and fast enough to produce feasible re-optimisations on the fly is of high practical value.
+
+ACO should be well-suited to such dynamic scenarios, as it is fast and has natural memory in its pheromone trails. By building a Python package for solving the DJSSP (with an emphasis placed on faults, the goal is not to reinvent SLURM \cite{slurm}), this project aims to fill a tooling gap in the applied scheduling community.
+
+\section{Review of Existing Work}
+As aforementioned, the static JSSP has been extensively studied \cite{jssp}\cite{jssp-healthcare}\cite{jssp-manufacturing}, and there exist Python packages that solve it \cite{jobshoplib}, usually using metaheuristic approaches like Genetic Algorithms. The DJSSP has been less thoroughly examined, although there are a few papers where ACO is used to solve DJSSP (\cite{ELCOCK2023100280}\cite{acodjssp}). However, these papers are proof of concept, with no open-source code or packages.
+To the best of our knowledge, there is no widely used, open-source Python package specifically targeting DJSSP with an ACO-based solver that can dynamically adjust schedules in real-time, which is where this project's novelty lies. Moreover, Genetic Algorithms are unsuitable for DJSSP as they need complete reinitialisation upon change, and Tabu search lacks memory reuse from past schedules, while ACO allows adaptive reuse of partial paths, making it better suited for dynamic scheduling environments.
+
+\section{Objectives}
+The IRP has the following objectives:
+\begin{itemize}
+    \item \textbf{Develop a modular ACO-based Python package} specifically for DJSSP and make it publicly available.
+    \item \textbf{Support a dynamic scheduling interface}, allowing insertion/removal of jobs or machines mid-simulation.
+    \item \textbf{Model and simulate fault scenarios}, including emergency job arrivals, surgery overruns, and machine breakdowns.
+    \item \textbf{Design benchmarks and experiments} comparing static ACO, naive rescheduling, and pheromone-guided rescheduling.
+    \item \textbf{Apply the framework to a hospital use-case} with realistic constraints (multi-doctor, multi-room, emergency patients).
+\end{itemize}
+
+\section{Future Plan}
+The project will span 12 weeks, divided into the following phases:
+
+\begin{itemize}
+    \item \textbf{Weeks 1-2}: Literature review, definition of DJSSP constraints, and core design of ACO components (pheromone matrix, ant logic etc).
+    \item \textbf{Weeks 3-5}: Develop static ACO scheduler. Validate on standard job shop benchmarks.
+    \item \textbf{Weeks 6-7}: Extend to dynamic scheduling.
+    \item \textbf{Weeks 8-9}: Implement fault models (e.g. emergency insertion, overruns) and test on synthetic hospital scenarios.
+    \item \textbf{Weeks 10-11}: Run comparative experiments. Tune parameters and evaluate results. Investigate different ACO algorithms.
+    \item \textbf{Week 12}: Finalise report, documentation, and testing.
+\end{itemize}
+
+\section{Risks}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{||X|X||}
+\hline
+\textbf{Risk} & \textbf{Mitigation} \\
+\hline
+ACO scalability under frequent disruptions & Implement time-bounded replanning \\
+ACO scalability under large disruptions & Pheromone decay tuning to promote new schedules \\
+Premature convergence & Tune parameters or try different ACO algorithms \\
+Evaluating performance when disruptions are stochastic & Use a seed for repeatable testing \\
+\hline
+\end{tabularx}
+\caption{Project risks and mitigation strategies}
+\end{table}
+
+
+\section{AI Acknowledgement Statement}
+Used \href{https://chatgpt.com/}{ChatGPT-4o} by OpenAI to help animate pheromone trails.
+
+I confirm that all submitted work is my own, despite assistance received from genAI tools.
+
+
+% References
+\printbibliography[title = References, heading=bibintoc]
+
+\end{document}          
