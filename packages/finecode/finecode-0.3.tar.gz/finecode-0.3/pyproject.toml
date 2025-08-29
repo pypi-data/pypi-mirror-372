@@ -1,0 +1,78 @@
+[project]
+name = "finecode"
+dynamic = ["version"]
+description = ""
+authors = [{ name = "Vladyslav Hnatiuk", email = "aders1234@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.11, < 3.14"
+dependencies = [
+    "loguru==0.7.*",
+    "tomlkit==0.11.*",
+    "watchdog==4.0.*",
+    "click==8.1.*",
+    "pydantic==2.10.*",
+    "platformdirs==4.3.*",
+    "pygls==2.0.0-a2",
+    "finecode_extension_api==0.3.*",
+    "finecode_extension_runner==0.3.*",
+    "ordered-set==4.1.*",
+    "mcp==1.9.*",
+    "fine_python_virtualenv==0.1.*",
+    "fine_python_pip==0.1.*",
+]
+
+[dependency-groups]
+dev_workspace = ["build==1.2.2.post1", "finecode==0.3.0", "debugpy==1.8.*"]
+dev = [{ include-group = "runtime" }, "pytest==7.4.*", "debugpy==1.8.*"]
+dev_no_runtime = [
+    "finecode_dev_common_preset==0.2.*",
+    # file_python_import_linter is temporary disabled, because it isn't ported to the new finecode_extension_api yet
+    # "fine_python_import_linter @ git+https://github.com/finecode-dev/finecode.git#subdirectory=extensions/fine_python_import_linter",
+]
+
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+# TODO: add import linter handler to lint action
+
+[tool.finecode]
+presets = [{ source = "finecode_dev_common_preset" }]
+
+[tool.finecode.env.dev_no_runtime.dependencies]
+finecode_dev_common_preset = { path = "./finecode_dev_common_preset", editable = true }
+
+[tool.importlinter]
+root_package = "finecode"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+id = "wm-layered"
+name = "WM layered architecture"
+type = "layers"
+layers = [
+    "finecode.lsp_server.lsp_server",
+    "finecode.lsp_server.services",
+    "finecode.domain",
+]
+
+
+[[tool.importlinter.contracts]]
+# such check doesn't control whether there are no raw requests in lsp_server, currently this should
+# be checked manually. We should check access to `runner.client.protocol` to avoid this?
+id = "wm-use-runner-client"
+name = "WM uses LSP requests only in runner_client and lsp_server, no raw requests in app"
+type = "forbidden"
+source_modules = ["finecode"]
+forbidden_modules = ["lsprotocol"]
+ignore_imports = [
+    "finecode.runner.runner_client -> lsprotocol",
+    "finecode.lsp_server.lsp_server -> lsprotocol",
+]
+
+
+[tool.setuptools_scm]
+version_file = "src/finecode/_version.py"
+
+[tool.setuptools.package-data]
+finecode = ["base_config.toml"]
