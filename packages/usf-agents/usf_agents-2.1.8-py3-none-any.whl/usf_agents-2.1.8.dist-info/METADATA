@@ -1,0 +1,1337 @@
+Metadata-Version: 2.4
+Name: usf-agents
+Version: 2.1.8
+Summary: A lightweight multi-agent orchestration framework with better control, easy to use for complex to simple use cases. Developer friendly with more visibility and supports all models with OpenAI compatible API.
+Author: UltraSafe AI Team
+License: USF Agents SDK License
+Project-URL: Homepage, https://us.inc
+Project-URL: Repository, https://github.com/UltraSafeAI/usf-agents-python
+Project-URL: Documentation, https://us.inc/docs
+Project-URL: Bug Reports, https://github.com/UltraSafeAI/usf-agents-python/issues
+Keywords: multi-agent,orchestration,framework,lightweight,agent,developer-friendly,visibility,control,complex-usecase,simple-usecase,all-models,openai-compatible,llm,ai-agent,tool-calling,streaming,usf,planning,UltraSafe,UltraSafe AI,usf-agents
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: Other/Proprietary License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: openai>=1.0.0
+Requires-Dist: aiohttp>=3.8.0
+Dynamic: license-file
+Dynamic: requires-python
+
+# USF Agent SDK
+
+A flexible, OpenAI-compatible Agent SDK that provides intelligent planning and tool execution capabilities using the official USF Agent SDK APIs.
+
+## 🚀 Features
+
+- **Multi-Stage Configuration** - Different models for planning, tool calling, and final responses
+- **Manual Tool Execution** - Complete user control over tool implementations
+- **Provider Flexibility** - Mix different LLM providers (USF, OpenAI, Anthropic, etc.)
+- **Memory Management** - Built-in conversation memory with auto-trimming
+- **Streaming Support** - Real-time response streaming
+- **Automatic Date/Time Appending** - All final responses include current UTC timestamp
+- **Date/Time Override** - Custom date, time, and timezone configuration support
+- **Extra Parameters Support** - Pass any OpenAI API parameters for advanced control
+- **Type Hints Support** - Full type annotations included
+
+## 📦 Installation
+
+```bash
+pip install usf-agents
+```
+
+## 🎯 Quick Start
+
+```python
+from usf_agents import USFAgent
+
+# Basic configuration
+agent = USFAgent({
+    'api_key': 'your-usf-api-key',
+    'model': 'usf-mini'
+})
+
+# Simple query without tools
+async for result in agent.run('Hello, how are you?'):
+    if result['type'] == 'final_answer':
+        print('Response:', result['content'])
+```
+
+## 🔄 Core Workflow
+
+The USF Agent follows a three-stage workflow:
+
+```
+User Request → Plan → Tool/Agent Call → Tool/Agent Execution → Plan → ... → Plan → Final Response
+```
+
+1. **Planning Stage** - Agent analyzes the request and decides if tools are needed
+2. **Tool Calling Stage** - Agent generates tool calls in OpenAI format (if needed)
+3. **Final Response Stage** - Agent generates the final user-facing response
+
+
+## ⚙️ Configuration
+
+### Basic Configuration
+
+```python
+agent = USFAgent({
+    'api_key': 'your-api-key',                    # Required
+    'base_url': 'https://api.us.inc/usf/v1',      # Default USF endpoint
+    'model': 'usf-mini',                          # Default model
+    'introduction': 'You are a helpful AI',       # Custom system prompt
+    'knowledge_cutoff': '15 January 2025',        # Knowledge cutoff date
+    'stream': False,                              # Enable streaming
+    'max_loops': 20,                              # Maximum planning/tool loops (default: 20)
+    
+    # User context (applies to all stages)
+    'backstory': 'I am a software engineer working on improving user experience.',
+    'goal': 'Create intuitive and efficient solutions for users.',
+    
+    # Memory configuration
+    'temp_memory': {
+        'enabled': True,
+        'max_length': 10,
+        'auto_trim': True
+    }
+})
+```
+
+## 👤 User Context: Backstory and Goal
+
+The USF Agent SDK supports user context through `backstory` and `goal` parameters that provide personality and objective guidance to enhance agent interactions.
+
+### Basic Usage
+
+```python
+agent = USFAgent({
+    'api_key': 'your-api-key',
+    'backstory': 'I am a software engineer working on improving user experience for our application.',
+    'goal': 'Create intuitive and efficient solutions that help users accomplish their tasks quickly.'
+})
+```
+
+### How It Works
+
+- **Planning & Tool Calling**: Backstory and goal are passed directly as API parameters to `usf-agent/plan` and `usf-agent/tool-call` endpoints
+- **Final Response**: When generating the final response, backstory and goal are added to the system message to provide context
+- **Consistency**: The same backstory and goal apply to all stages of the agent workflow
+- **Memory**: Backstory and goal context is maintained throughout the conversation
+
+### Advanced Examples
+
+```python
+# Customer service agent
+customer_service_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'backstory': 'I am a customer service representative with 5 years of experience helping customers resolve technical issues.',
+    'goal': 'Provide helpful, empathetic, and efficient support to resolve customer problems quickly.',
+    'model': 'usf-mini'
+})
+
+# Research assistant
+research_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'backstory': 'I am a research scientist with expertise in data analysis and academic writing.',
+    'goal': 'Provide accurate, well-sourced information and help users understand complex topics.',
+    'final_response': {
+        'temperature': 0.3  # More factual responses
+    }
+})
+
+# Creative writing assistant
+creative_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'backstory': 'I am a creative writer and storyteller with a passion for engaging narratives.',
+    'goal': 'Help users craft compelling stories and improve their writing skills.',
+    'final_response': {
+        'temperature': 0.8,  # More creative responses
+        'presence_penalty': 0.2
+    }
+})
+```
+
+### Context Enhancement using backstory and goal
+
+When backstory and goal are provided, they automatically enhance the agent's understanding and response quality. The agent uses this context to provide more personalized and relevant responses.
+
+```python
+# Example 1: Technical support context
+support_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'backstory': 'I am a product manager at a tech startup focusing on mobile applications.',
+    'goal': 'Improve user engagement and retention through better UX design.'
+})
+
+# Example 2: Development context
+technical_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'backstory': 'I am a senior developer debugging performance issues in our microservices architecture.',
+    'goal': 'Identify bottlenecks and optimize system performance to handle 10x more traffic.'
+})
+
+# Example 3: Marketing context
+content_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'backstory': 'I am a marketing manager creating content for our B2B SaaS platform.',
+    'goal': 'Generate compelling content that converts prospects into customers.'
+})
+
+# The agent will use this context throughout the conversation
+async for result in support_agent.run('How can I improve our app\'s user onboarding?'):
+    if result['type'] == 'final_answer':
+        print(result['content'])
+        break
+
+async for result in technical_agent.run('Our API response times are slow, what should I investigate?'):
+    if result['type'] == 'final_answer':
+        print(result['content'])
+        break
+
+async for result in content_agent.run('Write a blog post about our new feature.'):
+    if result['type'] == 'final_answer':
+        print(result['content'])
+        break
+```
+
+### Best Practices
+
+```python
+# ✅ Good: Specific and relevant backstory
+agent = USFAgent({
+    'api_key': 'your-api-key',
+    'backstory': 'I am a frontend developer working on a React application for e-commerce.',
+    'goal': 'Build responsive, accessible components that improve user conversion rates.'
+})
+
+# ❌ Avoid: Vague or irrelevant context
+agent = USFAgent({
+    'api_key': 'your-api-key',
+    'backstory': 'I like computers.',
+    'goal': 'Do stuff.'
+})
+
+# ✅ Good: Task-specific context
+debugging_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'backstory': 'I am debugging a Python application that handles user authentication.',
+    'goal': 'Identify and fix the root cause of authentication failures in production.'
+})
+```
+
+### Multi-Stage Configuration
+
+Use different models for each stage to optimize cost and performance:
+
+```python
+agent = USFAgent({
+    # Default fallback configuration
+    'api_key': 'default-key',
+    'base_url': 'https://api.us.inc/usf/v1',
+    'model': 'usf-mini',
+    
+    # Planning stage - Use powerful model for complex reasoning
+    'planning': {
+        'api_key': 'planning-key',
+        'model': 'usf-mini',
+        'introduction': 'You are an expert planning assistant.'
+    },
+    
+    # Tool calling stage - Use fast model for efficiency
+    'tool_calling': {
+        'api_key': 'tool-key',
+        'model': 'usf-mini-x1'
+    },
+    
+    # Final response stage - Use different provider
+    'final_response': {
+        'api_key': 'api-key',
+        'base_url': 'https://api.us.inc/usf/v1',
+        'model': 'usf-mini',
+        'temperature': 0.7
+    }
+})
+```
+
+## 🕒 Automatic Date/Time Feature
+
+The USF Agent SDK automatically appends the current date and time to all final responses. This feature:
+
+- **Always Active** - No configuration required, works automatically
+- **UTC Timezone** - Consistent timezone for all responses
+- **Format**: `Current date: MM/DD/YYYY, HH:MM:SS AM/PM (UTC Timezone).`
+- **Universal Coverage** - Works with both streaming and non-streaming modes
+- **All Response Paths** - Applies to both OpenAI-based and legacy response generation
+
+### Example Output
+
+```python
+# User query: "What is the capital of France?"
+# Agent response will end with:
+"Current system time is 5:54 AM (UTC)."
+```
+
+### Technical Details
+
+The date/time is automatically injected during the message processing phase, ensuring that:
+- The LLM receives instructions to include the timestamp
+- The timestamp reflects the exact moment of response generation
+- No additional API calls or processing overhead
+- Consistent format across all responses
+
+### Date/Time Override
+
+You can override the default UTC timestamp with custom date, time, and timezone:
+
+#### Static Date/Time Override
+
+```python
+# Global configuration with static override
+agent = USFAgent({
+    'api_key': 'your-api-key',
+    'final_response': {
+        'date_time_override': {
+            'enabled': True,
+            'date': '12/25/2025',        # MM/DD/YYYY format required
+            'time': '11:30:45 PM',       # HH:MM:SS AM/PM format required
+            'timezone': 'EST'            # Any timezone string
+        }
+    }
+})
+
+# Per-request override
+async for result in agent.run('What time is it?', {
+    'date_time_override': {
+        'enabled': True,
+        'date': '01/01/2026',
+        'time': '12:00:00 AM',
+        'timezone': 'UTC'
+    }
+}):
+    if result['type'] == 'final_answer':
+        response = result['content']
+        break
+```
+
+#### Dynamic/Real-time Date/Time Override
+
+```python
+import datetime
+from zoneinfo import ZoneInfo
+
+# Function to get current time in specific timezone
+def get_current_time_in_timezone(timezone):
+    now = datetime.datetime.now(ZoneInfo(timezone))
+    
+    return {
+        'date': now.strftime('%m/%d/%Y'),
+        'time': now.strftime('%I:%M:%S %p'),
+        'timezone': timezone
+    }
+
+# Dynamic override for different timezones
+tokyo_time = get_current_time_in_timezone('Asia/Tokyo')
+async for result in agent.run('What time is it in Tokyo?', {
+    'date_time_override': {
+        'enabled': True,
+        **tokyo_time
+    }
+}):
+    if result['type'] == 'final_answer':
+        response = result['content']
+        break
+
+# Multiple timezone examples
+timezones = [
+    'America/New_York',
+    'Europe/London', 
+    'Asia/Tokyo',
+    'Australia/Sydney',
+    'America/Los_Angeles'
+]
+
+for tz in timezones:
+    time_data = get_current_time_in_timezone(tz)
+    async for result in agent.run(f'What\'s happening now in {tz}?', {
+        'date_time_override': {
+            'enabled': True,
+            **time_data
+        }
+    }):
+        if result['type'] == 'final_answer':
+            response = result['content']
+            break
+```
+
+#### Timezone Format Examples
+
+```python
+# Various supported timezone formats
+timezone_examples = [
+    # Standard abbreviations
+    {'timezone': 'EST', 'description': 'Eastern Standard Time'},
+    {'timezone': 'PST', 'description': 'Pacific Standard Time'},
+    {'timezone': 'GMT', 'description': 'Greenwich Mean Time'},
+    
+    # Full timezone names
+    {'timezone': 'Eastern Standard Time', 'description': 'Full name'},
+    {'timezone': 'Pacific Standard Time', 'description': 'Full name'},
+    
+    # UTC offsets
+    {'timezone': 'UTC-5', 'description': 'UTC offset negative'},
+    {'timezone': 'UTC+9', 'description': 'UTC offset positive'},
+    
+    # IANA timezone identifiers (recommended)
+    {'timezone': 'America/New_York', 'description': 'IANA identifier'},
+    {'timezone': 'Europe/London', 'description': 'IANA identifier'},
+    {'timezone': 'Asia/Tokyo', 'description': 'IANA identifier'},
+    {'timezone': 'Australia/Sydney', 'description': 'IANA identifier'}
+]
+```
+
+#### Validation and Fallback
+
+```python
+# Invalid formats automatically fallback to UTC
+invalid_examples = [
+    {
+        'enabled': True,
+        'date': '2025-12-25',      # Wrong format (YYYY-MM-DD)
+        'time': '23:30:45',        # Wrong format (24-hour)
+        'timezone': 'EST'
+    },
+    {
+        'enabled': True,
+        'date': '12/25/2025',
+        'time': '11:30:45 PM'
+        # Missing timezone
+    },
+    {
+        'enabled': False,           # Disabled override
+        'date': '12/25/2025',
+        'time': '11:30:45 PM',
+        'timezone': 'EST'
+    }
+]
+
+# All above examples will fallback to UTC automatically
+```
+
+## 🔧 Extra Parameters Support
+
+The USF Agent SDK supports passing any additional OpenAI API parameters directly to the final response generation. This provides full access to OpenAI's chat completion capabilities.
+
+### Basic Extra Parameters
+
+```python
+# Global configuration with extra parameters
+agent = USFAgent({
+    'api_key': 'your-api-key',
+    'final_response': {
+        # Standard parameters
+        'temperature': 0.7,
+        'stop': ['END'],
+        
+        # Extra OpenAI parameters
+        'max_tokens': 1000,
+        'top_p': 0.9,
+        'presence_penalty': 0.1,
+        'frequency_penalty': 0.2,
+        'seed': 12345,
+        'user': 'user-123'
+    }
+})
+```
+
+### Structured Output with JSON Schema
+
+```python
+# Complex response_format with JSON schema
+structured_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'final_response': {
+        'response_format': {
+            'type': 'json_schema',
+            'json_schema': {
+                'name': 'book_info',
+                'strict': True,
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'title': {
+                            'type': 'string',
+                            'description': 'Title of the book'
+                        },
+                        'author': {
+                            'type': 'string', 
+                            'description': 'Author of the book'
+                        },
+                        'year_published': {
+                            'type': 'number',
+                            'description': 'Year the book was first published'
+                        },
+                        'genre': {
+                            'type': 'string',
+                            'enum': ['fiction', 'non-fiction', 'mystery', 'romance', 'sci-fi'],
+                            'description': 'Genre of the book'
+                        },
+                        'rating': {
+                            'type': 'number',
+                            'minimum': 1,
+                            'maximum': 5,
+                            'description': 'Rating out of 5 stars'
+                        }
+                    },
+                    'required': ['title', 'author', 'year_published'],
+                    'additionalProperties': False
+                }
+            }
+        },
+        'temperature': 0.1  # Low temperature for consistent JSON
+    }
+})
+
+# This will force structured JSON output
+async for result in structured_agent.run('Tell me about the book "1984"'):
+    if result['type'] == 'final_answer':
+        book_info = result['content']
+        break
+```
+
+### Advanced Parameter Examples
+
+```python
+# Token control with logit_bias
+biased_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'final_response': {
+        'logit_bias': {
+            '1820': 10,     # Boost 'positive' token
+            '4633': -10,    # Reduce 'negative' token  
+            '50256': -100   # Avoid end-of-text token
+        },
+        'temperature': 0.8
+    }
+})
+
+# Deterministic responses with seed
+deterministic_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'final_response': {
+        'seed': 42,
+        'temperature': 0.7  # Same seed + temp = consistent results
+    }
+})
+
+# Creative writing with penalties
+creative_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'final_response': {
+        'presence_penalty': 0.6,   # Encourage new topics
+        'frequency_penalty': 0.3,  # Reduce repetition
+        'temperature': 0.9,        # High creativity
+        'max_tokens': 500
+    }
+})
+
+# Streaming with usage tracking
+streaming_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'stream': True,
+    'final_response': {
+        'stream_options': {
+            'include_usage': True
+        },
+        'max_tokens': 200
+    }
+})
+```
+
+### Per-Request Parameter Override
+
+```python
+# Mix global and per-request parameters
+flexible_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'final_response': {
+        'temperature': 0.7,  # Global default
+        'max_tokens': 500    # Global default
+    }
+})
+
+# Request 1: JSON output
+async for result in flexible_agent.run('List 3 colors', {
+    'final_response': {
+        'response_format': {'type': 'json_object'},
+        'temperature': 0.1,  # Override global
+        'max_tokens': 100    # Override global
+    }
+}):
+    if result['type'] == 'final_answer':
+        json_response = result['content']
+        break
+
+# Request 2: Creative writing
+async for result in flexible_agent.run('Write a short story', {
+    'final_response': {
+        'temperature': 0.9,      # Override global
+        'presence_penalty': 0.4, # Add new parameter
+        'max_tokens': 800,       # Override global
+        'stop': ['THE END']      # Add stop sequence
+    }
+}):
+    if result['type'] == 'final_answer':
+        story_response = result['content']
+        break
+
+# Request 3: Deterministic output
+async for result in flexible_agent.run('What is 2+2?', {
+    'final_response': {
+        'seed': 123,
+        'temperature': 0.0,  # Most deterministic
+        'max_tokens': 50
+    }
+}):
+    if result['type'] == 'final_answer':
+        fact_response = result['content']
+        break
+```
+
+### Combining Date/Time Override with Extra Parameters
+
+```python
+# Use both features together
+combined_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'final_response': {
+        # Date/time override
+        'date_time_override': {
+            'enabled': True,
+            'date': '12/31/2025',
+            'time': '11:59:59 PM',
+            'timezone': 'EST'
+        },
+        
+        # Extra OpenAI parameters
+        'response_format': {
+            'type': 'json_schema',
+            'json_schema': {
+                'name': 'year_end_summary',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'year': {'type': 'number'},
+                        'summary': {'type': 'string'},
+                        'predictions': {
+                            'type': 'array',
+                            'items': {'type': 'string'}
+                        }
+                    },
+                    'required': ['year', 'summary']
+                }
+            }
+        },
+        'max_tokens': 800,
+        'temperature': 0.5
+    }
+})
+```
+
+### Supported Extra Parameters
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `response_format` | dict | Control output format | `{'type': "json_object"}` |
+| `max_tokens` | int | Maximum response length | `1000` |
+| `top_p` | float | Nucleus sampling (0-1) | `0.9` |
+| `presence_penalty` | float | New topic penalty (-2 to 2) | `0.1` |
+| `frequency_penalty` | float | Repetition penalty (-2 to 2) | `0.2` |
+| `logit_bias` | dict | Token probability control | `{"50256": -100}` |
+| `seed` | int | Deterministic output | `12345` |
+| `user` | str | User identifier | `"user-123"` |
+| `stream_options` | dict | Streaming configuration | `{'include_usage': True}` |
+
+### Important Notes
+
+- **Scope**: Extra parameters only apply to final response generation
+- **Validation**: Parameter validation is handled by the OpenAI API
+- **Errors**: Invalid parameters will cause API errors (passed through directly)
+- **Future-Proof**: Any new OpenAI parameters are automatically supported
+- **Planning/Tools**: Extra parameters are ignored by planning and tool calling APIs
+
+## 📚 Usage Examples
+
+### Example 1: Simple Query (No Tools)
+
+```python
+from usf_agents import USFAgent
+
+agent = USFAgent({
+    'api_key': 'your-api-key'
+})
+
+async for result in agent.run('What is 2 + 2?'):
+    print(f"{result['type']}:", result.get('content') or result.get('plan'))
+```
+
+### Example 2: Weather Query with Tool Execution
+
+```python
+# Define your tools
+tools = [
+    {
+        'type': 'function',
+        'function': {
+            'name': 'get_weather',
+            'description': 'Get current weather for a location',
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'location': {'type': 'string', 'description': 'City name'}
+                },
+                'required': ['location']
+            }
+        }
+    }
+]
+
+# Custom tool execution function
+async def execute_weather_tool(tool_call):
+    name = tool_call['function']['name']
+    args = json.loads(tool_call['function']['arguments'])
+    
+    # Your custom weather API logic here
+    weather_data = await get_weather_from_api(args['location'])
+    
+    return {
+        'role': 'tool',
+        'tool_call_id': tool_call['id'],
+        'name': name,
+        'content': json.dumps(weather_data)
+    }
+
+# Main execution - Continue until agent provides final answer
+messages = [
+    {'role': 'user', 'content': 'What\'s the weather in New York?'}
+]
+
+while True:
+    final_answer_received = False
+    
+    async for result in agent.run(messages, {'tools': tools}):
+        if result['type'] == 'plan':
+            print('Plan:', result['plan'])
+            
+            # Add plan to messages
+            messages.append({
+                'role': 'assistant',
+                'content': result['content'],
+                'type': 'agent_plan'
+            })
+        
+        if result['type'] == 'tool_calls':
+            print('Tools to execute:', result['tool_calls'])
+            
+            # Add tool call message
+            messages.append({
+                'role': 'assistant',
+                'content': '',
+                'tool_calls': result['tool_calls']
+            })
+            
+            # Execute tools manually
+            for tool_call in result['tool_calls']:
+                tool_result = await execute_weather_tool(tool_call)
+                messages.append(tool_result)
+            
+            # Break to continue the planning loop with tool results
+            break
+        
+        if result['type'] == 'final_answer':
+            print('Final Answer:', result['content'])
+            final_answer_received = True
+            break
+    
+    # Exit if we received the final answer
+    if final_answer_received:
+        break
+```
+
+### Example 3: Cost Optimization Setup
+
+```python
+cost_optimized_agent = USFAgent({
+    # Use expensive model only for planning
+    'planning': {
+        'api_key': 'usf-key',
+        'model': 'usf-mini'  # High-quality planning
+    },
+    
+    # Use cheap model for tool calling
+    'tool_calling': {
+        'api_key': 'usf-key',
+        'model': 'usf-mini-x1'  # Better tool calling
+    },
+    
+    # Use mid-tier model for responses
+    'final_response': {
+        'api_key': 'usf-key',
+        'model': 'usf-mini'  # Fast and high quality responses
+    }
+})
+```
+
+### Example 4: Provider Mixing
+
+```python
+mixed_provider_agent = USFAgent({
+    # USF for planning and tool calling
+    'planning': {
+        'api_key': 'usf-key',
+        'base_url': 'https://api.us.inc/usf/v1',
+        'model': 'usf-mini'
+    },
+    
+    'tool_calling': {
+        'api_key': 'usf-key',
+        'base_url': 'https://api.us.inc/usf/v1',
+        'model': 'usf-mini-x1'
+    },
+    
+    # OpenAI for final responses
+    'final_response': {
+        'api_key': 'openai-key',
+        'base_url': 'https://api.openai.com/v1',
+        'model': 'gpt-4'
+    }
+})
+```
+
+### Example 5: Custom Tool Implementation
+
+```python
+import json
+
+# Multi-tool example
+tools = [
+    {
+        'type': 'function',
+        'function': {
+            'name': 'calculator',
+            'description': 'Perform mathematical calculations',
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'expression': {'type': 'string', 'description': 'Math expression to evaluate'}
+                },
+                'required': ['expression']
+            }
+        }
+    },
+    {
+        'type': 'function',
+        'function': {
+            'name': 'web_search',
+            'description': 'Search the web for information',
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'query': {'type': 'string', 'description': 'Search query'}
+                },
+                'required': ['query']
+            }
+        }
+    }
+]
+
+# Universal tool executor
+async def execute_custom_tool(tool_call):
+    name = tool_call['function']['name']
+    args = json.loads(tool_call['function']['arguments'])
+    
+    if name == 'calculator':
+        result = eval(args['expression'])  # Use a safe math library in production
+        return {
+            'role': 'tool',
+            'tool_call_id': tool_call['id'],
+            'name': name,
+            'content': json.dumps({'result': result, 'expression': args['expression']})
+        }
+    elif name == 'web_search':
+        search_results = await perform_web_search(args['query'])
+        return {
+            'role': 'tool',
+            'tool_call_id': tool_call['id'],
+            'name': name,
+            'content': json.dumps({'query': args['query'], 'results': search_results})
+        }
+    else:
+        return {
+            'role': 'tool',
+            'tool_call_id': tool_call['id'],
+            'name': name,
+            'content': json.dumps({'error': 'Tool not implemented'})
+        }
+
+# Complex query requiring multiple tools
+messages = [
+    {'role': 'user', 'content': 'Calculate 25*4 and then search for information about that number'}
+]
+
+while True:
+    final_answer_received = False
+    
+    async for result in agent.run(messages, {'tools': tools}):
+        if result['type'] == 'plan':
+            print('Plan:', result['plan'])
+            
+            # Add plan to messages
+            messages.append({
+                'role': 'assistant',
+                'content': result['content'],
+                'type': 'agent_plan'
+            })
+        
+        if result['type'] == 'tool_calls':
+            print('Executing tools:', [t['function']['name'] for t in result['tool_calls']])
+            
+            # Add tool call message
+            messages.append({
+                'role': 'assistant',
+                'content': '',
+                'tool_calls': result['tool_calls']
+            })
+            
+            # Execute all tools
+            for tool_call in result['tool_calls']:
+                tool_result = await execute_custom_tool(tool_call)
+                messages.append(tool_result)
+                print(f"{tool_call['function']['name']} result:", tool_result['content'])
+            
+            # Break to continue the planning loop
+            break
+        
+        if result['type'] == 'final_answer':
+            print('Final Answer:', result['content'])
+            final_answer_received = True
+            break
+    
+    if final_answer_received:
+        break
+```
+
+### Example 6: Streaming Responses
+
+```python
+streaming_agent = USFAgent({
+    'api_key': 'your-api-key',
+    'stream': True  # Enable streaming
+})
+
+async for result in streaming_agent.run('Tell me a story'):
+    if result['type'] == 'final_answer':
+        print(result['content'], end='')  # Stream content as it arrives
+```
+
+### Example 7: Memory Management
+
+```python
+agent = USFAgent({
+    'api_key': 'your-api-key',
+    'temp_memory': {
+        'enabled': True,
+        'max_length': 20,
+        'auto_trim': True
+    }
+})
+
+# Memory is automatically managed
+async for result in agent.run('My name is John'):
+    if result['type'] == 'final_answer':
+        break
+
+async for result in agent.run('What is my name?'):  # Agent remembers
+    if result['type'] == 'final_answer':
+        print(result['content'])
+        break
+
+# Manual memory management
+print('Current memory:', agent.get_memory())
+agent.clear_memory()  # Clear all memory
+agent.set_memory([...])  # Set specific memory state
+```
+
+### Example 8: Per-Request Overrides
+
+```python
+# Override configurations for specific requests
+async for result in agent.run(messages, {
+    'tools': [...],
+    'max_loops': 50,              # Allow more loops for complex requests
+    
+    # Override planning for this request
+    'planning': {
+        'model': 'usf-mini',
+        'introduction': 'You are a specialized assistant for this task'
+    },
+    
+    # Override final response
+    'final_response': {
+        'temperature': 0.9,
+        'model': 'usf-mini-x1'
+    }
+}):
+    if result['type'] == 'final_answer':
+        response = result['content']
+        break
+```
+
+## 🔧 API Reference
+
+### Constructor Options
+
+```python
+from typing import Dict, List, Optional, Union, Any
+
+class USFAgent:
+    def __init__(self, config: Dict[str, Any]):
+        """
+        Initialize USF Agent with configuration.
+        
+        Args:
+            config: Configuration dictionary with the following options:
+            
+            # Required
+            api_key: str
+            
+            # Optional global settings
+            base_url: str = 'https://api.us.inc/usf/v1'
+            model: str = 'usf-mini'
+            introduction: str = ''
+            knowledge_cutoff: str = '15 January 2025'
+            stream: bool = False
+            max_loops: int = 20  # Range: 1-100
+            
+            # User context (applies to all stages)
+            backstory: str = ''
+            goal: str = ''
+            
+            # Stage-specific configurations
+            planning: Dict[str, Any] = {}
+            tool_calling: Dict[str, Any] = {}
+            final_response: Dict[str, Any] = {}
+            
+            # Memory configuration
+            temp_memory: Dict[str, Any] = {
+                'enabled': False,
+                'max_length': 10,
+                'auto_trim': True
+            }
+        """
+```
+
+### Methods
+
+#### `run(messages, options=None)`
+
+Execute the agent workflow.
+
+```python
+async def run(
+    self,
+    messages: Union[str, List[Dict[str, Any]]],
+    options: Optional[Dict[str, Any]] = None
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Execute the agent workflow.
+    
+    Args:
+        messages: String or list of message objects
+        options: Optional configuration overrides
+        
+    Yields:
+        Dict with keys:
+        - type: 'plan' | 'tool_calls' | 'final_answer'
+        - content: str (optional)
+        - plan: str (optional)
+        - final_decision: str (optional)
+        - agent_status: str (optional)
+        - tool_choice: Any (optional)
+        - tool_calls: List[Dict] (optional)
+    """
+```
+
+#### `clear_memory()`
+
+Clear all conversation memory.
+
+#### `get_memory()`
+
+Get current memory state.
+
+#### `set_memory(messages)`
+
+Set specific memory state.
+
+## 🎯 Best Practices
+
+### Tool Execution Patterns
+
+```python
+# Proper tool execution pattern - Continue until final answer
+messages = [{'role': 'user', 'content': 'Your query here'}]
+
+while True:
+    final_answer_received = False
+    
+    async for result in agent.run(messages, {'tools': tools}):
+        if result['type'] == 'plan':
+            # Add plan to messages
+            messages.append({
+                'role': 'assistant',
+                'content': result['content'],
+                'type': 'agent_plan'
+            })
+        
+        if result['type'] == 'tool_calls':
+            # Add tool call message
+            messages.append({
+                'role': 'assistant',
+                'content': '',
+                'tool_calls': result['tool_calls']
+            })
+            
+            # Execute all tools
+            for tool_call in result['tool_calls']:
+                tool_result = await execute_custom_tool(tool_call)
+                messages.append(tool_result)
+            
+            # Break to continue the planning loop
+            break
+        
+        if result['type'] == 'final_answer':
+            print('Final Answer:', result['content'])
+            final_answer_received = True
+            break
+    
+    if final_answer_received:
+        break
+```
+
+### Error Handling
+
+```python
+try:
+    async for result in agent.run(messages):
+        # Handle results
+        pass
+except Exception as error:
+    if 'USFAgent API Error' in str(error):
+        print('API Error:', str(error))
+    elif 'USFAgent Network Error' in str(error):
+        print('Network Error:', str(error))
+    else:
+        print('Unknown Error:', str(error))
+```
+
+### Configuration Recommendations
+
+```python
+# Development setup
+dev_agent = USFAgent({
+    'api_key': 'dev-key',
+    'model': 'usf-mini',        # Fast for development
+    'final_response': {
+        'temperature': 0.7         # Deterministic responses
+    }
+})
+
+# Production setup
+prod_agent = USFAgent({
+    'planning': {
+        'model': 'usf-mini',
+    },
+    'tool_calling': {
+        'model': 'usf-mini-x1'        # Better tool calling
+    },
+    'final_response': {
+        'base_url': 'https://api.us.inc/usf/v1',
+        'model': 'usf-mini',          # Fast and high-quality responses
+        'temperature': 0.7
+    }
+})
+```
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**API Key Errors:**
+```
+USFAgent API Error: Invalid API key
+```
+- Verify your API key is correct
+- Check API key permissions
+- Ensure the key is not expired
+
+**Network Errors:**
+```
+USFAgent Network Error: Cannot connect to USF API
+```
+- Check internet connection
+- Verify endpoint URL is accessible
+- Check firewall settings
+
+**Tool Execution Errors:**
+- Ensure tool results have `role: "tool"`
+- Include `tool_call_id` in tool results
+- Validate tool result JSON format
+
+**Response Format Errors:**
+```
+BadRequestError: Response format is not allowed with tools
+```
+- This error has been fixed in the latest version
+- The issue was caused by sending empty `tools: []` parameter to the API
+- Update to the latest version to resolve this issue
+
+### Debug Mode
+
+Enable comprehensive debug logging to see detailed API call information:
+
+```python
+# Enable debug mode in configuration
+agent = USFAgent({
+    'api_key': 'your-api-key',
+    'debug': True,  # Enable debug mode
+    'model': 'usf-mini'
+})
+
+# Debug mode will show:
+# - Complete request URLs and headers (with masked API keys)
+# - Full request payloads sent to APIs
+# - Response status and data
+# - Error details with request context
+# - JSON parsing information
+
+# Example debug output:
+"""
+DEBUG: Planning API Call
+{
+  "url": "https://api.us.inc/usf/v1/usf-agent/plan",
+  "method": "POST",
+  "headers": {
+    "apiKey": "sk-1234567890...abcd",
+    "Content-Type": "application/json"
+  },
+  "payload": {
+    "messages": [...],
+    "tools": [...],
+    "base_url": "https://api.us.inc/usf/v1",
+    "model": "usf-mini"
+  }
+}
+"""
+```
+
+### Debug Mode Configuration
+
+```python
+# Global debug mode
+agent = USFAgent({
+    'api_key': 'your-api-key',
+    'debug': True,  # Applies to all stages
+})
+
+# Stage-specific debug mode
+agent = USFAgent({
+    'api_key': 'your-api-key',
+    'planning': {
+        'debug': True  # Only debug planning calls
+    },
+    'final_response': {
+        'debug': True  # Only debug final response calls
+    }
+})
+
+# Per-request debug override
+async for result in agent.run(messages, {
+    'final_response': {
+        'debug': True  # Enable debug for this request only
+    }
+}):
+    pass
+```
+
+### Advanced Debugging
+
+Check the agent's internal state for configuration issues:
+
+```python
+print('Planning Config:', agent.planning_config)
+print('Tool Calling Config:', agent.tool_calling_config)
+print('Final Response Config:', agent.final_response_config)
+print('Current Memory:', agent.get_memory())
+
+# Validate configuration
+try:
+    agent._validate_configuration()
+    print("Configuration is valid")
+except Exception as error:
+    print(f"Configuration error: {error}")
+```
+
+### Debug Example Script
+
+See `debug_example.py` for a complete example of using debug mode:
+
+```python
+# Run the debug example
+python debug_example.py
+```
+
+This will demonstrate debug output for all API calls and help you understand what data is being sent to the APIs.
+
+## 📄 License
+
+**USF Agents SDK License**
+
+Copyright (c) 2025 UltraSafe AI Team
+
+**PERMITTED USE:**
+- Anyone may use this software for any purpose
+
+**RESTRICTED ACTIVITIES:**
+- No one may modify the code
+- No one may use the code for commercial purposes
+- No one may use the code to create competitive products
+
+**ATTRIBUTION:**
+- All copies of this software must retain this license notice
+- Any use of this software must include attribution to UltraSafe AI Team
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📞 Support
+
+For issues and questions:
+- Check the troubleshooting section above
+- Review the examples for common patterns
+- Ensure you're following the three-stage workflow correctly
+
+---
+
+**USF Agent SDK** - Flexible, powerful, and easy to use. Build intelligent agents with complete control over tool execution and model selection.
