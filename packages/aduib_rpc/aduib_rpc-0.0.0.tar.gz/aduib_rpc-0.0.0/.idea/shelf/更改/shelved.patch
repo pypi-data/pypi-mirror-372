@@ -1,0 +1,1060 @@
+Index: __main__.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import asyncio\nimport logging\n\nfrom aduib_rpc.discover.entities import ServiceInstance\nfrom aduib_rpc.discover.registry.nacos.nacos_service_registry import NacosServiceRegistry\nfrom aduib_rpc.discover.service import AduibServiceFactory\nfrom aduib_rpc.utils.constant import AIProtocols, TransportSchemes\n\nlogging.basicConfig(level=logging.DEBUG)\n\nasync def main():\n    service = ServiceInstance(service_name='test_jsonrpc_app', host='localhost', port=5000,\n                                   protocol=AIProtocols.AduibRpc, weight=1, scheme=TransportSchemes.GRPC)\n    registry = NacosServiceRegistry(server_addresses='10.0.0.96:8848',\n                                         namespace='eeb6433f-d68c-4b3b-a4a7-eeff19110e4d', group_name='DEFAULT_GROUP',\n                                         username='nacos', password='nacos11.')\n    factory = AduibServiceFactory(service_instance=service)\n    await registry.register_service(service)\n    await factory.run_server()\n\nif __name__ == '__main__':\n    asyncio.run(main())
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/__main__.py b/__main__.py
+--- a/__main__.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/__main__.py	(date 1756376579217)
+@@ -9,7 +9,7 @@
+ logging.basicConfig(level=logging.DEBUG)
+ 
+ async def main():
+-    service = ServiceInstance(service_name='test_jsonrpc_app', host='localhost', port=5000,
++    service = ServiceInstance(service_name='test_jsonrpc_app', host='10.0.0.124', port=5000,
+                                    protocol=AIProtocols.AduibRpc, weight=1, scheme=TransportSchemes.GRPC)
+     registry = NacosServiceRegistry(server_addresses='10.0.0.96:8848',
+                                          namespace='eeb6433f-d68c-4b3b-a4a7-eeff19110e4d', group_name='DEFAULT_GROUP',
+Index: __main2__.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import asyncio\nimport logging\n\nfrom aduib_rpc.discover.entities import ServiceInstance\nfrom aduib_rpc.discover.registry.nacos.nacos_service_registry import NacosServiceRegistry\nfrom aduib_rpc.discover.service import AduibServiceFactory\nfrom aduib_rpc.utils.constant import AIProtocols, TransportSchemes\n\nlogging.basicConfig(level=logging.DEBUG)\n\nasync def main():\n    service = ServiceInstance(service_name='test_jsonrpc_app', host='localhost', port=5000,\n                                   protocol=AIProtocols.AduibRpc, weight=1, scheme=TransportSchemes.GRPC)\n    registry = NacosServiceRegistry(server_addresses='10.0.0.96:8848',\n                                         namespace='eeb6433f-d68c-4b3b-a4a7-eeff19110e4d', group_name='DEFAULT_GROUP',\n                                         username='nacos', password='nacos11.')\n    factory = AduibServiceFactory(service_instance=service)\n    service = await registry.discover_service(service.service_name)\n    print(service)\n\nif __name__ == '__main__':\n    asyncio.run(main())
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/__main2__.py b/__main2__.py
+--- a/__main2__.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/__main2__.py	(date 1756377506537)
+@@ -1,22 +1,46 @@
+ import asyncio
+ import logging
+ 
++import grpc
++import uvicorn
++
++from aduib_rpc.utils.constant import AIProtocols, TransportSchemes
+ from aduib_rpc.discover.entities import ServiceInstance
++from aduib_rpc.client.auth import InMemoryCredentialsProvider
++from aduib_rpc.client.auth.interceptor import AuthInterceptor
++from aduib_rpc.client.base_client import ClientConfig, AduibRpcClient
++from aduib_rpc.client.client_factory import AduibRpcClientFactory
+ from aduib_rpc.discover.registry.nacos.nacos_service_registry import NacosServiceRegistry
+ from aduib_rpc.discover.service import AduibServiceFactory
+-from aduib_rpc.utils.constant import AIProtocols, TransportSchemes
+ 
+ logging.basicConfig(level=logging.DEBUG)
+ 
+ async def main():
+-    service = ServiceInstance(service_name='test_jsonrpc_app', host='localhost', port=5000,
++    service = ServiceInstance(service_name='test_jsonrpc_app', host='10.0.0.124', port=5001,
+                                    protocol=AIProtocols.AduibRpc, weight=1, scheme=TransportSchemes.GRPC)
+     registry = NacosServiceRegistry(server_addresses='10.0.0.96:8848',
+                                          namespace='eeb6433f-d68c-4b3b-a4a7-eeff19110e4d', group_name='DEFAULT_GROUP',
+                                          username='nacos', password='nacos11.')
+     factory = AduibServiceFactory(service_instance=service)
+-    service = await registry.discover_service(service.service_name)
+-    print(service)
++    discover_service = await registry.discover_service(service.service_name)
++    logging.debug(f'Service: {discover_service}')
++    logging.debug(f'Service URL: {discover_service.url}')
++    def create_channel(url: str) -> grpc.Channel:
++        return grpc.insecure_channel(discover_service.url)
++
++    client_factory = AduibRpcClientFactory(
++        config=ClientConfig(grpc_channel_factory=create_channel, supported_transports=[TransportSchemes.GRPC]))
++    aduib_rpc_client:AduibRpcClient = client_factory.create(service.url, server_preferred=TransportSchemes.GRPC,interceptors=[AuthInterceptor(credentialProvider=InMemoryCredentialsProvider())])
++    resp = aduib_rpc_client.completion(method="chat.completions",
++                                       data={"model": "gpt-3.5-turbo", "messages": [{"role": "user", "content": "Hello!"}]},
++                                       meta={"stream": "true",
++                                             "model": "gpt-3.5-turbo",
++                                            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0"} | service.get_service_info())
++    async for r in resp:
++        logging.debug(f'Response: {r}')
++
++    # await factory.run_server()
++
+ 
+ if __name__ == '__main__':
+     asyncio.run(main())
+\ No newline at end of file
+Index: src/aduib_rpc/client/__init__.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from .midwares import ClientContext\nfrom .midwares import ClientRequestInterceptor\nfrom .errors import ClientError\nfrom .errors import ClientHttpError\nfrom .errors import ClientJSONRPCError\n\n__all__ = [\n    \"ClientContext\",\n    \"ClientRequestInterceptor\",\n    \"ClientError\",\n    \"ClientHttpError\",\n    \"ClientJSONRPCError\",\n]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/client/__init__.py b/src/aduib_rpc/client/__init__.py
+--- a/src/aduib_rpc/client/__init__.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/client/__init__.py	(date 1756373930627)
+@@ -1,13 +1,19 @@
+-from .midwares import ClientContext
+-from .midwares import ClientRequestInterceptor
+ from .errors import ClientError
+-from .errors import ClientHttpError
++from .errors import ClientHTTPError
+ from .errors import ClientJSONRPCError
++from .midwares import ClientContext
++from .midwares import ClientRequestInterceptor
++from .config import ClientConfig
++from .base_client import AduibRpcClient
++from .base_client import BaseAduibRpcClient
+ 
+ __all__ = [
+-    "ClientContext",
+-    "ClientRequestInterceptor",
+     "ClientError",
+-    "ClientHttpError",
++    "ClientHTTPError",
+     "ClientJSONRPCError",
++    "ClientContext",
++    "ClientRequestInterceptor",
++    "ClientConfig",
++    "AduibRpcClient",
++    "BaseAduibRpcClient",
+ ]
+\ No newline at end of file
+Index: src/aduib_rpc/client/config.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/client/config.py b/src/aduib_rpc/client/config.py
+new file mode 100644
+--- /dev/null	(date 1756373919667)
++++ b/src/aduib_rpc/client/config.py	(date 1756373919667)
+@@ -0,0 +1,26 @@
++import dataclasses
++from collections.abc import Callable
++
++try:
++    import httpx
++    from grpc.aio import Channel
++except ImportError:
++    httpx = None  # type: ignore
++    Channel = None  # type: ignore
++
++from aduib_rpc.utils.constant import TransportSchemes
++
++@dataclasses.dataclass
++class ClientConfig:
++    """Client configuration class."""
++    streaming: bool = True
++    """Whether to use streaming mode for message sending."""
++    httpx_client: httpx.AsyncClient | None = None
++    """Http client to use to connect to agent."""
++
++    grpc_channel_factory: Callable[[str], Channel] | None = None
++    """Generates a grpc connection channel for a given url."""
++
++    supported_transports: list[TransportSchemes | str] = dataclasses.field(
++        default_factory=list
++    )
+\ No newline at end of file
+Index: src/aduib_rpc/client/transports/jsonrpc.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import json\nfrom typing import AsyncGenerator, Any\nfrom uuid import uuid4\n\nimport httpx\nfrom httpx_sse import SSEError, aconnect_sse\n\nfrom aduib_rpc.client import ClientContext, ClientRequestInterceptor, ClientJSONRPCError\nfrom aduib_rpc.client.errors import ClientHTTPError, ClientJSONError\nfrom aduib_rpc.client.transports.base import ClientTransport\nfrom aduib_rpc.types import AduibRpcRequest, AduibRpcResponse, JsonRpcMessageRequest, JsonRpcMessageResponse, \\\n    JSONRPCErrorResponse, JsonRpcStreamingMessageRequest, JsonRpcStreamingMessageResponse\n\n\nclass JsonRpcTransport(ClientTransport):\n    \"\"\" A JSON-RPC transport for the Aduib RPC client. \"\"\"\n    def __init__(\n        self,\n        httpx_client: httpx.AsyncClient,\n        url: str | None = None,\n        interceptors: list[ClientRequestInterceptor] | None = None,\n    ):\n        \"\"\"Initializes the RestTransport.\"\"\"\n        if url:\n            self.url = url\n        else:\n            raise ValueError('Must provide  url')\n        if self.url.endswith('/'):\n            self.url = self.url[:-1]\n        self.httpx_client = httpx_client\n        self.interceptors = interceptors or []\n\n\n    async def _apply_interceptors(\n        self,\n        method_name: str,\n        request_payload: dict[str, Any],\n        http_kwargs: dict[str, Any] | None,\n        context: ClientContext | None,\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        final_http_kwargs = http_kwargs or {}\n        final_request_payload = request_payload\n\n        for interceptor in self.interceptors:\n            (\n                final_request_payload,\n                final_http_kwargs,\n            ) = await interceptor.intercept(\n                method_name,\n                final_request_payload,\n                final_http_kwargs,\n                context,\n                context.get_schema()\n            )\n        return final_request_payload, final_http_kwargs\n\n    def _get_http_args(\n        self, context: ClientContext | None\n    ) -> dict[str, Any] | None:\n        return context.state.get('http_kwargs') if context else None\n\n    async def completion(self, request: AduibRpcRequest, *, context: ClientContext) -> AduibRpcResponse:\n        \"\"\"Sends a non-streaming message request to the agent.\"\"\"\n        rpc_request = JsonRpcMessageRequest(params=request, id=str(uuid4()))\n        payload, modified_kwargs = await self._apply_interceptors(\n            'message/completion',\n            rpc_request.model_dump(mode='json', exclude_none=True),\n            self._get_http_args(context),\n            context,\n        )\n        response_data = await self._send_request(payload, modified_kwargs)\n        response = JsonRpcMessageResponse.model_validate(response_data)\n        if isinstance(response.root, JSONRPCErrorResponse):\n            raise ClientJSONRPCError(response.root)\n        if not response.root.result.is_success():\n            raise ClientHTTPError(status_code=response.root.result.error.code, message=response.root.result.error.message)\n        return response.root.result\n\n    async def completion_stream(self, request: AduibRpcRequest, *, context: ClientContext) -> AsyncGenerator[\n        AduibRpcResponse]:\n        \"\"\"Sends a streaming message request to the agent and yields responses as they arrive.\"\"\"\n        rpc_request = JsonRpcStreamingMessageRequest(\n            params=request, id=str(uuid4())\n        )\n        payload, modified_kwargs = await self._apply_interceptors(\n            'message/completion/stream',\n            rpc_request.model_dump(mode='json', exclude_none=True),\n            self._get_http_args(context),\n            context,\n        )\n\n        modified_kwargs.setdefault('timeout', None)\n\n        async with aconnect_sse(\n                self.httpx_client,\n                'POST',\n                self.url,\n                json=payload,\n                **modified_kwargs,\n        ) as event_source:\n            try:\n                async for sse in event_source.aiter_sse():\n                    response = JsonRpcStreamingMessageResponse.model_validate(\n                        json.loads(sse.data)\n                    )\n                    if isinstance(response.root, JSONRPCErrorResponse):\n                        raise ClientJSONRPCError(response.root)\n                    if not response.root.result.is_success():\n                        raise ClientHTTPError(status_code=response.root.result.error.code, message=response.root.result.error.message)\n                    yield response.root.result\n            except SSEError as e:\n                raise ClientHTTPError(\n                    400, f'Invalid SSE response or protocol error: {e}'\n                ) from e\n            except json.JSONDecodeError as e:\n                raise ClientJSONError(str(e)) from e\n            except httpx.RequestError as e:\n                raise ClientHTTPError(\n                    503, f'Network communication error: {e}'\n                ) from e\n\n    async def _send_request(\n            self,\n            rpc_request_payload: dict[str, Any],\n            http_kwargs: dict[str, Any] | None = None,\n    ) -> dict[str, Any]:\n        try:\n            response = await self.httpx_client.post(\n                self.url, json=rpc_request_payload, **(http_kwargs or {})\n            )\n            response.raise_for_status()\n            return response.json()\n        except httpx.ReadTimeout as e:\n            raise ClientHTTPError('Client Request timed out') from e\n        except httpx.HTTPStatusError as e:\n            raise ClientHTTPError(e.response.status_code, str(e)) from e\n        except json.JSONDecodeError as e:\n            raise ClientJSONError(str(e)) from e\n        except httpx.RequestError as e:\n            raise ClientHTTPError(\n                503, f'Network communication error: {e}'\n            ) from e
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/client/transports/jsonrpc.py b/src/aduib_rpc/client/transports/jsonrpc.py
+--- a/src/aduib_rpc/client/transports/jsonrpc.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/client/transports/jsonrpc.py	(date 1756373448636)
+@@ -5,8 +5,8 @@
+ import httpx
+ from httpx_sse import SSEError, aconnect_sse
+ 
+-from aduib_rpc.client import ClientContext, ClientRequestInterceptor, ClientJSONRPCError
+ from aduib_rpc.client.errors import ClientHTTPError, ClientJSONError
++from aduib_rpc.client import ClientContext, ClientRequestInterceptor, ClientJSONRPCError
+ from aduib_rpc.client.transports.base import ClientTransport
+ from aduib_rpc.types import AduibRpcRequest, AduibRpcResponse, JsonRpcMessageRequest, JsonRpcMessageResponse, \
+     JSONRPCErrorResponse, JsonRpcStreamingMessageRequest, JsonRpcStreamingMessageResponse
+@@ -77,7 +77,7 @@
+         return response.root.result
+ 
+     async def completion_stream(self, request: AduibRpcRequest, *, context: ClientContext) -> AsyncGenerator[
+-        AduibRpcResponse]:
++        AduibRpcResponse, None]:
+         """Sends a streaming message request to the agent and yields responses as they arrive."""
+         rpc_request = JsonRpcStreamingMessageRequest(
+             params=request, id=str(uuid4())
+Index: src/aduib_rpc/utils/encoders.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/utils/encoders.py b/src/aduib_rpc/utils/encoders.py
+new file mode 100644
+--- /dev/null	(date 1755676346759)
++++ b/src/aduib_rpc/utils/encoders.py	(date 1755676346759)
+@@ -0,0 +1,216 @@
++import dataclasses
++import datetime
++from collections import defaultdict, deque
++from collections.abc import Callable
++from decimal import Decimal
++from enum import Enum
++from ipaddress import IPv4Address, IPv4Interface, IPv4Network, IPv6Address, IPv6Interface, IPv6Network
++from pathlib import Path, PurePath
++from re import Pattern
++from types import GeneratorType
++from typing import Any, Literal, Optional, Union
++from uuid import UUID
++
++from pydantic import BaseModel
++from pydantic.networks import AnyUrl, NameEmail
++from pydantic.types import SecretBytes, SecretStr
++from pydantic_core import Url
++
++def _model_dump(model: BaseModel, mode: Literal["json", "python"] = "json", **kwargs: Any) -> Any:
++    return model.model_dump(mode=mode, **kwargs)
++
++
++# Taken from Pydantic v1 as is
++def isoformat(o: Union[datetime.date, datetime.time]) -> str:
++    return o.isoformat()
++
++
++# Taken from Pydantic v1 as is
++# TODO: pv2 should this return strings instead?
++def decimal_encoder(dec_value: Decimal) -> Union[int, float]:
++    """
++    Encodes a Decimal as int of there's no exponent, otherwise float
++
++    This is useful when we use ConstrainedDecimal to represent Numeric(x,0)
++    where a integer (but not int typed) is used. Encoding this as a float
++    results in failed round-tripping between encode and parse.
++    Our Id type is a prime example of this.
++
++    >>> decimal_encoder(Decimal("1.0"))
++    1.0
++
++    >>> decimal_encoder(Decimal("1"))
++    1
++    """
++    if dec_value.as_tuple().exponent >= 0:  # type: ignore[operator]
++        return int(dec_value)
++    else:
++        return float(dec_value)
++
++
++ENCODERS_BY_TYPE: dict[type[Any], Callable[[Any], Any]] = {
++    bytes: lambda o: o.decode(),
++    datetime.date: isoformat,
++    datetime.datetime: isoformat,
++    datetime.time: isoformat,
++    datetime.timedelta: lambda td: td.total_seconds(),
++    Decimal: decimal_encoder,
++    Enum: lambda o: o.value,
++    frozenset: list,
++    deque: list,
++    GeneratorType: list,
++    IPv4Address: str,
++    IPv4Interface: str,
++    IPv4Network: str,
++    IPv6Address: str,
++    IPv6Interface: str,
++    IPv6Network: str,
++    NameEmail: str,
++    Path: str,
++    Pattern: lambda o: o.pattern,
++    SecretBytes: str,
++    SecretStr: str,
++    set: list,
++    UUID: str,
++    Url: str,
++    AnyUrl: str,
++}
++
++
++def generate_encoders_by_class_tuples(
++    type_encoder_map: dict[Any, Callable[[Any], Any]],
++) -> dict[Callable[[Any], Any], tuple[Any, ...]]:
++    encoders_by_class_tuples: dict[Callable[[Any], Any], tuple[Any, ...]] = defaultdict(tuple)
++    for type_, encoder in type_encoder_map.items():
++        encoders_by_class_tuples[encoder] += (type_,)
++    return encoders_by_class_tuples
++
++
++encoders_by_class_tuples = generate_encoders_by_class_tuples(ENCODERS_BY_TYPE)
++
++
++def jsonable_encoder(
++    obj: Any,
++    by_alias: bool = True,
++    exclude_unset: bool = False,
++    exclude_defaults: bool = False,
++    exclude_none: bool = False,
++    custom_encoder: Optional[dict[Any, Callable[[Any], Any]]] = None,
++    sqlalchemy_safe: bool = True,
++) -> Any:
++    custom_encoder = custom_encoder or {}
++    if custom_encoder:
++        if type(obj) in custom_encoder:
++            return custom_encoder[type(obj)](obj)
++        else:
++            for encoder_type, encoder_instance in custom_encoder.items():
++                if isinstance(obj, encoder_type):
++                    return encoder_instance(obj)
++    if isinstance(obj, BaseModel):
++        obj_dict = _model_dump(
++            obj,
++            mode="json",
++            include=None,
++            exclude=None,
++            by_alias=by_alias,
++            exclude_unset=exclude_unset,
++            exclude_none=exclude_none,
++            exclude_defaults=exclude_defaults,
++        )
++        if "__root__" in obj_dict:
++            obj_dict = obj_dict["__root__"]
++        return jsonable_encoder(
++            obj_dict,
++            exclude_none=exclude_none,
++            exclude_defaults=exclude_defaults,
++            sqlalchemy_safe=sqlalchemy_safe,
++        )
++    if dataclasses.is_dataclass(obj):
++        # Ensure obj is a dataclass instance, not a dataclass type
++        if not isinstance(obj, type):
++            obj_dict = dataclasses.asdict(obj)
++            return jsonable_encoder(
++                obj_dict,
++                by_alias=by_alias,
++                exclude_unset=exclude_unset,
++                exclude_defaults=exclude_defaults,
++                exclude_none=exclude_none,
++                custom_encoder=custom_encoder,
++                sqlalchemy_safe=sqlalchemy_safe,
++            )
++    if isinstance(obj, Enum):
++        return obj.value
++    if isinstance(obj, PurePath):
++        return str(obj)
++    if isinstance(obj, str | int | float | type(None)):
++        return obj
++    if isinstance(obj, Decimal):
++        return format(obj, "f")
++    if isinstance(obj, dict):
++        encoded_dict = {}
++        allowed_keys = set(obj.keys())
++        for key, value in obj.items():
++            if (
++                (not sqlalchemy_safe or (not isinstance(key, str)) or (not key.startswith("_sa")))
++                and (value is not None or not exclude_none)
++                and key in allowed_keys
++            ):
++                encoded_key = jsonable_encoder(
++                    key,
++                    by_alias=by_alias,
++                    exclude_unset=exclude_unset,
++                    exclude_none=exclude_none,
++                    custom_encoder=custom_encoder,
++                    sqlalchemy_safe=sqlalchemy_safe,
++                )
++                encoded_value = jsonable_encoder(
++                    value,
++                    by_alias=by_alias,
++                    exclude_unset=exclude_unset,
++                    exclude_none=exclude_none,
++                    custom_encoder=custom_encoder,
++                    sqlalchemy_safe=sqlalchemy_safe,
++                )
++                encoded_dict[encoded_key] = encoded_value
++        return encoded_dict
++    if isinstance(obj, list | set | frozenset | GeneratorType | tuple | deque):
++        encoded_list = []
++        for item in obj:
++            encoded_list.append(
++                jsonable_encoder(
++                    item,
++                    by_alias=by_alias,
++                    exclude_unset=exclude_unset,
++                    exclude_defaults=exclude_defaults,
++                    exclude_none=exclude_none,
++                    custom_encoder=custom_encoder,
++                    sqlalchemy_safe=sqlalchemy_safe,
++                )
++            )
++        return encoded_list
++
++    if type(obj) in ENCODERS_BY_TYPE:
++        return ENCODERS_BY_TYPE[type(obj)](obj)
++    for encoder, classes_tuple in encoders_by_class_tuples.items():
++        if isinstance(obj, classes_tuple):
++            return encoder(obj)
++
++    try:
++        data = dict(obj)
++    except Exception as e:
++        errors: list[Exception] = []
++        errors.append(e)
++        try:
++            data = vars(obj)
++        except Exception as e:
++            errors.append(e)
++            raise ValueError(errors) from e
++    return jsonable_encoder(
++        data,
++        by_alias=by_alias,
++        exclude_unset=exclude_unset,
++        exclude_defaults=exclude_defaults,
++        exclude_none=exclude_none,
++        custom_encoder=custom_encoder,
++        sqlalchemy_safe=sqlalchemy_safe,
++    )
+Index: src/aduib_rpc/server/request_handlers/request_handler.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from abc import ABC, abstractmethod\nfrom typing import AsyncGenerator\n\nfrom aduib_rpc.server.context import ServerContext, ServerInterceptor\nfrom aduib_rpc.types import AduibRpcRequest, AduibRpcResponse\n\n\nclass RequestHandler(ABC):\n    \"\"\" request handler base class \"\"\"\n\n    @abstractmethod\n    async def on_message(\n            self,\n            message: AduibRpcRequest,\n            context: ServerContext | None = None,\n            interceptors: list[ServerInterceptor] | None = None\n    )-> AduibRpcResponse:\n        \"\"\"Handles the 'message' method.\n\n        Args:\n            message: The incoming `CompletionRequest` object.\n            context: Context provided by the server.\n            interceptors: list of ServerInterceptor instances to process the request.\n\n        Returns:\n            The `AduibRpcResponse` object containing the response.\n        \"\"\"\n        raise NotImplementedError(\"Method not implemented.\")\n\n    @abstractmethod\n    async def on_stream_message(\n            self,\n            message: AduibRpcRequest,\n            context: ServerContext | None = None,\n            interceptors: list[ServerInterceptor] | None = None\n    )-> AsyncGenerator[AduibRpcResponse, None]:\n        \"\"\"Handles the 'stream_message' method.\n\n        Args:\n            message: The incoming `CompletionRequest` object.\n            context: Context provided by the server.\n            interceptors: list of ServerInterceptor instances to process the request.\n\n        Yields:\n            The `AduibRpcResponse` objects containing the streaming responses.\n        \"\"\"\n        raise NotImplementedError(\"Method not implemented.\")\n        yield
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/server/request_handlers/request_handler.py b/src/aduib_rpc/server/request_handlers/request_handler.py
+--- a/src/aduib_rpc/server/request_handlers/request_handler.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/server/request_handlers/request_handler.py	(date 1756372465238)
+@@ -13,7 +13,6 @@
+             self,
+             message: AduibRpcRequest,
+             context: ServerContext | None = None,
+-            interceptors: list[ServerInterceptor] | None = None
+     )-> AduibRpcResponse:
+         """Handles the 'message' method.
+ 
+@@ -32,7 +31,6 @@
+             self,
+             message: AduibRpcRequest,
+             context: ServerContext | None = None,
+-            interceptors: list[ServerInterceptor] | None = None
+     )-> AsyncGenerator[AduibRpcResponse, None]:
+         """Handles the 'stream_message' method.
+ 
+Index: src/aduib_rpc/client/transports/rest.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import json\nfrom typing import AsyncGenerator, Any\n\nimport httpx\nfrom google.protobuf.json_format import MessageToDict, Parse, ParseDict\nfrom httpx_sse import aconnect_sse, SSEError\n\nfrom aduib_rpc.client import ClientContext, ClientRequestInterceptor\nfrom aduib_rpc.client.errors import ClientJSONError, ClientHTTPError\nfrom aduib_rpc.client.transports.base import ClientTransport\nfrom aduib_rpc.grpc import aduib_rpc_pb2\nfrom aduib_rpc.types import AduibRpcRequest, AduibRpcResponse\nfrom aduib_rpc.utils import proto_utils\nfrom aduib_rpc.utils.constant import DEFAULT_RPC_PATH\n\n\nclass RestTransport(ClientTransport):\n    \"\"\" A REST transport for the Aduib RPC client. \"\"\"\n    def __init__(\n        self,\n        httpx_client: httpx.AsyncClient,\n        url: str | None = None,\n        interceptors: list[ClientRequestInterceptor] | None = None,\n    ):\n        \"\"\"Initializes the RestTransport.\"\"\"\n        if url:\n            self.url = url\n        else:\n            raise ValueError('Must provide  url')\n        if self.url.endswith('/'):\n            self.url = self.url[:-1]\n        if not self.url.endswith(DEFAULT_RPC_PATH):\n            self.url = f\"{self.url}{DEFAULT_RPC_PATH}\"\n        self.httpx_client = httpx_client\n        self.interceptors = interceptors or []\n\n    def get_http_args(self, context: ClientContext) -> dict:\n        return context.state['http_kwargs'] if 'http_kwargs' in context.state else {}\n\n    async def _setup_request_message(self,method, context, request)-> tuple[dict[str, Any], dict[str, Any]]:\n        http_args = self.get_http_args(context)\n        data_ = aduib_rpc_pb2.RpcTask(id=request.id, method=request.method,\n                                      meta=proto_utils.ToProto.metadata(request.meta),\n                                      data=proto_utils.ToProto.taskData(request.data)),\n        for interceptor in self.interceptors:\n            (\n                final_request_payload,\n                final_http_kwargs,\n            ) = await interceptor.intercept(\n                method,\n                final_request_payload,\n                final_http_kwargs,\n                context,\n                context.get_schema()\n            )\n        return MessageToDict(data_), http_args\n\n    async def completion(self, request: AduibRpcRequest, *, context: ClientContext) -> AduibRpcResponse:\n        method = \"/v1/message/completion\"\n        data_, http_args = await self._setup_request_message(method,context, request)\n        response_data = await self._send_post_request(method, data_, http_args)\n        response = aduib_rpc_pb2.RpcTaskResponse()\n        ParseDict(response_data, response)\n        rpc_response = proto_utils.FromProto.rpc_response(response)\n        if not rpc_response.is_success():\n            raise ClientHTTPError(rpc_response.error.code, rpc_response.error.message)\n        return rpc_response\n\n    async def completion_stream(self, request: AduibRpcRequest, *, context: ClientContext) -> AsyncGenerator[\n        AduibRpcResponse]:\n        method = \"/v1/message/completion/stream\"\n        data_, http_args = await self._setup_request_message(method,context, request)\n        async with aconnect_sse(\n                self.httpx_client,\n                'POST',\n                f'{self.url}{method}',\n                json=data_,\n                **http_args,\n        ) as event_source:\n            try:\n                async for sse in event_source.aiter_sse():\n                    event = aduib_rpc_pb2.RpcTaskResponse()\n                    Parse(sse.data, event)\n                    response = proto_utils.FromProto.rpc_response(event)\n                    if not response.is_success():\n                        raise  ClientHTTPError( response.error.code, response.error.message)\n                    yield response\n            except SSEError as e:\n                raise ClientHTTPError(\n                    400, f'Invalid SSE response or protocol error: {e}'\n                ) from e\n            except json.JSONDecodeError as e:\n                raise ClientJSONError(str(e)) from e\n            except httpx.RequestError as e:\n                raise ClientHTTPError(\n                    503, f'Network communication error: {e}'\n                ) from e\n\n    async def _send_request(self, request: httpx.Request) -> dict[str, Any]:\n        try:\n            response = await self.httpx_client.send(request)\n            response.raise_for_status()\n            return response.json()\n        except httpx.HTTPStatusError as e:\n            raise ClientHTTPError(e.response.status_code, str(e)) from e\n        except json.JSONDecodeError as e:\n            raise ClientJSONError(str(e)) from e\n        except httpx.RequestError as e:\n            raise ClientHTTPError(\n                503, f'Network communication error: {e}'\n            ) from e\n\n    async def _send_post_request(\n        self,\n        target: str,\n        rpc_request_payload: dict[str, Any],\n        http_kwargs: dict[str, Any] | None = None,\n    ) -> dict[str, Any]:\n        return await self._send_request(\n            self.httpx_client.build_request(\n                'POST',\n                f'{self.url}{target}',\n                json=rpc_request_payload,\n                **(http_kwargs or {}),\n            )\n        )\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/client/transports/rest.py b/src/aduib_rpc/client/transports/rest.py
+--- a/src/aduib_rpc/client/transports/rest.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/client/transports/rest.py	(date 1756373199323)
+@@ -67,7 +67,7 @@
+         return rpc_response
+ 
+     async def completion_stream(self, request: AduibRpcRequest, *, context: ClientContext) -> AsyncGenerator[
+-        AduibRpcResponse]:
++        AduibRpcResponse, None]:
+         method = "/v1/message/completion/stream"
+         data_, http_args = await self._setup_request_message(method,context, request)
+         async with aconnect_sse(
+Index: src/aduib_rpc/types.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import time\nfrom abc import ABC\nfrom decimal import Decimal\nfrom enum import StrEnum, Enum\nfrom typing import List\nfrom typing import Optional, Sequence, Annotated, Union, Literal, Any\n\nfrom pydantic import BaseModel, Field, field_validator, RootModel\nfrom pydantic import model_validator\n\n\nclass ModelUsage(BaseModel):\n    pass\n\n\nclass PriceType(Enum):\n    \"\"\"\n    Enum class for price type.\n    \"\"\"\n\n    INPUT = \"input\"\n    OUTPUT = \"output\"\n\n\nclass PriceInfo(BaseModel):\n    \"\"\"\n    Model class for price info.\n    \"\"\"\n\n    unit_price: Decimal\n    unit: Decimal\n    total_amount: Decimal\n    currency: str\n\nclass LLMMode(StrEnum):\n    \"\"\"\n    Enum class for large language model mode.\n    \"\"\"\n\n    COMPLETION = \"completion\"\n    CHAT = \"chat\"\n\n    @classmethod\n    def value_of(cls, value: str) -> \"LLMMode\":\n        \"\"\"\n        Get value of given mode.\n\n        :param value: mode value\n        :return: mode\n        \"\"\"\n        for mode in cls:\n            if mode.value == value:\n                return mode\n        raise ValueError(f\"invalid mode value {value}\")\n\n\nclass LLMUsage(ModelUsage):\n    \"\"\"\n    Model class for llm usage.\n    \"\"\"\n\n    prompt_tokens: int = 0\n    prompt_unit_price: Decimal= Decimal(\"0.0\")\n    prompt_price_unit: Decimal= Decimal(\"0.0\")\n    prompt_price: Decimal = Decimal(\"0.0\")\n    completion_tokens: int = 0\n    completion_unit_price: Decimal = Decimal(\"0.0\")\n    completion_price_unit: Decimal = Decimal(\"0.0\")\n    completion_price: Decimal = Decimal(\"0.0\")\n    total_tokens: int = 0\n    total_price: Decimal = Decimal(\"0.0\")\n    currency: str = \"USD\"\n    latency: float = 0.0\n\n    @classmethod\n    def empty_usage(cls):\n        return cls(\n            prompt_tokens=0,\n            prompt_unit_price=Decimal(\"0.0\"),\n            prompt_price_unit=Decimal(\"0.0\"),\n            prompt_price=Decimal(\"0.0\"),\n            completion_tokens=0,\n            completion_unit_price=Decimal(\"0.0\"),\n            completion_price_unit=Decimal(\"0.0\"),\n            completion_price=Decimal(\"0.0\"),\n            total_tokens=0,\n            total_price=Decimal(\"0.0\"),\n            currency=\"USD\",\n            latency=0.0,\n        )\n\n    def plus(self, other: \"LLMUsage\") -> \"LLMUsage\":\n        \"\"\"\n        Add two LLMUsage instances together.\n\n        :param other: Another LLMUsage instance to add\n        :return: A new LLMUsage instance with summed values\n        \"\"\"\n        if self.total_tokens == 0:\n            return other\n        else:\n            return LLMUsage(\n                prompt_tokens=self.prompt_tokens + other.prompt_tokens,\n                prompt_unit_price=other.prompt_unit_price,\n                prompt_price_unit=other.prompt_price_unit,\n                prompt_price=self.prompt_price + other.prompt_price,\n                completion_tokens=self.completion_tokens + other.completion_tokens,\n                completion_unit_price=other.completion_unit_price,\n                completion_price_unit=other.completion_price_unit,\n                completion_price=self.completion_price + other.completion_price,\n                total_tokens=self.total_tokens + other.total_tokens,\n                total_price=self.total_price + other.total_price,\n                currency=other.currency,\n                latency=self.latency + other.latency,\n            )\n\n    def __add__(self, other: \"LLMUsage\") -> \"LLMUsage\":\n        \"\"\"\n        Overload the + operator to add two LLMUsage instances.\n\n        :param other: Another LLMUsage instance to add\n        :return: A new LLMUsage instance with summed values\n        \"\"\"\n        return self.plus(other)\n\n\nclass NumTokensResult(PriceInfo):\n    \"\"\"\n    Model class for number of tokens result.\n    \"\"\"\n\n    tokens: int\n\nclass StreamOptions(BaseModel):\n    include_usage: Optional[bool] = True\n    continuous_usage_stats: Optional[bool] = False\n\nclass JsonSchemaResponseFormat(BaseModel):\n    name: str\n    description: Optional[str] = None\n    # schema is the field in openai but that causes conflicts with pydantic so\n    # instead use json_schema with an alias\n    json_schema: Optional[dict[str, Any]] = Field(default=None, alias='schema')\n    strict: Optional[bool] = None\n\n\nclass StructuralTag(BaseModel):\n    begin: str\n    # schema is the field, but that causes conflicts with pydantic so\n    # instead use structural_tag_schema with an alias\n    structural_tag_schema: Optional[dict[str, Any]] = Field(default=None,\n                                                            alias=\"schema\")\n    end: str\n\n\nclass StructuralTagResponseFormat(BaseModel):\n    type: Literal[\"structural_tag\"]\n    structures: list[StructuralTag]\n    triggers: list[str]\n\n\nclass ResponseFormat(BaseModel):\n    # type must be \"json_schema\", \"json_object\", or \"text\"\n    type: Literal[\"text\", \"json_object\", \"json_schema\"]\n    json_schema: Optional[JsonSchemaResponseFormat] = None\n\n\nAnyResponseFormat = Union[ResponseFormat, StructuralTagResponseFormat]\n\nclass PromptMessageRole(Enum):\n    \"\"\"\n    Enum class for prompt message.\n    \"\"\"\n\n    SYSTEM = \"system\"\n    USER = \"user\"\n    ASSISTANT = \"assistant\"\n    TOOL = \"tool\"\n\n    @classmethod\n    def value_of(cls, value: str) -> \"PromptMessageRole\":\n        \"\"\"\n        Get value of given mode.\n\n        :param value: mode value\n        :return: mode\n        \"\"\"\n        for mode in cls:\n            if mode.value == value:\n                return mode\n        raise ValueError(f\"invalid prompt message type value {value}\")\n\n\n\n\nclass PromptMessageTool(BaseModel):\n    \"\"\"\n    Model class for prompt message tool.\n    \"\"\"\n\n    name: str\n    description: str\n    parameters: dict\n\n\nclass PromptMessageFunction(BaseModel):\n    \"\"\"\n    Model class for prompt message function.\n    \"\"\"\n\n    type: str = \"function\"\n    function: PromptMessageTool\n\nclass PromptMessageNamedFunction(BaseModel):\n    name: str\n\n\nclass PromptMessageToolChoiceParam(BaseModel):\n    function: PromptMessageNamedFunction\n    type: Literal[\"function\"] = \"function\"\n\n\nclass PromptMessageContentType(StrEnum):\n    \"\"\"\n    Enum class for prompt message content type.\n    \"\"\"\n\n    TEXT = \"text\"\n    IMAGE = \"image\"\n    AUDIO = \"audio\"\n    VIDEO = \"video\"\n    DOCUMENT = \"document\"\n\n\nclass PromptMessageContent(BaseModel):\n    \"\"\"\n    Model class for prompt message content.\n    \"\"\"\n\n    type: PromptMessageContentType\n\n\nclass TextPromptMessageContent(PromptMessageContent):\n    \"\"\"\n    Model class for text prompt message content.\n    \"\"\"\n\n    type: PromptMessageContentType = PromptMessageContentType.TEXT\n    data: str\n\n\nclass MultiModalPromptMessageContent(PromptMessageContent):\n    \"\"\"\n    Model class for multi-modal prompt message content.\n    \"\"\"\n\n    type: PromptMessageContentType\n    format: str = Field(default=..., description=\"the format of multi-modal file\")\n    base64_data: str = Field(default=\"\", description=\"the base64 data of multi-modal file\")\n    url: str = Field(default=\"\", description=\"the url of multi-modal file\")\n    mime_type: str = Field(default=..., description=\"the mime type of multi-modal file\")\n\n    @property\n    def data(self):\n        return self.url or f\"data:{self.mime_type};base64,{self.base64_data}\"\n\n\nclass VideoPromptMessageContent(MultiModalPromptMessageContent):\n    type: PromptMessageContentType = PromptMessageContentType.VIDEO\n\n\nclass AudioPromptMessageContent(MultiModalPromptMessageContent):\n    type: PromptMessageContentType = PromptMessageContentType.AUDIO\n\n    @property\n    def input_audio(self):\n        return {\n            \"format\": self.format,\n            \"data\": self.data,\n            \"url\": self.url,\n            \"mime_type\": self.mime_type\n        }\n\n\nclass ImagePromptMessageContent(MultiModalPromptMessageContent):\n    \"\"\"\n    Model class for image prompt message content.\n    \"\"\"\n\n    class DETAIL(StrEnum):\n        LOW = \"low\"\n        HIGH = \"high\"\n\n    type: PromptMessageContentType = PromptMessageContentType.IMAGE\n    detail: DETAIL = DETAIL.LOW\n\n    @property\n    def image_url(self):\n        return {\n            \"format\": self.format,\n            \"data\": self.data,\n            \"url\": self.data,\n            \"mime_type\": self.mime_type,\n            \"detail\": self.detail\n        }\n\n\n\nclass DocumentPromptMessageContent(MultiModalPromptMessageContent):\n    type: PromptMessageContentType = PromptMessageContentType.DOCUMENT\n\n\nPromptMessageContentUnionTypes = Annotated[\n    Union[\n        TextPromptMessageContent,\n        ImagePromptMessageContent,\n        DocumentPromptMessageContent,\n        AudioPromptMessageContent,\n        VideoPromptMessageContent,\n    ],\n    Field(discriminator=\"type\"),\n]\n\n\nclass PromptMessage(ABC, BaseModel):\n    \"\"\"\n    Model class for prompt message.\n    \"\"\"\n\n    role: PromptMessageRole\n    content: Optional[str | Sequence[PromptMessageContent]] = None\n    name: Optional[str] = None\n\n    def is_empty(self) -> bool:\n        \"\"\"\n        Check if prompt message is empty.\n\n        :return: True if prompt message is empty, False otherwise\n        \"\"\"\n        return not self.content\n\n    def convert_str_prompt_to_content(self):\n        \"\"\"\n        Convert string prompt to content.\n\n        :return: None\n        \"\"\"\n        if isinstance(self, str):\n            self.content = [TextPromptMessageContent(data=self.content)]\n\n\nclass UserPromptMessage(PromptMessage):\n    \"\"\"\n    Model class for user prompt message.\n    \"\"\"\n\n    role: PromptMessageRole = PromptMessageRole.USER\n\n\nclass AssistantPromptMessage(PromptMessage):\n    \"\"\"\n    Model class for assistant prompt message.\n    \"\"\"\n\n    class ToolCall(BaseModel):\n        \"\"\"\n        Model class for assistant prompt message tool call.\n        \"\"\"\n\n        class ToolCallFunction(BaseModel):\n            \"\"\"\n            Model class for assistant prompt message tool call function.\n            \"\"\"\n\n            name: str\n            arguments: str\n\n        id: str\n        type: str\n        function: ToolCallFunction\n\n        @field_validator(\"id\", mode=\"before\")\n        @classmethod\n        def transform_id_to_str(cls, value) -> str:\n            if not isinstance(value, str):\n                return str(value)\n            else:\n                return value\n\n    role: PromptMessageRole = PromptMessageRole.ASSISTANT\n    tool_calls: list[ToolCall] = []\n    audio: Optional[dict[str, Any]] = None\n\n    def is_empty(self) -> bool:\n        \"\"\"\n        Check if prompt message is empty.\n\n        :return: True if prompt message is empty, False otherwise\n        \"\"\"\n        if not super().is_empty() and not self.tool_calls:\n            return False\n\n        return True\n\n\nclass SystemPromptMessage(PromptMessage):\n    \"\"\"\n    Model class for system prompt message.\n    \"\"\"\n\n    role: PromptMessageRole = PromptMessageRole.SYSTEM\n\n\nclass ToolPromptMessage(PromptMessage):\n    \"\"\"\n    Model class for tool prompt message.\n    \"\"\"\n\n    role: PromptMessageRole = PromptMessageRole.TOOL\n    tool_call_id: str\n\n    def is_empty(self) -> bool:\n        \"\"\"\n        Check if prompt message is empty.\n\n        :return: True if prompt message is empty, False otherwise\n        \"\"\"\n        if not super().is_empty() and not self.tool_call_id:\n            return False\n\n        return True\n\nclass ChatCompletionRequest(BaseModel):\n    messages: Optional[list[PromptMessage]] = None\n    model: Optional[str] = None\n    tools: Optional[list[PromptMessageFunction]] = None\n    tool_choice: Optional[Union[\n        Literal[\"none\"],\n        Literal[\"auto\"],\n        Literal[\"required\"],\n        PromptMessageToolChoiceParam,\n    ]] = \"none\"\n    stream: bool = None\n    stream_options: Optional[StreamOptions] = None\n    top_p: Optional[float] = None\n    top_k: Optional[int] = None\n    temperature: Optional[float] = None\n    max_tokens: Optional[int] = Field(\n        default=None,\n        description=\"The maximum number of tokens that can be present in a prompt.\",\n        deprecated=\"max_tokens is deprecated, use max_completion_tokens instead\"\n    )\n    max_completion_tokens: Optional[int] = Field(\n        default=None,\n        description=\"The maximum number of tokens that can be generated in the completion.\"\n    )\n    n: Optional[int] = 1\n    logit_bias: Optional[dict[str, float]] = None\n    logprobs: Optional[bool] = False\n    top_logprobs: Optional[int] = 0\n    stop: Optional[Union[str, Sequence[str]]] = None\n    frequency_penalty: Optional[float] = None\n    presence_penalty: Optional[float] = None\n    response_format: Optional[AnyResponseFormat] = None\n    seed: Optional[int] = None\n    user: Optional[str] = None\n    reasoning_effort: Optional[Literal[\"low\", \"medium\", \"high\"]] = None\n    include_reasoning: bool = None\n    audio: Optional[dict[str,Any]]= None\n    modalities: Optional[list[str]]= None\n\n\n    @field_validator(\"messages\", mode=\"before\")\n    @classmethod\n    def convert_prompt_messages(cls, v):\n        if not isinstance(v, list):\n            raise ValueError(\"prompt_messages must be a list\")\n\n        for i in range(len(v)):\n            if v[i][\"role\"] == PromptMessageRole.USER.value:\n                v[i] = UserPromptMessage(**v[i])\n            elif v[i][\"role\"] == PromptMessageRole.ASSISTANT.value:\n                v[i] = AssistantPromptMessage(**v[i])\n            elif v[i][\"role\"] == PromptMessageRole.SYSTEM.value:\n                v[i] = SystemPromptMessage(**v[i])\n            elif v[i][\"role\"] == PromptMessageRole.TOOL.value:\n                v[i] = ToolPromptMessage(**v[i])\n            else:\n                v[i] = PromptMessage(**v[i])\n\n        return v\n\n    @model_validator(mode=\"before\")\n    @classmethod\n    def validate_stream_options(cls, data):\n        if data.get(\"stream_options\") and not data.get(\"stream\"):\n            raise ValueError(\n                \"Stream options can only be defined when `stream=True`.\")\n\n        return data\n\n    @model_validator(mode=\"before\")\n    @classmethod\n    def check_tool_usage(cls, data):\n\n        # if \"tool_choice\" is not specified but tools are provided,\n        # default to \"auto\" tool_choice\n        if \"tool_choice\" not in data and data.get(\"tools\"):\n            data[\"tool_choice\"] = \"auto\"\n\n        # if \"tool_choice\" is \"none\" -- no validation is needed for tools\n        if \"tool_choice\" in data and data[\"tool_choice\"] == \"none\":\n            return data\n\n        # if \"tool_choice\" is specified -- validation\n        if \"tool_choice\" in data and data[\"tool_choice\"] is not None:\n\n            # ensure that if \"tool choice\" is specified, tools are present\n            if \"tools\" not in data or data[\"tools\"] is None:\n                raise ValueError(\n                    \"When using `tool_choice`, `tools` must be set.\")\n\n            # make sure that tool choice is either a named tool\n            # OR that it's set to \"auto\" or \"required\"\n            if data[\"tool_choice\"] not in [\n                \"auto\", \"required\"\n            ] and not isinstance(data[\"tool_choice\"], dict):\n                raise ValueError(\n                    f'Invalid value for `tool_choice`: {data[\"tool_choice\"]}! ' \\\n                    'Only named tools, \"none\", \"auto\" or \"required\" ' \\\n                    'are supported.'\n                )\n\n            # if tool_choice is \"required\" but the \"tools\" list is empty,\n            # override the data to behave like \"none\" to align with\n            # OpenAI’s behavior.\n            if data[\"tool_choice\"] == \"required\" and isinstance(\n                    data[\"tools\"], list) and len(data[\"tools\"]) == 0:\n                data[\"tool_choice\"] = \"none\"\n                del data[\"tools\"]\n                return data\n\n            # ensure that if \"tool_choice\" is specified as an object,\n            # it matches a valid tool\n            correct_usage_message = 'Correct usage: `{\"type\": \"function\",' \\\n                                    ' \"function\": {\"name\": \"my_function\"}}`'\n            if isinstance(data[\"tool_choice\"], dict):\n                valid_tool = False\n                function = data[\"tool_choice\"].get(\"function\")\n                if not isinstance(function, dict):\n                    raise ValueError(\n                        f\"Invalid value for `function`: `{function}` in \"\n                        f\"`tool_choice`! {correct_usage_message}\")\n                if \"name\" not in function:\n                    raise ValueError(f\"Expected field `name` in `function` in \"\n                                     f\"`tool_choice`! {correct_usage_message}\")\n                function_name = function[\"name\"]\n                if not isinstance(function_name,\n                                  str) or len(function_name) == 0:\n                    raise ValueError(\n                        f\"Invalid `name` in `function`: `{function_name}`\"\n                        f\" in `tool_choice`! {correct_usage_message}\")\n                for tool in data[\"tools\"]:\n                    if tool[\"function\"][\"name\"] == function_name:\n                        valid_tool = True\n                        break\n                if not valid_tool:\n                    raise ValueError(\n                        \"The tool specified in `tool_choice` does not match any\"\n                        \" of the specified `tools`\")\n        return data\n\nclass CompletionRequest(BaseModel):\n    prompt: Optional[Union[list[int], list[list[int]], str, list[str]]] = None\n    prompt_embeds: Optional[Union[bytes, list[bytes]]] = None\n    model: Optional[str] = None\n    stream: bool = None\n    stream_options: Optional[StreamOptions] = None\n    top_p: Optional[float] = None\n    top_k: Optional[int] = None\n    temperature: Optional[float] = None\n    max_tokens: Optional[int] = Field(\n        default=None,\n        description=\"The maximum number of tokens that can be present in a prompt.\",\n        deprecated=\"max_tokens is deprecated, use max_completion_tokens instead\"\n    )\n    max_completion_tokens: Optional[int] = Field(\n        default=None,\n        description=\"The maximum number of tokens that can be generated in the completion.\"\n    )\n    n: Optional[int] = 1\n    logit_bias: Optional[dict[str, float]] = None\n    logprobs: Optional[bool] = False\n    top_logprobs: Optional[int] = 0\n    stop: Optional[Union[str, Sequence[str]]] = None\n    suffix: Optional[str] = None\n    frequency_penalty: Optional[float] = None\n    presence_penalty: Optional[float] = None\n    response_format: Optional[AnyResponseFormat] = None\n    seed: Optional[int] = None\n    user: Optional[str] = None\n\n    @model_validator(mode=\"before\")\n    @classmethod\n    def validate_stream_options(cls, data):\n        if data.get(\"stream_options\") and not data.get(\"stream\"):\n            raise ValueError(\n                \"Stream options can only be defined when `stream=True`.\")\n\n        return data\n\n    @model_validator(mode=\"before\")\n    @classmethod\n    def check_tool_usage(cls, data):\n\n        # if \"tool_choice\" is not specified but tools are provided,\n        # default to \"auto\" tool_choice\n        if \"tool_choice\" not in data and data.get(\"tools\"):\n            data[\"tool_choice\"] = \"auto\"\n\n        # if \"tool_choice\" is \"none\" -- no validation is needed for tools\n        if \"tool_choice\" in data and data[\"tool_choice\"] == \"none\":\n            return data\n\n        # if \"tool_choice\" is specified -- validation\n        if \"tool_choice\" in data and data[\"tool_choice\"] is not None:\n\n            # ensure that if \"tool choice\" is specified, tools are present\n            if \"tools\" not in data or data[\"tools\"] is None:\n                raise ValueError(\n                    \"When using `tool_choice`, `tools` must be set.\")\n\n            # make sure that tool choice is either a named tool\n            # OR that it's set to \"auto\" or \"required\"\n            if data[\"tool_choice\"] not in [\n                \"auto\", \"required\"\n            ] and not isinstance(data[\"tool_choice\"], dict):\n                raise ValueError(\n                    f'Invalid value for `tool_choice`: {data[\"tool_choice\"]}! ' \\\n                    'Only named tools, \"none\", \"auto\" or \"required\" ' \\\n                    'are supported.'\n                )\n\n            # if tool_choice is \"required\" but the \"tools\" list is empty,\n            # override the data to behave like \"none\" to align with\n            # OpenAI’s behavior.\n            if data[\"tool_choice\"] == \"required\" and isinstance(\n                    data[\"tools\"], list) and len(data[\"tools\"]) == 0:\n                data[\"tool_choice\"] = \"none\"\n                del data[\"tools\"]\n                return data\n\n            # ensure that if \"tool_choice\" is specified as an object,\n            # it matches a valid tool\n            correct_usage_message = 'Correct usage: `{\"type\": \"function\",' \\\n                                    ' \"function\": {\"name\": \"my_function\"}}`'\n            if isinstance(data[\"tool_choice\"], dict):\n                valid_tool = False\n                function = data[\"tool_choice\"].get(\"function\")\n                if not isinstance(function, dict):\n                    raise ValueError(\n                        f\"Invalid value for `function`: `{function}` in \"\n                        f\"`tool_choice`! {correct_usage_message}\")\n                if \"name\" not in function:\n                    raise ValueError(f\"Expected field `name` in `function` in \"\n                                     f\"`tool_choice`! {correct_usage_message}\")\n                function_name = function[\"name\"]\n                if not isinstance(function_name,\n                                  str) or len(function_name) == 0:\n                    raise ValueError(\n                        f\"Invalid `name` in `function`: `{function_name}`\"\n                        f\" in `tool_choice`! {correct_usage_message}\")\n                for tool in data[\"tools\"]:\n                    if tool[\"function\"][\"name\"] == function_name:\n                        valid_tool = True\n                        break\n                if not valid_tool:\n                    raise ValueError(\n                        \"The tool specified in `tool_choice` does not match any\"\n                        \" of the specified `tools`\")\n        return data\n\nclass EmbeddingRequest(BaseModel):\n    prompt: str\n    model: str\n    encoding_format: Optional[str] = \"float\"\n\nclass EmbeddingsResponse(BaseModel):\n    embedding: Optional[List[float]] = None\n    object: Optional[str] = None\n    index: Optional[int] = None\n\n\nclass CreateModelRequest(BaseModel):\n    model_name: str\n    provider_name: str\n    model_type: str\n    max_tokens: int\n    input_price: float | None = 0.0\n    output_price: float | None = 0.0\n    model_configs: dict[str, Any]| None = {}\n    model_feature: list[str] | None = []\n\nclass ChatCompletionResponseChunkDelta(BaseModel):\n    \"\"\"\n    Model class for llm result chunk delta.\n    \"\"\"\n\n    index: int\n    message: AssistantPromptMessage= None\n    text: Optional[str] = None\n    usage: Optional[LLMUsage] = None\n    finish_reason: Optional[str] = None\n    delta: Optional[AssistantPromptMessage] = None\n\n\nclass ChatCompletionResponseChunk(BaseModel):\n    \"\"\"\n    Model class for llm result chunk.\n    \"\"\"\n    id: Optional[str] = None\n    object: Optional[str] = None\n    created: Optional[int] = None\n    model: str= None\n    prompt_messages: Union[list[PromptMessage], str]= None\n    system_fingerprint: Optional[str] = None\n    choices: list[ChatCompletionResponseChunkDelta]= None\n    delta: ChatCompletionResponseChunkDelta= None\n    usage: Optional[LLMUsage] = None\n    done: bool = False\n\n\nclass ChatCompletionResponse(BaseModel):\n    \"\"\"\n    Model class for llm result.\n    \"\"\"\n\n    id: Optional[str] = None\n    model: str\n    prompt_messages: Union[list[PromptMessage], str] = None\n    message: AssistantPromptMessage = None\n    usage: LLMUsage\n    system_fingerprint: Optional[str] = None\n    done: bool = False\n    choices: list[ChatCompletionResponseChunkDelta] = None\n\n\nclass CreateProviderRequest(BaseModel):\n    provider_name: str\n    supported_model_types: list[str]\n    provider_type: str\n    provider_config: dict[str, Any]\n\n\nclass ModelPermission(BaseModel):\n    id: str = Field(default_factory=lambda: f\"modelperm-{int(time.time())}\")\n    object: str = \"model_permission\"\n    created: int = Field(default_factory=lambda: int(time.time()))\n    allow_create_engine: bool = False\n    allow_sampling: bool = True\n    allow_logprobs: bool = True\n    allow_search_indices: bool = False\n    allow_view: bool = True\n    allow_fine_tuning: bool = False\n    organization: str = \"*\"\n    group: Optional[str] = None\n    is_blocking: bool = False\n\n\nclass ModelCard(BaseModel):\n    id: str\n    object: str = \"model\"\n    created: int = Field(default_factory=lambda: int(time.time()))\n    owned_by: str = \"vllm\"\n    root: Optional[str] = None\n    parent: Optional[str] = None\n    max_model_len: Optional[int] = None\n    permission: list[ModelPermission] = Field(default_factory=list)\n\n\nclass ModelList(BaseModel):\n    object: str = \"list\"\n    data: list[ModelCard] = Field(default_factory=list)\n\nclass AduibRPCError(BaseModel):\n    \"\"\"\n    Represents a JSON-RPC 2.0 Error object, included in an error response.\n    \"\"\"\n\n    code: int\n    \"\"\"\n    A number that indicates the error type that occurred.\n    \"\"\"\n    data: Any | None = None\n    \"\"\"\n    A primitive or structured value containing additional information about the error.\n    This may be omitted.\n    \"\"\"\n    message: str\n    \"\"\"\n    A string providing a short description of the error.\n    \"\"\"\n\nclass AduibRpcRequest(BaseModel):\n    aduib_rpc: Literal['1.0'] = '1.0'\n    method: str\n    data: Union[ChatCompletionRequest, CompletionRequest, EmbeddingRequest, dict[str, Any],Any, None] = None\n    meta: Optional[dict[str, Any]] = None\n    id: Union[str, int, None] = None\n\n    def add_meta(self, key: str, value: Any) -> None:\n        if self.meta is None:\n            self.meta = {}\n        self.meta[key] = value\n\n\nclass AduibRpcResponse(BaseModel):\n    aduib_rpc: Literal['1.0'] = '1.0'\n    result: Union[ChatCompletionResponse, ChatCompletionResponseChunk, EmbeddingsResponse, dict[str, Any],Any, None] = None\n    error: Optional[AduibRPCError] = None\n    id: Union[str, int, None] = None\n    status: Literal['success', 'error'] = 'success'\n\n    def is_success(self) -> bool:\n        return self.status == 'success' and self.error is None\n\n    def cast(self, to_type: Any) -> Any:\n        if self.result is None:\n            return None\n        if isinstance(self.result, to_type):\n            return self.result\n        return to_type(**self.result)\n\n\"\"\"\njsonrpc types\n\"\"\"\n\nclass JSONRPCError(BaseModel):\n    \"\"\"\n    Represents a JSON-RPC 2.0 Error object, included in an error response.\n    \"\"\"\n\n    code: int\n    \"\"\"\n    A number that indicates the error type that occurred.\n    \"\"\"\n    data: Any | None = None\n    \"\"\"\n    A primitive or structured value containing additional information about the error.\n    This may be omitted.\n    \"\"\"\n    message: str\n    \"\"\"\n    A string providing a short description of the error.\n    \"\"\"\n\nclass JSONRPCErrorResponse(BaseModel):\n    \"\"\"\n    Represents a JSON-RPC 2.0 Error Response object.\n    \"\"\"\n\n    error: (\n        JSONRPCError\n    )\n    \"\"\"\n    An object describing the error that occurred.\n    \"\"\"\n    id: str | int | None = None\n    \"\"\"\n    The identifier established by the client.\n    \"\"\"\n    jsonrpc: Literal['2.0'] = '2.0'\n    \"\"\"\n    The version of the JSON-RPC protocol. MUST be exactly \"2.0\".\n    \"\"\"\n\nclass JSONRPCRequest(BaseModel):\n    \"\"\"\n    Represents a JSON-RPC 2.0 Request object.\n    \"\"\"\n\n    id: str | int | None = None\n    \"\"\"\n    A unique identifier established by the client. It must be a String, a Number, or null.\n    The server must reply with the same value in the response. This property is omitted for notifications.\n    \"\"\"\n    jsonrpc: Literal['2.0'] = '2.0'\n    \"\"\"\n    The version of the JSON-RPC protocol. MUST be exactly \"2.0\".\n    \"\"\"\n    method: str\n    \"\"\"\n    A string containing the name of the method to be invoked.\n    \"\"\"\n    params: dict[str, Any] | None = None\n    \"\"\"\n    A structured value holding the parameter values to be used during the method invocation.\n    \"\"\"\n\n\nclass JSONRPCSuccessResponse(BaseModel):\n    \"\"\"\n    Represents a successful JSON-RPC 2.0 Response object.\n    \"\"\"\n\n    id: str | int | None = None\n    \"\"\"\n    The identifier established by the client.\n    \"\"\"\n    jsonrpc: Literal['2.0'] = '2.0'\n    \"\"\"\n    The version of the JSON-RPC protocol. MUST be exactly \"2.0\".\n    \"\"\"\n    result: Any\n    \"\"\"\n    The value of this member is determined by the method invoked on the Server.\n    \"\"\"\n\nclass JsonRpcMessageRequest(BaseModel):\n    \"\"\"\n    Represents a JSON-RPC request for the `message/send` method.\n    \"\"\"\n\n    id: str | int\n    \"\"\"\n    The identifier for this request.\n    \"\"\"\n    jsonrpc: Literal['2.0'] = '2.0'\n    \"\"\"\n    The version of the JSON-RPC protocol. MUST be exactly \"2.0\".\n    \"\"\"\n    method: Literal['message/completion'] = 'message/completion'\n    \"\"\"\n    The method name. Must be 'message/completion'.\n    \"\"\"\n    params: AduibRpcRequest\n    \"\"\"\n    The parameters for sending a message.\n    \"\"\"\n\nclass JsonRpcStreamingMessageRequest(BaseModel):\n    \"\"\"\n    Represents a JSON-RPC request for the `message/stream` method.\n    \"\"\"\n\n    id: str | int\n    \"\"\"\n    The identifier for this request.\n    \"\"\"\n    jsonrpc: Literal['2.0'] = '2.0'\n    \"\"\"\n    The version of the JSON-RPC protocol. MUST be exactly \"2.0\".\n    \"\"\"\n    method: Literal['message/completion/stream'] = 'message/completion/stream'\n    \"\"\"\n    The method name. Must be 'message/completion/stream'.\n    \"\"\"\n    params: AduibRpcRequest\n    \"\"\"\n    The parameters for sending a message.\n    \"\"\"\n\nclass JsonRpcMessageSuccessResponse(BaseModel):\n    \"\"\"\n    Represents a successful JSON-RPC response for the `message/send` method.\n    \"\"\"\n\n    id: str | int | None = None\n    \"\"\"\n    The identifier established by the client.\n    \"\"\"\n    jsonrpc: Literal['2.0'] = '2.0'\n    \"\"\"\n    The version of the JSON-RPC protocol. MUST be exactly \"2.0\".\n    \"\"\"\n    result: AduibRpcResponse\n    \"\"\"\n    The result, which can be a direct reply Message or the initial Task object.\n    \"\"\"\n\n\nclass JsonRpcStreamingMessageSuccessResponse(BaseModel):\n    \"\"\"\n    Represents a successful JSON-RPC response for the `message/stream` method.\n    The server may send multiple response objects for a single request.\n    \"\"\"\n\n    id: str | int | None = None\n    \"\"\"\n    The identifier established by the client.\n    \"\"\"\n    jsonrpc: Literal['2.0'] = '2.0'\n    \"\"\"\n    The version of the JSON-RPC protocol. MUST be exactly \"2.0\".\n    \"\"\"\n    result: AduibRpcResponse\n    \"\"\"\n    The result, which can be a Message, Task, or a streaming update event.\n    \"\"\"\nclass AduibJSONRPCResponse(\n    RootModel[\n        JSONRPCErrorResponse\n        | JsonRpcMessageSuccessResponse\n        | JsonRpcStreamingMessageSuccessResponse\n    ]):\n    root: (\n        JSONRPCErrorResponse\n        | JsonRpcMessageSuccessResponse\n        | JsonRpcStreamingMessageSuccessResponse\n    )\n    \"\"\"\n    Represents a JSON-RPC response envelope.\n    \"\"\"\n\nclass AduibJSONRpcRequest(\n    RootModel[JsonRpcMessageRequest\n              |JsonRpcStreamingMessageRequest\n              ]):\n    root: (JSONRPCRequest\n           | JsonRpcStreamingMessageRequest)\n    \"\"\"\n    Represents a JSON-RPC request envelope.\n    \"\"\"\n\n\nclass JsonRpcMessageResponse(\n    RootModel[JSONRPCErrorResponse | JsonRpcMessageSuccessResponse]\n):\n    root: JSONRPCErrorResponse | JsonRpcMessageSuccessResponse\n    \"\"\"\n    Represents a JSON-RPC response for the `message/send` method.\n    \"\"\"\n\n\nclass JsonRpcStreamingMessageResponse(\n    RootModel[JSONRPCErrorResponse | JsonRpcStreamingMessageSuccessResponse]\n):\n    root: JSONRPCErrorResponse | JsonRpcStreamingMessageSuccessResponse\n    \"\"\"\n    Represents a JSON-RPC response for the `message/stream` method.\n    \"\"\"\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/types.py b/src/aduib_rpc/types.py
+--- a/src/aduib_rpc/types.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/types.py	(date 1756375377415)
+@@ -339,14 +339,23 @@
+         """
+         return not self.content
+ 
+-    def convert_str_prompt_to_content(self):
++    @classmethod
++    def convert_str_prompt_to_contents(cls,str_contents:list['PromptMessage']) -> list['PromptMessage']:
+         """
+-        Convert string prompt to content.
++        Convert string prompt messages to content prompt messages.
+ 
+-        :return: None
++        :param str_contents: list of string prompt messages
++        :return: list of content prompt messages
+         """
+-        if isinstance(self, str):
+-            self.content = [TextPromptMessageContent(data=self.content)]
++        contents = []
++        for content in str_contents:
++            if isinstance(content.content, str):
++                contents.append(TextPromptMessageContent(data=content.content))
++            elif isinstance(content.content, PromptMessageContent):
++                contents.append(content)
++            else:
++                raise ValueError(f"Invalid prompt message content type {type(content)}")
++        return contents
+ 
+ 
+ class UserPromptMessage(PromptMessage):
+Index: src/aduib_rpc/client/transports/grpc.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from typing import AsyncGenerator\n\nimport grpc\nfrom grpc.aio import Channel\n\nfrom aduib_rpc.client import ClientContext, ClientRequestInterceptor\nfrom aduib_rpc.client.base_client import ClientConfig\nfrom aduib_rpc.client.errors import ClientHTTPError\nfrom aduib_rpc.client.transports.base import ClientTransport\nfrom aduib_rpc.grpc import aduib_rpc_pb2_grpc, aduib_rpc_pb2\nfrom aduib_rpc.types import AduibRpcRequest, AduibRpcResponse\nfrom aduib_rpc.utils import proto_utils\n\n\nclass GrpcTransport(ClientTransport):\n    \"\"\"A gRPC transport for the Aduib RPC client.\"\"\"\n\n    def __init__(\n        self,\n        channel: Channel,\n    ):\n        \"\"\"Initializes the GrpcTransport.\"\"\"\n        self.channel = channel\n        self.stub = aduib_rpc_pb2_grpc.AduibRpcServiceStub(channel)\n\n    @classmethod\n    def create(\n        cls,\n        url: str,\n        config: ClientConfig,\n        interceptors: list[ClientRequestInterceptor],\n    ) -> 'GrpcTransport':\n        \"\"\"Creates a gRPC transport for the A2A client.\"\"\"\n        if config.grpc_channel_factory is None:\n            raise ValueError('grpc_channel_factory is required when using gRPC')\n        return cls(\n            config.grpc_channel_factory(url),\n        )\n\n\n    async def completion(self, request: AduibRpcRequest, *, context: ClientContext) -> AduibRpcResponse:\n        \"\"\"Sends a message to the agent and returns the response.\"\"\"\n        grpc_metadata = []\n        if request.meta:\n            for key, value in request.meta.items():\n                grpc_metadata.append((key, value))\n        response = await self.stub.completion(\n            aduib_rpc_pb2.RpcTask(id=request.id,\n                                  method=request.method,\n                                  meta=proto_utils.ToProto.metadata(request.meta),\n                                  data=proto_utils.ToProto.taskData(request.data)\n            ),\n            metadata=grpc_metadata\n        )\n        rpc_response = proto_utils.FromProto.rpc_response(response)\n        if not rpc_response.is_success():\n            raise ClientHTTPError(rpc_response.error.code, rpc_response.error.message)\n        return rpc_response\n\n    async def completion_stream(self, request: AduibRpcRequest, *, context: ClientContext) -> AsyncGenerator[\n        AduibRpcResponse]:\n        \"\"\"Sends a streaming message to the agent and yields the responses.\"\"\"\n        grpc_metadata = []\n        if request.meta:\n            for key, value in request.meta.items():\n                grpc_metadata.append((key, value))\n        stream=self.stub.stream_completion(\n            aduib_rpc_pb2.RpcTask(id=request.id,\n                                  method=request.method,\n                                  meta=proto_utils.ToProto.metadata(request.meta),\n                                  data=proto_utils.ToProto.taskData(request.data)\n            ),\n            metadata=grpc_metadata\n        )\n        while True:\n            try:\n                response = await stream.read()\n                if response == grpc.aio.EOF:\n                    break\n                rpc_response = proto_utils.FromProto.rpc_response(response)\n                if not rpc_response.is_success():\n                    raise ClientHTTPError(rpc_response.error.code, rpc_response.error.message)\n                yield rpc_response\n            except Exception as e:\n                break
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/client/transports/grpc.py b/src/aduib_rpc/client/transports/grpc.py
+--- a/src/aduib_rpc/client/transports/grpc.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/client/transports/grpc.py	(date 1756377577779)
+@@ -1,16 +1,19 @@
++import logging
+ from typing import AsyncGenerator
+ 
+ import grpc
+ from grpc.aio import Channel
+ 
+-from aduib_rpc.client import ClientContext, ClientRequestInterceptor
+-from aduib_rpc.client.base_client import ClientConfig
++from aduib_rpc.client.config import ClientConfig
+ from aduib_rpc.client.errors import ClientHTTPError
++from aduib_rpc.client import ClientContext, ClientRequestInterceptor
+ from aduib_rpc.client.transports.base import ClientTransport
+ from aduib_rpc.grpc import aduib_rpc_pb2_grpc, aduib_rpc_pb2
+ from aduib_rpc.types import AduibRpcRequest, AduibRpcResponse
+ from aduib_rpc.utils import proto_utils
+ 
++logger = logging.getLogger(__name__)
++
+ 
+ class GrpcTransport(ClientTransport):
+     """A gRPC transport for the Aduib RPC client."""
+@@ -58,7 +61,7 @@
+         return rpc_response
+ 
+     async def completion_stream(self, request: AduibRpcRequest, *, context: ClientContext) -> AsyncGenerator[
+-        AduibRpcResponse]:
++        AduibRpcResponse, None]:
+         """Sends a streaming message to the agent and yields the responses."""
+         grpc_metadata = []
+         if request.meta:
+@@ -82,4 +85,5 @@
+                     raise ClientHTTPError(rpc_response.error.code, rpc_response.error.message)
+                 yield rpc_response
+             except Exception as e:
++                logging.error(f"Error in gRPC stream: {e}")
+                 break
+\ No newline at end of file
+Index: src/aduib_rpc/client/transports/base.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from abc import ABC, abstractmethod\nfrom collections.abc import AsyncGenerator\n\nfrom aduib_rpc.client.midwares import ClientContext\nfrom aduib_rpc.types import AduibRpcRequest, AduibRpcResponse\n\n\nclass ClientTransport(ABC):\n    \"\"\"Abstract base class for client transport mechanisms.\"\"\"\n\n    @abstractmethod\n    async def completion(self,\n                   request: AduibRpcRequest,\n                   *,\n                   context: ClientContext) -> AduibRpcResponse:\n        \"\"\"Sends a request and returns the response.\n        Args:\n            request: The `AduibRpcRequest` object to be sent.\n            context: Context provided by the client.\n        Returns:\n            The `AduibRpcResponse` object containing the response.\n        \"\"\"\n\n    @abstractmethod\n    async def completion_stream(self,\n                            request: AduibRpcRequest,\n                            *,\n                            context: ClientContext) -> AsyncGenerator[AduibRpcResponse]:\n        \"\"\"Sends a request and returns an async generator for streaming responses.\n        Args:\n            request: The `AduibRpcRequest` object to be sent.\n            context: Context provided by the client.\n        Yields:\n            The `AduibRpcResponse` objects containing the streaming responses.\n        \"\"\"\n        return\n        yield
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/client/transports/base.py b/src/aduib_rpc/client/transports/base.py
+--- a/src/aduib_rpc/client/transports/base.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/client/transports/base.py	(date 1756373199313)
+@@ -25,7 +25,7 @@
+     async def completion_stream(self,
+                             request: AduibRpcRequest,
+                             *,
+-                            context: ClientContext) -> AsyncGenerator[AduibRpcResponse]:
++                            context: ClientContext) -> AsyncGenerator[AduibRpcResponse, None]:
+         """Sends a request and returns an async generator for streaming responses.
+         Args:
+             request: The `AduibRpcRequest` object to be sent.
+Index: src/aduib_rpc/client/base_client.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import dataclasses\nimport uuid\nfrom abc import ABC, abstractmethod\nfrom collections.abc import Callable, AsyncIterator\nfrom typing import Optional, Any\n\nfrom aduib_rpc.client.midwares import ClientRequestInterceptor, ClientContext\nfrom aduib_rpc.client.transports.base import ClientTransport\nfrom aduib_rpc.types import AduibRpcRequest, AduibRpcResponse\n\ntry:\n    import httpx\n    from grpc.aio import Channel\nexcept ImportError:\n    httpx = None  # type: ignore\n    Channel = None  # type: ignore\n\nfrom aduib_rpc.utils.constant import TransportSchemes\n\n\n@dataclasses.dataclass\nclass ClientConfig:\n    \"\"\"Client configuration class.\"\"\"\n    streaming: bool = True\n    \"\"\"Whether to use streaming mode for message sending.\"\"\"\n    httpx_client: httpx.AsyncClient | None = None\n    \"\"\"Http client to use to connect to agent.\"\"\"\n\n    grpc_channel_factory: Callable[[str], Channel] | None = None\n    \"\"\"Generates a grpc connection channel for a given url.\"\"\"\n\n    supported_transports: list[TransportSchemes | str] = dataclasses.field(\n        default_factory=list\n    )\n\nclass AduibRpcClient(ABC):\n    \"\"\"Abstract base class for a client.\"\"\"\n\n    def __init__(\n        self,\n        middleware: list[ClientRequestInterceptor] | None = None,\n    ):\n        self._middleware = middleware\n        if self._middleware is None:\n            self._middleware = []\n\n\n    @abstractmethod\n    async def completion(\n        self,\n        method: str,\n        data: Any= None,\n        meta: Optional[dict[str, Any]] = None,\n        *,\n        context: ClientContext | None = None,\n    ) -> AsyncIterator[AduibRpcResponse]:\n        \"\"\"Sends a message to the agent.\n\n        This method handles both streaming and non-streaming (polling) interactions\n        based on the client configuration and agent capabilities. It will yield\n        events as they are received from the agent.\n\n        Args:\n            method: The RPC method to call.\n            data: The data to send in the request.\n            meta: Optional metadata to include in the request.\n            context: The client call context.\n        \"\"\"\n        return\n        yield\n\n    async def add_middleware(\n        self,\n        middleware: ClientRequestInterceptor,\n    ) -> None:\n        \"\"\"Adds a middleware to the client.\n\n        Args:\n            middleware: The middleware to add.\n        \"\"\"\n        self._middleware.append(middleware)\n\n\n\nclass BaseAduibRpcClient(AduibRpcClient):\n    \"\"\"Base implementation of the AduibRpc client, containing transport-independent logic.\"\"\"\n\n    def __init__(\n        self,\n        config: ClientConfig,\n        transport: ClientTransport,\n        middleware: list[ClientRequestInterceptor] | None = None,\n    ):\n        super().__init__(middleware)\n        self._config = config\n        self._transport = transport\n\n    async def completion(self,\n                         method: str,\n                         data: Any = None,\n                         meta: Optional[dict[str, Any]] = None,\n                         *,\n                         context: ClientContext | None = None) -> AsyncIterator[\n        AduibRpcResponse]:\n        \"\"\"Sends a message to the agent.\n        This method handles both streaming and non-streaming (polling) interactions\n        based on the client configuration and agent capabilities. It will yield\n        events as they are received from the agent.\n        Args:\n            method: The RPC method to call.\n            data: The data to send in the request.\n            meta: Optional metadata to include in the request.\n            context: The client call context.\n        Returns:\n            An async iterator yielding `AduibRpcResponse` objects as they are received.\n        \"\"\"\n        if context is None:\n            context = ClientContext()\n        context.state['session_id'] = str(uuid.uuid4())\n        context.state['http_kwargs'] = {'headers': meta['headers']} if meta and 'headers' in meta else {}\n        context.state['schema'] = meta['schema'] if 'schema' in meta else None\n        request = AduibRpcRequest(method=method, data=data, meta=meta,id=str(uuid.uuid4()))\n        if not self._config.streaming:\n            response = await self._transport.completion(\n                request, context=context\n            )\n            yield response\n            return\n\n        async for response in self._transport.completion_stream(\n            request, context=context\n        ):\n            yield response\n\n\n\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/client/base_client.py b/src/aduib_rpc/client/base_client.py
+--- a/src/aduib_rpc/client/base_client.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/client/base_client.py	(date 1756377258073)
+@@ -1,9 +1,9 @@
+-import dataclasses
+ import uuid
+ from abc import ABC, abstractmethod
+-from collections.abc import Callable, AsyncIterator
++from collections.abc import AsyncIterator, AsyncGenerator
+ from typing import Optional, Any
+ 
++from aduib_rpc.client import ClientConfig
+ from aduib_rpc.client.midwares import ClientRequestInterceptor, ClientContext
+ from aduib_rpc.client.transports.base import ClientTransport
+ from aduib_rpc.types import AduibRpcRequest, AduibRpcResponse
+@@ -15,23 +15,6 @@
+     httpx = None  # type: ignore
+     Channel = None  # type: ignore
+ 
+-from aduib_rpc.utils.constant import TransportSchemes
+-
+-
+-@dataclasses.dataclass
+-class ClientConfig:
+-    """Client configuration class."""
+-    streaming: bool = True
+-    """Whether to use streaming mode for message sending."""
+-    httpx_client: httpx.AsyncClient | None = None
+-    """Http client to use to connect to agent."""
+-
+-    grpc_channel_factory: Callable[[str], Channel] | None = None
+-    """Generates a grpc connection channel for a given url."""
+-
+-    supported_transports: list[TransportSchemes | str] = dataclasses.field(
+-        default_factory=list
+-    )
+ 
+ class AduibRpcClient(ABC):
+     """Abstract base class for a client."""
+Index: src/aduib_rpc/client/transports/__init__.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from .base import ClientTransport\nfrom .grpc import GrpcTransport\nfrom .jsonrpc import JsonRpcTransport\nfrom .rest import RestTransport\n\n__all__ = [\n    'ClientTransport',\n    'GrpcTransport',\n    'JsonRpcTransport',\n    'RestTransport',\n]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/client/transports/__init__.py b/src/aduib_rpc/client/transports/__init__.py
+--- a/src/aduib_rpc/client/transports/__init__.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/client/transports/__init__.py	(date 1756373138942)
+@@ -1,11 +1,11 @@
+ from .base import ClientTransport
+-from .grpc import GrpcTransport
+ from .jsonrpc import JsonRpcTransport
+ from .rest import RestTransport
++from .grpc import GrpcTransport
+ 
+ __all__ = [
+     'ClientTransport',
+-    'GrpcTransport',
+     'JsonRpcTransport',
+     'RestTransport',
++    'GrpcTransport',
+ ]
+\ No newline at end of file
+Index: README.md
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>```\n# aduib_rpc\n\n## 项目简介\naduib_rpc 是一个基于 Python 的远程过程调用（RPC）服务，支持 gRPC、JSON-RPC 和 REST 接口，适用于多种 AI 相关的服务场景。\n\n## 目录结构\n```\naduib_rpc/\n├── main.py\n├── pyproject.toml\n├── README.md\n├── uv.lock\n├── scripts/\n│   ├── compile_protos.py\n│   └── json_to_proto.py\n├── src/\n│   └── aduib_rpc/\n│       ├── types.py\n│       ├── grpc/\n│       │   ├── chat_completion_pb2_grpc.py\n│       │   ├── chat_completion_pb2.py\n│       │   └── ...（更多 gRPC 相关文件）\n│       ├── protos/\n│       │   ├── chat_completion.proto\n│       │   └── ...（更多 proto 文件）\n│       ├── server/\n│       │   ├── context.py\n│       │   └── request_handlers/\n│       │       ├── grpc_handler.py\n│       │       ├── jsonrpc_handler.py\n│       │       ├── request_handler.py\n│       │       └── rest_handler.py\n│       └── utils/\n│           ├── jsonrpc_helper.py\n│           └── proto_utils.py\n└── tests/\n```\n\n## 安装方法\n\n1. 克隆仓库：\n   ```\n   git clone <your-repo-url>\n   cd aduib_rpc\n   ```\n\n2. 安装依赖：\n   ```\n   pip install -r requirements.txt\n   ```\n\n3. 编译 proto 文件（如有需要）：\n   ```\n   python scripts/compile_protos.py\n   ```\n\n## 使用方法\n\n1. 启动主服务：\n   ```\n   python main.py\n   ```\n\n2. 可通过 gRPC、JSON-RPC 或 REST 接口进行调用，具体接口定义见 `src/aduib_rpc/protos/` 及 `src/aduib_rpc/grpc/`。\n\n## 测试\n\n项目测试文件位于 `tests/` 目录，可使用 pytest 运行：\n```\npytest tests/\n```\n\n## 许可证\n\n本项目采用 MIT 许可证，详情见 LICENSE 文件。\n\n```\n\n你可以直接复制以上内容到你的 `README.md` 文件中。
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/README.md b/README.md
+--- a/README.md	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/README.md	(date 1756377874685)
+@@ -1,80 +1,121 @@
+-```
+ # aduib_rpc
+ 
+ ## 项目简介
+-aduib_rpc 是一个基于 Python 的远程过程调用（RPC）服务，支持 gRPC、JSON-RPC 和 REST 接口，适用于多种 AI 相关的服务场景。
++aduib_rpc 是一个基于 Python 的远程过程调用（RPC）框架，支持 gRPC、JSON-RPC 和 REST 协议。该框架提供了客户端和服务端的完整实现，支持服务发现、负载均衡和认证等功能，特别适用于 AI 服务集成场景。
++
++## 核心功能
++
++- **多协议支持**：支持 gRPC、JSON-RPC 和 REST API
++- **服务发现**：集成服务注册与发现机制
++- **负载均衡**：支持多种负载均衡策略
++- **认证机制**：提供客户端认证拦截器
++- **中间件支持**：可扩展的中间件架构
++- **错误处理**：统一的错误处理机制
+ 
+ ## 目录结构
++
+ ```
+ aduib_rpc/
+-├── main.py
+-├── pyproject.toml
+-├── README.md
+-├── uv.lock
+-├── scripts/
+-│   ├── compile_protos.py
+-│   └── json_to_proto.py
+-├── src/
+-│   └── aduib_rpc/
+-│       ├── types.py
+-│       ├── grpc/
+-│       │   ├── chat_completion_pb2_grpc.py
+-│       │   ├── chat_completion_pb2.py
+-│       │   └── ...（更多 gRPC 相关文件）
+-│       ├── protos/
+-│       │   ├── chat_completion.proto
+-│       │   └── ...（更多 proto 文件）
+-│       ├── server/
+-│       │   ├── context.py
+-│       │   └── request_handlers/
+-│       │       ├── grpc_handler.py
+-│       │       ├── jsonrpc_handler.py
+-│       │       ├── request_handler.py
+-│       │       └── rest_handler.py
+-│       └── utils/
+-│           ├── jsonrpc_helper.py
+-│           └── proto_utils.py
+-└── tests/
++├── src/aduib_rpc/
++│   ├── client/            # 客户端实现
++│   │   ├── auth/          # 认证相关
++│   │   └── transports/    # 传输层实现
++│   ├── discover/          # 服务发现
++│   │   ├── entities/      # 实体定义
++│   │   ├── load_balance/  # 负载均衡
++│   │   ├── registry/      # 服务注册
++│   │   └── service/       # 服务工厂
++│   ├── grpc/              # gRPC 协议相关
++│   ├── proto/             # 协议定义文件
++│   ├── server/            # 服务端实现
++│   └── utils/             # 工具函数
++├── scripts/               # 辅助脚本
++└── tests/                 # 测试用例
+ ```
+ 
+ ## 安装方法
+ 
+ 1. 克隆仓库：
+    ```
+-   git clone <your-repo-url>
++   git clone <repository-url>
+    cd aduib_rpc
+    ```
+ 
+ 2. 安装依赖：
+    ```
+-   pip install -r requirements.txt
++   uv sync
+    ```
+ 
+-3. 编译 proto 文件（如有需要）：
++3. 编译 proto 文件（如需更新）：
+    ```
+    python scripts/compile_protos.py
+    ```
+ 
+-## 使用方法
++## 使用示例
++
++### 客户端示例
++
++```python
++service = ServiceInstance(service_name='test_jsonrpc_app', host='localhost', port=5001,
++                                   protocol=AIProtocols.AduibRpc, weight=1, scheme=TransportSchemes.GRPC)
++    registry = NacosServiceRegistry(server_addresses='localhost:8848',
++                                         namespace='eeb6433f-d68c-4b3b-a4a7-eeff19110e', group_name='DEFAULT_GROUP',
++                                         username='nacos', password='localhost')
++    factory = AduibServiceFactory(service_instance=service)
++    discover_service = await registry.discover_service(service.service_name)
++    logging.debug(f'Service: {discover_service}')
++    logging.debug(f'Service URL: {discover_service.url}')
++    def create_channel(url: str) -> grpc.Channel:
++        return grpc.insecure_channel(discover_service.url)
+ 
+-1. 启动主服务：
+-   ```
+-   python main.py
+-   ```
++    client_factory = AduibRpcClientFactory(
++        config=ClientConfig(grpc_channel_factory=create_channel, supported_transports=[TransportSchemes.GRPC]))
++    aduib_rpc_client:AduibRpcClient = client_factory.create(service.url, server_preferred=TransportSchemes.GRPC,interceptors=[AuthInterceptor(credentialProvider=InMemoryCredentialsProvider())])
++    resp = aduib_rpc_client.completion(method="chat.completions",
++                                       data={"model": "gpt-3.5-turbo", "messages": [{"role": "user", "content": "Hello!"}]},
++                                       meta={"stream": "true",
++                                             "model": "gpt-3.5-turbo",
++                                            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0"} | service.get_service_info())
++    async for r in resp:
++        logging.debug(f'Response: {r}')
++```
++
++### 服务端示例
++
++```python
++async def main():
++    service = ServiceInstance(service_name='test_jsonrpc_app', host='localhost', port=5000,
++                                   protocol=AIProtocols.AduibRpc, weight=1, scheme=TransportSchemes.GRPC)
++    registry = NacosServiceRegistry(server_addresses='localhost:8848',
++                                         namespace='eeb6433f-d68c-4b3b-a4a7-eeff19110e4d', group_name='DEFAULT_GROUP',
++                                         username='nacos', password='localhost')
++    factory = AduibServiceFactory(service_instance=service)
++    await registry.register_service(service)
++    await factory.run_server()
++
++if __name__ == '__main__':
++    asyncio.run(main())
++```
+ 
+-2. 可通过 gRPC、JSON-RPC 或 REST 接口进行调用，具体接口定义见 `src/aduib_rpc/protos/` 及 `src/aduib_rpc/grpc/`。
++## 开发
+ 
+-## 测试
++1. 安装开发依赖：
++   ```
++   uv sync  --all-extras --dev
++   ```
+ 
+-项目测试文件位于 `tests/` 目录，可使用 pytest 运行：
+-```
+-pytest tests/
+-```
++2. 运行测试：
++   ```
++   pytest tests/
++   ```
+ 
++## 协议支持
++
++框架支持以下协议与数据格式：
++- gRPC (Protocol Buffers)
++- JSON-RPC
++- REST API
++
+ ## 许可证
+ 
+-本项目采用 MIT 许可证，详情见 LICENSE 文件。
+-
+-```
+-
+-你可以直接复制以上内容到你的 `README.md` 文件中。
+\ No newline at end of file
++Apache License 2.0
+\ No newline at end of file
+Index: src/aduib_rpc/utils/proto_utils.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from typing import Any\n\nfrom google.protobuf import struct_pb2\nfrom google.protobuf.json_format import ParseDict, MessageToDict\n\nfrom aduib_rpc.grpc import aduib_rpc_pb2, chat_completion_response_pb2, embedding_pb2, chat_completion_pb2\nfrom aduib_rpc.grpc.chat_completion_response_pb2 import ChatCompletionResponse\nfrom aduib_rpc.types import ChatCompletionRequest, CompletionRequest, AduibRpcRequest, EmbeddingRequest, \\\n    AduibRpcResponse, ChatCompletionResponseChunk, EmbeddingsResponse\n\n\nclass FromProto:\n    \"\"\"Utility class for converting protobuf messages to native Python types.\"\"\"\n    @classmethod\n    def rpc_request(cls, request:aduib_rpc_pb2.RpcTask) -> AduibRpcRequest:\n        request_dict = MessageToDict(request)\n        rpc_request = AduibRpcRequest(**request_dict)\n        if request.data.chat_completion:\n            chat_completion_dict = MessageToDict(request.data.chat_completion)\n            chat_completion_request = ChatCompletionRequest(**chat_completion_dict)\n            if not chat_completion_request.messages:\n                rpc_request.data = CompletionRequest(**chat_completion_dict)\n            else:\n                rpc_request.data=chat_completion_request\n        elif request.data.embedding:\n            rpc_request.data=EmbeddingRequest(**MessageToDict(request.data.embedding))\n        return rpc_request\n\n    @classmethod\n    def rpc_response(cls, response: aduib_rpc_pb2.RpcTaskResponse) -> AduibRpcResponse:\n        response_dict = MessageToDict(response)\n        rpc_response = AduibRpcResponse(**response_dict)\n        if response.result.chat_completion_response:\n            chat_completion_response_dict = MessageToDict(response.result.chat_completion_response)\n            if 'choices' in chat_completion_response_dict and chat_completion_response_dict['choices']:\n                if 'delta' in chat_completion_response_dict['choices'][0]:\n                    rpc_response.result = ChatCompletionResponseChunk(**chat_completion_response_dict)\n                else:\n                    rpc_response.result = ChatCompletionResponse(**chat_completion_response_dict)\n        elif response.result.embedding_response:\n            rpc_response.result = EmbeddingsResponse(**MessageToDict(response.result.embedding_response))\n        return rpc_response\n\n\nclass ToProto:\n    \"\"\"Utility class for converting native Python types to protobuf messages.\"\"\"\n    @classmethod\n    def rpc_response(cls, response: AduibRpcResponse) -> aduib_rpc_pb2.RpcTaskResponse:\n        response_dict = response.model_dump(exclude_none=True)\n        rpc_response = aduib_rpc_pb2.RpcTaskResponse()\n        ParseDict(response_dict, rpc_response)\n        if isinstance(response.result, ChatCompletionResponse):\n            chat_completion_response = chat_completion_response_pb2.ChatCompletionResponse()\n            ParseDict(response.result.model_dump(exclude_none=True), chat_completion_response)\n            rpc_response.result.chat_completion_response.CopyFrom(chat_completion_response)\n        if isinstance(response.result, ChatCompletionResponseChunk):\n            chat_completion_response = chat_completion_response_pb2.ChatCompletionResponse()\n            ParseDict(response.result.model_dump(exclude_none=True), chat_completion_response)\n            rpc_response.result.chat_completion_response.CopyFrom(chat_completion_response)\n        elif isinstance(response.result, EmbeddingsResponse):\n            embedding_response = embedding_pb2.EmbeddingResponse()\n            ParseDict(response.result.model_dump(exclude_none=True), embedding_response)\n            rpc_response.result.embedding_response.CopyFrom(embedding_response)\n        return rpc_response\n\n    @classmethod\n    def metadata(cls, metadata: dict[str, Any]) -> struct_pb2.Struct | None:\n        if not metadata:\n            return None\n        return dict_to_struct(metadata)\n\n    @classmethod\n    def taskData(cls, data: Any) -> aduib_rpc_pb2.TaskData:\n        task_data = aduib_rpc_pb2.TaskData()\n        if isinstance(data, CompletionRequest):\n            chat_completion_request = chat_completion_pb2.ChatCompletion()\n            ParseDict(data.model_dump(exclude_none=True), chat_completion_request)\n            task_data.chat_completion.CopyFrom(chat_completion_request)\n        elif isinstance(data, ChatCompletionRequest):\n            chat_completion_request = chat_completion_pb2.ChatCompletion()\n            ParseDict(data.model_dump(exclude_none=True), chat_completion_request)\n            task_data.chat_completion.CopyFrom(chat_completion_request)\n        elif isinstance(data, EmbeddingRequest):\n            embedding_request = embedding_pb2.EmbeddingRequest()\n            ParseDict(data.model_dump(exclude_none=True), embedding_request)\n            task_data.embedding.CopyFrom(embedding_request)\n        return task_data\n\n\ndef dict_to_struct(dictionary: dict[str, Any]) -> struct_pb2.Struct:\n    \"\"\"Converts a Python dict to a Struct proto.\n\n    Unfortunately, using `json_format.ParseDict` does not work because this\n    wants the dictionary to be an exact match of the Struct proto with fields\n    and keys and values, not the traditional Python dict structure.\n\n    Args:\n      dictionary: The Python dict to convert.\n\n    Returns:\n      The Struct proto.\n    \"\"\"\n    struct = struct_pb2.Struct()\n    for key, val in dictionary.items():\n        if isinstance(val, dict):\n            struct[key] = dict_to_struct(val)\n        else:\n            struct[key] = val\n    return struct\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/utils/proto_utils.py b/src/aduib_rpc/utils/proto_utils.py
+--- a/src/aduib_rpc/utils/proto_utils.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/utils/proto_utils.py	(date 1756375757021)
+@@ -6,7 +6,8 @@
+ from aduib_rpc.grpc import aduib_rpc_pb2, chat_completion_response_pb2, embedding_pb2, chat_completion_pb2
+ from aduib_rpc.grpc.chat_completion_response_pb2 import ChatCompletionResponse
+ from aduib_rpc.types import ChatCompletionRequest, CompletionRequest, AduibRpcRequest, EmbeddingRequest, \
+-    AduibRpcResponse, ChatCompletionResponseChunk, EmbeddingsResponse
++    AduibRpcResponse, ChatCompletionResponseChunk, EmbeddingsResponse, PromptMessage
++from aduib_rpc.utils.encoders import jsonable_encoder
+ 
+ 
+ class FromProto:
+@@ -74,15 +75,16 @@
+         task_data = aduib_rpc_pb2.TaskData()
+         if isinstance(data, CompletionRequest):
+             chat_completion_request = chat_completion_pb2.ChatCompletion()
+-            ParseDict(data.model_dump(exclude_none=True), chat_completion_request)
++            ParseDict(jsonable_encoder(obj=data), chat_completion_request,ignore_unknown_fields=True)
+             task_data.chat_completion.CopyFrom(chat_completion_request)
+         elif isinstance(data, ChatCompletionRequest):
++            data.messages=PromptMessage.convert_str_prompt_to_contents(data.messages)
+             chat_completion_request = chat_completion_pb2.ChatCompletion()
+-            ParseDict(data.model_dump(exclude_none=True), chat_completion_request)
++            ParseDict(jsonable_encoder(obj=data), chat_completion_request,ignore_unknown_fields=True)
+             task_data.chat_completion.CopyFrom(chat_completion_request)
+         elif isinstance(data, EmbeddingRequest):
+             embedding_request = embedding_pb2.EmbeddingRequest()
+-            ParseDict(data.model_dump(exclude_none=True), embedding_request)
++            ParseDict(jsonable_encoder(obj=data), embedding_request,ignore_unknown_fields=True)
+             task_data.embedding.CopyFrom(embedding_request)
+         return task_data
+ 
+Index: src/aduib_rpc/server/request_handlers/default_request_handler.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import logging\nimport uuid\nfrom collections.abc import AsyncGenerator\n\nfrom aduib_rpc.server.context import ServerContext, ServerInterceptor\nfrom aduib_rpc.server.model_excution import get_model_executor\nfrom aduib_rpc.server.model_excution.context import RequestContext\nfrom aduib_rpc.server.model_excution.model_executor import ModelExecutor, MODEL_EXECUTIONS\nfrom aduib_rpc.server.request_handlers import RequestHandler\nfrom aduib_rpc.types import AduibRpcResponse, AduibRpcRequest, AduibRPCError\n\nlogger = logging.getLogger(__name__)\n\n\nclass DefaultRequestHandler(RequestHandler):\n    \"\"\"Default implementation of RequestHandler with no-op methods.\"\"\"\n\n    def __init__(self):\n        self.model_executor = None\n\n    async def on_message(\n            self,\n            message: AduibRpcRequest,\n            context: ServerContext | None = None,\n            interceptors: list[ServerInterceptor] | None = None\n\n    )-> AduibRpcResponse:\n        \"\"\"Handles the 'message' method.\n        Args:\n            message: The incoming `CompletionRequest` object.\n            context: Context provided by the server.\n            interceptors: list of ServerInterceptor instances to process the request.\n\n        Returns:\n            The `AduibRpcResponse` object containing the response.\n        \"\"\"\n        try:\n            intercepted: AduibRPCError= None\n            if interceptors:\n                for interceptor in interceptors:\n                    intercepted = await interceptor.intercept(message, context)\n                    if intercepted:\n                        break\n            if not intercepted:\n                context:RequestContext=self._setup_request_context(message,context)\n                self.model_executor=self._validate_model_executor(context)\n                response = await self.model_executor.execute(context)\n                return AduibRpcResponse(id=context.request_id, result=response)\n            else:\n                return AduibRpcResponse(id=context.request_id, result=None, status='error',\n                                       error=intercepted)\n        except Exception as e:\n            logger.error(f\"Error processing message: {e}\")\n            raise\n\n    async def on_stream_message(self, message: AduibRpcRequest,\n                                context: ServerContext | None = None,\n                                interceptors: list[ServerInterceptor] | None = None\n                                ) -> AsyncGenerator[AduibRpcResponse]:\n        \"\"\"Handles the 'stream_message' method.\n\n        Args:\n            message: The incoming `CompletionRequest` object.\n            context: Context provided by the server.\n            interceptors: list of ServerInterceptor instances to process the request.\n\n        Yields:\n            The `AduibRpcResponse` objects containing the streaming responses.\n        \"\"\"\n        try:\n            intercepted: AduibRPCError= None\n            if interceptors:\n                for interceptor in interceptors:\n                    intercepted = await interceptor.intercept(message, context)\n            if not intercepted:\n                context:RequestContext=self._setup_request_context(message,context)\n                self.model_executor=self._validate_model_executor(context)\n                async for response in self.model_executor.execute(context):\n                    yield AduibRpcResponse(id=context.request_id, result=response)\n            else:\n                yield AduibRpcResponse(id=context.request_id, result=None, status='error',\n                                       error=intercepted)\n        except Exception as e:\n            logger.error(f\"Error processing stream message: {e}\")\n            raise\n\n    def _setup_request_context(self,\n                               message: AduibRpcRequest,\n            context: ServerContext | None = None) -> RequestContext:\n        \"\"\"Sets up and returns a RequestContext based on the provided ServerContext.\"\"\"\n        context_id:str=str(uuid.uuid4())\n        request_id:str=message.id or str(uuid.uuid4())\n        request_context = RequestContext(\n            context_id=context_id,\n            request_id=request_id,\n            request=message,\n            server_context=context,\n        )\n        return request_context\n\n    def _validate_model_executor(self, context:RequestContext) -> ModelExecutor:\n        \"\"\"Validates and returns the ModelExecutor instance.\"\"\"\n        model_executor: ModelExecutor = get_model_executor(\n            model_id=context.model_name,model_type=context.method)\n        if model_executor is None:\n            logger.error(f\"ModelExecutor for {context.model_name} not found\")\n            raise ValueError(f\"No model executor found for model '{context.model_name}' with method '{context.method}'\")\n        return model_executor\n\n\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/server/request_handlers/default_request_handler.py b/src/aduib_rpc/server/request_handlers/default_request_handler.py
+--- a/src/aduib_rpc/server/request_handlers/default_request_handler.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/server/request_handlers/default_request_handler.py	(date 1756372465227)
+@@ -15,14 +15,14 @@
+ class DefaultRequestHandler(RequestHandler):
+     """Default implementation of RequestHandler with no-op methods."""
+ 
+-    def __init__(self):
++    def __init__(self,interceptors: list[ServerInterceptor] | None = None):
+         self.model_executor = None
++        self.interceptors= interceptors or []
+ 
+     async def on_message(
+             self,
+             message: AduibRpcRequest,
+             context: ServerContext | None = None,
+-            interceptors: list[ServerInterceptor] | None = None
+ 
+     )-> AduibRpcResponse:
+         """Handles the 'message' method.
+@@ -36,8 +36,8 @@
+         """
+         try:
+             intercepted: AduibRPCError= None
+-            if interceptors:
+-                for interceptor in interceptors:
++            if self.interceptors:
++                for interceptor in self.interceptors:
+                     intercepted = await interceptor.intercept(message, context)
+                     if intercepted:
+                         break
+@@ -55,7 +55,6 @@
+ 
+     async def on_stream_message(self, message: AduibRpcRequest,
+                                 context: ServerContext | None = None,
+-                                interceptors: list[ServerInterceptor] | None = None
+                                 ) -> AsyncGenerator[AduibRpcResponse]:
+         """Handles the 'stream_message' method.
+ 
+@@ -69,8 +68,8 @@
+         """
+         try:
+             intercepted: AduibRPCError= None
+-            if interceptors:
+-                for interceptor in interceptors:
++            if self.interceptors:
++                for interceptor in self.interceptors:
+                     intercepted = await interceptor.intercept(message, context)
+             if not intercepted:
+                 context:RequestContext=self._setup_request_context(message,context)
+Index: src/aduib_rpc/discover/registry/__init__.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from .service_registry import ServiceRegistry\nfrom .service_registry import InMemoryServiceRegistry\n\n__all__ = [\"ServiceRegistry\", \"InMemoryServiceRegistry\"]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/discover/registry/__init__.py b/src/aduib_rpc/discover/registry/__init__.py
+--- a/src/aduib_rpc/discover/registry/__init__.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/discover/registry/__init__.py	(date 1756371474274)
+@@ -1,4 +1,4 @@
+ from .service_registry import ServiceRegistry
+ from .service_registry import InMemoryServiceRegistry
+-
+-__all__ = ["ServiceRegistry", "InMemoryServiceRegistry"]
+\ No newline at end of file
++from .nacos.nacos_service_registry import NacosServiceRegistry
++__all__ = ["ServiceRegistry", "InMemoryServiceRegistry", "NacosServiceRegistry"]
+\ No newline at end of file
+Index: src/aduib_rpc/discover/entities/service_instance.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from pydantic import BaseModel\n\nfrom aduib_rpc.utils.constant import AIProtocols, TransportSchemes\n\n\nclass ServiceInstance(BaseModel):\n    \"\"\"Represents a service instance in the discovery system.\"\"\"\n    service_name: str\n    host: str\n    port: int\n    weight: int=1\n    metadata: dict[str, str] | None = {}\n    protocol: AIProtocols = AIProtocols.AduibRpc\n    scheme: TransportSchemes = TransportSchemes.GRPC\n\n    @property\n    def url(self) -> str:\n        \"\"\"Constructs the URL for the service instance.\"\"\"\n        return f\"{self.scheme.value}://{self.host}:{self.port}\"\n\n    @property\n    def instance_id(self) -> str:\n        \"\"\"Returns the service instance ID.\"\"\"\n        return f\"{self.service_name}:{self.host}:{self.port}\"\n\n    def get_metadata_value(self, key: str) -> str | None:\n        \"\"\"Retrieves a metadata value by key.\"\"\"\n        if self.metadata and key in self.metadata:\n            return self.metadata[key]\n        return None\n    def get_service_info(self) -> dict[str, str | int | dict[str, str]]:\n        \"\"\"Returns a dictionary representation of the service instance.\"\"\"\n        return self.metadata|{\n            \"service_name\": self.service_name,\n            \"host\": self.host,\n            \"port\": str(self.port),\n            \"weight\": str(self.weight),\n            \"protocol\": self.protocol.value,\n            \"scheme\": self.scheme.value,\n        }
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/discover/entities/service_instance.py b/src/aduib_rpc/discover/entities/service_instance.py
+--- a/src/aduib_rpc/discover/entities/service_instance.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/discover/entities/service_instance.py	(date 1756371592804)
+@@ -16,7 +16,7 @@
+     @property
+     def url(self) -> str:
+         """Constructs the URL for the service instance."""
+-        return f"{self.scheme.value}://{self.host}:{self.port}"
++        return f"{self.scheme.value}://{self.host}:{self.port}" if self.scheme!=TransportSchemes.GRPC else f"{self.host}:{self.port}"
+ 
+     @property
+     def instance_id(self) -> str:
+Index: src/aduib_rpc/discover/registry/nacos/nacos_service_registry.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from typing import Any\n\nfrom aduib_rpc.discover.entities import ServiceInstance\nfrom aduib_rpc.discover.load_balance import LoadBalancerFactory\nfrom aduib_rpc.discover.registry import ServiceRegistry\nfrom aduib_rpc.discover.registry.nacos.client import NacosClient\nfrom aduib_rpc.utils.async_utils import AsyncUtils\nfrom aduib_rpc.utils.constant import LoadBalancePolicy, AIProtocols, TransportSchemes\n\n\nclass NacosServiceRegistry(ServiceRegistry):\n\n    def __init__(self,\n                 server_addresses:str,\n                 namespace: str = \"public\",\n                 group_name: str = \"DEFAULT_GROUP\",\n                 username: str = None,\n                 password: str = None,\n                 policy: LoadBalancePolicy = LoadBalancePolicy.WeightedRoundRobin,\n                 ):\n        self.server_addresses = server_addresses\n        self.namespace = namespace\n        self.group_name = group_name\n        self.username = username\n        self.password = password\n        self.policy = policy\n        self.client = NacosClient(server_addresses, namespace,group_name, username, password)\n        # AsyncUtils.run_async(self.client.create_config_service())\n        # AsyncUtils.run_async(self.client.create_naming_service())\n        self.state:dict[str,ServiceInstance]={}\n\n    async def init_naming_service(self):\n        if self.client.naming_service is None:\n            await self.client.create_naming_service()\n\n    async def register_service(self, service_info: ServiceInstance) -> None:\n        \"\"\"Register a service instance with the registry.\"\"\"\n        await self.init_naming_service()\n        await self.client.register_instance(service_info.service_name, service_info.host, service_info.port, service_info.weight, metadata=service_info.get_service_info())\n\n\n    def unregister_service(self, service_name: str) -> None:\n        if service_name in self.state:\n            service = self.state.get(service_name)\n            self.client.remove_instance(service_name, service.host, service.port)\n\n    async def discover_service(self, service_name:str) -> ServiceInstance| dict[str,Any] | None:\n        await self.init_naming_service()\n        services = await self.client.list_instances(service_name)\n        if len(services) == 0:\n            return None\n        service_instances: list[ServiceInstance] = []\n        for service in services:\n            service_instance = ServiceInstance(\n                service_name=service.serviceName,\n                protocol=AIProtocols.to_original(service.metadata.get('protocol')),\n                scheme=TransportSchemes.to_original(service.metadata.get('scheme')),\n                host=service.ip,\n                port=service.port,\n                weight=int(service.weight),\n                metadata=service.metadata or {}\n            )\n            service_instances.append(service_instance)\n        instance = LoadBalancerFactory.get_load_balancer(self.policy).select_instance(service_instances)\n        self.state[service_name] = instance\n        return instance
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/discover/registry/nacos/nacos_service_registry.py b/src/aduib_rpc/discover/registry/nacos/nacos_service_registry.py
+--- a/src/aduib_rpc/discover/registry/nacos/nacos_service_registry.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/discover/registry/nacos/nacos_service_registry.py	(date 1756371474279)
+@@ -4,7 +4,6 @@
+ from aduib_rpc.discover.load_balance import LoadBalancerFactory
+ from aduib_rpc.discover.registry import ServiceRegistry
+ from aduib_rpc.discover.registry.nacos.client import NacosClient
+-from aduib_rpc.utils.async_utils import AsyncUtils
+ from aduib_rpc.utils.constant import LoadBalancePolicy, AIProtocols, TransportSchemes
+ 
+ 
+Index: src/aduib_rpc/discover/registry/nacos/client.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import json\nimport logging\nimport signal\nfrom typing import Callable\n\nimport nacos\nfrom v2.nacos import ClientConfigBuilder, GRPCConfig, NacosConfigService, NacosNamingService, ConfigParam, \\\n    RegisterInstanceParam, DeregisterInstanceParam, ListInstanceParam, Instance, Service, GetServiceParam\n\nlogger = logging.getLogger(__name__)\n\n\nclass NacosClient:\n    def __init__(self, server_addr: str,\n                 namespace: str,\n                 group: str,\n                 user_name: str,\n                 password: str,\n                 log_level: str = \"INFO\"):\n        self.naming_service = None\n        self.config_service = None\n        self.server_addr = server_addr\n        self.namespace = namespace\n        self.group = group\n        self.user_name = user_name\n        self.password = password\n        self.cache = {}\n        self.log_level = log_level\n        self.client_config = (ClientConfigBuilder()\n                              .username(self.user_name)\n                              .password(self.password)\n                              .server_address(self.server_addr)\n                              .log_level(self.log_level)\n                              .namespace_id(self.namespace)\n                              .grpc_config(GRPCConfig(grpc_timeout=5000))\n                              .build())\n        self.client = nacos.NacosClient(server_addresses=server_addr, namespace=namespace, username=user_name,\n                                        password=password)\n        self.config_watcher = ConfigWatcher(self)\n        self.config_service: NacosConfigService = None\n        self.naming_service: NacosNamingService = None\n\n    async def create_config_service(self):\n        self.config_service = await NacosConfigService.create_config_service(self.client_config)\n\n    async def create_naming_service(self):\n        self.naming_service = await NacosNamingService.create_naming_service(self.client_config)\n\n    \"\"\"\n    get config value from nacos\n    \"\"\"\n\n    async def get_all_dicts(self, data_id: str):\n        data = self.cache.get(data_id)\n        # data is none or is ''\n        if data is None or data == '':\n            data = await self.config_service.get_config(ConfigParam(data_id=data_id, group=self.group))\n            # ''\n            if data is not None and data != '':\n                self.cache[data_id] = json.loads(data)\n        return self.cache.get(data_id)\n\n    async def register_config_listener(self, data_id: str):\n        try:\n            # context = multiprocessing.get_context(\"spawn\")\n            # context.Process(target=(self.client.add_config_watcher(data_id=data_id,group=self.group,cb=ConfigWatcher(self))),\n            #                 name=f\"ConfigWatcher\").start()\n            # self.client.add_config_watcher(data_id=data_id, group=self.group, cb=ConfigWatcher(self))\n            def config_listener(tenant, data_id, group, content):\n                self.cache[data_id] = json.loads(content)\n                logger.debug(f\"config_listener data_id:{data_id},group:{group},data:{content}\")\n\n            async def remove_config_watcher_signal(signal, frame):\n                await self.config_service.remove_listener(data_id=data_id, group=self.group, listener=config_listener)\n                logger.debug(f\"remove_config_watcher_signal:{signal},{frame}\")\n\n            signal.signal(signal.SIGINT, remove_config_watcher_signal)\n            signal.signal(signal.SIGTERM, remove_config_watcher_signal)\n            await self.config_service.add_listener(data_id=data_id, group=self.group, listener=config_listener)\n            logger.info(f\"Config watcher {data_id} registered\")\n        except Exception as e:\n            logger.error(f\"register_config_watcher error:{e}\")\n\n    def publish_config(self, data_id: str, data: str):\n        logger.debug(f\"publish_config:{data_id},{data}\")\n        self.client.publish_config(data_id=data_id, group=self.group, content=data, config_type=\"json\")\n\n    async def register_instance(self, service_name: str, ip: str, port: int, weight: int = 1, metadata=None):\n        if metadata is None:\n            metadata = {}\n        logger.debug(f\"register_instance:{service_name},{ip},{port},{weight}\")\n        # self.naming_service.register_instance(service_name=service_name, ip=ip, port=port,weight=weight,metadata=metadata)\n        await self.naming_service.register_instance(\n            RegisterInstanceParam(service_name=service_name, ip=ip, port=port, weight=weight, metadata=metadata))\n\n        async def remove_instance_signal(signal, frame):\n            logger.debug(f\"remove_instance_signal:{signal},{frame}\")\n            await self.remove_instance(service_name=service_name, ip=ip, port=port)\n\n        signal.signal(signal.SIGINT, remove_instance_signal)\n        signal.signal(signal.SIGTERM, remove_instance_signal)\n        # self.client.subscribe(listener_fn=NameInstanceWatcher,service_name=service_name, namespace_id =self.namespace,group_name=self.group)\n\n    async def remove_instance(self, service_name: str, ip: str = None, port: int = None):\n        # self.client.unsubscribe(service_name=service_name,listener_name=\"NameInstanceWatcher\")\n        # self.client.stop_subscribe()\n        # self.client.remove_naming_instance(service_name=service_name, ip=ip, port=port)\n        await self.naming_service.deregister_instance(\n            DeregisterInstanceParam(service_name=service_name, ip=ip, port=port))\n\n    async def get_service(self, service_name: str)-> Service:\n        return self.naming_service.get_service(GetServiceParam(service_name=service_name, group_name=self.group))\n\n    async def list_instances(self, service_name: str)-> list[Instance]:\n        # return self.naming_service.list_instances(service_name=service_name, namespace_id=self.namespace,group_name=self.group, healthy_only=True)\n        return await self.naming_service.list_instances(ListInstanceParam(\n            service_name=service_name,\n            group_name=self.group,\n            healthy_only=True\n        ))\n\n\nclass ConfigWatcher(Callable):\n    __name__ = \"ConfigWatcher\"\n\n    def __init__(self, client: NacosClient):\n        self.client = client\n\n    def __call__(self, data_id: str, group: str, data: str):\n        logger.info(f\"ConfigWatcher data_id:{data_id},group:{group},data:{data}\")\n        self.client.cache[data_id] = json.loads(data)\n\n\nclass NameInstanceWatcher(Callable):\n    listener_name = \"NameInstanceWatcher\"\n\n    def launch(self, *args, **kwargs):\n        logger.info(f\"NameInstanceWatcher launch:{args},{kwargs}\")\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/discover/registry/nacos/client.py b/src/aduib_rpc/discover/registry/nacos/client.py
+--- a/src/aduib_rpc/discover/registry/nacos/client.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/discover/registry/nacos/client.py	(date 1756371474286)
+@@ -3,9 +3,23 @@
+ import signal
+ from typing import Callable
+ 
+-import nacos
+-from v2.nacos import ClientConfigBuilder, GRPCConfig, NacosConfigService, NacosNamingService, ConfigParam, \
++try:
++    import nacos
++    from v2.nacos import ClientConfigBuilder, GRPCConfig, NacosConfigService, NacosNamingService, ConfigParam, \
+     RegisterInstanceParam, DeregisterInstanceParam, ListInstanceParam, Instance, Service, GetServiceParam
++except ImportError:
++    nacos = None
++    ClientConfigBuilder = None
++    GRPCConfig = None
++    NacosConfigService = None
++    NacosNamingService = None
++    ConfigParam = None
++    RegisterInstanceParam = None
++    DeregisterInstanceParam = None
++    ListInstanceParam = None
++    Instance = None
++    Service = None
++    GetServiceParam = None
+ 
+ logger = logging.getLogger(__name__)
+ 
+Index: src/aduib_rpc/discover/service/aduibrpc_service_factory.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import asyncio\nimport logging\nfrom typing import Any\n\nimport grpc\nimport uvicorn\nfrom grpc_reflection.v1alpha import reflection\n\nfrom aduib_rpc.discover.entities import ServiceInstance\nfrom aduib_rpc.discover.registry import ServiceRegistry\nfrom aduib_rpc.discover.service import ServiceFactory, add_signal_handlers, get_ip_port\nfrom aduib_rpc.grpc import aduib_rpc_pb2_grpc, aduib_rpc_pb2\nfrom aduib_rpc.server.protocols.rest import AduibRpcRestFastAPIApp\nfrom aduib_rpc.server.protocols.rpc import AduibRpcStarletteApp\nfrom aduib_rpc.server.request_handlers import DefaultRequestHandler, GrpcHandler\nfrom aduib_rpc.server.request_handlers.grpc_handler import DefaultServerContentBuilder\nfrom aduib_rpc.utils.constant import TransportSchemes\n\nlogger = logging.getLogger(__name__)\n\n\nclass AduibServiceFactory(ServiceFactory):\n    \"\"\"Class for discovering Aduib services on the network.\"\"\"\n\n    def __init__(self,\n                 service_instance: ServiceInstance,\n                 ):\n        self.service = service_instance\n        self.server = None\n\n    async def run_server(self, **kwargs: Any):\n        \"\"\"Run a server for the given service instance.\"\"\"\n        match self.service.scheme:\n            case TransportSchemes.GRPC:\n                self.server=await self.run_grpc_server()\n            case TransportSchemes.JSONRPC:\n                self.server=await self.run_jsonrpc_server(**kwargs)\n            case TransportSchemes.HTTP:\n                self.server=await self.run_rest_server(**kwargs)\n            case _:\n                raise ValueError(f\"Unsupported transport scheme: {self.service.scheme}\")\n\n    def get_server(self) -> Any:\n        return self.server\n\n    async def run_grpc_server(self):\n        # Create gRPC server\n        host, port = get_ip_port(self.service)\n        grpc_server = grpc.aio.server()\n        \"\"\"Creates the gRPC server.\"\"\"\n        request_handler = DefaultRequestHandler()\n\n        server = grpc.aio.server()\n        aduib_rpc_pb2_grpc.add_AduibRpcServiceServicer_to_server(\n            GrpcHandler(request_handler=request_handler, context_builder=DefaultServerContentBuilder()),\n            server,\n        )\n        SERVICE_NAMES = (\n            aduib_rpc_pb2.DESCRIPTOR.services_by_name['AduibRpcService'].full_name,\n            reflection.SERVICE_NAME,\n        )\n        reflection.enable_server_reflection(SERVICE_NAMES, server)\n        server.add_insecure_port(f'{host}:{port}')\n        logging.info(f'Starting gRPC server on port {port}')\n        await grpc_server.start()\n        loop = asyncio.get_running_loop()\n        add_signal_handlers(loop, grpc_server.stop, 5)\n        await grpc_server.wait_for_termination()\n\n    async def run_jsonrpc_server(self, **kwargs: Any, ):\n        \"\"\"Run a JSON-RPC server for the given service instance.\"\"\"\n        host, port = get_ip_port(self.service)\n        request_handler = DefaultRequestHandler()\n        server = AduibRpcStarletteApp(request_handler=request_handler)\n        uvicorn.run(server.build(**kwargs), host=host, port=port)\n\n    async def run_rest_server(self, **kwargs: Any, ):\n        \"\"\"Run a REST server for the given service instance.\"\"\"\n        host, port = get_ip_port(self.service)\n        request_handler = DefaultRequestHandler()\n        server = AduibRpcRestFastAPIApp(request_handler=request_handler)\n        uvicorn.run(server.build(**kwargs), host=host, port=port)\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/aduib_rpc/discover/service/aduibrpc_service_factory.py b/src/aduib_rpc/discover/service/aduibrpc_service_factory.py
+--- a/src/aduib_rpc/discover/service/aduibrpc_service_factory.py	(revision 297fb75b64deee9e15b715c33a05fe9b7eb5ee9f)
++++ b/src/aduib_rpc/discover/service/aduibrpc_service_factory.py	(date 1756372465238)
+@@ -7,9 +7,9 @@
+ from grpc_reflection.v1alpha import reflection
+ 
+ from aduib_rpc.discover.entities import ServiceInstance
+-from aduib_rpc.discover.registry import ServiceRegistry
+ from aduib_rpc.discover.service import ServiceFactory, add_signal_handlers, get_ip_port
+ from aduib_rpc.grpc import aduib_rpc_pb2_grpc, aduib_rpc_pb2
++from aduib_rpc.server.context import ServerInterceptor
+ from aduib_rpc.server.protocols.rest import AduibRpcRestFastAPIApp
+ from aduib_rpc.server.protocols.rpc import AduibRpcStarletteApp
+ from aduib_rpc.server.request_handlers import DefaultRequestHandler, GrpcHandler
+@@ -24,7 +24,9 @@
+ 
+     def __init__(self,
+                  service_instance: ServiceInstance,
++                 interceptors: list[ServerInterceptor] | None = None
+                  ):
++        self.interceptors = interceptors or []
+         self.service = service_instance
+         self.server = None
+ 
+@@ -48,7 +50,7 @@
+         host, port = get_ip_port(self.service)
+         grpc_server = grpc.aio.server()
+         """Creates the gRPC server."""
+-        request_handler = DefaultRequestHandler()
++        request_handler = DefaultRequestHandler(self.interceptors)
+ 
+         server = grpc.aio.server()
+         aduib_rpc_pb2_grpc.add_AduibRpcServiceServicer_to_server(
+@@ -70,13 +72,13 @@
+     async def run_jsonrpc_server(self, **kwargs: Any, ):
+         """Run a JSON-RPC server for the given service instance."""
+         host, port = get_ip_port(self.service)
+-        request_handler = DefaultRequestHandler()
++        request_handler = DefaultRequestHandler(self.interceptors)
+         server = AduibRpcStarletteApp(request_handler=request_handler)
+         uvicorn.run(server.build(**kwargs), host=host, port=port)
+ 
+     async def run_rest_server(self, **kwargs: Any, ):
+         """Run a REST server for the given service instance."""
+         host, port = get_ip_port(self.service)
+-        request_handler = DefaultRequestHandler()
++        request_handler = DefaultRequestHandler(self.interceptors)
+         server = AduibRpcRestFastAPIApp(request_handler=request_handler)
+         uvicorn.run(server.build(**kwargs), host=host, port=port)
