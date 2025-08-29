@@ -1,0 +1,40 @@
+cmake_minimum_required(VERSION {{ project.build.cmake_min_version }} FATAL_ERROR)
+
+project({{ project.meta_data.name }} LANGUAGES CXX)
+
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+
+include(GNUInstallDirs)
+
+set(CMAKE_CXX_STANDARD {{ project.build.cpp_standard }})
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set(LLVM_BUILD_INSTRUMENTED_COVERAGE ON)
+add_compile_options(-fPIC -Wall -Werror)
+
+message(STATUS "My Build Type: ${CMAKE_BUILD_TYPE} Cross Building To: $ENV{PLATFORM}")
+
+IF(CMAKE_BUILD_TYPE MATCHES Debug AND NOT "$ENV{PLATFORM}" STREQUAL "win64")
+    add_compile_options(-fprofile-instr-generate -fcoverage-mapping -gdwarf-4 -O0)
+    add_link_options(-fprofile-instr-generate)
+ENDIF()
+
+# Bins and libs to correct folder.
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/{{ project.structure.header_path }})
+
+{% if not project.meta_data.header_only -%}
+# DELETE THIS ONLY USED FOR HELLO WORLD!!!!
+file(GLOB_RECURSE  SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/{{ project.structure.source_path }}/*.cpp)
+{%- endif %}
+
+add_subdirectory(tests)
+
+{% if not project.meta_data.header_only -%}
+add_library(${CMAKE_PROJECT_NAME} SHARED ${SOURCES})
+{%- endif -%}

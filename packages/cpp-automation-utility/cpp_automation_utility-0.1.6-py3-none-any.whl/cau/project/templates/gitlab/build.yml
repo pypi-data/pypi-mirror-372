@@ -1,0 +1,34 @@
+build:
+  image: {{ gitlab.docker_image }}
+  stage: build
+  script:
+    - cau build -b $BUILD_DIR -t $BUILD_TYPE -p $CROSS_COMPILE
+  artifacts:
+    name: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA-$CI_JOB_ID"
+    paths:
+      - ./$BUILD_DIR/lib
+      - ./$BUILD_DIR/include
+      - ./$BUILD_DIR/bin
+      - ./$BUILD_DIR/src
+      - ./$BUILD_DIR/compile_commands.json
+  parallel:
+    matrix:
+      - BUILDTYPE: Release
+        CROSSCOMPILE:
+          - linux
+        {%- if build.cross_build %}
+          - win64
+        {%- endif %}
+      - BUILDTYPE: Debug
+        CROSSCOMPILE:
+          - linux
+        {%- if build.cross_build %}
+          - win64
+        {%- endif %}
+  cache:
+    key: $CI_COMMIT_REF_SLUG-$CROSS_COMPILE-$BUILD_TYPE
+    paths:
+      - ./.conan
+  variables:
+    BUILD_TYPE: ${BUILDTYPE}
+    CROSS_COMPILE: ${CROSSCOMPILE}
