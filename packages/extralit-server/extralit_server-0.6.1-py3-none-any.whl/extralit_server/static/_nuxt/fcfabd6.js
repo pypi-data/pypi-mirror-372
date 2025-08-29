@@ -1,0 +1,1 @@
+(window.webpackJsonp=window.webpackJsonp||[]).push([[34],{1713:function(e,a){e.exports={attributes:{},body:"# 👏 Conventions\n\n- Folder name -> kebab-case . ex: base-tag\n- Components name -> PascalCase . ex: BaseTag.vue\n- Class name -> PascalCase . ex: Question.ts\n- Variables or Const names -> camelCase . ex: firstName: string\n"}}}]);
