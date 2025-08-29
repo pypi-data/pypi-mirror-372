@@ -1,0 +1,60 @@
+?expr: term ("+" term)*
+
+?term: factor ("*" factor)*
+
+?factor: register
+       | "(" expr ")"
+       | wildcards
+       | function
+
+// Unary interactions
+?function: log
+      | exp
+      | sqrt
+      | squared
+      | inverse
+      | linear
+      | tanh
+      | gaussian
+      | add
+      | multiply
+
+// simple unary interactions
+log: "log" "(" expr ")"
+exp: "exp" "(" expr ")"
+sqrt: "sqrt" "(" expr ")"
+squared: "squared" "(" expr ")"
+inverse: "inverse" "(" expr ")"
+linear: "linear" "(" expr ")"
+tanh: "tanh" "(" expr ")"
+
+// simple binary interactions
+add: "add" "(" expr "," expr ")"
+multiply: "multiply" "(" expr "," expr ")"
+
+// Gaussian can be either unary or binary
+gaussian: "gaussian" "(" expr ")"
+        | "gaussian" "(" expr "," expr ")"
+
+// Wildcards
+?wildcards: interact1
+          | interact2
+          | wildcard
+          | register_any
+          | exclude
+
+interact1: "func" "(" expr ")"
+interact2: "func" "(" expr "," expr ")"
+wildcard: "_" ("[" wc_param ("," wc_param)* "]")?
+?wc_param: INT | register | exclude
+register_any : "?"
+exclude: "!" register
+
+// Explicit register
+?register: SINGLE_ESCAPED_STRING | DOUBLE_ESCAPED_STRING
+
+SINGLE_ESCAPED_STRING: /'[^']*'/
+%import common.ESCAPED_STRING -> DOUBLE_ESCAPED_STRING
+%import common.INT -> INT
+%import common.WS
+%ignore WS
