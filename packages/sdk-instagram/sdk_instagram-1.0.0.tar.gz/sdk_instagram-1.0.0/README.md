@@ -1,0 +1,112 @@
+
+# Getting Started with Instagram API
+
+## Introduction
+
+Description of Instagram RESTful API.
+
+Current limitations:
+
+* Instagram service does not support [cross origin headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS)
+  for security reasons, therefore it is not possible to use Swagger UI and make API calls directly from browser.
+* Modification API requests (`POST`, `DELETE`) require additional security [scopes](https://instagram.com/developer/authorization/)
+  that are available for Apps [created on or after Nov 17, 2015](http://instagram.com/developer/review/) and
+  started in [Sandbox Mode](http://instagram.com/developer/sandbox/).
+* Consider the [Instagram limitations](https://instagram.com/developer/limits/) for API calls that depends on App Mode.
+
+**Warning:** For Apps [created on or after Nov 17, 2015](http://instagram.com/developer/changelog/) API responses
+containing media objects no longer return the `data` field in `comments` and `likes` nodes.
+
+Last update: 2015-11-28
+
+Instagram Developer Documentation: [https://instagram.com/developer](https://instagram.com/developer)
+
+## Install the Package
+
+The package is compatible with Python versions `3.7+`.
+Install the package from PyPi using the following pip command:
+
+```bash
+pip install sdk-instagram==1.0.0
+```
+
+You can also view the package at:
+https://pypi.python.org/pypi/sdk-instagram/1.0.0
+
+## Initialize the API Client
+
+**_Note:_** Documentation for the client can be found [here.](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/client.md)
+
+The following parameters are configurable for the API Client:
+
+| Parameter | Type | Description |
+|  --- | --- | --- |
+| environment | `Environment` | The API environment. <br> **Default: `Environment.PRODUCTION`** |
+| http_client_instance | `HttpClient` | The Http Client passed from the sdk user for making requests |
+| override_http_client_configuration | `bool` | The value which determines to override properties of the passed Http Client from the sdk user |
+| http_call_back | `HttpCallBack` | The callback value that is invoked before and after an HTTP call is made to an endpoint |
+| timeout | `float` | The value to use for connection timeout. <br> **Default: 60** |
+| max_retries | `int` | The number of times to retry an endpoint call if it fails. <br> **Default: 0** |
+| backoff_factor | `float` | A backoff factor to apply between attempts after the second try. <br> **Default: 2** |
+| retry_statuses | `Array of int` | The http statuses on which retry is to be done. <br> **Default: [408, 413, 429, 500, 502, 503, 504, 521, 522, 524]** |
+| retry_methods | `Array of string` | The http methods on which retry is to be done. <br> **Default: ['GET', 'PUT']** |
+| api_key_credentials | [`ApiKeyCredentials`](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/auth/custom-query-parameter.md) | The credential object for Custom Query Parameter |
+| instagram_auth_credentials | [`InstagramAuthCredentials`](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/auth/oauth-2-implicit-grant.md) | The credential object for OAuth 2 Implicit Grant |
+
+The API client can be initialized as follows:
+
+```python
+from instagramapi.configuration import Environment
+from instagramapi.http.auth.api_key import ApiKeyCredentials
+from instagramapi.http.auth.instagram_auth import InstagramAuthCredentials
+from instagramapi.instagramapi_client import InstagramapiClient
+from instagramapi.models.o_auth_scope_instagram_auth_enum import OAuthScopeInstagramAuthEnum
+
+client = InstagramapiClient(
+    api_key_credentials=ApiKeyCredentials(
+        access_token='access_token'
+    ),
+    instagram_auth_credentials=InstagramAuthCredentials(
+        o_auth_client_id='OAuthClientId',
+        o_auth_redirect_uri='OAuthRedirectUri',
+        o_auth_scopes=[
+            OAuthScopeInstagramAuthEnum.BASIC,
+            OAuthScopeInstagramAuthEnum.COMMENTS
+        ]
+    ),
+    environment=Environment.PRODUCTION
+)
+```
+
+## Authorization
+
+This API uses the following authentication schemes.
+
+* [`api_key (Custom Query Parameter)`](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/auth/custom-query-parameter.md)
+* [`instagram_auth (OAuth 2 Implicit Grant)`](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/auth/oauth-2-implicit-grant.md)
+
+## List of APIs
+
+* [Users](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/controllers/users.md)
+* [Relationships](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/controllers/relationships.md)
+* [Media](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/controllers/media.md)
+* [Comments](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/controllers/comments.md)
+* [Likes](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/controllers/likes.md)
+* [Tags](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/controllers/tags.md)
+* [Locations](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/controllers/locations.md)
+* [Geographies](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/controllers/geographies.md)
+
+## SDK Infrastructure
+
+### HTTP
+
+* [HttpResponse](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/http-response.md)
+* [HttpRequest](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/http-request.md)
+
+### Utilities
+
+* [ApiHelper](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/api-helper.md)
+* [HttpDateTime](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/http-date-time.md)
+* [RFC3339DateTime](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/rfc3339-date-time.md)
+* [UnixDateTime](https://www.github.com/MuHamza30/instagram-python-sdk/tree/1.0.0/doc/unix-date-time.md)
+
