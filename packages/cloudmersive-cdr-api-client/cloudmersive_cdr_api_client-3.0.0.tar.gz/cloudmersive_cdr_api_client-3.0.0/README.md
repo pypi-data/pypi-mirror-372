@@ -1,0 +1,99 @@
+# cloudmersive_cdr_api_client
+Use the Content Disarm and Reconstruction API to remove security risks from documents by tearing them down, removing unsafe content and rebuilding them.
+
+This Python package provides a native API client for [Cloudmersive CDR API](https://cloudmersive.com/cdr-api)
+
+- API version: v1
+- Package version: 3.0.0
+- Build package: io.swagger.codegen.languages.PythonClientCodegen
+
+## Requirements.
+
+Python 2.7 and 3.4+
+
+## Installation & Usage
+### pip install
+
+If the python package is hosted on Github, you can install directly from Github
+
+```sh
+pip install git+https://github.com/GIT_USER_ID/GIT_REPO_ID.git
+```
+(you may need to run `pip` with root permission: `sudo pip install git+https://github.com/GIT_USER_ID/GIT_REPO_ID.git`)
+
+Then import the package:
+```python
+import cloudmersive_cdr_api_client 
+```
+
+### Setuptools
+
+Install via [Setuptools](http://pypi.python.org/pypi/setuptools).
+
+```sh
+python setup.py install --user
+```
+(or `sudo python setup.py install` to install the package for all users)
+
+Then import the package:
+```python
+import cloudmersive_cdr_api_client
+```
+
+## Getting Started
+
+Please follow the [installation procedure](#installation--usage) and then run the following:
+
+```python
+from __future__ import print_function
+import time
+import cloudmersive_cdr_api_client
+from cloudmersive_cdr_api_client.rest import ApiException
+from pprint import pprint
+
+# Configure API key authorization: Apikey
+configuration = cloudmersive_cdr_api_client.Configuration()
+configuration.api_key['Apikey'] = 'YOUR_API_KEY'
+# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+# configuration.api_key_prefix['Apikey'] = 'Bearer'
+
+# create an instance of the API class
+api_instance = cloudmersive_cdr_api_client.FileSanitizationApi(cloudmersive_cdr_api_client.ApiClient(configuration))
+input_file = '/path/to/file.txt' # file | Input document, or photos of a document, to extract data from (optional)
+
+try:
+    # Complete Content Disarm and Reconstruction on an Input File, and output in same file format
+    api_instance.file(input_file=input_file)
+except ApiException as e:
+    print("Exception when calling FileSanitizationApi->file: %s\n" % e)
+
+```
+
+## Documentation for API Endpoints
+
+All URIs are relative to *https://api.cloudmersive.com*
+
+Class | Method | HTTP request | Description
+------------ | ------------- | ------------- | -------------
+*FileSanitizationApi* | [**file**](docs/FileSanitizationApi.md#file) | **POST** /cdr/sanitization/file | Complete Content Disarm and Reconstruction on an Input File, and output in same file format
+*FileSanitizationApi* | [**file_to_pdf**](docs/FileSanitizationApi.md#file_to_pdf) | **POST** /cdr/sanitization/file/to/pdf | Complete Content Disarm and Reconstruction on an Input File with PDF/A Output
+
+
+## Documentation For Models
+
+
+
+## Documentation For Authorization
+
+
+## Apikey
+
+- **Type**: API key
+- **API key parameter name**: Apikey
+- **Location**: HTTP header
+
+
+## Author
+
+
+
