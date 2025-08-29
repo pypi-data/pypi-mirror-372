@@ -1,0 +1,89 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:plone="http://namespaces.plone.org/plone"
+    xmlns:zcml="http://namespaces.zope.org/zcml"
+    i18n_domain="pas.plugins.imio">
+
+  <!-- Set overrides folder for Just-a-Bunch-Of-Templates product -->
+  <include package="z3c.jbot" file="meta.zcml" />
+  <browser:jbot
+      directory="overrides"
+      layer="pas.plugins.imio.interfaces.IPasPluginsImioLayer"
+      />
+
+  <!-- Publish static files -->
+  <browser:resourceDirectory
+      name="pas.plugins.imio"
+      directory="static"
+      layer="pas.plugins.imio.interfaces.IPasPluginsImioLayer"
+      />
+
+  <include package="Products.CMFCore" file="permissions.zcml" />
+
+  <!-- Control panel -->
+  <browser:page
+      class="pas.plugins.authomatic.browser.controlpanel.AuthomaticSettingsEditFormSettingsControlPanel"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+      layer="pas.plugins.imio.interfaces.IPasPluginsImioLayer"
+      name="authomatic-controlpanel"
+      permission="cmf.ManagePortal"
+      />
+
+  <!-- Login -->
+  <browser:page
+      class=".view.AuthenticView"
+      for="*"
+      layer="pas.plugins.imio.interfaces.IPasPluginsImioLayer"
+      name="authentic-handler"
+      permission="zope2.View"
+      />
+
+  <browser:page
+      class=".view.AddAuthenticUsers"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+      layer="pas.plugins.imio.interfaces.IPasPluginsImioLayer"
+      name="add-authentic-users"
+      permission="cmf.ManagePortal"
+      />
+
+  <include zcml:condition="not-have plone-5" package="plone.app.controlpanel" file="permissions.zcml" />
+  <!-- Override User list for Plone 4 -->
+  <browser:page
+      zcml:condition="not-have plone-5"
+      name="usergroup-userprefs"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+      class=".usergroups.ImioUsersOverviewControlPanel"
+      layer="pas.plugins.imio.interfaces.IPasPluginsImioLayer"
+      permission="plone.app.controlpanel.UsersAndGroups"
+      template="templates/usergroups_usersoverview_p4.pt"
+      />
+
+  <!-- Override User list for Plone 5 -->
+  <browser:page
+      zcml:condition="have plone-5"
+      name="usergroup-userprefs"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+      class=".usergroups_usersoverview.ImioUsersOverviewControlPanel"
+      layer="pas.plugins.imio.interfaces.IPasPluginsImioLayer"
+      permission="plone.app.controlpanel.UsersAndGroups"
+      template="templates/usergroups_usersoverview_p5.pt"
+      />
+
+  <browser:page
+        zcml:condition="have plone-5"
+        name="zope_login"
+        for="plone.app.layout.navigation.interfaces.INavigationRoot"
+        permission="zope.Public"
+        class="Products.CMFPlone.browser.login.login.FailsafeLoginForm"
+        template="templates/zope_login.pt"
+        />
+
+  <browser:page
+      class=".view.RevokeUserAccess"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+      layer="pas.plugins.imio.interfaces.IPasPluginsImioLayer"
+      name="revoke-user-access"
+      permission="cmf.ManagePortal"
+      />
+</configure>

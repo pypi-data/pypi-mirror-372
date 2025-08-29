@@ -1,0 +1,151 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:zcml="http://namespaces.zope.org/zcml"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:i18n="http://namespaces.zope.org/i18n"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    i18n_domain="pas.plugins.imio">
+
+  <five:registerPackage initialize=".initialize" package="." />
+
+  <include package="plone.api" />
+  <include package="Products.GenericSetup" file="meta.zcml" />
+  <include package="Products.GenericSetup" />
+  <include package="z3c.jbot" />
+  <include package="pas.plugins.authomatic" />
+  <include package="plone.app.changeownership" />
+
+  <i18n:registerTranslations directory="locales" />
+
+  <include package=".browser" />
+
+  <browser:page
+    name="imio_login"
+    for="OFS.interfaces.IItem"
+    layer=".interfaces.IPasPluginsImioLayer"
+    permission="zope2.View"
+    class=".login.ImioLoginFormView"
+    />
+
+  <browser:page
+    name="imio_logout"
+    for="OFS.interfaces.IItem"
+    layer=".interfaces.IPasPluginsImioLayer"
+    permission="zope2.View"
+    class=".logout.ImioLogoutFormView"
+    />
+
+  <genericsetup:registerProfile
+    name="base"
+    title="pas.plugins.imio base"
+    directory="profiles/base"
+    description="Installs the pas.plugins.imio base add-on."
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+    post_handler=".setuphandlers.post_install"
+    />
+
+
+  <genericsetup:registerProfile
+    zcml:condition="have plone-5"
+    name="default"
+    title="pas.plugins.imio plone5/6"
+    directory="profiles/plone5"
+    description="Installs the pas.plugins.imio add-on."
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+    post_handler=".setuphandlers.post_install"
+    />
+
+  <genericsetup:registerProfile
+    zcml:condition="not-have plone-5"
+    name="default"
+    title="pas.plugins.imio plone4"
+    directory="profiles/plone4"
+    description="Installs the pas.plugins.imio add-on."
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+    post_handler=".setuphandlers.post_install"
+    />
+
+  <genericsetup:registerProfile
+    zcml:condition="have plone-5"
+    name="testing"
+    title="pas.plugins.imio testing"
+    directory="profiles/testing5"
+    description="Installs the pas.plugins.imio base add-on."
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+    post_handler=".setuphandlers.post_install"
+    />
+
+  <genericsetup:registerProfile
+    zcml:condition="not-have plone-5"
+    name="testing"
+    title="pas.plugins.imio testing"
+    directory="profiles/testing4"
+    description="Installs the pas.plugins.imio base add-on."
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+    post_handler=".setuphandlers.post_install"
+    />
+
+
+  <genericsetup:registerProfile
+    name="uninstall"
+    title="pas.plugins.imio (uninstall)"
+    directory="profiles/uninstall"
+    description="Uninstalls the pas.plugins.imio add-on."
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+    post_handler=".setuphandlers.uninstall"
+    />
+
+  <genericsetup:registerProfile
+    name="usagers"
+    title="pas.plugins.imio usagers plone5/6"
+    directory="profiles/usagers"
+    description="Installs the pas.plugins.imio add-on with usagers."
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+    post_handler=".setuphandlers.post_install"
+    />
+
+  <utility
+    factory=".setuphandlers.HiddenProfiles"
+    name="pas.plugins.imio-hiddenprofiles" />
+
+  <adapter
+    zcml:condition="not-have plone-5"
+    provides=".user.IPASUserDataSchema"
+    for="*"
+    factory=".user.PASUserDataPanelAdapter"
+    />
+
+  <utility
+    factory=".useridfactories.ProviderIDFactory"
+    name="authenticusername"
+    />
+  <!--configure package="plone.app.users">
+    <browser:page
+      for="plone.app.layout.navigation.interfaces.INavigationRoot"
+      name="personal-information"
+      class="pas.plugins.imio.user.PasUserDataPanel"
+      permission="cmf.SetOwnProperties"
+      layer="pas.plugins.imio.interfaces.IPasPluginsImioLayer"
+      />
+    <browser:page
+      for="plone.app.layout.navigation.interfaces.INavigationRoot"
+      name="user-information"
+      class="pas.plugins.imio.user.PasUserDataConfiglet"
+      permission="plone.app.controlpanel.UsersAndGroups"
+      layer="pas.plugins.imio.interfaces.IPasPluginsImioLayer"
+      />
+  </configure-->
+
+  <genericsetup:upgradeStep
+      title="Migrate to new userid"
+      description="Update userid (do not use username) for users and (local-)roles"
+      source="1000"
+      destination="1001"
+      handler="pas.plugins.imio.upgrades.set_new_userid"
+      sortkey="1"
+      profile="pas.plugins.imio:default"
+      />
+
+</configure>
+
