@@ -1,0 +1,48 @@
+name: Test Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-build:
+    name: Test build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Test build with maturin
+        uses: PyO3/maturin-action@v1
+        with:
+          manylinux: auto
+          command: build
+
+      - name: Test installation
+        run: |
+          # Find and install the wheel
+          find target -name "*.whl" -exec pip install {} \;
+          python -c "import blazemetrics; print('Import successful')"
+
+      - name: Run basic tests
+        run: |
+          python -c "
+          from blazemetrics import rouge_score, bleu
+          candidates = ['the cat sat on the mat']
+          references = [['the cat was on the mat']]
+          print('ROUGE:', rouge_score(candidates, references, score_type='rouge_n', n=1))
+          print('BLEU:', bleu(candidates, references))
+          print('All tests passed!')
+          " 
