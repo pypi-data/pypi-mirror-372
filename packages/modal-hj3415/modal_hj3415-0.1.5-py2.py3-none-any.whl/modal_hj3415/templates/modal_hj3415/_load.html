@@ -1,0 +1,75 @@
+<!-- 부트스트랩 모달창 열어주는 코드, 타이틀과 푸터를 변경한다. -->
+{% load static %}
+
+{% if popup %}
+<style>
+.modal-title {
+  text-decoration: none;
+  color: #777777;
+  transition: 0.3s;
+  line-height: 1;
+}
+
+.modal .modal-dialog .modal-footer .popup-check {
+  text-decoration: none;
+  color: #777777;
+  transition: 0.3s;
+  line-height: 1;
+}
+
+.modal-body {
+  padding: 0;
+}
+</style>
+
+
+<div class="modal fade" id="{{ modal_id }}" tabindex="-1" aria-labelledby="{{ modal_id }}Label" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="{{ modal_id }}Label">{{ popup.modal_title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% include template_name %}
+      </div>
+      <div class="modal-footer justify-content-start">
+        <div class="popup-check">
+          <input type="checkbox" id="epopup_suppress" />
+          <label for="epopup_suppress" data-id="checkbox_text">{{ dont_show_again }}</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const storageKey = "ecacher-modal_{{ modal_id }}";
+  // '다시보지않기'면 DOM 제거
+  if (localStorage.getItem(storageKey) === 'true') {
+    const el = document.getElementById('{{ modal_id }}');
+    if (el) el.remove();
+    return;
+  }
+  {% if auto_open %}
+  const modalEl = document.getElementById('{{ modal_id }}');
+  if (modalEl && window.bootstrap?.Modal) {
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+    const checkbox = modalEl.querySelector('#epopup_suppress');
+    if (checkbox) {
+      checkbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          localStorage.setItem("ecacher-modal_{{ modal_id }}", 'true');
+          modal.hide();
+        } else {
+          localStorage.removeItem("ecacher-modal_{{ modal_id }}");
+        }
+      });
+    }
+  }
+  {% endif %}
+});
+</script>
+{% endif %}
