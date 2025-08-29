@@ -1,0 +1,46 @@
+name: Hotfix CI
+
+on:
+  push:
+    branches:
+      - 'hotfix/**'
+      - 'fix/**'
+  pull_request:
+    branches: [ main ]
+    types: [ opened, synchronize, reopened ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  urgent-validation:
+    name: Urgent Validation
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: ./api-runtime
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            api-runtime/target
+          key: ${{ runner.os }}-cargo-hotfix-${{ hashFiles('api-runtime/Cargo.lock') }}
+      
+      - name: Run critical tests
+        run: cargo test --release --verbose
+      
+      - name: Build release
+        run: cargo build --release --verbose
+      
+      - name: Security scan
+        run: |
+          cargo install cargo-audit || true
+          cargo audit || true

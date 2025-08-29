@@ -1,0 +1,435 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  # Validate PR metadata
+  pr-metadata:
+    name: PR Metadata Validation
+    runs-on: self-hosted
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Check PR Title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title;
+            
+            // Check conventional commit format
+            const validTypes = ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert'];
+            const typeRegex = new RegExp(`^(${validTypes.join('|')})(\\(.+\\))?(!)?:\\s.+`);
+            
+            if (!typeRegex.test(title)) {
+              core.setFailed(`PR title must follow conventional commit format: type(scope): description
+              Valid types: ${validTypes.join(', ')}
+              Current title: "${title}"`);
+              
+              // Add comment to PR
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `❌ **PR Title Validation Failed**
+                
+                Your PR title must follow the [Conventional Commits](https://www.conventionalcommits.org/) format:
+                \`type(scope): description\`
+                
+                **Valid types:** ${validTypes.map(t => `\`${t}\``).join(', ')}
+                
+                **Examples:**
+                - \`feat(api): add new endpoint for user management\`
+                - \`fix: resolve memory leak in parser\`
+                - \`docs(readme): update installation instructions\`
+                
+                Please update your PR title and try again.`
+              });
+            } else {
+              console.log(`✅ PR title is valid: ${title}`);
+            }
+
+      - name: Check PR Description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+            
+            // Check for minimum description length
+            if (body.length < 50) {
+              core.warning('PR description is too short. Please provide more details.');
+            }
+            
+            // Check for required sections
+            const requiredSections = ['## Description', '## Type of Change', '## Testing'];
+            const missingSections = requiredSections.filter(section => !body.includes(section));
+            
+            if (missingSections.length > 0) {
+              core.warning(`PR description is missing sections: ${missingSections.join(', ')}`);
+              
+              // Add comment with template
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `📝 **PR Description Template**
+                
+                Your PR description is missing some sections. Please update it with:
+                
+                ## Description
+                Brief description of what this PR does.
+                
+                ## Type of Change
+                - [ ] Bug fix (non-breaking change which fixes an issue)
+                - [ ] New feature (non-breaking change which adds functionality)
+                - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+                - [ ] Documentation update
+                
+                ## Testing
+                - [ ] Tests pass locally
+                - [ ] Added new tests
+                - [ ] Updated existing tests
+                
+                ## Checklist
+                - [ ] My code follows the style guidelines
+                - [ ] I have performed a self-review
+                - [ ] I have commented my code where necessary
+                - [ ] I have updated the documentation
+                - [ ] My changes generate no new warnings`
+              });
+            }
+
+      - name: Check PR Size
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { additions, deletions, changed_files } = pr;
+            
+            let size = 'small';
+            let emoji = '🟢';
+            
+            if (changed_files > 30 || additions + deletions > 1000) {
+              size = 'extra-large';
+              emoji = '🔴';
+              core.warning('This PR is very large. Consider breaking it into smaller PRs.');
+            } else if (changed_files > 15 || additions + deletions > 500) {
+              size = 'large';
+              emoji = '🟡';
+            } else if (changed_files > 5 || additions + deletions > 100) {
+              size = 'medium';
+              emoji = '🟠';
+            }
+            
+            // Add size label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: [`size/${size}`]
+            });
+            
+            console.log(`${emoji} PR Size: ${size} (${changed_files} files, +${additions}/-${deletions})`);
+
+  # Auto-label PRs based on files changed
+  auto-label:
+    name: Auto Label
+    runs-on: self-hosted
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Label based on files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            const labels = new Set();
+            
+            for (const file of files) {
+              // Documentation changes
+              if (file.filename.endsWith('.md') || file.filename.includes('docs/')) {
+                labels.add('documentation');
+              }
+              
+              // Test changes
+              if (file.filename.includes('test') || file.filename.includes('spec')) {
+                labels.add('tests');
+              }
+              
+              // CI/CD changes
+              if (file.filename.includes('.github/') || file.filename.includes('ci/')) {
+                labels.add('ci/cd');
+              }
+              
+              // Security changes
+              if (file.filename.includes('security') || file.filename === 'SECURITY.md') {
+                labels.add('security');
+              }
+              
+              // Dependency changes
+              if (file.filename === 'Cargo.toml' || file.filename === 'Cargo.lock') {
+                labels.add('dependencies');
+              }
+              
+              // Source code changes
+              if (file.filename.endsWith('.rs') && !file.filename.includes('test')) {
+                labels.add('rust');
+              }
+            }
+            
+            if (labels.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: Array.from(labels)
+              });
+            }
+
+  # Check for merge conflicts
+  conflict-check:
+    name: Merge Conflict Check
+    runs-on: self-hosted
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for conflicts
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          if ! git merge-tree $(git merge-base HEAD origin/${{ github.base_ref }}) HEAD origin/${{ github.base_ref }} | grep -q "<<<<<<< "; then
+            echo "✅ No merge conflicts detected"
+          else
+            echo "❌ Merge conflicts detected"
+            echo "::error::This PR has merge conflicts that must be resolved"
+            exit 1
+          fi
+
+  # Comment commands handler
+  command-handler:
+    name: Handle PR Commands
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse and Execute Command
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment;
+            const command = comment.body.trim();
+            
+            // Check if commenter has write permission
+            const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: comment.user.login
+            });
+            
+            if (!['admin', 'write'].includes(permission.permission)) {
+              await github.rest.reactions.createForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: comment.id,
+                content: '-1'
+              });
+              return;
+            }
+            
+            // Handle commands
+            let response = '';
+            
+            switch(command) {
+              case '/retest':
+                response = '🔄 Re-running CI tests...';
+                // Trigger CI rerun
+                await github.rest.actions.reRunWorkflow({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: context.runId
+                });
+                break;
+                
+              case '/format':
+                response = '🎨 Running auto-formatter...';
+                // This would trigger a formatting workflow
+                break;
+                
+              case '/benchmark':
+                response = '📊 Running performance benchmarks...';
+                // This would trigger benchmark workflow
+                break;
+                
+              case '/approve':
+                response = '✅ Approval noted';
+                await github.rest.pulls.createReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.issue.number,
+                  event: 'APPROVE'
+                });
+                break;
+                
+              case '/help':
+                response = `**Available PR Commands:**
+                - \`/retest\` - Re-run CI tests
+                - \`/format\` - Run auto-formatter
+                - \`/benchmark\` - Run performance benchmarks
+                - \`/approve\` - Approve this PR
+                - \`/help\` - Show this help message`;
+                break;
+                
+              default:
+                response = `Unknown command: ${command}. Use \`/help\` for available commands.`;
+            }
+            
+            // Post response
+            if (response) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: response
+              });
+            }
+            
+            // Add reaction to acknowledge
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: comment.id,
+              content: 'rocket'
+            });
+
+  # PR review assignment
+  review-assignment:
+    name: Auto Assign Reviewers
+    runs-on: self-hosted
+    if: github.event_name == 'pull_request' && github.event.action == 'opened'
+    steps:
+      - name: Assign Reviewers
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Define review teams based on labels or files
+            const reviewers = [];
+            const teamReviewers = [];
+            
+            // Get labels
+            const labels = pr.labels.map(l => l.name);
+            
+            // Assign reviewers based on labels
+            if (labels.includes('security')) {
+              reviewers.push('security-team-member');
+            }
+            
+            if (labels.includes('documentation')) {
+              reviewers.push('docs-team-member');
+            }
+            
+            // Don't assign to PR author
+            const filteredReviewers = reviewers.filter(r => r !== pr.user.login);
+            
+            if (filteredReviewers.length > 0) {
+              try {
+                await github.rest.pulls.requestReviewers({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  reviewers: filteredReviewers,
+                  team_reviewers: teamReviewers
+                });
+                console.log(`Assigned reviewers: ${filteredReviewers.join(', ')}`);
+              } catch (error) {
+                console.log('Could not assign reviewers:', error.message);
+              }
+            }
+
+  # Generate PR summary with AI
+  pr-summary:
+    name: Generate PR Summary
+    runs-on: self-hosted
+    if: github.event_name == 'pull_request' && github.event.action == 'opened'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Get diff statistics
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            // Categorize changes
+            const changes = {
+              added: files.filter(f => f.status === 'added').map(f => f.filename),
+              modified: files.filter(f => f.status === 'modified').map(f => f.filename),
+              removed: files.filter(f => f.status === 'removed').map(f => f.filename)
+            };
+            
+            // Create summary comment
+            const summary = `## 📊 PR Summary
+            
+            **Changes:** ${files.length} files (+${pr.additions} / -${pr.deletions})
+            
+            ### 📁 Files Changed
+            ${changes.added.length > 0 ? `\n**Added (${changes.added.length}):**\n${changes.added.map(f => `- ✨ ${f}`).join('\n')}` : ''}
+            ${changes.modified.length > 0 ? `\n**Modified (${changes.modified.length}):**\n${changes.modified.slice(0, 10).map(f => `- 📝 ${f}`).join('\n')}${changes.modified.length > 10 ? `\n- ... and ${changes.modified.length - 10} more` : ''}` : ''}
+            ${changes.removed.length > 0 ? `\n**Removed (${changes.removed.length}):**\n${changes.removed.map(f => `- 🗑️ ${f}`).join('\n')}` : ''}
+            
+            ### 🏷️ Metadata
+            - **Author:** @${pr.user.login}
+            - **Base Branch:** \`${pr.base.ref}\`
+            - **Head Branch:** \`${pr.head.ref}\`
+            - **Commits:** ${pr.commits}
+            
+            ---
+            <details>
+            <summary>🤖 Automation Details</summary>
+            
+            - PR validation will run automatically
+            - Use \`/help\` to see available commands
+            - Security and quality checks are required to pass
+            </details>`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: summary
+            });

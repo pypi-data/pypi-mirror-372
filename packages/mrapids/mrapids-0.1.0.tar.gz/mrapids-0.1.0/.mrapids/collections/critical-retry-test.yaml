@@ -1,0 +1,35 @@
+name: critical-retry-test
+description: Test critical failures and retry logic
+
+requests:
+  # Critical request - if this fails, stop execution
+  - name: critical_check
+    operation: get
+    critical: true
+    expect:
+      status: 200
+      
+  # This should not run if critical_check fails
+  - name: dependent_operation
+    operation: post
+    depends_on:
+      - critical_check
+    body:
+      data: "test"
+      
+  # Test retry with exponential backoff
+  - name: flaky_endpoint
+    operation: status/{code}
+    params:
+      code: "500"  # This will fail
+    retry:
+      attempts: 3
+      delay: 100
+      backoff: exponential
+      
+  # Cleanup always runs
+  - name: cleanup
+    operation: get
+    run_always: true
+    params:
+      action: "cleanup"

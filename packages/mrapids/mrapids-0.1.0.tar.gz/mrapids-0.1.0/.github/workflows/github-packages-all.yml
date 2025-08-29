@@ -1,0 +1,293 @@
+name: Publish to GitHub Packages (All Types)
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_types:
+        description: 'Which packages to publish'
+        required: true
+        type: choice
+        options:
+          - all
+          - docker
+          - binaries
+          - archives
+        default: all
+  
+  release:
+    types: [published]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 1. Publish Docker Container to GitHub Packages
+  publish-docker:
+    name: 📦 Docker Container Package
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'release' || 
+      github.event.inputs.package_types == 'all' ||
+      github.event.inputs.package_types == 'docker'
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Generate Docker summary
+        run: |
+          echo "### 🐳 Docker Package Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Registry**: \`${{ env.REGISTRY }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "🏷️ **Image**: \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Pull Commands:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Latest version" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Specific version" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View Package](https://github.com/${{ github.repository }}/pkgs/container/$(basename ${{ env.IMAGE_NAME }}))" >> $GITHUB_STEP_SUMMARY
+
+  # 2. Publish Binary Packages to GitHub Packages
+  publish-binaries:
+    name: 📦 Binary Packages (${{ matrix.target }})
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'release' || 
+      github.event.inputs.package_types == 'all' ||
+      github.event.inputs.package_types == 'binaries'
+    permissions:
+      contents: write
+      packages: write
+    
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: linux-amd64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: windows-amd64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            name: darwin-amd64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: darwin-arm64
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      
+      - name: Build Release Binary
+        run: cargo build --release --target ${{ matrix.target }} --all-features
+      
+      - name: Package Binary
+        shell: bash
+        run: |
+          cd target/${{ matrix.target }}/release
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            7z a ../../../mrapids-${{ matrix.name }}.zip mrapids.exe
+            echo "ASSET_PATH=mrapids-${{ matrix.name }}.zip" >> $GITHUB_ENV
+            echo "ASSET_CONTENT_TYPE=application/zip" >> $GITHUB_ENV
+          else
+            tar czf ../../../mrapids-${{ matrix.name }}.tar.gz mrapids
+            echo "ASSET_PATH=mrapids-${{ matrix.name }}.tar.gz" >> $GITHUB_ENV
+            echo "ASSET_CONTENT_TYPE=application/gzip" >> $GITHUB_ENV
+          fi
+          cd ../../../
+      
+      - name: Upload to GitHub Release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./${{ env.ASSET_PATH }}
+          asset_name: ${{ env.ASSET_PATH }}
+          asset_content_type: ${{ env.ASSET_CONTENT_TYPE }}
+      
+      - name: Upload as Package
+        run: |
+          # Upload binary as a GitHub Package
+          VERSION="${{ github.ref_name }}"
+          if [[ "$VERSION" == "main" ]]; then VERSION="latest"; fi
+          
+          echo "Uploading ${{ env.ASSET_PATH }} as package version $VERSION"
+          
+          curl -X PUT \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: ${{ env.ASSET_CONTENT_TYPE }}" \
+            --data-binary @${{ env.ASSET_PATH }} \
+            "https://uploads.github.com/repos/${{ github.repository }}/packages/generic/mrapids-${{ matrix.name }}/$VERSION/${{ env.ASSET_PATH }}"
+
+  # 3. Publish Archive Packages (source code, docs, etc.)
+  publish-archives:
+    name: 📦 Archive Packages
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'release' || 
+      github.event.inputs.package_types == 'all' ||
+      github.event.inputs.package_types == 'archives'
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create Documentation Archive
+        run: |
+          # Build documentation
+          cargo doc --no-deps --all-features
+          
+          # Create archives
+          tar czf docs.tar.gz -C target doc
+          tar czf examples.tar.gz examples/
+          tar czf source.tar.gz src/ Cargo.toml Cargo.lock README.md
+      
+      - name: Upload Archives as Packages
+        run: |
+          VERSION="${{ github.ref_name }}"
+          if [[ "$VERSION" == "main" ]]; then VERSION="latest"; fi
+          
+          for file in *.tar.gz; do
+            echo "Uploading $file as package"
+            curl -X PUT \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/gzip" \
+              --data-binary @$file \
+              "https://uploads.github.com/repos/${{ github.repository }}/packages/generic/mrapids-archives/$VERSION/$file"
+          done
+      
+      - name: Create Package Summary
+        run: |
+          echo "### 📚 Archive Packages Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following archives are available:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Archive | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| docs.tar.gz | API Documentation |" >> $GITHUB_STEP_SUMMARY
+          echo "| examples.tar.gz | Example Code |" >> $GITHUB_STEP_SUMMARY
+          echo "| source.tar.gz | Source Code |" >> $GITHUB_STEP_SUMMARY
+
+  # 4. Create Package Registry Index
+  create-package-index:
+    name: 📋 Create Package Index
+    runs-on: self-hosted
+    needs: [publish-docker, publish-binaries, publish-archives]
+    if: always()
+    permissions:
+      contents: write
+      packages: read
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate Package Index
+        run: |
+          cat > PACKAGES.md << 'EOF'
+          # 📦 GitHub Packages Registry
+          
+          ## Available Packages
+          
+          ### 🐳 Docker Images
+          - **Latest**: `ghcr.io/microrapids/api-runtime:latest`
+          - **Version**: `ghcr.io/microrapids/api-runtime:${{ github.ref_name }}`
+          
+          ### 💾 Binary Releases
+          - **Linux AMD64**: `mrapids-linux-amd64.tar.gz`
+          - **Windows AMD64**: `mrapids-windows-amd64.zip`
+          - **macOS AMD64**: `mrapids-darwin-amd64.tar.gz`
+          - **macOS ARM64**: `mrapids-darwin-arm64.tar.gz`
+          
+          ### 📚 Archives
+          - **Documentation**: `docs.tar.gz`
+          - **Examples**: `examples.tar.gz`
+          - **Source**: `source.tar.gz`
+          
+          ## Installation
+          
+          ### Docker
+          \`\`\`bash
+          docker pull ghcr.io/microrapids/api-runtime:latest
+          docker run -p 8080:8080 ghcr.io/microrapids/api-runtime:latest
+          \`\`\`
+          
+          ### Binary
+          \`\`\`bash
+          # Download for your platform
+          curl -LO https://github.com/microrapids/api-runtime/releases/latest/download/mrapids-linux-amd64.tar.gz
+          tar xzf mrapids-linux-amd64.tar.gz
+          ./mrapids --help
+          \`\`\`
+          
+          ## Package URLs
+          - [Container Registry](https://github.com/microrapids/api-runtime/pkgs/container/api-runtime)
+          - [All Packages](https://github.com/microrapids/api-runtime/packages)
+          
+          ---
+          Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Version: ${{ github.ref_name }}
+          EOF
+      
+      - name: Update README with package info
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 All GitHub Packages Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Package Types Created:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Docker Container Images" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Platform-specific Binaries" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Documentation Archives" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### View All Packages:" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [GitHub Packages](https://github.com/${{ github.repository }}/packages)" >> $GITHUB_STEP_SUMMARY

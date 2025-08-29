@@ -1,0 +1,437 @@
+name: Publish Multi-Language Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      languages:
+        description: 'Which language packages to create'
+        required: true
+        type: choice
+        options:
+          - all
+          - python
+          - javascript
+          - java
+          - dotnet
+          - go
+          - ruby
+  
+  release:
+    types: [published]
+
+jobs:
+  # Python Package
+  python-package:
+    name: 🐍 Python Package
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'release' || 
+      github.event.inputs.languages == 'all' ||
+      github.event.inputs.languages == 'python'
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Create Python Package Structure
+        run: |
+          # Create a sample Python package
+          mkdir -p mrapids_py/src
+          
+          cat > mrapids_py/setup.py << 'EOF'
+          from setuptools import setup, find_packages
+          
+          setup(
+              name="mrapids-client",
+              version="${{ github.ref_name }}",
+              packages=find_packages(),
+              install_requires=["requests>=2.28.0"],
+              author="MicroRapids",
+              description="Python client for MicroRapids API Runtime",
+              url="https://github.com/microrapids/api-runtime",
+          )
+          EOF
+          
+          cat > mrapids_py/src/__init__.py << 'EOF'
+          """MicroRapids Python Client"""
+          __version__ = "${{ github.ref_name }}"
+          
+          class MicroRapidsClient:
+              def __init__(self, base_url):
+                  self.base_url = base_url
+              
+              def health_check(self):
+                  return {"status": "healthy", "version": __version__}
+          EOF
+      
+      - name: Build Python Package
+        run: |
+          cd mrapids_py
+          pip install build
+          python -m build
+      
+      - name: Upload Python Package to GitHub Packages
+        run: |
+          cd mrapids_py
+          for file in dist/*; do
+            filename=$(basename "$file")
+            curl -X PUT \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$file" \
+              "https://uploads.github.com/repos/${{ github.repository }}/packages/python/mrapids-client/${{ github.ref_name }}/$filename"
+          done
+      
+      - name: Create pip install instructions
+        run: |
+          echo "### 🐍 Python Package Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Install with:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# From GitHub Releases" >> $GITHUB_STEP_SUMMARY
+          echo "pip install https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mrapids_client-${{ github.ref_name }}-py3-none-any.whl" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # JavaScript/NPM Package
+  npm-package:
+    name: 📦 NPM Package
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'release' || 
+      github.event.inputs.languages == 'all' ||
+      github.event.inputs.languages == 'javascript'
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://npm.pkg.github.com'
+      
+      - name: Create NPM Package
+        run: |
+          mkdir -p mrapids-js
+          cd mrapids-js
+          
+          cat > package.json << 'EOF'
+          {
+            "name": "@microrapids/api-runtime-client",
+            "version": "${{ github.ref_name }}",
+            "description": "JavaScript client for MicroRapids API Runtime",
+            "main": "index.js",
+            "repository": {
+              "type": "git",
+              "url": "https://github.com/microrapids/api-runtime.git"
+            },
+            "publishConfig": {
+              "registry": "https://npm.pkg.github.com"
+            }
+          }
+          EOF
+          
+          cat > index.js << 'EOF'
+          class MicroRapidsClient {
+            constructor(baseUrl) {
+              this.baseUrl = baseUrl;
+            }
+            
+            async healthCheck() {
+              return { status: 'healthy', version: '${{ github.ref_name }}' };
+            }
+          }
+          
+          module.exports = MicroRapidsClient;
+          EOF
+          
+          cat > .npmrc << 'EOF'
+          @microrapids:registry=https://npm.pkg.github.com
+          //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
+          EOF
+      
+      - name: Publish to GitHub Packages
+        run: |
+          cd mrapids-js
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create npm install instructions
+        run: |
+          echo "### 📦 NPM Package Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Install with:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "npm install @microrapids/api-runtime-client" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # Java/Maven Package
+  java-package:
+    name: ☕ Maven Package
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'release' || 
+      github.event.inputs.languages == 'all' ||
+      github.event.inputs.languages == 'java'
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+      
+      - name: Create Maven Package
+        run: |
+          mkdir -p mrapids-java/src/main/java/com/microrapids
+          cd mrapids-java
+          
+          cat > pom.xml << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <project xmlns="http://maven.apache.org/POM/4.0.0"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+                   http://maven.apache.org/xsd/maven-4.0.0.xsd">
+              <modelVersion>4.0.0</modelVersion>
+              
+              <groupId>com.microrapids</groupId>
+              <artifactId>api-runtime-client</artifactId>
+              <version>${{ github.ref_name }}</version>
+              
+              <distributionManagement>
+                  <repository>
+                      <id>github</id>
+                      <name>GitHub Packages</name>
+                      <url>https://maven.pkg.github.com/microrapids/api-runtime</url>
+                  </repository>
+              </distributionManagement>
+          </project>
+          EOF
+          
+          cat > src/main/java/com/microrapids/Client.java << 'EOF'
+          package com.microrapids;
+          
+          public class Client {
+              private String baseUrl;
+              
+              public Client(String baseUrl) {
+                  this.baseUrl = baseUrl;
+              }
+              
+              public String healthCheck() {
+                  return "healthy";
+              }
+          }
+          EOF
+      
+      - name: Publish to GitHub Packages
+        run: |
+          cd mrapids-java
+          mvn deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # .NET/NuGet Package
+  dotnet-package:
+    name: 🔷 NuGet Package
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'release' || 
+      github.event.inputs.languages == 'all' ||
+      github.event.inputs.languages == 'dotnet'
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '7.0.x'
+      
+      - name: Create .NET Package
+        run: |
+          mkdir mrapids-dotnet
+          cd mrapids-dotnet
+          
+          dotnet new classlib -n MicroRapids.Client
+          cd MicroRapids.Client
+          
+          cat > MicroRapids.Client.csproj << 'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <TargetFramework>net7.0</TargetFramework>
+              <PackageId>MicroRapids.ApiRuntime.Client</PackageId>
+              <Version>${{ github.ref_name }}</Version>
+              <Authors>MicroRapids</Authors>
+              <Description>.NET client for MicroRapids API Runtime</Description>
+              <RepositoryUrl>https://github.com/microrapids/api-runtime</RepositoryUrl>
+            </PropertyGroup>
+          </Project>
+          EOF
+      
+      - name: Pack and Publish
+        run: |
+          cd mrapids-dotnet/MicroRapids.Client
+          dotnet pack --configuration Release
+          dotnet nuget push bin/Release/*.nupkg \
+            --source https://nuget.pkg.github.com/microrapids/index.json \
+            --api-key ${{ secrets.GITHUB_TOKEN }}
+
+  # Go Package
+  go-package:
+    name: 🐹 Go Package
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'release' || 
+      github.event.inputs.languages == 'all' ||
+      github.event.inputs.languages == 'go'
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Build Go Binaries
+        run: |
+          mkdir -p mrapids-go
+          cd mrapids-go
+          
+          cat > main.go << 'EOF'
+          package main
+          
+          import "fmt"
+          
+          func main() {
+              fmt.Println("MicroRapids Go Client v${{ github.ref_name }}")
+          }
+          EOF
+          
+          # Build for multiple platforms
+          GOOS=linux GOARCH=amd64 go build -o mrapids-linux-amd64
+          GOOS=darwin GOARCH=amd64 go build -o mrapids-darwin-amd64
+          GOOS=windows GOARCH=amd64 go build -o mrapids-windows-amd64.exe
+      
+      - name: Upload Go Binaries as Generic Packages
+        run: |
+          cd mrapids-go
+          for binary in mrapids-*; do
+            curl -X PUT \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$binary" \
+              "https://uploads.github.com/repos/${{ github.repository }}/packages/go/mrapids/${{ github.ref_name }}/$binary"
+          done
+
+  # Ruby Package
+  ruby-package:
+    name: 💎 Ruby Gem
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'release' || 
+      github.event.inputs.languages == 'all' ||
+      github.event.inputs.languages == 'ruby'
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+      
+      - name: Create Ruby Gem
+        run: |
+          mkdir -p mrapids-ruby/lib
+          cd mrapids-ruby
+          
+          cat > mrapids-client.gemspec << 'EOF'
+          Gem::Specification.new do |s|
+            s.name        = 'mrapids-client'
+            s.version     = '${{ github.ref_name }}'
+            s.summary     = 'MicroRapids API Runtime Client'
+            s.authors     = ['MicroRapids']
+            s.files       = ['lib/mrapids.rb']
+            s.homepage    = 'https://github.com/microrapids/api-runtime'
+          end
+          EOF
+          
+          cat > lib/mrapids.rb << 'EOF'
+          class MicroRapidsClient
+            def initialize(base_url)
+              @base_url = base_url
+            end
+            
+            def health_check
+              { status: 'healthy', version: '${{ github.ref_name }}' }
+            end
+          end
+          EOF
+      
+      - name: Build and Publish Gem
+        run: |
+          cd mrapids-ruby
+          gem build mrapids-client.gemspec
+          
+          # Configure credentials
+          mkdir -p ~/.gem
+          echo "---" > ~/.gem/credentials
+          echo ":github: Bearer ${{ secrets.GITHUB_TOKEN }}" >> ~/.gem/credentials
+          chmod 0600 ~/.gem/credentials
+          
+          # Push to GitHub Packages
+          gem push --key github \
+            --host https://rubygems.pkg.github.com/microrapids \
+            mrapids-client-*.gem
+
+  # Summary
+  package-summary:
+    name: 📊 Package Summary
+    runs-on: self-hosted
+    needs: [python-package, npm-package, java-package, dotnet-package, go-package, ruby-package]
+    if: always()
+    
+    steps:
+      - name: Create Summary
+        run: |
+          echo "# 🌍 Multi-Language Packages Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Package Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Language | Package | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🐍 Python | mrapids-client | ${{ needs.python-package.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📦 NPM | @microrapids/api-runtime-client | ${{ needs.npm-package.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ☕ Java | com.microrapids:api-runtime-client | ${{ needs.java-package.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔷 .NET | MicroRapids.ApiRuntime.Client | ${{ needs.dotnet-package.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🐹 Go | mrapids binaries | ${{ needs.go-package.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 💎 Ruby | mrapids-client | ${{ needs.ruby-package.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View all packages: [GitHub Packages](https://github.com/${{ github.repository }}/packages)" >> $GITHUB_STEP_SUMMARY

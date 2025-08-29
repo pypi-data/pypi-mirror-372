@@ -1,0 +1,124 @@
+# Default MCP Agent Policy
+# This policy provides safe defaults for AI agents accessing APIs
+
+version: "1.0"
+
+metadata:
+  name: "default-agent-policy"
+  description: "Safe defaults for AI agent API access"
+  author: "MicroRapid Team"
+  created: "2024-01-20"
+
+defaults:
+  # Only allow read operations by default
+  allow_methods: ["GET", "HEAD", "OPTIONS"]
+  # Prevent agents from accessing external references
+  deny_external_refs: true
+  # Require authentication for all operations
+  require_auth: true
+  # Basic audit logging by default
+  audit_level: "basic"
+
+rules:
+  # Rule 1: Allow read-only access to public APIs
+  - name: "public-readonly"
+    description: "Allow read-only operations on public APIs"
+    pattern: "api.public.com/*"
+    allow:
+      methods: ["GET"]
+      operations: ["list*", "get*", "search*", "find*"]
+    audit:
+      level: "basic"
+      
+  # Rule 2: Allow GitHub read operations
+  - name: "github-readonly"
+    description: "Read-only access to GitHub API"
+    pattern: "*github.com/*"
+    conditions:
+      - auth_profile: "github-readonly"
+    allow:
+      methods: ["GET"]
+      operations:
+        - "get*"
+        - "list*"
+        - "search*"
+    deny:
+      operations:
+        - "*secret*"
+        - "*token*"
+        - "*key*"
+    audit:
+      level: "detailed"
+      include_response: false
+      
+  # Rule 3: Block all payment/financial operations
+  - name: "block-payments"
+    description: "Deny all payment-related operations"
+    pattern: "*/payment/*"
+    deny:
+      all: true
+    explain: "Payment operations require human approval and cannot be performed by agents"
+    
+  # Rule 4: Internal API access with conditions
+  - name: "internal-apis"
+    description: "Conditional access to internal APIs"
+    pattern: "*.internal.company.com/*"
+    conditions:
+      - auth_profile: "internal-agent"
+        environment: "staging"
+        time_window: "business_hours"
+    allow:
+      methods: ["GET", "POST"]
+      operations:
+        - "get*"
+        - "list*"
+        - "create*"
+      tags: ["safe", "agent-allowed"]
+    deny:
+      operations:
+        - "delete*"
+        - "update*Admin*"
+        - "*credential*"
+    audit:
+      level: "detailed"
+      include_body: true
+      include_response: true
+      
+  # Rule 5: Development environment - more permissive
+  - name: "dev-environment"
+    description: "Relaxed rules for development"
+    pattern: "*.dev.local/*"
+    conditions:
+      - environment: "development"
+    allow:
+      methods: ["GET", "POST", "PUT", "DELETE"]
+      operations: ["*"]
+    audit:
+      level: "none"
+      
+  # Rule 6: Deny admin operations everywhere
+  - name: "deny-admin"
+    description: "Block all admin operations"
+    pattern: "*"
+    deny:
+      operations:
+        - "*admin*"
+        - "*Admin*"
+        - "deleteAll*"
+        - "reset*"
+        - "purge*"
+    explain: "Administrative operations are not permitted for agents"
+    
+  # Rule 7: Health check endpoints - always allow
+  - name: "health-checks"
+    description: "Allow health check endpoints"
+    pattern: "*"
+    allow:
+      operations:
+        - "health"
+        - "healthz"
+        - "ping"
+        - "status"
+      methods: ["GET"]
+    # No auth required for health checks
+    conditions: []
