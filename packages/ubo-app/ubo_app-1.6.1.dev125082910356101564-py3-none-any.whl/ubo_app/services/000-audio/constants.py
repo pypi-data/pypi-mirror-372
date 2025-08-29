@@ -1,0 +1,3 @@
+# ruff: noqa: D100
+AUDIO_MIC_STATE_ICON_PRIORITY = -20
+AUDIO_MIC_STATE_ICON_ID = 'audio:mic-state'
