@@ -1,0 +1,116 @@
+# ML expert Platform Model Registry CLI, SDK
+
+## 개요
+
+NAVER Cloud Platform의 ML expert Platform Model Registry 서비스를 이용하기 위한 CLI, SDK 패키지
+
+## 설치하기
+
+```sh
+pip install ncloud-mlx[model-registry]
+```
+
+## Quick Start
+
+### 1. 환경변수 설정 (필수)
+
+```bash
+# 환경변수 설정
+export MLX_ENDPOINT_URL="https://your-mlx-endpoint"
+export MLX_APIKEY="your-api-key"
+export MLX_PROJECT="your-project-name"
+```
+
+### 2. CLI 사용법
+
+```sh
+# 모델 생성
+mlx model-registry create model {model_name}
+
+# 버전 생성
+mlx model-registry create version {model_name} {version}
+
+# Model 업로드
+mlx model-registry upload {model_name} {version} ./local_path
+
+# Model 다운로드
+mlx model-registry download {model_name} {version} ./output_path
+```
+
+### 3. SDK 사용법
+
+```python
+from mlx.sdk.core import config
+from mlx.sdk.model_registry import ModelRegistryAPI
+from mlx.api.model_registry import ModelRequest, VersionRequest
+import os
+
+# 방법 1: 환경변수에서 직접 가져오기
+mlxp_endpoint = os.getenv("MLX_ENDPOINT_URL")
+mlxp_apikey = os.getenv("MLX_APIKEY")
+mlxp_project = os.getenv("MLX_PROJECT")
+
+# 방법 2: config 파일 사용 (환경변수가 설정되어 있으면 환경변수를 우선으로 사용)
+# mlx 설치 필요 (pip install mlx)
+# mlxp_endpoint = config.ConfigFile().endpoint_url
+# mlxp_apikey = config.ConfigFile().apikey
+# mlxp_project = config.ConfigFile().project
+
+# 클라이언트 초기화
+client = ModelRegistryAPI(mlxp_endpoint, mlxp_apikey)
+
+# 모델 생성
+model_request = ModelRequest(name="my_model")
+model = client.model_api.create(mlxp_project, model_request)
+
+# 버전 생성
+version_request = VersionRequest(version="v1.0")
+version = client.model_version_api.create(mlxp_project, "my_model", version_request)
+
+# 파일 업로드
+client.file_api.upload_sync(
+    project_name=mlxp_project,
+    model_name="my_model",
+    version_name="v1.0",
+    local_path="/path/to/local/files",
+    remote_path="/"
+)
+
+# 파일 다운로드
+client.file_api.download_sync(
+    project_name=mlxp_project,
+    model_name="my_model",
+    version_name="v1.0",
+    remote_path="/",
+    local_path="/path/to/download"
+)
+```
+
+## 실행
+
+```sh
+mlx-model-registry --help
+```
+
+```sh
+$ mlx-model-registry --help
+
+ Usage: mlx-model-registry [OPTIONS] COMMAND [ARGS]...
+
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --install-completion          Install completion for the current shell.                                         │
+│ --show-completion             Show completion for the current shell, to copy it or customize the installation.  │
+│ --help                        Show this message and exit.                                                       │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ create     Model or version create                                                                              │
+│ delete     Delete a model, version, file or directory on model service                                          │
+│ download   Download a file or directory from model registry service                                             │
+│ get        Print model or version's details                                                                     │
+│ public     subcommand for public model                                                                          │
+│ update     Update model or version on model registry service                                                    │
+│ upload     Upload file or directory to model registry service                                                   │
+│ uri        Print uri for MODEL_NAME and VERSION to access model registry                                        │
+│ verify     Verify the local path's model file set with the model registry's file set                            │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
