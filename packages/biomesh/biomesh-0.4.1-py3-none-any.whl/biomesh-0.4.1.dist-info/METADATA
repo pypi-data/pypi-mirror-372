@@ -1,0 +1,90 @@
+Metadata-Version: 2.4
+Name: biomesh
+Version: 0.4.1
+Summary: Create meshes from segmented imaging data for finite element simulations using Gmsh.
+Project-URL: Homepage, https://github.com/TUM-LNM/biomesh
+Project-URL: Bug Tracker, https://github.com/TUM-LNM/biomesh/issues
+Author: The biomesh Authors
+License: The MIT License (MIT)
+        
+        Copyright (c) 2025 The biomesh Authors
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+        THE SOFTWARE.
+License-File: LICENSE
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Requires-Dist: lnmmeshio>=5.6.4
+Requires-Dist: loguru>=0.7.2
+Requires-Dist: meshio<6,>=5.3.5
+Requires-Dist: numpy>=1.26.4
+Requires-Dist: python-utils>=2.3.0
+Requires-Dist: pyyaml<7,>=6.0.0
+Requires-Dist: scipy
+Requires-Dist: tqdm==4.66.5
+Description-Content-Type: text/markdown
+
+# biomesh
+
+[![pipeline](https://github.com/TUM-LNM/biomesh/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/TUM-LNM/biomesh/actions/workflows/build_and_test.yml)
+
+## Installation
+
+biomesh can be installed via pip as
+
+```
+pip install biomesh
+```
+
+If you want to generate a mesh with Gmsh, you also need to install the gmsh python library as
+
+```
+pip install gmsh
+```
+
+## Usage
+
+To generate a finite element mesh from multiple colored stl-files, you simply need to do
+
+```python
+import biomesh
+
+# note, this requires gmsh to be installed (pip install gmsh)
+mesh = biomesh.mesh_colored_stl_files(
+    "path/to/part1.stl",
+    "path/to/part2.stl",
+    "path/to/part3.stl",
+    mesh_size=2.0
+)
+# alternatively, you can also just use meshio to load a mesh: mesh = meshio.read("path/to/mesh.vtu")
+
+# make all elements quadratic
+mesh = biomesh.lin_to_quad(mesh)
+
+# reorder nodes to reduce bandwidth of matrix
+mesh = biomesh.reorder(mesh)
+```
+
+The nodes of all stl-files are matched. Each stl-file will be considered as an own volume.
