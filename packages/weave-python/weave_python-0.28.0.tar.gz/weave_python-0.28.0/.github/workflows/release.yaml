@@ -1,0 +1,45 @@
+name: publish python
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - weave/**
+      - pyproject.toml
+      - .python-version
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  tag-and-release:
+    uses: weave-labs/ci/.github/workflows/tag-and-release.yaml@main
+    with:
+      default-bump: 'patch'
+    secrets:
+      APP_ID: ${{ secrets.STITCH_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.STITCH_PRIVATE_KEY }}
+
+  package:
+    needs: tag-and-release
+    uses: weave-labs/ci/.github/workflows/publish-python.yaml@main
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/p/weave-python
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: 'true'

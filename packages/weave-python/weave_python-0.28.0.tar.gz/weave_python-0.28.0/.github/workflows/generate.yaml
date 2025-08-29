@@ -1,0 +1,112 @@
+name: "generate schema"
+
+on:
+  repository_dispatch:
+    types:
+      - schema-release
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - id: app_token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.STITCH_ID }}
+          private-key: ${{ secrets.STITCH_PRIVATE_KEY }}
+          owner: weave-labs
+
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: 'false'
+
+      - name: Checkout schema
+        uses: actions/checkout@v5
+        with:
+          path: schema
+          persist-credentials: 'false'
+          repository: weave-labs/schema
+          ref: ${{ github.event.client_payload.ref }}
+          token: ${{ steps.app_token.outputs.token }}
+
+      - name: Setup sqlc
+        uses: sqlc-dev/setup-sqlc@v4
+        with:
+          sqlc-version: '1.28.0'
+
+      - name: Setup buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: 'true'
+
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          cache-dependency-glob: "uv.lock"
+          enable-cache: true
+
+      - name: Clear out gen previous api gen files
+        uses: weave-labs/ci/.github/actions/clean-generated-output-dir@main
+        with:
+          working-directory: "weave/weaveapi"
+
+      - name: Clear out gen previous sql gen files
+        uses: weave-labs/ci/.github/actions/clean-generated-output-dir@main
+        with:
+          working-directory: "weave/weavesql"
+
+      #      disabled until sqlc supports copyfrom command for python
+      #      https://github.com/sqlc-dev/sqlc-gen-python/pull/92
+      #
+      #      - name: Generate sqlc configuration
+      #        run: python3 tools/sqlcgen/sqlcgen.py --schema schema/weavesql
+      #
+      #      - name: Generate sql schema
+      #        run: sqlc generate
+
+      - name: Generate proto schema
+        run: buf generate
+
+      - name: Run uv sync
+        run: uv sync
+
+      - uses: astral-sh/ruff-action@v3
+        with:
+          args: "--version"
+      - run: ruff check --fix
+      - run: ruff format
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -z $(git status --porcelain) ]]; then
+            echo "No changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected"
+            git status
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          base: 'main'
+          delete-branch: 'true'
+          body: |
+            This PR updates the generated code from schema version ${{ github.event.client_payload.schema_version }}.
+            Automated changes by GitHub Actions workflow.
+          branch: "update-schema-${{ github.event.client_payload.schema_version }}"
+          commit-message: "feat: update generated code from schema ${{ github.event.client_payload.schema_version }}"
+          title: "Update generated code from schema ${{ github.event.client_payload.schema_version }}"
+          token: ${{ steps.app_token.outputs.token }}
