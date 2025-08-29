@@ -1,0 +1,37 @@
+database: test
+pre_ingest:
+  - CREATE CONSTRAINT nkPerson IF NOT EXISTS FOR(n:Person) REQUIRE (n.personId) IS NODE KEY; 
+  - CREATE CONSTRAINT nkMovie IF NOT EXISTS FOR(n:Movie) REQUIRE (n.movieId) IS NODE KEY;
+
+queries:
+  load_person: |
+      WITH $rows AS rows
+      UNWIND rows AS row
+      MERGE(p:Person {personId:row.personId})
+        ON CREATE
+          SET p.personId=row.personId,
+              p.name=row.name,
+              p.birthYear=toInteger(row.birthYear)
+  load_movie: |
+      WITH $rows AS rows
+      UNWIND rows AS row
+      MERGE(m:Movie {movieId:row.movieId})
+        ON CREATE
+          SET m.movieId=row.movieId,
+              m.title=row.title,
+              m.averageVote=toFloat(row.avgVote),
+              m.releaseYear=toInteger(row.releaseYear),
+              m.genres=split(row.genres,':')
+  load_role: |
+      WITH $rows AS rows
+      UNWIND rows AS row
+      MATCH(p:Person {personId:row.personId}),(m:Movie {movieId:row.movieId})
+      MERGE(p)-[r:ACTED_IN]->(m)
+        ON CREATE
+        SET r.characters=split(row.characters,':')
+  create_actor: |
+      MERGE(p:Person:Actor {personId:$id})
+        ON CREATE
+          SET p.personId=$id,
+              p.name=$name,
+              p.birthYear=$year
