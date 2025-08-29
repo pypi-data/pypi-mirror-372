@@ -1,0 +1,22 @@
+from datetime import timedelta
+
+from data_gateway_sdk.protocols.smpm.smpm_ul_device_energy_16b_profile_8h_energy import SmpmUlDeviceEnergy16BProfile8HEnergyData, SmpmUlDeviceEnergy16bProfile8hEnergyIds
+from data_gateway_sdk.utils.buf_ref import BufRef
+
+
+def test_smpm_ul_device_energy_16b_profile_8h_energy() -> None:
+    case_serialized = bytes.fromhex("b0035500200008800140000a80013800")
+    assert SmpmUlDeviceEnergy16BProfile8HEnergyData(packet_type_id_enum=SmpmUlDeviceEnergy16bProfile8hEnergyIds.UL_DATA_16B__PROFILE_ENERGY_ACTIVE_CONSUMED_H8_1, days_ago=timedelta(seconds=0.0), valid=(True, False, True, False, True, False, True, False), profile=(0, 1, 2, 3, 4, 5, 6, 7)) == SmpmUlDeviceEnergy16BProfile8HEnergyData.parse(BufRef(case_serialized))  # noqa: E501
+    assert case_serialized == SmpmUlDeviceEnergy16BProfile8HEnergyData.serialize(SmpmUlDeviceEnergy16BProfile8HEnergyData(packet_type_id_enum=SmpmUlDeviceEnergy16bProfile8hEnergyIds.UL_DATA_16B__PROFILE_ENERGY_ACTIVE_CONSUMED_H8_1, days_ago=timedelta(seconds=0.0), valid=(True, False, True, False, True, False, True, False), profile=(0, 1, 2, 3, 4, 5, 6, 7)))  # noqa: E501
+    case_serialized = bytes.fromhex("b0035500200008800140000a80013800")
+    assert SmpmUlDeviceEnergy16BProfile8HEnergyData(packet_type_id_enum=SmpmUlDeviceEnergy16bProfile8hEnergyIds.UL_DATA_16B__PROFILE_ENERGY_ACTIVE_CONSUMED_H8_1, days_ago=timedelta(seconds=0.0), valid=(True, False, True, False, True, False, True, False), profile=(0, 1, 2, 3, 4, 5, 6, 7)) == SmpmUlDeviceEnergy16BProfile8HEnergyData.parse(BufRef(case_serialized))  # noqa: E501
+    assert case_serialized == SmpmUlDeviceEnergy16BProfile8HEnergyData.serialize(SmpmUlDeviceEnergy16BProfile8HEnergyData(days_ago=timedelta(seconds=0.0), packet_type_id_enum=SmpmUlDeviceEnergy16bProfile8hEnergyIds.UL_DATA_16B__PROFILE_ENERGY_ACTIVE_CONSUMED_H8_1, profile=(0, 1, 2, 3, 4, 5, 6, 7), valid=(True, False, True, False, True, False, True, False)))  # noqa: E501
+    case_serialized = bytes.fromhex("bb035500200008800140000a80013800")
+    assert SmpmUlDeviceEnergy16BProfile8HEnergyData(packet_type_id_enum=SmpmUlDeviceEnergy16bProfile8hEnergyIds.UL_DATA_16B__PROFILE_ENERGY_REACTIVE_GENERATED_H8_3, days_ago=timedelta(seconds=0.0), valid=(True, False, True, False, True, False, True, False), profile=(0, 1, 2, 3, 4, 5, 6, 7)) == SmpmUlDeviceEnergy16BProfile8HEnergyData.parse(BufRef(case_serialized))  # noqa: E501
+    assert case_serialized == SmpmUlDeviceEnergy16BProfile8HEnergyData.serialize(SmpmUlDeviceEnergy16BProfile8HEnergyData(days_ago=timedelta(seconds=0.0), packet_type_id_enum=SmpmUlDeviceEnergy16bProfile8hEnergyIds.UL_DATA_16B__PROFILE_ENERGY_REACTIVE_GENERATED_H8_3, profile=(0, 1, 2, 3, 4, 5, 6, 7), valid=(True, False, True, False, True, False, True, False)))  # noqa: E501
+    case_serialized = bytes.fromhex("b0fb5500200008800140000a80013800")
+    assert SmpmUlDeviceEnergy16BProfile8HEnergyData(packet_type_id_enum=SmpmUlDeviceEnergy16bProfile8hEnergyIds.UL_DATA_16B__PROFILE_ENERGY_ACTIVE_CONSUMED_H8_1, days_ago=timedelta(seconds=2678400.0), valid=(True, False, True, False, True, False, True, False), profile=(0, 1, 2, 3, 4, 5, 6, 7)) == SmpmUlDeviceEnergy16BProfile8HEnergyData.parse(BufRef(case_serialized))  # noqa: E501
+    assert case_serialized == SmpmUlDeviceEnergy16BProfile8HEnergyData.serialize(SmpmUlDeviceEnergy16BProfile8HEnergyData(days_ago=timedelta(seconds=2678400.0), packet_type_id_enum=SmpmUlDeviceEnergy16bProfile8hEnergyIds.UL_DATA_16B__PROFILE_ENERGY_ACTIVE_CONSUMED_H8_1, profile=(0, 1, 2, 3, 4, 5, 6, 7), valid=(True, False, True, False, True, False, True, False)))  # noqa: E501
+    case_serialized = bytes.fromhex("bbfb5500200008800140000a80013800")
+    assert SmpmUlDeviceEnergy16BProfile8HEnergyData(packet_type_id_enum=SmpmUlDeviceEnergy16bProfile8hEnergyIds.UL_DATA_16B__PROFILE_ENERGY_REACTIVE_GENERATED_H8_3, days_ago=timedelta(seconds=2678400.0), valid=(True, False, True, False, True, False, True, False), profile=(0, 1, 2, 3, 4, 5, 6, 7)) == SmpmUlDeviceEnergy16BProfile8HEnergyData.parse(BufRef(case_serialized))  # noqa: E501
+    assert case_serialized == SmpmUlDeviceEnergy16BProfile8HEnergyData.serialize(SmpmUlDeviceEnergy16BProfile8HEnergyData(days_ago=timedelta(seconds=2678400.0), packet_type_id_enum=SmpmUlDeviceEnergy16bProfile8hEnergyIds.UL_DATA_16B__PROFILE_ENERGY_REACTIVE_GENERATED_H8_3, profile=(0, 1, 2, 3, 4, 5, 6, 7), valid=(True, False, True, False, True, False, True, False)))  # noqa: E501
