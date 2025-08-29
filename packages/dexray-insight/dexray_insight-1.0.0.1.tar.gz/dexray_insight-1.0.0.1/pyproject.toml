@@ -1,0 +1,278 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dexray-insight"
+dynamic = ["version"]
+description = "This project is part of the dynamic Sandbox Sandroid. Its purpose is to do static analysis to grasp a basic understanding of an Android application. It also allows security analysis of an APK."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "GPL-3.0"}
+authors = [
+    {name = "Daniel Baier"},
+    {name = "Jan-Niclas Hilgert"},
+    {name = "Jannis Finn Borg-Olivier"}
+]
+keywords = ["mobile", "static analysis", "apk", "malware", "android"]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Debuggers",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology"
+]
+dependencies = [
+    # Add your dependencies here - extracted from the imports in your code
+    "androguard>=3.4.0",  # Ensure modern version with proper multidex support
+    "lxml",
+    "requests",
+    "pyyaml",
+    "colorama",
+    "tqdm",
+    "lz4",
+    "xxhash",
+    "bs4",
+    "apkid",
+    "kavanoz",
+    "python-magic",
+    "r2pipe"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-mock>=3.11.1",
+    "pytest-cov>=4.1.0",
+    "pytest-benchmark>=4.0.0",
+    "pytest-xdist>=3.3.1",
+    "pytest-timeout>=2.1.0",
+    "pytest-asyncio>=0.21.1",
+    "factory-boy>=3.3.0",
+    "responses>=0.23.0",
+    "freezegun>=1.2.2",
+    "zipfile36>=0.1.3",
+]
+dev = [
+    "black>=23.7.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+    "radon>=5.1.0",
+    "pytest>=7.4.0",
+    "pytest-mock>=3.11.1",
+    "pytest-cov>=4.1.0",
+    "pytest-benchmark>=4.0.0",
+    "pytest-xdist>=3.3.1",
+    "pytest-timeout>=2.1.0",
+    "pytest-asyncio>=0.21.1",
+    "factory-boy>=3.3.0",
+    "responses>=0.23.0",
+    "freezegun>=1.2.2",
+    "zipfile36>=0.1.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/fkie-cad/Sandroid_Dexray-Insight"
+Repository = "https://github.com/fkie-cad/Sandroid_Dexray-Insight"
+Issues = "https://github.com/fkie-cad/Sandroid_Dexray-Insight/issues"
+
+[project.scripts]
+asam = "dexray_insight.asam:main"
+dexray-insight = "dexray_insight.asam:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.dynamic]
+version = {attr = "dexray_insight.about.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["apk_overview/resources/*"]
+
+# Ruff configuration
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "tests/fixtures",
+    "example_samples",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "N",    # pep8-naming
+    "S",    # flake8-bandit (security)
+    "T20",  # flake8-print
+    "SIM",  # flake8-simplify
+    "PIE",  # flake8-pie
+]
+ignore = [
+    "S101",  # Use of assert detected (pytest uses assert)
+    "S603",  # subprocess call without shell=True
+    "S607",  # Starting a process with a partial executable path
+    "E501",  # Line too long (handled by black)
+    "T201",  # print statements (allowed in CLI tool)
+    "B008",  # Do not perform function calls in argument defaults (common in dataclasses)
+    "N999",  # Invalid module name (acceptable for legacy modules)
+    "N817",  # CamelCase imports (ET, XMLParser are standard)
+    "UP009", # UTF-8 encoding declaration (acceptable for Python 2 compatibility)
+]
+
+# Ignore F811 (redefined name) in test files for pytest fixtures
+# Ignore S314 (XML parsing) where we have secure implementations
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["F811", "S105", "S106", "S108", "S314"]
+"src/dexray_insight/modules/library_detection/utils/version_analyzer.py" = ["S314"]
+"src/dexray_insight/modules/string_analysis/extractors/string_extractor.py" = ["S314"]
+"src/dexray_insight/security/sensitive_data_assessment.py" = ["S314"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dexray_insight"]
+force-single-line = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# Black configuration
+[tool.black]
+line-length = 120
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | tests/fixtures
+  | example_samples
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+line_length = 120
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+known_first_party = ["dexray_insight"]
+skip_glob = ["tests/fixtures/*", "example_samples/*"]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "e2e: End-to-end tests",
+    "slow: Slow tests",
+    "network: Tests requiring network access",
+    "regression: Regression tests"
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning"
+]
+timeout = 60
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=src/dexray_insight",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+]
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Gradually enable
+ignore_missing_imports = true
+exclude = [
+    "tests/fixtures/",
+    "example_samples/",
+    "docs/",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src/dexray_insight"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/conftest.py",
+    "*/fixtures/*",
+    "*/examples/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+# Bandit security linter configuration
+[tool.bandit]
+exclude_dirs = ["tests", "docs"]
+skips = ["B101", "B601"]  # Skip assert_used and shell=True (needed for legitimate use cases)
