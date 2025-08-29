@@ -1,0 +1,2 @@
+from consoles import *
+startReactIdleConsole()
