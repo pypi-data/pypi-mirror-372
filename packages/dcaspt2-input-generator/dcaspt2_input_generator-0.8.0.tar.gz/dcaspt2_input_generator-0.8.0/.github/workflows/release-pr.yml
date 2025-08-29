@@ -1,0 +1,73 @@
+name: create-release-pull-request
+
+on:
+  workflow_dispatch:
+    inputs:
+      major_versionup:
+        description: "major version up"
+        type: boolean
+        required: false
+        default: false
+      minor_versionup:
+        description: "minor version up"
+        type: boolean
+        required: false
+        default: false
+      patch_versionup:
+        description: "patch version up"
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  PACKAGE_NAME: dcaspt2_input_generator
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install hatch twine
+      - name: Update version
+        id: version_up_type
+        run: |
+          if ${{ github.event.inputs.major_versionup }}; then
+            python .github/scripts/versionup.py --major
+            echo "VERSION_UP_TYPE=major" >> $GITHUB_OUTPUT
+          elif ${{ github.event.inputs.minor_versionup }}; then
+            python .github/scripts/versionup.py --minor
+            echo "VERSION_UP_TYPE=minor" >> $GITHUB_OUTPUT
+          elif ${{ github.event.inputs.patch_versionup }}; then
+            python .github/scripts/versionup.py --patch
+            echo "VERSION_UP_TYPE=patch" >> $GITHUB_OUTPUT
+          fi
+      - name: Get the NEW_VERSION
+        id: new_version
+        run: |
+          echo "NEW_VERSION=$(hatch version)" >> $GITHUB_OUTPUT
+      - name: Create branch name
+        id: branch_name
+        run: |
+          echo "BRANCH_NAME=release-v${{ steps.new_version.outputs.NEW_VERSION }}" >> $GITHUB_OUTPUT
+      - name: Create Pull request with release-v${{ steps.new_version.outputs.NEW_VERSION }} tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${{ steps.branch_name.outputs.BRANCH_NAME }}"
+          git add .
+          git commit -m "Release ${{ env.PACKAGE_NAME }} ${{ steps.new_version.outputs.NEW_VERSION }}"
+          git push origin "${{ steps.branch_name.outputs.BRANCH_NAME }}"
+          gh pr create --title "Release ${{ env.PACKAGE_NAME }} ${{ steps.new_version.outputs.NEW_VERSION }}" --body "Release ${{ env.PACKAGE_NAME }} ${{ steps.new_version.outputs.NEW_VERSION }}" --label ${{ steps.version_up_type.outputs.VERSION_UP_TYPE }} --label "release"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
