@@ -1,0 +1,1 @@
+"""CoverageEligibilityResponse module."""
