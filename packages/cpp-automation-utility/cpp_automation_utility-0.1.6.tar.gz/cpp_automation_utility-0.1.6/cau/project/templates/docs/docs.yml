@@ -1,0 +1,19 @@
+make-docs:
+  cache: []
+  stage: docs
+  image: {{ gitlab.docker_image }}
+  variables:
+    ARTIFACT_DIR: {{ meta_data.name }}
+    DOC_DIR: "./docs"
+  before_script:
+    - poetry install --no-root
+  script:
+    - poetry run make -C $DOC_DIR html
+  after_script:
+    - mkdir $ARTIFACT_DIR && mv $DOC_DIR/build/html/* $ARTIFACT_DIR
+  artifacts:
+    expose_as: "Docs"
+    name: $ARTIFACT_DIR
+    when: on_success
+    paths:
+      - $ARTIFACT_DIR

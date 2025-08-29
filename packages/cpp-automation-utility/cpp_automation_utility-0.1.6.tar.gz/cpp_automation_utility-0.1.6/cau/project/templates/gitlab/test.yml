@@ -1,0 +1,94 @@
+{%- if gitlab.need_to_include() %}
+include:
+  {%- if gitlab.code_quality %}
+  - template: Code-Quality.gitlab-ci.yml
+  {%- endif %}
+  {%- if gitlab.sast %}
+  - template: Security/SAST.gitlab-ci.yml
+  {%- endif %}
+  {%- if gitlab.secrets %}
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  {%- endif %}
+{%- endif %}
+
+image: {{ gitlab.docker_image }}
+
+{% if gitlab.sast %}
+sast:
+  cache: []
+  stage: test
+  artifacts:
+    paths: [gl-sast-report.json]
+{%- endif %}
+
+{% if gitlab.code_quality %}
+code_quality_html:
+  extends: code_quality
+  {%- if gitlab.self_managed %}
+  cache: []
+  services: []
+  tags:
+    - cq-sans-dind
+  {%- endif %}
+  variables:
+    REPORT_FORMAT: html
+  artifacts:
+    paths: [gl-code-quality-report.html]
+{%- endif %}
+
+unit_test:
+  cache: []
+  image: ubuntu:22.04
+  stage: test
+  dependencies:
+    - "build: [Release, linux]"
+  script:
+    - ./$BUILD_DIR/bin/Test{{ meta_data.name }} --gtest_output="xml:report.xml"
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+
+coverage:
+  cache: []
+  stage: test
+  dependencies:
+    - "build: [Debug, linux]"
+  coverage: '/^TOTAL.*(\s\d+\.\d+%)$/'
+  script:
+    - cau coverage -b $BUILD_DIR -p {{ meta_data.name }}
+  artifacts:
+    name: "CoverageReport"
+    paths:
+      - ./CoverageReport
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: ./coverage.xml
+
+lint:
+  stage: test
+  cache:
+    key: $CI_COMMIT_REF_SLUG-linux-Debug
+    paths:
+      - ./.conan
+  dependencies:
+    - "build: [Debug, linux]"
+  script:
+    - cau lint -b $BUILD_DIR
+
+memory:
+  cache: []
+  stage: test
+  dependencies:
+    - "build: [Debug, linux]"
+  script:
+    - cau leak-check -p {{ meta_data.name }} -b $BUILD_DIR
+
+{% if gitlab.secrets and gitlab.self_managed %}
+secret_detection:
+  variables:
+    GIT_SSL_NO_VERIFY: "1"
+  artifacts:
+    paths: [gl-secret-detection-report.json]
+{%- endif %}
