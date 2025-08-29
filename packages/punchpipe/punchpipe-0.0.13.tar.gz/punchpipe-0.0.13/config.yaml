@@ -1,0 +1,282 @@
+root: "/Users/mhughes/data/punch_simulation/"
+tlm_directory: "/Users/mhughes/data/punch_simulation/RAW_CCSDS_DATA/"
+file_version: "0"
+bucket_name: "output_bucket_name"
+
+plate_scale:
+  1: 0.02444444444
+  2: 0.02444444444
+  3: 0.02444444444
+  4: 0.008333333333
+
+# CCD gain for [bottom, top] sides of chip
+ccd_gain:
+  1: [4.93, 4.92]
+  2: [4.90, 5.04]
+  3: [4.94, 4.89]
+  4: [4.98, 4.92]
+
+replay:
+  science_blocks: [2048, 24575]
+  window_in_days: 5
+
+# Scaling vmin/vmax factors for [WFI, NFI]
+quicklook_scaling:
+  '0':
+    default: [[100, 800], [300, 1100]]
+    DK: [[0,40], [0,40]]
+    CR: [[100, 800], [300, 1100]]
+    PM: [[100, 650], [300, 1100]]
+    PZ: [[100, 650], [300, 1100]]
+    PP: [[100, 650], [300, 1100]]
+  'H':
+    default: [[100, 800], [300, 1100]]
+    CR: [[100, 800], [300, 1100]]
+    PM: [[100, 650], [300, 1100]]
+    PZ: [[100, 650], [300, 1100]]
+    PP: [[100, 650], [300, 1100]]
+  '1':
+    default: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    CR: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    PM: [[2.5e-13, 2.5e-11], [2.5e-11, 5e-10]]
+    PZ: [[2.5e-13, 2.5e-11], [2.5e-11, 5e-10]]
+    PP: [[2.5e-13, 2.5e-11], [2.5e-11, 5e-10]]
+  '2':
+    default: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    PT: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    PN: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    CT: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    CN: [[5e-13, 5e-11], [5e-11, 1e-9]]
+  '3':
+    default: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    PF: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    CF: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    CT: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    PT: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    CA: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    PA: [[5e-13, 5e-11], [5e-11, 1e-9]]
+  'Q':
+    default: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    CF: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    CT: [[5e-13, 5e-11], [5e-11, 1e-9]]
+    CN: [[5e-13, 5e-11], [5e-11, 1e-9]]
+
+quality_check:
+  mean_low: 0
+  mean_high: 65000
+
+scheduler:
+  max_start: 10
+
+dask_cluster:
+  n_workers: 40
+  n_threads_per_worker: 1
+
+cache_layer:
+  cache_enabled: true
+  max_age_hours: 24
+  max_size_MB: 30000
+
+control:
+  launcher:
+    description: "Kick off new flows for processing."
+    max_flows_running: 80
+    max_flows_to_launch_at_once: 60
+    launch_time_window_minutes: 3
+  health_monitor:
+    description: "Monitor the health of the pipeline."
+  cache_nanny:
+    description: "Monitors the shared memory cache"
+    schedule: "*/5 * * * *"
+  cleaner:
+    description: "Cleans things in the database"
+    schedule: "*/5 * * * *"
+
+flows:
+  level0:
+    description: "Creates Level 0 files from raw packets."
+    tags: ["L0"]
+    concurrency_limit: 1
+    priority:
+      initial: 5
+      seconds: [ 30, 120, 600 ]
+      escalation: [ 10, 20, 30 ]
+    schedule: "*/30 * * * *"
+    options:
+        retry_days: 5.0
+        num_workers: 8
+        pfw_recency_requirement: 3.0  # seconds
+        xact_recency_requirement: 3.0  # seconds
+
+  construct_stray_light:
+    description: "Creates Level 1 stray light model files."
+    tags: [ "L1" ]
+    priority:
+      initial: 10000
+      seconds: [1]
+      escalation: [10000]
+    schedule: "* * * * *"
+    launch_weight: 0.6
+    options:
+
+  level1:
+    description: "Creates Level 1 files."
+    tags: ["L1"]
+    priority:
+      initial: 6
+      seconds: [ 30, 120, 600 ]
+      escalation: [ 11, 21, 31 ]
+    schedule: "* * * * *"
+    launch_weight: 0.6
+    options:
+
+  level2:
+    description: "Creates Level 2 files."
+    tags: [ "L2" ]
+    priority:
+      initial: 1000
+      seconds: [ 3000, 12000, 60000 ]
+      escalation: [ 1000, 1000, 1000 ]
+    schedule: "* * * * *"
+    options:
+
+  level2_clear:
+    description: "Creates Level 2 clear files."
+    tags: [ "L2" ]
+    priority:
+      initial: 1000
+      seconds: [ 3000, 12000, 60000 ]
+      escalation: [ 1000, 1000, 1000 ]
+    schedule: "* * * * *"
+    launch_weight: 1
+    options:
+
+  levelq:
+    description: "Creates Level Q CTM and CNN data files."
+    tags: [ "LQ" ]
+    priority:
+      initial: 1000
+      seconds: [ 3000, 12000, 60000 ]
+      escalation: [ 1000, 1000, 1000 ]
+    schedule: "* * * * *"
+    options:
+
+  levelq_upload:
+    description: "Uploads Level Q files."
+    tags: [ "LQ" ]
+    priority:
+      initial: 1000
+      seconds: [ 3000, 12000, 60000 ]
+      escalation: [ 1000, 1000, 1000 ]
+    schedule: "* * * * *"
+    options:
+
+  levelq_CFM:
+    description: "Makes Level Q CFM files."
+    tags: [ "LQ" ]
+    priority:
+      initial: 1000
+      seconds: [ 3000, 12000, 60000 ]
+      escalation: [ 1000, 1000, 1000 ]
+    schedule: "* * * * *"
+    options:
+
+  levelq_CFN:
+    description: "Makes Level Q CFN files."
+    tags: [ "LQ" ]
+    priority:
+      initial: 1000
+      seconds: [ 3000, 12000, 60000 ]
+      escalation: [ 1000, 1000, 1000 ]
+    schedule: "* * * * *"
+    options:
+
+  level3_PTM:
+    description: "Creates Level 3 PTM files."
+    tags: [ "L3" ]
+    priority:
+      initial: 10000
+      seconds: [1]
+      escalation: [10000]
+    schedule: "* * * * *"
+    options:
+
+  level3_PIM:
+    description: "Creates Level 3 PIM files."
+    tags: [ "L3" ]
+    priority:
+      initial: 10000
+      seconds: [1]
+      escalation: [10000]
+    schedule: "* * * * *"
+    options:
+
+  level3_CTM:
+    description: "Creates Level 3 CTM files."
+    tags: [ "L3" ]
+    priority:
+      initial: 10000
+      seconds: [1]
+      escalation: [10000]
+    schedule: "* * * * *"
+    options:
+
+  level3_CIM:
+    description: "Creates Level 3 CIM files."
+    tags: [ "L3" ]
+    priority:
+      initial: 10000
+      seconds: [1]
+      escalation: [10000]
+    schedule: "* * * * *"
+    options:
+
+  construct_f_corona_background:
+    description: "Creates Level 3 f corona model files."
+    tags: [ "L3" ]
+    priority:
+      initial: 10000
+      seconds: [1]
+      escalation: [10000]
+    schedule: "* * * * *"
+    options:
+
+  construct_starfield_background:
+    description: "Creates Level 3 starfield files."
+    tags: [ "L3" ]
+    priority:
+      initial: 10000
+      seconds: [1]
+      escalation: [10000]
+    schedule: "* * * * *"
+    options:
+
+  visualize:
+    description: "Creates quicklook movies."
+    tags: [ "LQ" ]
+    priority:
+      initial: 10
+      seconds: [60*60*24]
+      escalation: [1000]
+    schedule: "0 0 * * *"
+    options:
+
+  simpunch:
+    description: "Runs simpunch."
+    tags: [ "sim" ]
+    priority:
+      initial: 1
+      seconds: [1]
+      escalation: [1]
+    schedule: "0 */8 * * *"
+    launch_weight: 1.5
+    options:
+      gamera_files_dir: "/Users/mhughes/data/punch_simulation/synthetic_cme/"
+      out_dir: "/Users/mhughes/data/punch_simulation/outputs/"
+      simulation_start: "2025-03-21T08:00:00"
+      simulation_cadence_minutes: 4.0
+      backward_psf_model_path: "/Users/mhughes/data/punch_simulation/inputs/synthetic_backward_psf.fits"
+      wfi_quartic_backward_model_path: "/Users/mhughes/data/punch_simulation/inputs/wfi_quartic_backward_coeffs.fits"
+      nfi_quartic_backward_model_path: "/Users/mhughes/data/punch_simulation/inputs/nfi_quartic_backward_coeffs.fits"
+      transient_probability: 0.0
+      shift_pointing: false
