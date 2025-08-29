@@ -1,0 +1,5 @@
+=====================
+iosanita.contenttypes
+=====================
+
+User documentation

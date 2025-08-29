@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+    xmlns:metal="http://xml.zope.org/namespaces/metal"
+    xmlns:tal="http://xml.zope.org/namespaces/tal"
+    tal:define="
+        rows python: options.get('rows', []);
+        columns python: options.get('columns', []);
+        "
+    i18n:domain="iosanita.contenttypes"
+>
+    <head>
+        <style tal:content="context/pdf_styles|nothing" />
+    </head>
+    <body>
+        <header class="header" 
+                tal:define="title context/pdf_title|nothing; logo context/pdf_logo|nothing" 
+                tal:condition="title">
+            <div id="logo" tal:condition="logo" tal:content="structure logo"/>
+            <h1 class="title">${title}</h1>
+        </header>
+
+        <p class="description first-page"
+           tal:define="description context/pdf_description|nothing;
+                       as_html context/pdf_description_as_html|nothing"
+           tal:condition="description"
+        >
+            <tal:d tal:condition="as_html" tal:content="structure description" />
+            <tal:d tal:condition="not:as_html" tal:content="description" />
+        </p>
+
+        <!-- il footer deve trovarsi in questa posizione per essere presente in tutte le pagine,
+             non va spostato in fondo
+        -->
+        <footer class="footer" tal:condition="context/with_footer|nothing">
+            <span tal:content="context/pdf_datetime|nothing" />
+        </footer>
+
+        <section>
+            <table class="export-table">
+                <thead>
+                    <tr>
+                        <tal:headers repeat="col python:columns">
+                            <th tal:content="col/title"></th>
+                        </tal:headers>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr tal:repeat="row rows"
+                        tal:attributes="class python:'row-' + (repeat['row'].even() and 'even' or 'odd')">
+                        <!-- <td tal:define="item_url python:item[0];
+                                        item_title python:item[1]">
+                            <a href="${item_url}" title="{item_title}">${item_title}</a>
+                        </td> -->
+                        <tal:td tal:repeat="value row">                            
+                            <td tal:define="
+                                    idx repeat/value/index; 
+                                    formatted python:context.pdf_cell_format(columns[idx], value)">
+                                <tal:str tal:condition="python:formatted.get('type', 'str') == 'str'" tal:content="formatted/value"></tal:str>
+                                <tal:url tal:condition="python:formatted.get('type') == 'url'">
+                                    <a tal:attributes="href formatted/url" tal:content="formatted/value"></a>
+                                </tal:url>
+                            </td>
+                        </tal:td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </body>
+</html>
