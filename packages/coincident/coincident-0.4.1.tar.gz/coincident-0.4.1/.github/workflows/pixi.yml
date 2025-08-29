@@ -1,0 +1,39 @@
+name: Pixi
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.14
+        with:
+          environments: dev
+          manifest-path: pyproject.toml
+          cache: true
+          frozen: true
+
+      # NOTE: https://github.com/prefix-dev/setup-pixi/issues/136
+      - name: Ensure Dynamic version
+        run: |
+          pip install -e . --no-deps
+
+      - name: Run Pylint
+        continue-on-error: true
+        run: |
+          pixi run lint
+
+      - name: Run Pytest
+        env:
+          MAXAR_API_KEY: ${{ secrets.MAXAR_API_KEY}}
+          EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME}}
+          EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD}}
+        run: |
+          pixi run networktest
