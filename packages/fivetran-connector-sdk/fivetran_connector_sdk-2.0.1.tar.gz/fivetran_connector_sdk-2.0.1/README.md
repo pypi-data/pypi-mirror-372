@@ -1,0 +1,42 @@
+# **fivetran-connector-sdk**
+[![Downloads](https://static.pepy.tech/badge/fivetran-connector-sdk)](https://pepy.tech/project/fivetran-connector-sdk)
+
+The *fivetran-connector-sdk* allows users to execute custom, self-written Python code within [Fivetran's](https://www.fivetran.com/) secure cloud environment. Fivetran automatically manages running the connectors on your scheduled frequency and manages the required compute resources.
+
+The Connector SDK service is the best fit for the following use cases:
+- Fivetran doesn't have a connector for your source and is unlikely to support it soon.
+- You are using private APIs, custom applications, unsupported file formats, or those that require pre-processing.
+- You have sensitive data that needs filtering or anonymizing before entering the destination.
+- You don't want to introduce a 3rd party into your pipeline (e.g., to host a custom function).
+
+To learn more, see our [Connector SDK documentation](https://fivetran.com/docs/connectors/connector-sdk)
+
+## **Install**
+
+    pip install fivetran-connector-sdk
+
+## **Requirements**
+- Python version ≥3.9 and ≤3.12
+- Operating system:
+  - Windows: 10 or later (64-bit only)
+  - macOS: 13 (Ventura) or later (Apple Silicon [arm64] or Intel [x86_64])
+  - Linux: Distributions such as Ubuntu 20.04 or later, Debian 10 or later, or Amazon Linux 2 or later (arm64 or x86_64)
+
+## **Getting started**
+See [Quickstart guide](https://fivetran.com/docs/connectors/connector-sdk/quickstart-guide) to get started.
+
+## **Usage**
+Import required classes from fivetran_connector_sdk to begin writing your custom data connector
+
+```python
+  from fivetran_connector_sdk import Connector
+  from fivetran_connector_sdk import Logging as log
+  from fivetran_connector_sdk import Operations as op
+```
+See our [Technical Reference](https://fivetran.com/docs/connectors/connector-sdk/technical-reference#update) and [Best Practices](https://fivetran.com/docs/connectors/connector-sdk/best-practices) documentation for more details.
+
+You can also refer to our [existing examples](https://github.com/fivetran/fivetran_connector_sdk) to better understand Fivetran's Connector SDK and start creating custom data connectors.
+
+## **Maintenance**
+This package is actively maintained by Fivetran Developers. Please reach out to our [Support team](https://support.fivetran.com/hc/en-us) for any inquiries.
+
