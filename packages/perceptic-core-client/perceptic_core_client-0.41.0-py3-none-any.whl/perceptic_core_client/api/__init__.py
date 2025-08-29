@@ -1,0 +1,15 @@
+# flake8: noqa
+
+# import apis into api package
+from perceptic_core_client.api.citations_resource_api import CitationsResourceApi
+from perceptic_core_client.api.connection_resource_api import ConnectionResourceApi
+from perceptic_core_client.api.file_system_contents_resource_api import FileSystemContentsResourceApi
+from perceptic_core_client.api.file_system_resource_api import FileSystemResourceApi
+from perceptic_core_client.api.indexer_resource_api import IndexerResourceApi
+from perceptic_core_client.api.indexing_schedule_resource_api import IndexingScheduleResourceApi
+from perceptic_core_client.api.indexing_task_resource_api import IndexingTaskResourceApi
+from perceptic_core_client.api.tag_resource_api import TagResourceApi
+from perceptic_core_client.api.uri_resource_api import UriResourceApi
+from perceptic_core_client.api.user_resource_api import UserResourceApi
+from perceptic_core_client.api.worker_resource_api import WorkerResourceApi
+
