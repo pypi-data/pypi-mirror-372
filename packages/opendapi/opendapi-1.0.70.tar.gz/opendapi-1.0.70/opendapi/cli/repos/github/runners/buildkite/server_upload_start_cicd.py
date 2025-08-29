@@ -1,0 +1,115 @@
+"""
+CLI for loading the base and headcollected dapi file information,
+analyzing them, uploading the required information to the DAPI server,
+and then starting the server driven CICD.
+
+This command is invoked in a buildkite CI runner for a github repo and a single runtime:
+`opendapi github buildkite server-upload-start-cicd`
+"""
+
+# pylint: disable=duplicate-code
+
+import datetime
+
+import click
+
+from opendapi.adapters.dapi_server import CICDIntegration
+from opendapi.cli.common import get_opendapi_config_from_root
+from opendapi.cli.context_agnostic import (
+    cicd_init,
+    cicd_persist_files,
+    cicd_start,
+    load_collected_files,
+)
+from opendapi.cli.options import (
+    dapi_server_options,
+    dbt_options,
+    dev_options,
+    git_options,
+    opendapi_run_options,
+)
+from opendapi.cli.repos.github.options import repo_options
+from opendapi.cli.repos.github.runners.buildkite.options import (
+    construct_change_trigger_event,
+    runner_options,
+)
+from opendapi.defs import CommitType
+
+
+@click.command()
+# common options
+@dapi_server_options
+@dbt_options
+@dev_options
+@git_options
+@opendapi_run_options
+# github repo options
+@repo_options
+# github repo buildkite runner options
+@runner_options
+def cli(**kwargs):
+    """
+    CLI for loading the base and headcollected dapi file information,
+    analyzing them, uploading the required information to the DAPI server,
+    and then starting the server driven CICD.
+
+    This command is invoked in a buildkite CI runner for a github repo and a single runtime:
+    `opendapi github buildkite server-upload-start-cicd`
+    """
+
+    change_trigger_event = construct_change_trigger_event(kwargs)
+    opendapi_config = get_opendapi_config_from_root(
+        local_spec_path=kwargs.get("local_spec_path"),
+        validate_config=True,
+    )
+    runtime = opendapi_config.assert_single_runtime()
+
+    head_collected_files = load_collected_files(
+        opendapi_config,
+        CommitType.HEAD,
+        runtime,
+    )
+    base_collected_files = load_collected_files(
+        opendapi_config,
+        CommitType.BASE,
+        runtime,
+    )
+
+    job_id = kwargs["buildkite_job_id"]
+    # NOTE: we may want to make this an envvar set by the script,
+    #       but this works for now. The ideal case is we pull this from BK API,
+    #       which we will need anyway for DBT, but this is fine for now.
+    job_started_at = datetime.datetime.now(datetime.timezone.utc)
+    build_id = kwargs["buildkite_build_id"]
+    retry_count = kwargs["buildkite_retry_count"]
+    woven_cicd_id, s3_upload_data = cicd_init(
+        lambda dr: dr.cicd_init_github_buildkite(
+            job_id=job_id,
+            job_started_at=job_started_at,
+            build_id=build_id,
+            retry_count=retry_count,
+        ),
+        change_trigger_event,
+        kwargs,
+    )
+    cicd_persist_files(
+        base_collected_files,
+        head_collected_files,
+        change_trigger_event,
+        opendapi_config,
+        s3_upload_data,
+        runtime,
+        kwargs,
+    )
+    cicd_start(
+        woven_cicd_id,
+        opendapi_config,
+        change_trigger_event,
+        CICDIntegration.GITHUB_BUILDKITE,
+        {
+            "job_id": job_id,
+            "build_id": build_id,
+            "retry_count": retry_count,
+        },
+        kwargs,
+    )
