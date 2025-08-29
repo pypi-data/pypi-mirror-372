@@ -1,0 +1,193 @@
+# chunkingman
+
+> Biblioteca en Python para segmentar textos con múltiples estrategias: por tokens, semántica, LLM y métodos híbridos.
+
+[![PyPI version](https://img.shields.io/pypi/v/chunkingman.svg)](https://pypi.org/project/chunkingman/)  
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](#requisitos)  
+[![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](#licencia)
+
+`chunkingman` facilita dividir textos largos en fragmentos semánticamente coherentes usando varias técnicas escalables.
+
+---
+
+## Contenido
+
+- [Instalación](#instalación)
+- [Requisitos](#requisitos)
+- [Configuración de credenciales](#configuración-de-credenciales)
+- [Ejemplos de uso](#ejemplos-de-uso)
+- [Elegir la estrategia adecuada](#elegir-la-estrategia-adecuada)
+- [Buenas prácticas](#buenas-prácticas)
+- [Roadmap](#roadmap)
+- [Contribuir](#contribuir)
+- [Licencia](#licencia)
+
+---
+
+## Instalación
+
+```bash
+pip install chunkingman
+```
+
+*Recomendado usar un entorno virtual (venv, conda, etc.).*
+
+---
+
+## Requisitos
+
+- Python **3.12 o superior**  
+- Dependencias runtime (instaladas automáticamente): `rapidfuzz`, `chromadb`, `tiktoken`, `sentence-transformers`, `numpy`, `backoff`, `tqdm`, `openai`, `anthropic`, `attrs`
+
+### Requisitos adicionales según funciones usadas:
+
+- **Embeddings o LLM OpenAI**: exporta `OPENAI_API_KEY`  
+- **LLMs Anthropic**: exporta `ANTHROPIC_API_KEY`
+
+---
+
+## Configuración de credenciales
+
+Puedes usar un archivo `.env`:
+
+```
+OPENAI_API_KEY=TU_CLAVE_OPENAI
+ANTHROPIC_API_KEY=TU_CLAVE_ANTHROPIC
+```
+
+O exportarlas directamente en tu entorno:
+
+```bash
+export OPENAI_API_KEY="tu-clave"
+export ANTHROPIC_API_KEY="tu-clave"
+```
+
+> Si utilizas `.env`, asegúrate de cargarlo (por ejemplo, con `python-dotenv`) antes de usar la librería.
+
+---
+
+## Ejemplos de uso
+
+### 1. FixedTokenChunker
+Corta los textos estrictamente según cantidad de tokens (útil para cumplir límites de contexto).
+
+```python
+from chunkingman.fixed_token_chunker import FixedTokenChunker
+
+text = "Esto es un texto largo..."
+chunker = FixedTokenChunker(chunk_size=800, chunk_overlap=100)
+chunks = chunker.split_text(text)
+```
+
+---
+
+### 2. RecursiveTokenChunker
+Usa divisores jerárquicos (párrafos → líneas → oraciones → palabras) para preservar coherencia.
+
+```python
+from chunkingman.recursive_token_chunker import RecursiveTokenChunker
+
+chunker = RecursiveTokenChunker(chunk_size=300, chunk_overlap=0)
+chunks = chunker.split_text(text)
+```
+
+---
+
+### 3. ClusterSemanticChunker
+Convierten fragmentos en embeddings, calculan similitud y aplican DP con penalización optimizada.
+
+```python
+from chunkingman.cluster_semantic_chunker import ClusterSemanticChunker
+from chunkingman.utils import get_embedding_function
+
+emb_fn = get_embedding_function(
+    model_name="BAAI/bge-m3",  # puedes cambiar por gte-large, e5-large-v2, etc.
+    device="cpu"               # o "cuda" si tienes GPU
+)
+
+chunker = ClusterSemanticChunker(
+    embedding_function=emb_fn,
+    max_chunk_size=800,
+    min_chunk_size=140,
+    lambda_penalty=5.0,
+    similarity_band=200,
+)
+
+chunks = chunker.split_text(text)
+```
+
+---
+
+### 4. KamradtModifiedChunker
+Agrupa por semántica para alcanzar un tamaño medio de chunk especificado.
+
+```python
+from chunkingman.kamradt_modified_chunker import KamradtModifiedChunker
+
+chunker = KamradtModifiedChunker(avg_chunk_size=400, min_chunk_size=50)
+chunks = chunker.split_text(text)
+```
+
+---
+
+### 5. LLMSemanticChunker
+Delega en un LLM (OpenAI / Anthropic) la sugerencia de cortes temáticos.
+
+```python
+from chunkingman.llm_semantic_chunker import LLMSemanticChunker
+
+chunker = LLMSemanticChunker(organisation="openai", model_name="gpt-4o")
+chunks = chunker.split_text(text)
+```
+
+---
+
+## ¿Cómo elegir la estrategia correcta?
+
+| Estrategia                | Cuándo usarla                                           |
+|---------------------------|---------------------------------------------------------|
+| FixedTokenChunker         | Necesitas límites de tokens estrictos.                 |
+| RecursiveTokenChunker     | Quieres cortes naturales sin embeddings.                |
+| ClusterSemanticChunker    | Buscas cohesión semántica con embeddings.               |
+| KamradtModifiedChunker    | Prefieres chunks de tamaño medio optimizado.            |
+| LLMSemanticChunker        | Deseas cortes temáticos propuestos por un LLM.          |
+
+---
+
+## Buenas prácticas
+
+- Cuenta tokens con `tiktoken` para garantizar validez frente a modelos LLM.
+- Usa `rapidfuzz` por rendimiento y compatibilidad API con `fuzzywuzzy`.
+- Carga tus credenciales desde entorno o `.env` (no hardcodeadas).
+- Usa tamaño de chunk acorde al modelo de embeddings o LLM que uses.
+
+---
+
+## Roadmap
+
+- Benchmarks entre distintos chunkers.
+- Configuración de *Trusted Publishers* para publicación CI/CD.
+- Plugins de visualización e integración (CLI, exportación, metadatos, etc.).
+
+---
+
+## Contribuir
+
+¡Tu ayuda es bienvenida!  
+1. Fork del repo  
+2. Crea una rama (`git checkout -b mi-feature`)  
+3. Añade tests y documentación  
+4. Abre un pull request
+
+```bash
+git clone https://github.com/romanpert/chunkingman
+cd chunkingman
+pip install -e ".[dev]"
+pytest -q
+```
+
+---
+
+## Licencia
+
+Licenciado bajo **Apache License 2.0** — consulta el archivo `LICENSE` para más información.
