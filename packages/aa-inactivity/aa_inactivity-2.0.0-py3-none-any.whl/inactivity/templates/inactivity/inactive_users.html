@@ -1,0 +1,136 @@
+{% extends 'inactivity/base.html' %}
+{% load i18n %}
+{% load humanize %}
+{% load static %}
+
+{% block details %}
+
+    {% if not has_policies %}
+        <div class="alert alert-warning" role="alert">
+            If you want to use this page, you need to define an inactivity policy first.
+        </div>
+    {% endif %}
+
+    <!-- Nav tabs -->
+    <ul id="myTabs" class="nav nav-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-target="#tab-inactive-users" aria-controls="tab-inactive-users" role="tab" data-bs-toggle="tab">
+                {% translate "Currently inactive" %}
+            </button>
+        </li>
+    </ul>
+
+    <div class="card  card-tabs">
+        <div class="card-body">
+            <div class="tab-content">
+
+                <div role="tabcard" class="tab-pane active" id="tab-inactive-users">
+                    <div class="table-responsive">
+                        <table id="table-inactive-users" style="width: 100%;" class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>{% translate "Notified" %}</th>
+                                    <th>{% translate "User" %}</th>
+                                    <th>{% translate "Last login" %}</th>
+                                    <th>{% translate "Policy" %}</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+{% endblock %}
+
+{% block extra_javascript %}
+
+    {% include "bundles/datatables-js-bs5.html" %}
+    {% include "bundles/filterdropdown-js.html" %}
+
+    <script>
+        "use strict";
+        $(document).ready(function () {
+
+            /* dataTable def */
+            let lengthMenu =  [
+                [10, 25, 50, 100, -1],
+                [10, 25, 50, 100, "All"],
+            ];
+
+            $("#table-inactive-users").DataTable({
+                ajax: {
+                    url: '{% url "inactivity:inactive_users_data" %}',
+                    dataSrc: "data",
+                    cache: false,
+                },
+
+                columns: [
+                    {
+                        data: 'notified_at',
+                        render: {
+                            _: 'display',
+                            sort: 'sort'
+                        }
+                    },
+                    {
+                        data: "user_html",
+                        render: {
+                            _: 'display',
+                            sort: 'sort'
+                        }
+                    },
+                    {
+                        data: 'last_login_at',
+                        render: {
+                            _: 'display',
+                            sort: 'sort'
+                        }
+                    },
+                    { data: "policy" },
+                    /* hidden */
+                    { data: "corporation_name" },
+                ],
+
+                lengthMenu: lengthMenu,
+
+                order: [
+                    [0, "desc"],
+                ],
+                columnDefs: [
+                    { visible: false, targets: [4] }
+                ],
+                filterDropDown: {
+                    columns: [
+                        {
+                            idx: 3,
+                            maxWidth: "12em"
+                        },
+                        {
+                            idx: 4,
+                            title: "{% translate 'Corporation' %}",
+                            maxWidth: "12em"
+                        }
+                    ],
+                    bootstrap: true,
+                    bootstrap_version: 5,
+                },
+
+            });
+
+        });
+    </script>
+
+{% endblock %}
+
+{% block extra_css %}
+    {% include 'bundles/datatables-css-bs5.html' %}
+    <link rel="stylesheet" href="{% static 'inactivity/css/aa-bootstrap-fix.min.css' %}" type="text/css">
+    <link rel="stylesheet" href="{% static 'inactivity/css/inactivity.css' %}" type="text/css">
+{% endblock %}
+
+{% block extra_script %}
+{% endblock %}
