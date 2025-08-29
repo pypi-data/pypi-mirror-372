@@ -1,0 +1,1 @@
+"""diagnostic report module."""
