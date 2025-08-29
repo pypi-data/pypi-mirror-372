@@ -1,0 +1,302 @@
+# 🚀 ASAP CLI - AWS Migration Assistant
+
+**ASAP (AWS SQL Analytics Platform)** is an AI-powered CLI tool designed to accelerate SQL and ETL migrations to AWS. Built by the AWS ProServ Data & Analytics Latam Team, it provides expert-level migration assistance with interactive guidance and validation.
+
+## 🎯 Overview
+
+ASAP CLI leverages advanced AI agents to:
+- **Migrate SQL/ETL** from legacy platforms (Oracle, Teradata, SQL Server) to AWS services
+- **Optimize queries** for performance and cost efficiency
+- **Assess migration complexity** and risks
+- **Generate implementation roadmaps** with step-by-step guidance
+- **Suggest AWS-native architectures** using Glue, EMR, Redshift, and Athena
+- **Validate data quality** and provide testing strategies
+
+## ✨ Key Features
+
+### 🔄 **SQL/ETL Migration**
+- **Multi-platform support**: Oracle, Teradata, SQL Server → AWS
+- **Target platforms**: Amazon Redshift, Spark SQL, AWS Glue
+- **Interactive migration process** with feedback loops
+- **Semantic preservation** of business logic and data types
+
+### ⚡ **Query & Transformation Optimization** 
+- Performance tuning recommendations
+- Cost optimization strategies
+- AWS-specific optimizations (DISTKEY, SORTKEY, partitioning)
+
+### 🎯 **Expert Migration Assessment**
+- Complexity and risk analysis
+- Compatibility issue identification
+- Business rules validation
+- Migration readiness evaluation
+
+### 📋 **Implementation Planning**
+- Detailed migration roadmaps
+- Step-by-step execution plans
+- Field mapping documentation
+- Test case generation
+
+### 🏗️ **AWS Architecture Guidance**
+- Service recommendations (Glue, EMR, Redshift, Athena)
+- Best practices implementation
+- Performance optimization
+- Security considerations
+
+### 🛠️ **Debug & Validation Tools**
+- SQL debugging and correction
+- Data quality validation
+- Test result comparison
+- Automated fixing with explanations
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Python 3.10+**
+- **AWS CLI configured** with appropriate permissions
+- **AWS Bedrock access** (Claude models)
+- **Git** for version control
+
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone git@ssh.gitlab.aws.dev:jorsie/asap-cli.git
+   cd asap-cli
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Install the CLI tool**:
+   ```bash
+   pip install -e .
+   ```
+
+4. **Set up aws account**:
+   1. Go to your aws account.
+   2. Create user with access granted to aws bedrock.
+   3. Configure your acces key and secret acces key for aws cli.
+   4. Activate your aws cli profile. 
+   5. Go to aws bedrock and ensure access to Claude 3.7 Sonnet and Claude Sonnet 4
+
+
+### Altenative Installation
+
+1. 
+   ```bash
+   pip install asap-cli
+   ```
+
+2. **Set up aws account**:
+   1. Go to your aws account.
+   2. Create user with access granted to aws bedrock.
+   3. Configure your acces key and secret acces key for aws cli.
+   4. Activate your aws cli profile. 
+   5. Go to aws bedrock and ensure access to Claude 3.7 Sonnet and Claude Sonnet 4
+
+
+### Usage
+
+**Start the interactive migration assistant**:
+```bash
+asap agent run
+```
+
+The CLI will guide you through:
+1. **Pipeline identification** - Name your migration pipeline
+2. **Source platform** - Specify your current SQL dialect
+3. **Target platform** - Choose your AWS destination
+4. **Migration execution** - Follow interactive prompts
+5. **Validation & debugging** - Test and refine results
+
+## 📖 Usage Examples
+
+### Example 1: SQL Server to Redshift Migration
+```bash
+asap agent run
+```
+
+```
+├── migration/                 # Migration workspace
+│   └── {pipeline_name}/
+│       ├── source/           # Source SQL files
+```
+
+1. The first you need to do is open the directory in your terminal where you are gonna work 
+2. Create the migration directory and inside that create a new folder with the pipeline name 
+3. Inside the pipeline name folder add new folder call source and inside this folder create the .sql file you want to migrate. 
+(The system accept .sql and .txt files)
+4. After that you are ready to make it your firts migration.
+
+### Command example
+
+```
+aws-proserv:~$ I need to migrate my sales pipeline from SQL Server to Redshift
+
+# The agent will:
+# 1. Ask for pipeline name: "sales"
+# 2. Request source SQL files in migration/sales/source/
+# 3. Generate assessment and translation
+# 4. Provide interactive feedback loop
+# 5. Output optimized Redshift SQL
+```
+
+### Example 2: Debugging SQL Issues
+
+```
+├── migration/                 # Migration workspace (use this as an example)
+│   └── {pipeline_name}/
+│       ├── source/           # Source SQL files
+│       ├── target_sql/       # Translated SQL output
+│       ├── assessment/       # Migration assessments
+│       ├── expected_result/  # Test expected results
+│       └── query_result/     # Actual test results
+```
+
+For debugging firts you need to extract two main things:
+
+1. Get an expected result of your query, this is the result from your source sql. Save in expected_result folder inside your pipeline name folder.
+
+2. Get the actual result form the target sql query, this is result you obtain after execute the same values with the target sql query. 
+   Save in query_result folder 
+Note: The system only recieve files in .csv format. 
+
+3. For the expected_result and query_result you have to assign the same name, this name is your **test case name**. 
+   The agent use that to make the debugging procees. You could have more that one test case, the only rule you have to follow is same name for each 
+   expected_result and query_result files and not repeat test case names. 
+
+### Example 2: Example on command 
+
+```bash
+aws-proserv:~$ Debug my customer_analytics pipeline with test case "revenue_calculation"
+
+# The agent will:
+# 1. Compare expected vs actual results
+# 2. Identify discrepancies
+# 3. Fix the SQL with explanations
+# 4. Save corrected version
+```
+
+## 🏗️ Project Structure
+
+```
+asap-cli/
+├── asap/
+│   ├── cli.py                 # Main CLI entry point
+│   └── agent/
+│       ├── main.py            # Agent command registration
+│       └── utils/
+│           ├── agents/
+│           │   ├── config.py              # Agent configuration
+│           │   ├── factory_agent.py       # Agent factory
+│           │   ├── migration_assistant_agent.py  # Core agent logic
+│           │   └── tools/
+│           │       ├── translate/         # SQL translation tools
+│           │       ├── debug/             # Debugging tools
+│           │       └── general/           # Shared utilities
+│           └── general/
+│               └── ui.py                  # User interface utilities
+├── migration/                 # Migration workspace (use this as an example)
+│   └── {pipeline_name}/
+│       ├── source/           # Source SQL files
+│       ├── target_sql/       # Translated SQL output
+│       ├── assessment/       # Migration assessments
+│       ├── expected_result/  # Test expected results
+│       └── query_result/     # Actual test results
+├── requirements.txt          # Python dependencies
+├── pyproject.toml           # Package configuration
+└── README.md               # This file
+```
+
+
+## 🔧 Configuration
+
+### AWS Bedrock Models
+ASAP CLI uses multiple Claude models for different tasks:
+- **Primary**: `us.anthropic.claude-sonnet-4-20250514-v1:0`
+- **Fallback**: `us.anthropic.claude-3-7-sonnet-20250219-v1:0`
+
+
+## 📚 Documentation
+
+### Core Components
+
+- **MigrationAssistantAgent**: Main conversational agent with tool integration
+- **TranslateSQL Tool**: Handles SQL dialect conversion and optimization
+- **DebugSQL Tool**: Identifies and fixes SQL issues with explanations
+- **BedrockLLamager**: Manages AWS Bedrock model interactions with failover
+
+### Migration Process
+
+1. **Assessment Phase**: 
+   - Analyzes source SQL complexity
+   - Identifies compatibility issues
+   - Maps business rules and requirements
+
+2. **Translation Phase**:
+   - Converts SQL to target dialect
+   - Applies AWS-specific optimizations
+   - Preserves semantic accuracy
+
+3. **Validation Phase**:
+   - Compares expected vs actual results
+   - Provides debugging assistance
+   - Generates corrected SQL with explanations
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**"Could not load agent command"**
+```bash
+# Ensure Python path includes the project directory
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+```
+
+**AWS Bedrock Access Denied**
+```bash
+# Verify AWS credentials and Bedrock access
+aws bedrock list-foundation-models --region us-east-1
+```
+
+**Migration Files Not Found**
+```bash
+# Ensure proper directory structure
+mkdir -p migration/{pipeline_name}/{source,target_sql,assessment,expected_result,query_result}
+```
+
+## 📊 Supported Platforms
+
+### Source Platforms
+- **Oracle** (PL/SQL, Oracle SQL)
+- **Teradata** (Teradata SQL)
+- **Microsoft SQL Server** (T-SQL)
+- **Generic SQL** (ANSI SQL)
+- **Other SQL platforms** (ANSI SQL)
+
+### Target Platforms  
+- **Amazon Redshift** (PostgreSQL-based)
+- **Spark SQL** (Apache Spark)
+- **AWS Glue** (PySpark/Scala)
+- **Amazon Athena** (Presto SQL)
+
+## 👥 Team
+
+**Developed by**: AWS ProServ Data & Analytics Latam Team  
+**Author**: Jorge Sierra (jorsie@amazon.com)  
+**Version**: 0.0.1
+
+
+## 🆘 Support
+
+For support and questions:
+- **Internal AWS Users**: Contact the ProServ Data & Analytics Latam Team, jorsie on slack 
+- **Issues**: Use the internal GitLab issue tracker
+
+---
+
+**🚀 Ready to accelerate your data migration journey with AWS ProServ expertise!**
