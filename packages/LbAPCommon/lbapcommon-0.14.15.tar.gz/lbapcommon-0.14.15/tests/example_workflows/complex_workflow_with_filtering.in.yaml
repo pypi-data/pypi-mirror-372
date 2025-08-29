@@ -1,0 +1,101 @@
+defaults:
+  inform:
+    - roneil
+  wg: DPA
+
+
+job_tuple:
+  application: "DaVinci/v64r10"
+  input:
+    bk_query: "/LHCb/Collision24/Beam6800GeV-VeloClosed-MagUp/Real Data/Sprucing24c3/94000000/CHARM.DST"
+  output: DVTUPLE.ROOT
+  options:
+    entrypoint: tupling:main
+    extra_options:
+      input_raw_format: 0.5
+      input_type: ROOT
+      simulation: False
+      data_type: "Upgrade"
+      event_store: HiveWhiteBoard
+      geometry_version: run3/2024.Q1.2-v00.00
+      conditions_version: master
+      input_process: "TurboPass"
+      input_stream: "charm"
+      evt_max: -1
+
+job_split:
+  application: "lb-conda/default/2024-12-12"
+  input:
+    job_name: "job_tuple"
+  output:
+    - KMPIPI.ROOT
+    - KKPI.ROOT
+    - KPPIPI.ROOT
+    - PIPIPI.ROOT
+    - KMKPKP.ROOT
+    - KPKPPI.ROOT
+    - BS0.ROOT
+    - "B0.ROOT"
+  options:
+    entrypoint: LbExec:skim_and_merge
+    extra_options:
+      compression:
+        optimise_baskets: false
+    extra_args:
+      - "--"
+      - "--write"
+      - "kmpipi=DpDspToKmPipPip"
+      - "--write"
+      - "kmpipi=DpDspToKPP_NoCuts"
+
+      - "--write"
+      - "kkpi=DpDspToKmKpPip"
+      - "--write"
+      - "kkpi=DpDspToKmKpPip_NoCuts"
+
+      - "--write"
+      - "kppipi=DpDspToKpPimPip"
+      - "--write"
+      - "kppipi=DpDspToKpPimPip_NoCuts"
+
+      - "--write"
+      - "pipipi=DpDspToPimPipPip"
+      - "--write"
+      - "pipipi=DpDspToPimPipPip_NoCuts"
+
+      - "--write"
+      - "kmkpkp=DpDspToKmKpKp"
+      - "--write"
+      - "kmkpkp=DpDspToKmKpKp_NoCuts"
+
+      - "--write"
+      - "kpkppi=DpDspToKpKpPim"
+      - "--write"
+      - "kpkppi=DpDspToKpKpPim_NoCuts"
+
+      - "--write"
+      - "bs0=Bs0ToDsmPip_DsmToKmKpPim"
+      - "--write"
+      - "bs0=Bs0ToDsmPip_DsmToPimPimPip"
+      - "--write"
+      - "b0=B0ToDmPip_DmToKmKpPim"
+      - "--write"
+      - "b0=B0ToDmPip_DmToPimPimPip"
+
+
+job_filter_B0:
+  application: "lb-conda/default/2024-12-12"
+
+  input:
+    job_name: "job_split"
+    filetype: "B0.ROOT"
+
+  output:
+  - B0.ROOT
+
+  options:
+    entrypoint: filter_jobs:filter_b0
+
+    extra_options:
+      compression:
+        algorithm: "ZSTD"

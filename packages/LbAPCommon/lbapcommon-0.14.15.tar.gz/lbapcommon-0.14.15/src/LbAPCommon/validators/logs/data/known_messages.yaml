@@ -1,0 +1,92 @@
+full_checks:
+  - regex: "ImportError: libdb-4.7.so: cannot open shared object file: No such file or directory"
+    fatal: true
+    details: |
+      The [`HEP_OSlibs` meta-package](https://gitlab.cern.ch/linuxsupport/rpms/HEP_OSlibs/-/blob/master/README.md)
+      required by some LHCb applications is not installed on the system. The solution is to either:
+
+        * Request that the local system administrator installs `HEP_OSlibs`
+        * Run the application inside singularity by passing `--container=singularity` to `lb-run`
+
+  - regex: "\\*{3} Break \\*{3} illegal instruction"
+    fatal: true
+    details: |
+      The application has been compiled with instructions which are not supported by the machine's
+      CPU. This should never happen and should be reported.
+
+  - regex: "lb-run:current host does not support any of"
+    fatal: true
+    details: |
+      The current host does not support running the requested application. Try using
+      `lb-describe-platform` to list of platforms supported by the current host and
+      `lb-sdb-query listPlatforms APPLICATION VERSION` to list the platforms supported by the given
+      application.
+
+  - regex: "anydbm.error: need 'c' or 'n' flag to open new db"
+    fatal: true
+    details: |
+      This error often occurs when trying to run the Stripping with the wrong version of DaVinci.
+      The correct version can be found at: https://twiki.cern.ch/twiki/bin/view/Main/ProcessingPasses
+
+
+line_checks:
+  # - level: ERROR
+  #   message: "putStatusOnTES(): RawBankReadoutStatus not created for this event, not putting it on TES"
+  #   details: |
+  #     TODO
+
+  - level: WARNING
+    regex: "LoKi::Particles::RelatedInfo: 	 No table at location .* \\[.*\\] StatusCode=FAILURE"
+    fatal: true
+    details: |
+      This message indicates the location specified for the information being accessed by
+      `RelatedInfo` does not exist. It is likely that either:
+
+        * The location specified is incorrect, try looking for it with `dst-dump`.
+        * The given information was never stored for that candidate, in which case the use of
+          `RelatedInfo` should be removed.
+
+  - level: ERROR
+    regex: "Error: createObj> Cannot access the object:.*"
+    fatal: true
+    details: |
+      This message indicates there was an error accessing the input file. You should:
+
+        * Ensure the input file exists and you have permission to open it
+        * Regenerate the pool XML catalogue (if applicable)
+
+      If the error persists you report the issue to one of the distributed analysis support
+      channels.
+
+  - level: WARNING
+    message: "no ROOT output file name, Histograms cannot be persistified"
+    ignore: true
+    details: |
+      Histograms are not being saved as no filename has been specified for storing them. This
+      message is harmless and normally ignored.
+
+  # - level: WARNING
+  #   message: "LoKi::LifetimeFitter:: Error from LoKi::Fitters::ctau_step,reset StatusCode=407"
+  #   details: |
+  #     TODO
+
+  - level: WARNING
+    regex: "CaloClusterMCTruth::  The relations table 'Relations/Rec/Calo/Clusters' is empty! StatusCode=FAILURE"
+    details: |
+      The calorimeter MC-truth information is not available in the input file. The tool which is
+      attempting to access it should be removed.
+
+  - level: ERROR
+    regex: "HltSelReportsDecoder::   Failed to add Hlt selection name Hlt2RecSummary to its container"
+    details: |
+      This is a known issue for 2015 data/MC. Variables related to the RecSummary should be ignored for these.
+
+  # - level: WARNING
+  #   regex: "Could not retrieve maxPt-particle... Skipping"
+  #   details: |
+  #     TODO
+
+  # - level: WARNING
+  #   regex: "MCTupleToolKinematic:: NULL end vertex for .* StatusCode=FAILURE"
+  #   details: |
+  #     TODO

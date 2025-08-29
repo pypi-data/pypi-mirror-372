@@ -1,0 +1,291 @@
+- comment: ''
+  inform:
+  - roneil
+  input_dataset:
+    conditions_description: Beam6800GeV-VeloClosed-MagUp
+    conditions_dict: {}
+    event_type: '94000000'
+    launch_parameters:
+      end_run: null
+      run_numbers: null
+      start_run: null
+  name: AnaProd#example_workflows#job_tuple,split,filter_B0
+  priority: 1b
+  steps:
+  - application:
+      name: DaVinci
+      version: v64r10
+    data_pkgs:
+    - name: AnalysisProductions
+      version: v999999999999
+    input: []
+    name: AnaProd#v999999999999#job_tuple
+    obsolete: true
+    options:
+      entrypoint: tupling:main
+      extra_options:
+        conditions_version: master
+        data_type: Upgrade
+        event_store: HiveWhiteBoard
+        evt_max: '-1'
+        geometry_version: run3/2024.Q1.2-v00.00
+        input_process: TurboPass
+        input_raw_format: '0.5'
+        input_stream: charm
+        input_type: ROOT
+        simulation: 'False'
+    output:
+    - type: DVTUPLE.ROOT
+      visible: false
+    processing_pass: AnaProd-v999999999999-job_tuple
+    ready: true
+    visible: true
+  - application:
+      name: lb-conda/default
+      version: '2024-12-12'
+    data_pkgs:
+    - name: AnalysisProductions
+      version: v999999999999
+    input:
+    - step_idx: 0
+      type: DVTUPLE.ROOT
+      visible: false
+    name: AnaProd#v999999999999#job_split
+    obsolete: true
+    options:
+      entrypoint: LbExec:skim_and_merge
+      extra_args:
+      - --
+      - --write
+      - kmpipi=DpDspToKmPipPip
+      - --write
+      - kmpipi=DpDspToKPP_NoCuts
+      - --write
+      - kkpi=DpDspToKmKpPip
+      - --write
+      - kkpi=DpDspToKmKpPip_NoCuts
+      - --write
+      - kppipi=DpDspToKpPimPip
+      - --write
+      - kppipi=DpDspToKpPimPip_NoCuts
+      - --write
+      - pipipi=DpDspToPimPipPip
+      - --write
+      - pipipi=DpDspToPimPipPip_NoCuts
+      - --write
+      - kmkpkp=DpDspToKmKpKp
+      - --write
+      - kmkpkp=DpDspToKmKpKp_NoCuts
+      - --write
+      - kpkppi=DpDspToKpKpPim
+      - --write
+      - kpkppi=DpDspToKpKpPim_NoCuts
+      - --write
+      - bs0=Bs0ToDsmPip_DsmToKmKpPim
+      - --write
+      - bs0=Bs0ToDsmPip_DsmToPimPimPip
+      - --write
+      - b0=B0ToDmPip_DmToKmKpPim
+      - --write
+      - b0=B0ToDmPip_DmToPimPimPip
+      extra_options:
+        compression:
+          optimise_baskets: 'false'
+    output:
+    - type: B0.ROOT
+      visible: false
+    - type: BS0.ROOT
+      visible: false
+    - type: KKPI.ROOT
+      visible: false
+    - type: KMKPKP.ROOT
+      visible: false
+    - type: KMPIPI.ROOT
+      visible: false
+    - type: KPKPPI.ROOT
+      visible: false
+    - type: KPPIPI.ROOT
+      visible: false
+    - type: PIPIPI.ROOT
+      visible: false
+    processing_pass: split
+    ready: true
+    visible: true
+  - application:
+      name: lb-conda/default
+      version: '2024-12-12'
+    data_pkgs:
+    - name: AnalysisProductions
+      version: v999999999999
+    input:
+    - step_idx: 1
+      type: B0.ROOT
+      visible: false
+    name: AnaProd#v999999999999#job_filter_B0
+    obsolete: true
+    options:
+      entrypoint: filter_jobs:filter_b0
+      extra_options:
+        compression:
+          algorithm: ZSTD
+    output:
+    - type: B0.ROOT
+      visible: false
+    processing_pass: filter_B0
+    ready: true
+    visible: true
+  - application:
+      name: lb-conda/default
+      version: '2025-02-14'
+    input:
+    - step_idx: 1
+      type: BS0.ROOT
+      visible: false
+    - step_idx: 1
+      type: KKPI.ROOT
+      visible: false
+    - step_idx: 1
+      type: KMKPKP.ROOT
+      visible: false
+    - step_idx: 1
+      type: KMPIPI.ROOT
+      visible: false
+    - step_idx: 1
+      type: KPKPPI.ROOT
+      visible: false
+    - step_idx: 1
+      type: KPPIPI.ROOT
+      visible: false
+    - step_idx: 1
+      type: PIPIPI.ROOT
+      visible: false
+    name: AnaProd#MergeV2#example_workflows#merge0
+    obsolete: true
+    options:
+      entrypoint: LbExec:skim_and_merge
+      extra_args: []
+      extra_options:
+        compression:
+          algorithm: ZSTD
+          level: 6
+          optimise_baskets: true
+    output:
+    - type: BS0.ROOT
+      visible: true
+    - type: KKPI.ROOT
+      visible: true
+    - type: KMKPKP.ROOT
+      visible: true
+    - type: KMPIPI.ROOT
+      visible: true
+    - type: KPKPPI.ROOT
+      visible: true
+    - type: KPPIPI.ROOT
+      visible: true
+    - type: PIPIPI.ROOT
+      visible: true
+    processing_pass: merged
+    ready: true
+    visible: false
+  - application:
+      name: lb-conda/default
+      version: '2025-02-14'
+    input:
+    - step_idx: 2
+      type: B0.ROOT
+      visible: false
+    name: AnaProd#MergeV2#example_workflows#merge1
+    obsolete: true
+    options:
+      entrypoint: LbExec:skim_and_merge
+      extra_args: []
+      extra_options:
+        compression:
+          algorithm: ZSTD
+          level: 6
+          optimise_baskets: true
+    output:
+    - type: B0.ROOT
+      visible: true
+    processing_pass: merged
+    ready: true
+    visible: false
+  submission_info:
+    transforms:
+    - ancestor_depth: 0
+      cpu: '1000000'
+      events: -1
+      group_size: 2
+      input_data_policy: protocol
+      input_plugin: APProcessing
+      multicore: true
+      output_file_mask: ''
+      output_mode: Local
+      output_se: CERN-BUFFER
+      priority: 2
+      remove_inputs_flags: false
+      steps:
+      - 0
+      type: WGProduction
+    - ancestor_depth: 0
+      cpu: '1000000'
+      events: -1
+      group_size: 2
+      input_data_policy: protocol
+      input_plugin: APProcessing
+      multicore: true
+      output_file_mask: ''
+      output_mode: Local
+      output_se: CERN-BUFFER
+      priority: 2
+      remove_inputs_flags: true
+      steps:
+      - 1
+      type: APPostProc
+    - ancestor_depth: 0
+      cpu: '1000000'
+      events: -1
+      group_size: 2
+      input_data_policy: protocol
+      input_plugin: APProcessing
+      multicore: true
+      output_file_mask: ''
+      output_mode: Local
+      output_se: CERN-BUFFER
+      priority: 2
+      remove_inputs_flags: true
+      steps:
+      - 2
+      type: APPostProc
+    - ancestor_depth: 0
+      cpu: '1000000'
+      events: -1
+      group_size: 10
+      input_data_policy: protocol
+      input_plugin: APProcessingByFileTypeSize
+      multicore: true
+      output_file_mask: ''
+      output_mode: Local
+      output_se: CERN-ANAPROD
+      priority: 2
+      remove_inputs_flags: true
+      steps:
+      - 3
+      type: APMerge
+    - ancestor_depth: 0
+      cpu: '1000000'
+      events: -1
+      group_size: 10
+      input_data_policy: protocol
+      input_plugin: APProcessingByFileTypeSize
+      multicore: true
+      output_file_mask: ''
+      output_mode: Local
+      output_se: CERN-ANAPROD
+      priority: 2
+      remove_inputs_flags: true
+      steps:
+      - 4
+      type: APMerge
+  type: AnalysisProduction
+  wg: DPA
