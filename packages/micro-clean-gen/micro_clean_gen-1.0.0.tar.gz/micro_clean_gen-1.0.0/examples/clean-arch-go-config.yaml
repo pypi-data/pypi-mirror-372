@@ -1,0 +1,221 @@
+# 整洁架构Go项目配置示例
+project:
+  name: image-system
+  version: 1.0.0
+  description: 图片管理系统的整洁架构实现
+
+# 领域聚合定义
+aggregates:
+  - name: image
+    fields:
+      - name: UserID
+        type: string
+        json: user_id
+      - name: URL
+        type: string
+        json: url
+      - name: Title
+        type: string
+        json: title
+      - name: Description
+        type: string
+        json: description
+      - name: Tags
+        type: "[]string"
+        json: tags
+      - name: Size
+        type: int64
+        json: size
+      - name: Width
+        type: int
+        json: width
+      - name: Height
+        type: int
+        json: height
+      - name: Format
+        type: string
+        json: format
+    events:
+      - name: ImageUploaded
+        fields:
+          - name: ImageID
+            type: string
+            json: image_id
+          - name: UserID
+            type: string
+            json: user_id
+          - name: URL
+            type: string
+            json: url
+          - name: Title
+            type: string
+            json: title
+          - name: Size
+            type: int64
+            json: size
+          - name: Width
+            type: int
+            json: width
+          - name: Height
+            type: int
+            json: height
+          - name: Format
+            type: string
+            json: format
+      - name: ImageProcessed
+        fields:
+          - name: ImageID
+            type: string
+            json: image_id
+          - name: ThumbnailURL
+            type: string
+            json: thumbnail_url
+      - name: ImageDeleted
+        fields:
+          - name: ImageID
+            type: string
+            json: image_id
+
+  - name: user
+    fields:
+      - name: Username
+        type: string
+        json: username
+      - name: Email
+        type: string
+        json: email
+      - name: Avatar
+        type: string
+        json: avatar
+    events:
+      - name: UserRegistered
+        fields:
+          - name: UserID
+            type: string
+            json: user_id
+          - name: Username
+            type: string
+            json: username
+          - name: Email
+            type: string
+            json: email
+      - name: UserUpdated
+        fields:
+          - name: UserID
+            type: string
+            json: user_id
+          - name: Username
+            type: string
+            json: username
+          - name: Email
+            type: string
+            json: email
+
+  - name: album
+    fields:
+      - name: UserID
+        type: string
+        json: user_id
+      - name: Name
+        type: string
+        json: name
+      - name: Description
+        type: string
+        json: description
+      - name: ImageIDs
+        type: "[]string"
+        json: image_ids
+    events:
+      - name: AlbumCreated
+        fields:
+          - name: AlbumID
+            type: string
+            json: album_id
+          - name: UserID
+            type: string
+            json: user_id
+          - name: Name
+            type: string
+            json: name
+      - name: ImageAddedToAlbum
+        fields:
+          - name: AlbumID
+            type: string
+            json: album_id
+          - name: ImageID
+            type: string
+            json: image_id
+
+# 技术栈配置
+infrastructure:
+  database:
+    driver: postgres
+    host: localhost
+    port: 5432
+    database: image_system
+    username: user
+    password: password
+  
+  cache:
+    driver: redis
+    host: localhost
+    port: 6379
+    database: 0
+  
+  eventstore:
+    driver: nats
+    url: nats://localhost:4222
+    cluster_id: test-cluster
+  
+  message_broker:
+    driver: nats
+    url: nats://localhost:4222
+
+# 服务配置
+services:
+  api:
+    port: 8080
+    timeout: 30s
+    max_connections: 100
+  
+  consumer:
+    workers: 5
+    batch_size: 100
+    retry_attempts: 3
+  
+  projection:
+    workers: 3
+    batch_size: 50
+    update_interval: 1s
+
+# 部署配置
+deployment:
+  docker:
+    base_image: golang:1.21-alpine
+    build_image: golang:1.21
+  
+  kubernetes:
+    replicas: 3
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+
+# 监控配置
+monitoring:
+  metrics:
+    enabled: true
+    port: 9090
+    path: /metrics
+  
+  tracing:
+    enabled: true
+    jaeger_url: http://localhost:14268/api/traces
+  
+  logging:
+    level: info
+    format: json
+    output: stdout
