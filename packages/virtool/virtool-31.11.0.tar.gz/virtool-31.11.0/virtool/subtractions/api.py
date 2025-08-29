@@ -1,0 +1,262 @@
+import aiohttp.web
+from aiohttp.web import Response
+from aiohttp.web_fileresponse import FileResponse
+from aiohttp_pydantic import PydanticView
+from aiohttp_pydantic.oas.typing import r200, r201, r204, r400, r403, r404, r409
+
+from virtool.api.custom_json import json_response
+from virtool.api.errors import APIBadRequest, APIConflict, APINoContent, APINotFound
+from virtool.api.policy import PermissionRoutePolicy, policy
+from virtool.api.routes import Routes
+from virtool.api.schema import schema
+from virtool.authorization.permissions import LegacyPermission
+from virtool.data.errors import ResourceConflictError, ResourceNotFoundError
+from virtool.data.utils import get_data_from_req
+from virtool.subtractions.models import Subtraction, SubtractionSearchResult
+from virtool.subtractions.oas import (
+    CreateSubtractionRequest,
+    FinalizeSubtractionRequest,
+    UpdateSubtractionRequest,
+)
+from virtool.uploads.utils import multipart_file_chunker
+
+routes = Routes()
+
+
+@routes.view("/spaces/{space_id}/subtractions")
+@routes.view("/subtractions")
+class SubtractionsView(PydanticView):
+    async def get(
+        self, find: str | None, short: bool = False, ready: bool = False
+    ) -> r200[SubtractionSearchResult]:
+        """Find subtractions.
+
+        Lists subtractions by their `name` or `nickname` by providing a `term` as a
+        query parameter. Partial matches are supported.
+
+        Supports pagination unless the `short` query parameter is set. In this case, an
+        array of objects containing the `id` and `name` of every subtraction is
+        returned.
+
+        Status Codes:
+            200: Successful operation
+        """
+        search_result = await get_data_from_req(self.request).subtractions.find(
+            find, short, ready, self.request.query
+        )
+
+        return json_response(search_result)
+
+    @policy(PermissionRoutePolicy(LegacyPermission.MODIFY_SUBTRACTION))
+    async def post(
+        self, data: CreateSubtractionRequest
+    ) -> r201[Subtraction] | r400 | r403:
+        """Create a subtraction.
+
+        Creates a new subtraction.
+
+        A job is started to build the data necessary to make the subtraction usable in
+        analyses. The subtraction is usable when the `ready` property is `true`.
+
+        Status Codes:
+            201: Created
+            400: Upload does not exist
+            403: Not permitted
+
+        """
+        try:
+            subtraction = await get_data_from_req(self.request).subtractions.create(
+                data, self.request["client"].user_id, 0
+            )
+        except ResourceNotFoundError as err:
+            if "Upload does not exist" in str(err):
+                raise APIBadRequest(str(err))
+
+            raise APINotFound()
+
+        return json_response(
+            subtraction,
+            headers={"Location": f"/subtraction/{subtraction.id}"},
+            status=201,
+        )
+
+
+@routes.view("/spaces/{space_id}/subtractions/{subtraction_id}")
+@routes.view("/subtractions/{subtraction_id}")
+@routes.jobs_api.get("/subtractions/{subtraction_id}")
+class SubtractionView(PydanticView):
+    async def get(self, subtraction_id: str, /) -> r200[Subtraction] | r404:
+        """Get a subtraction.
+
+        Fetches the details of a subtraction.
+
+        Status Codes:
+            200: Operation Successful
+            404: Not found
+
+        """
+        try:
+            subtraction = await get_data_from_req(self.request).subtractions.get(
+                subtraction_id
+            )
+        except ResourceNotFoundError:
+            raise APINotFound()
+
+        return json_response(subtraction)
+
+    @policy(PermissionRoutePolicy(LegacyPermission.MODIFY_SUBTRACTION))
+    async def patch(
+        self, subtraction_id: str, /, data: UpdateSubtractionRequest
+    ) -> r200[Subtraction] | r400 | r403 | r404:
+        """Update a subtraction.
+
+        Updates the name or nickname of an existing subtraction.
+
+        Status Codes:
+            200: Operation successful
+            400: Invalid input
+            403: Not permitted
+            404: Not found
+
+        """
+        try:
+            subtraction = await get_data_from_req(self.request).subtractions.update(
+                subtraction_id, data
+            )
+        except ResourceNotFoundError:
+            raise APINotFound()
+
+        return json_response(subtraction)
+
+    @policy(PermissionRoutePolicy(LegacyPermission.MODIFY_SUBTRACTION))
+    async def delete(self, subtraction_id: str, /) -> r204 | r403 | r404 | r409:
+        """Delete a subtraction.
+
+        Deletes an existing subtraction.
+
+        Status Codes:
+            204: No content
+            403: Not permitted
+            404: Not found
+            409: Has linked samples
+        """
+        try:
+            await get_data_from_req(self.request).subtractions.delete(subtraction_id)
+        except ResourceNotFoundError:
+            raise APINotFound()
+
+        raise APINoContent()
+
+
+@routes.jobs_api.put("/subtractions/{subtraction_id}/files/{filename}")
+async def upload(req) -> Response:
+    """Upload subtraction file.
+
+    Uploads a new subtraction file.
+    """
+    subtraction_id = req.match_info["subtraction_id"]
+    filename = req.match_info["filename"]
+
+    try:
+        subtraction_file = await get_data_from_req(req).subtractions.upload_file(
+            subtraction_id, filename, multipart_file_chunker(await req.multipart())
+        )
+    except ResourceConflictError as err:
+        raise APIConflict(str(err))
+    except ResourceNotFoundError as err:
+        if "Unsupported subtraction file name" in str(err):
+            raise APINotFound(str(err))
+
+        raise APINotFound()
+
+    return json_response(
+        subtraction_file,
+        status=201,
+        headers={
+            "Location": f"/subtractions/{subtraction_id}/files/{subtraction_file.name}"
+        },
+    )
+
+
+@routes.jobs_api.patch("/subtractions/{subtraction_id}")
+@schema(
+    {
+        "gc": {"type": "dict", "required": True},
+        "count": {"type": "integer", "required": True},
+    }
+)
+async def finalize_subtraction(req: aiohttp.web.Request):
+    """Finalize a subtraction.
+
+    Sets the GC field for a subtraction and marks it as ready.
+
+    """
+    data = await req.json()
+
+    try:
+        subtraction = await get_data_from_req(req).subtractions.finalize(
+            req.match_info["subtraction_id"], FinalizeSubtractionRequest(**data)
+        )
+    except ResourceConflictError as err:
+        raise APIConflict(str(err))
+    except ResourceNotFoundError:
+        raise APINotFound()
+
+    return json_response(subtraction)
+
+
+@routes.jobs_api.delete("/subtractions/{subtraction_id}")
+async def job_delete(req: aiohttp.web.Request):
+    """Remove a subtraction document.
+
+    Only usable in the Jobs API and when subtractions are unfinalized.
+
+    """
+    subtraction_id = req.match_info["subtraction_id"]
+
+    try:
+        subtraction = await get_data_from_req(req).subtractions.get(subtraction_id)
+    except ResourceNotFoundError:
+        raise APINotFound()
+
+    if subtraction.ready:
+        raise APIConflict("Only unfinalized subtractions can be deleted")
+
+    try:
+        await get_data_from_req(req).subtractions.delete(subtraction_id)
+    except ResourceNotFoundError:
+        raise APINotFound()
+
+    raise APINoContent()
+
+
+@routes.view("/subtractions/{subtraction_id}/files/{filename}")
+@routes.jobs_api.get("/subtractions/{subtraction_id}/files/{filename}")
+class SubtractionFileView(PydanticView):
+    async def get(self, subtraction_id: str, filename: str, /) -> r200 | r400 | r404:
+        """Download a subtraction file.
+
+        Downloads a Bowtie2 index or FASTA file for the given subtraction.
+
+        Files are attached to the subtraction as part of the creation job. They aren't
+        available for download until the job has completed and the `ready` field is
+        `true`.
+
+        Status Codes:
+            200: Operation successful
+            404: Not found
+        """
+        try:
+            descriptor = await get_data_from_req(self.request).subtractions.get_file(
+                subtraction_id, filename
+            )
+        except ResourceNotFoundError:
+            raise APINotFound()
+
+        return FileResponse(
+            descriptor.path,
+            headers={
+                "Content-Length": descriptor.size,
+                "Content-Type": "application/octet-stream",
+            },
+        )
