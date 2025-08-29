@@ -1,0 +1,84 @@
+variables:
+  UV_VERSION: 0.7
+  PYTHON_VERSION: 3.13
+  UV_LINK_MODE: copy
+
+default:
+  image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-alpine
+
+stages:
+  - test
+  - build
+  - deploy
+
+unittests:
+  stage: test
+  script:
+    - uv run pytest --cov --cov-report term --cov-report xml:coverage.xml
+  coverage: "/^coverage.xml$/"
+  artifacts:
+    # https://docs.gitlab.com/ee/ci/yaml/index.html#artifactsexpire_in
+    expire_in: 1 week
+
+    # https://docs.gitlab.com/ee/ci/testing/test_coverage_visualization.html
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+build:
+  stage: build
+  script:
+    - uv build
+  artifacts:
+    paths:
+      - dist/
+
+.publish_template: &publish_configuration
+  stage: deploy
+  dependencies:
+    - build
+  rules:
+    - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-\w+\d*)?$/'
+
+publish-gitlab:
+  <<: *publish_configuration
+  environment:
+    name: testing
+    url: https://gitlab.com/lunatone-public/lunatone-rest-api-client/-/packages/
+  variables:
+    UV_PUBLISH_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi"
+    UV_PUBLISH_USERNAME: "gitlab-ci-token"
+    UV_PUBLISH_PASSWORD: "${CI_JOB_TOKEN}"
+  script:
+    - uv publish
+
+publish-test-pypi:
+  <<: *publish_configuration
+  environment:
+    name: staging
+    url: https://test.pypi.org/project/lunatone-rest-api-client/
+  id_tokens:
+    TESTPYPI_ID_TOKEN:
+      aud: testpypi
+  before_script:
+    - python -m pip install -U twine
+  script:
+    # Using twine to publish to Test PyPI because uv wouldn't work with the id_tokens
+    - twine upload -r testpypi dist/*
+  when: manual
+
+publish-pypi:
+  <<: *publish_configuration
+  environment:
+    name: production
+    url: https://pypi.org/project/lunatone-rest-api-client/
+  id_tokens:
+    PYPI_ID_TOKEN:
+      aud: pypi
+  before_script:
+    - python -m pip install -U twine
+  script:
+    - twine upload dist/*
+  when: manual
+  manual_confirmation: 'Are you sure you want to publish to PyPI?'
