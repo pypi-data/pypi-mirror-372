@@ -1,0 +1,33 @@
+# This workflow mirrors the examples folder to a public repository
+
+name: Mirror examples to public repository
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'examples/**'
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Creates output folder
+        run: |
+          mkdir output
+          cp -r examples output
+          cp output/examples/README.md output
+      - name: Pushes to public repository
+        id: push_directory
+        uses: cpina/github-action-push-to-another-repository@07c4d7b3def0a8ebe788a8f2c843a4e1de4f6900
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.SSH_DEPLOY_KEY }}
+        with:
+          source-directory: output/
+          destination-github-username: 'annotell'
+          destination-repository-name: 'kognic-io-examples-python'
+          user-email: github-actions@github.com
+          commit-message: ${{ github.event.head_commit.message }}
+          target-branch: master
