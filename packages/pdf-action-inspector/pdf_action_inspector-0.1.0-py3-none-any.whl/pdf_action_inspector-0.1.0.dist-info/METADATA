@@ -1,0 +1,366 @@
+Metadata-Version: 2.4
+Name: pdf-action-inspector
+Version: 0.1.0
+Summary: A Model Context Protocol server for extracting and analyzing JavaScript Actions from PDF files
+Author-email: "Foxit Software Inc." <security-ml@foxitsoftware.com>
+License: MIT
+Project-URL: Homepage, https://github.com/foxitsoftware/PDFActionInspector
+Project-URL: Repository, https://github.com/foxitsoftware/PDFActionInspector
+Project-URL: Issues, https://github.com/foxitsoftware/PDFActionInspector/issues
+Project-URL: Documentation, https://github.com/foxitsoftware/PDFActionInspector#readme
+Keywords: pdf,security,analysis,javascript,actions,mcp,model-context-protocol
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Information Technology
+Classifier: Topic :: Security
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Text Processing :: General
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: PyPDF2>=3.0.0
+Requires-Dist: fastmcp>=2.0.0
+Provides-Extra: dev
+Requires-Dist: build>=0.8.0; extra == "dev"
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: flake8>=4.0.0; extra == "dev"
+Requires-Dist: twine>=4.0.0; extra == "dev"
+Dynamic: license-file
+
+# PDF Action Inspector
+
+A Model Context Protocol (MCP) server for extracting and analyzing JavaScript Actions from PDF files. PDF Actions can trigger malicious scripts when documents are opened or interacted with, making this tool valuable for security analysis.
+
+## Architecture
+
+The PDF Action Inspector follows a clean three-layer architecture:
+
+### 1. Core Inspector Layer (`src/core/inspector.py`)
+- **Purpose**: Business logic and PDF processing
+- **Returns**: Python native types (dict, list) for optimal performance
+- **Responsibilities**: PDF parsing, Action extraction, data validation
+- **Dependencies**: PyPDF2, custom utilities
+
+### 2. MCP Tools Layer (`mcp_server.py`)
+- **Purpose**: Model Context Protocol interface
+- **Returns**: JSON strings for external tool consumption
+- **Responsibilities**: Input validation, error handling, JSON serialization
+- **Dependencies**: Inspector core, FastMCP framework
+
+### 3. FastMCP Framework Layer
+- **Purpose**: MCP server hosting and communication
+- **Returns**: Structured tool responses to MCP clients
+- **Responsibilities**: Network communication, protocol handling
+- **Dependencies**: FastMCP library
+
+This separation ensures clean interfaces, better testability, and optimal performance at each layer.
+
+## Project Structure
+
+```
+├── pdf_action_inspector/            # Main package directory
+│   ├── mcp_server.py               # MCP server implementation
+│   ├── core/                       # Core PDF processing
+│   │   ├── inspector.py            # PDF analysis engine
+│   │   ├── cache_manager.py        # Caching system
+│   │   └── error_handler.py        # Error handling
+│   ├── config/                     # Configuration management
+│   │   ├── settings.py             # Application settings
+│   │   └── policies.py             # Security policies
+│   └── utils/                      # Utility functions
+│       ├── action_extractor.py     # PDF Action extraction
+│       └── pdf_utils.py            # PDF utilities
+├── examples/
+│   ├── pdf_samples/                # Sample PDFs for testing
+│   └── videos/                     # Demo videos
+├── tests/                          # Test suite
+├── docs/                           # Documentation
+├── pyproject.toml                  # Package configuration
+├── README.md                       # This file
+└── LICENSE                         # MIT License
+```
+
+## Setup
+
+### For Users (Recommended)
+
+```bash
+# Install from PyPI
+pip install pdf-action-inspector
+
+# Run the MCP server
+pdf-action-inspector
+```
+
+### For Developers
+
+```bash
+# Clone the repository
+git clone https://github.com/foxitsoftware/PDFActionInspector.git
+cd PDFActionInspector
+
+# Option 1: Using uv (recommended)
+uv sync
+uv run pdf-action-inspector
+
+# Option 2: Using pip
+pip install -r requirements.txt
+python pdf_action_inspector/mcp_server.py
+```
+
+## Claude Desktop Config
+
+**Recommended configuration (using uv):**
+
+```json
+{
+  "mcpServers": {
+    "pdf-action-inspector": {
+      "command": "uv",
+      "args": ["run", "pdf-action-inspector"]
+    }
+  }
+}
+```
+
+**Alternative (if installed globally):**
+
+```json
+{
+  "mcpServers": {
+    "pdf-action-inspector": {
+      "command": "pdf-action-inspector"
+    }
+  }
+}
+```
+
+## Tools
+
+The MCP server provides the following tools for PDF analysis:
+
+### Core Analysis Tools
+| Tool | Description |
+|------|-------------|
+| `analyze_pdf_actions_security(file_path)` | Generate security analysis prompt with extracted Actions data |
+| `extract_pdf_actions(file_path)` | Extract raw PDF Actions from all levels (document, page, annotation, field) |
+| `get_document_overview(file_path)` | Get comprehensive document structure and metadata |
+| `load_all_annotations(file_path)` | Extract all annotations with their associated Actions |
+
+### Detailed Analysis Tools
+| Tool | Description |
+|------|-------------|
+| `get_fields_by_name(file_path, field_name)` | Find form fields by name with fuzzy matching |
+| `get_page_text_content(file_path, page_number)` | Extract text content from specific page |
+| `get_pdf_object_information(file_path, object_number)` | Get detailed PDF object information |
+| `get_trailer_object(file_path)` | Get PDF trailer dictionary and document structure |
+| `load_all_annotations_in_page(file_path, page_index)` | Get annotations for specific page |
+| `get_page_information_by_spans(file_path, page_spans)` | Get information for page ranges |
+| `get_page_index_by_pdfobjnum(file_path, obj_num)` | Find page containing specific object |
+
+### Cache Management
+| Tool | Description |
+|------|-------------|
+| `set_pdf_password(file_path, password)` | Set password for encrypted PDF files |
+| `clear_pdf_cache(file_path)` | Clear cache for specific file or all cached files |
+| `get_cache_status()` | Get current cache status information |
+
+**Architecture:** The MCP tools layer returns JSON strings for external consumption, while the internal Inspector core returns Python dictionaries for better performance and type safety.
+
+## Working with Encrypted PDFs
+
+For password-protected PDF files, you need to set the password before analyzing:
+
+```python
+# First set the password for the encrypted PDF
+set_pdf_password("encrypted_document.pdf", "your_password_here")
+
+# Then proceed with analysis
+analyze_pdf_actions_security("encrypted_document.pdf")
+extract_pdf_actions("encrypted_document.pdf")
+```
+
+**Note:** Passwords are stored in memory for the current session only and are not persisted to disk.
+
+## Environment
+
+- `PDF_CACHE_TIMEOUT_SECONDS=120` - Cache timeout
+- `LOG_LEVEL=INFO` - Log level
+
+## 📚 Documentation
+
+- **[API Documentation](docs/API_DOCUMENTATION.md)** - Comprehensive API reference and usage guide
+
+## Development
+
+```bash
+# Run tests
+uv run python -m pytest tests/ -v
+
+# Run tests with coverage
+uv run python -m pytest tests/ --cov=pdf_action_inspector --cov-report=html
+
+# Add dependencies
+uv add <package_name>
+```
+
+## Example Analysis
+
+Here are examples of analyzing different types of PDFs using the MCP server in VS Code with GitHub Copilot:
+
+### Example 1: Malicious JavaScript Detection
+
+**File:** `confuse_js_code.pdf`
+
+**User:** Analyze the security of examples/pdf_samples/confuse_js_code.pdf
+
+**AI Agent Analysis:**
+```
+# Actions Summary
+- **Document Level**: One DocumentOpenAction with JavaScript execution
+- **Trigger**: Automatic execution when PDF is opened
+- **Action Type**: JavaScript execution with obfuscated payload
+
+# Behavior Analysis
+- **Obfuscated Code**: Hex-encoded string designed to hide malicious intent
+- **Automatic Execution**: No user interaction required - runs immediately on document open
+- **Decoded Payload**: `app.launchURL("http://evil.com")` - attempts to redirect user to external malicious site
+- **Evasion Technique**: Uses eval() with dynamic string construction to bypass static analysis
+
+# Security Analysis
+- **Attack Vector**: Malicious URL redirection through PDF JavaScript
+- **Social Engineering**: Disguised as innocent document, automatically executes on open
+- **Network Impact**: Attempts unauthorized external network connection
+- **User Privacy**: Potential data exfiltration through URL parameters
+- **System Risk**: Could be first stage of multi-stage attack
+
+# Conclusion
+**Scenario Overview:** Malicious PDF containing obfuscated JavaScript designed to redirect users to potentially harmful external website
+
+**Benign Level:** Malicious - Clear intent to redirect users without consent using obfuscation techniques
+
+**Risk Level:** High - Automatic execution with external network access and obfuscation indicates sophisticated attack
+
+**Confidence Score:** 95 - Clear evidence of malicious intent through obfuscation and unauthorized URL launch
+
+**Recommendation:** 
+- Block or quarantine this PDF immediately
+- Do not open in environments with JavaScript enabled
+- Investigate source and distribution method
+- Consider this as potential indicator of targeted attack campaign
+```
+
+### Example 2: Signature Field with JavaScript Action
+
+**File:** `test-signature_action.pdf`
+
+**User:** Analyze the signature field actions in examples/pdf_samples/test-signature_action.pdf
+
+**AI Agent Analysis:**
+```
+# Actions Summary
+- **Annotation Level**: Widget annotation (Signature field) with mouse-down action on page 1
+- **Trigger**: User clicks on signature field (AnnotMouseDown event)
+- **Action Type**: JavaScript execution that modifies a "Price" field value
+
+# Behavior Analysis
+- **Field Interaction**: When user clicks on the signature field "Signature_0", it triggers JavaScript execution
+- **Hidden Value Modification**: The JavaScript code `var field= this.getField("Price"); field.value=100` automatically sets a "Price" field to value 100
+- **User Experience**: User expects to sign the document but unknowingly triggers modification of financial data
+- **Timing**: Action executes immediately upon mouse-down on signature field, before actual signing
+
+# Security Analysis
+- **Integrity Risk**: The signature action modifies document content beyond the intended signing process
+- **User Deception**: User is unaware that clicking to sign will also change a price value to 100
+- **Data Manipulation**: Financial or business-critical data ("Price" field) is being altered without user consent
+- **Audit Trail**: This hidden modification may not be visible in standard signature audit processes
+- **Trust Violation**: Undermines the integrity expectation of digital signature workflows
+
+# Conclusion
+**Scenario Overview:** PDF with signature field that contains hidden JavaScript to modify a price field when user attempts to sign
+
+**Benign Level:** Misuse - While not overtly malicious, this represents improper use of signature actions to modify document data
+
+**Risk Level:** Medium - Unauthorized field modification during what should be a trusted signature process poses moderate security risk
+
+**Confidence Score:** 90 - Clear evidence of undisclosed value modification tied to signature interaction
+
+**Recommendation:** 
+- Review signature workflows for unexpected side effects
+- Implement validation to ensure signature actions only perform signing-related operations
+- Consider this a potential indicator of document tampering or fraudulent intent
+- Audit other documents from the same source for similar hidden behaviors
+```
+
+### Example 3: Clean Document Analysis
+
+**File:** `without_actions.pdf` (ISO PDF 2.0 specification document)
+
+**User:** Check examples/pdf_samples/without_actions.pdf for any malicious actions
+
+**AI Agent Analysis:**
+```
+# Actions Summary
+- **Document Level**: No actions detected at document level
+- **Page Level**: No actions detected at page level  
+- **Annotation Level**: No actions detected at annotation level
+- **Field Level**: No actions detected at field level
+- **Overall**: Complete absence of interactive Actions throughout the 21-page document
+
+# Behavior Analysis
+- **Static Document**: This is a purely static PDF document without any interactive elements or executable content
+- **Content Type**: Technical specification document (ISO/DIS 32000-2 PDF 2.0) - appears to be official ISO documentation
+- **Document Structure**: Standard PDF structure with 21 pages, no form fields, no annotations with actions
+- **Publisher Context**: Created with "Adobe PDF Library 15.0" and "Acrobat PDFMaker 15 for Word" - legitimate authoring tools
+- **File Size**: 1,011,774 bytes indicates substantial content typical of technical documentation
+
+# Security Analysis
+- **No JavaScript**: Document contains absolutely no executable JavaScript code at any level
+- **No Interactive Forms**: No AcroForm fields present that could contain hidden actions
+- **No Suspicious Annotations**: No widget annotations or other interactive elements that could harbor malicious code
+- **Standard PDF Structure**: Follows standard PDF 1.7 specification without suspicious modifications
+- **Legitimate Metadata**: Document metadata indicates creation through standard Adobe tools for technical documentation
+- **File Integrity**: Large file size and multi-page structure consistent with legitimate technical specification document
+
+# Conclusion
+**Scenario Overview:** Clean technical specification document (ISO PDF 2.0 standard) with no interactive elements or security concerns
+
+**Benign Level:** Benign - Standard documentation PDF created through legitimate authoring tools with no suspicious characteristics
+
+**Risk Level:** Info - Document poses no security risk and is safe for all environments including those with JavaScript enabled
+
+**Confidence Score:** 100 - Complete absence of any Actions or interactive elements provides absolute certainty of safety
+
+**Recommendation:** 
+- Safe to open and use in any environment without restrictions
+- No special precautions needed when handling this document
+- Can be distributed and shared without security concerns
+- Suitable for use in high-security environments
+```
+
+### Example 4: Financial Document Price Manipulation
+
+📹 **[Video Demo: Analyzing PDF Price Manipulation Attack](examples/videos/price-manipulation-demo.mp4)**
+
+Watch how our AI agent detects a malicious signature field that secretly changes a price from $1000 to $100 when the user attempts to sign the document.
+
+These examples demonstrate how the tool handles different scenarios: malicious code, suspicious behavior, and clean documents.
+
+## ⚠️ Important Disclaimer
+
+This project provides **a PDF security analysis framework** that surfaces all embedded PDF Actions and supports AI-assisted risk assessment. It integrates with security workflows as an MCP server module. 
+
+**We make no guarantees about the accuracy of specific analysis results.** This tool provides a methodology and framework for using AI to analyze PDF Actions security. The output results depend heavily on the AI model and agent application you choose to use. Users should validate findings through additional security measures and expert review.
+
+### What This Framework Provides:
+- **Comprehensive data extraction** for PDF Actions across all document levels
+- **MCP server integration** for AI security analysis workflows  
+- **Structured approach** to surface hidden PDF behaviors for security assessment
