@@ -1,0 +1,1 @@
+#Create a new calendar from start of the current year till the end of it, with Saturday and Sunday set as rest days

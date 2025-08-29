@@ -1,0 +1,1 @@
+#Create a new EURGBP FX Forward curve from scratch using only FX Forward constituents for 1M, 2M and 3M tenors and Save it as "My_curve"

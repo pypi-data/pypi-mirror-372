@@ -1,0 +1,1 @@
+#Print the number of working days between the 1st of January and the 31st of July 2024 using the UKG calendar
