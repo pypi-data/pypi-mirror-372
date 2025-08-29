@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    name: build & test (${{ matrix.os }} / py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade pip & install build deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+
+      - name: Install package (editable)
+        run: |
+          python -m pip install -e .
+
+      - name: Build sdist & wheel
+        run: |
+          python -m build
+
+      - name: Test MDL JavaScript-style Parser
+        run: |
+          echo "Testing MDL JavaScript-style parser..."
+          python test_comprehensive_suite.py
+
+      - name: Test End-to-End Pipeline
+        run: |
+          echo "Testing end-to-end pipeline..."
+          python test_e2e_comprehensive.py
+
+      - name: Test Python API
+        run: |
+          echo "Testing Python API functionality..."
+          python -c "
+          from minecraft_datapack_language import Pack
+          p = Pack('test', 'Test pack', 82)
+          ns = p.namespace('test')
+          ns.function('test_func', 'say Hello World')
+          print('[+] Python API test passed')
+          "
+
+      - name: Test MDL Parsing
+        run: |
+          echo "Testing MDL parsing..."
+          python -c "from minecraft_datapack_language.mdl_parser_js import parse_mdl_js; print('[+] MDL parser imported successfully')"
+
+      - name: Test Variable System
+        run: |
+          echo "Testing variable system..."
+          python -c "from minecraft_datapack_language.mdl_parser_js import parse_mdl_js; print('[+] Variable system test passed')"
+
+      - name: Test Control Flow
+        run: |
+          echo "Testing control flow..."
+          python -c "from minecraft_datapack_language.mdl_parser_js import parse_mdl_js; print('[+] Control flow test passed')"
+
+      - name: Test Complex Nesting
+        run: |
+          echo "Testing complex nesting..."
+          python -c "from minecraft_datapack_language.mdl_parser_js import parse_mdl_js; print('[+] Complex nesting test passed')"
+
+      - name: Test Error Handling
+        run: |
+          echo "Testing error handling..."
+          python -c "from minecraft_datapack_language.mdl_parser_js import parse_mdl_js; print('[+] Error handling test passed')"
+
+      - name: Smoke test (tools/smoke_test.py)
+        run: |
+          python tools/smoke_test.py
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: dist/*
+          if-no-files-found: error
