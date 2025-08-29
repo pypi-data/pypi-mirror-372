@@ -1,0 +1,137 @@
+#! /usr/bin/env python3
+# -*- coding: UTF-8 -*-
+##############################################
+# Home	: http://netkiller.github.io
+# Author: Neo <netkiller@msn.com>
+##############################################
+try:
+    import os
+    import logging
+    from simple_term_menu import TerminalMenu
+    from prompt_toolkit.shortcuts import input_dialog
+    from optparse import OptionParser
+except ImportError as err:
+    print("Error: %s" % (err))
+
+
+class Logviewer():
+    def __init__(self):
+        usage = "%prog [options] message\nHomepage: https://www.netkiller.cn\tAuthor: Neo <netkiller@msn.com>\nHelp: https://github.com/netkiller/devops/blob/master/doc/logviewer.md"
+        self.parser = OptionParser(usage)
+        self.parser.add_option('-c',
+                               "--kubeconfig",
+                               dest="kubeconfig",
+                               help="kubeconfig file",
+                               default=None,
+                               metavar="~/.kube/config")
+        self.parser.add_option('-i',
+                               '--install',
+                               dest="install",
+                               help="install logviewer")
+
+        self.parser.add_option('-a',
+                               '--adduser',
+                               dest="adduser",
+                               help="add user for log view")
+        self.parser.add_option('-l','--logfile', dest='logfile', help='logs file.', default='/var/log/logviewer.log', metavar='/var/log/logviewer.log')
+
+        (self.options, self.args) = self.parser.parse_args()
+
+        if self.options.logfile :
+            logging.basicConfig(level=logging.NOTSET,format='%(asctime)s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S',
+			filename=self.options.logfile,filemode='a')
+
+        self.logging = logging.getLogger()
+
+        if self.options.install:
+            os.system(
+                "usermod -s /usr/local/bin/logviewer.kubectl {user}".format(user=self.options.install))
+            os.system(
+                "grep {user} /etc/passwd".format(user=self.options.install))
+            exit()
+        if self.options.adduser:
+            os.system(
+                "adduser -s /usr/local/bin/logviewer.kubectl {user}".format(user=self.options.adduser))
+            os.system(
+                "grep {user} /etc/passwd".format(user=self.options.adduser))
+            exit()
+
+        if self.options.kubeconfig:
+            os.environ['KUBECONFIG'] = self.options.kubeconfig
+
+        self.tui()
+
+    def tui(self):
+        try:
+            namespaces = self.namespace()
+            namespace_menu = TerminalMenu(
+                namespaces, clear_screen=True, title="Namespace - Press Q or Esc to quit, '/' to search keyword.")
+            menu_index = namespace_menu.show()
+            while True:
+                namespace = namespaces[menu_index]
+                deployments = self.deployment(namespace)
+                deployments_menu = TerminalMenu(deployments, clear_screen=True)
+                submenu_index = deployments_menu.show()
+                deployment = deployments[submenu_index].split(' ')[0]
+                while True:
+                    pods = self.pod(namespace, deployment)
+                    pods_menu = TerminalMenu(pods, clear_screen=True)
+                    subsubmenu_index = pods_menu.show()
+                    pod = pods[subsubmenu_index].split(' ')[0]
+                    self.logs(namespace, deployment, pod)
+        except Exception as e:
+            self.logging.error(e)
+
+    def usage(self):
+        self.parser.print_help()
+        exit()
+
+    def namespace(self):
+        screen = os.popen(
+            "kubectl get namespace | grep -v 'NAME' | cut -d ' ' -f1")
+        namespaces = []
+        for tmp in screen.readlines():
+            namespaces.append(tmp.strip())
+        return namespaces
+
+    def deployment(self, namespace='default'):
+        screen = os.popen(
+            "kubectl get deployment -n {namespace} -o wide".format(namespace=namespace))
+        deployments = []
+        for tmp in screen.readlines():
+            deployments.append(tmp.strip())
+        return deployments
+
+    def pod(self, namespace='default', deployment=None):
+        grep = ''
+        if deployment:
+            grep = " | grep {deployment}".format(deployment=deployment)
+        screen = os.popen(
+            "kubectl get pods -n {namespace} -o wide {grep}".format(namespace=namespace, grep=grep))
+        pods = []
+        for tmp in screen.readlines():
+            pods.append(tmp.strip())
+        return pods
+
+    def logs(self, namespace='default', deployment = None, pod = None):
+        text = input_dialog(title='关键字搜索', text='请输入正则表达式:').run()
+        grep = ''
+        if text:
+            grep = ' | egrep --color "%s"' % text
+
+        if deployment: 
+            deployment = "-c {deployment}".format(deployment=deployment)
+        else:
+            deployment = ''
+
+        command = "kubectl logs -f --tail=200 -n {namespace} {pod} {deployment} {grep}".format(
+            namespace=namespace, deployment=deployment, pod=pod, grep=grep)
+        self.logging.debug(command)
+        screen = os.system(command)
+        return screen
+
+if __name__ == '__main__':
+    try:
+        viewer = Logviewer()
+    except KeyboardInterrupt:
+        print("Crtl+C Pressed. Shutting down.")

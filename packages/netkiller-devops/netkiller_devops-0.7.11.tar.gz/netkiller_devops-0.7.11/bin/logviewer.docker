@@ -1,0 +1,117 @@
+#! /usr/bin/env python3
+# -*- coding: UTF-8 -*-
+##############################################
+# Home	: http://netkiller.github.io
+# Author: Neo <netkiller@msn.com>
+##############################################
+try:
+    import os
+    from simple_term_menu import TerminalMenu
+    from prompt_toolkit.shortcuts import input_dialog
+    from optparse import OptionParser
+except ImportError as err:
+    print("Error: %s" % (err))
+
+
+class Logviewer():
+    def __init__(self):
+        usage = "%prog [options] message\nHomepage: https://www.netkiller.cn\tAuthor: Neo <netkiller@msn.com>\nHelp: https://github.com/netkiller/devops/blob/master/doc/logviewer.md"
+        self.parser = OptionParser(usage)
+        self.parser.add_option('-c',
+                               "--config",
+                               dest="config",
+                               help="config file",
+                               default='/usr/local/etc/logviewer.ini',
+                               metavar="/usr/local/etc/logviewer.ini")
+        self.parser.add_option('',
+                               "--host",
+                               dest="host",
+                               help="docker host",
+                               default=None,
+                               metavar="ssh://root@www.netkiller.cn")
+        self.parser.add_option('-i',
+                               '--install',
+                               dest="install",
+                               help="install logviewer")
+
+        self.parser.add_option('-a',
+                               '--adduser',
+                               dest="adduser",
+                               help="add user for log view")
+        self.parser.add_option('-d',
+                               '--debug',
+                               action='store_true',
+                               dest="debug",
+                               help="debug mode")
+
+        (self.options, self.args) = self.parser.parse_args()
+
+        if self.options.install:
+            os.system(
+                "usermod -s /usr/local/bin/logviewer.kubectl {user}".format(user=self.options.install))
+            os.system(
+                "grep {user} /etc/passwd".format(user=self.options.install))
+            exit()
+        if self.options.adduser:
+            os.system(
+                "adduser -s /usr/local/bin/logviewer.kubectl {user}".format(user=self.options.adduser))
+            os.system(
+                "grep {user} /etc/passwd".format(user=self.options.adduser))
+            exit()
+
+        if self.options.debug:
+            print("=" * 50)
+            print(self.options, self.args)
+            print("=" * 50)
+
+        if self.options.host:
+            os.environ['DOCKER_HOST'] = self.options.host
+
+        while True:
+            self.tui()
+
+    def tui(self):
+        containers = self.container()
+        try:
+            menu = TerminalMenu(containers, 
+                                # preview_command="docker logs --tail=10 {}",
+                                # preview_size=0.2, 
+                                clear_screen=True, 
+                                title="清选择容器查看日志，输入 Q 或 ESC 退出，输入 / 可查找")
+            menu_index = menu.show()
+            self.logs(containers[menu_index])
+        except Exception as e:
+            print(e)
+            exit()
+
+    def container(self):
+        screen = os.popen(
+            "docker container ls --format='{{.Names}}'")
+        containers = []
+        for tmp in screen.readlines():
+            containers.append(tmp.strip())
+        return (containers)
+
+    def logs(self, container):
+        cmd = []
+        cmd.append('docker logs -f --tail=500 ')
+        cmd.append(container)
+        text = input_dialog(title='关键字搜索',
+                            text='请输入正则表达式:').run()
+        if text:
+            cmd.append('|')
+            cmd.append('grep --color "%s"' % text)
+
+        command = ' '.join(cmd)
+        os.system(command)
+
+    def usage(self):
+        self.parser.print_help()
+        exit()
+
+
+if __name__ == '__main__':
+    try:
+        viewer = Logviewer()
+    except KeyboardInterrupt:
+        print("Crtlgg+C Pressed. Shutting down.")

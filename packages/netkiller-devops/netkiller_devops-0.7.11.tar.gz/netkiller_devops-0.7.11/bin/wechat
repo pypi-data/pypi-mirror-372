@@ -1,0 +1,70 @@
+#! /usr/bin/env python3
+# -*- coding: UTF-8 -*-
+##############################################
+# Home	: http://netkiller.github.io
+# Author: Neo <netkiller@msn.com>
+##############################################
+try:
+	import requests, os, sys
+	import logging, logging.handlers
+	from configparser import ConfigParser
+	from optparse import OptionParser, OptionGroup
+	module = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+	sys.path.insert(0,module)
+	from netkiller.wework import WeWork
+except ImportError as err:
+	print("Error: %s" %(err))
+
+class Wechat():
+
+	def __init__(self): 
+		usage = "usage: %prog [options] message"
+		self.parser = OptionParser(usage)
+		self.parser.add_option("-c", "--config", dest="config", help="config file", default='/usr/local/etc/wechat.ini', metavar="/usr/local/etc/wechat.ini")
+		self.parser.add_option('-e','--corporate', dest='corporate', help='corporate', default='default',metavar='default')
+		self.parser.add_option('-t','--totag', dest='totag', help='tag', default='1',metavar='"1|2|3"')
+		self.parser.add_option('-s', "--stdin", action="store_true", dest="stdin", help="stdin")
+		self.parser.add_option("", "--debug", action="store_true", dest="debug", help="debug mode")
+
+		(options, args) = self.parser.parse_args()
+
+		self.config = ConfigParser()
+		self.config.read(options.config)
+		conf = dict(self.config.items(options.corporate))
+
+		self.corpid = conf.get('corpid')
+		self.secret = conf.get('secret')
+		self.agentid = conf.get('agentid')
+
+		if options.debug:
+			print("="*50)
+			print(options, args)
+			print("="*50)
+
+		wework = WeWork(self.corpid, self.secret, self.agentid)
+
+		if options.stdin :
+			message = ''.join ( sys.stdin.readlines() )
+			# print(message)
+			wework.sendTextMessage(options.totag, message)
+			exit()
+
+		if args :
+			message = ' '.join(args)
+			wework.sendTextMessage(options.totag, message)
+			# print(message)
+		else:
+			self.usage()
+
+	def debug(self):
+		for (key,value) in self.config.items() :
+			print(key,value)
+
+	def usage(self):
+		self.parser.print_help()
+		print("\nHomepage: https://www.netkiller.cn\tAuthor: Neo <netkiller@msn.com>")
+		print("Help: https://github.com/netkiller/devops/blob/master/doc/wechat.md")
+		exit()
+
+if __name__ == '__main__':
+	wechat = Wechat()
