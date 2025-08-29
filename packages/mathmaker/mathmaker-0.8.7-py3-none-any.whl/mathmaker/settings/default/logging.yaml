@@ -1,0 +1,77 @@
+version: 1
+
+# Don't modify this file.
+# If you wish to define customized logging configuration,
+# you should duplicate it as dev/logging.yaml and edit this copy instead
+# (for instance, turn debug logging on by setting dbg level to DEBUG).
+
+formatters:
+    dbgMessageFormatter:
+        format: '[%(name)s] %(message)s'
+    rawMessageFormatter:
+        format: '%(message)s'
+    defaultFormatter:
+        format: '%(asctime)s.%(msecs)d %(filename)s: %(funcName)s: %(message)s'
+        datefmt: '%Y/%m/%d %H:%M:%S'
+    rsyslogdFormatter:
+        format: '%(levelname)s %(filename)s: %(funcName)s: %(message)s'
+    rsyslogdDaemonFormatter:
+        format: '%(levelname)s %(message)s'
+    stderrFormatter:
+        format: '[mathmaker] %(levelname)s %(filename)s: %(funcName)s: %(message)s'
+
+handlers:
+    nullHandler:
+        class: logging.NullHandler
+    mainSysLogHandler:
+        class: logging.handlers.SysLogHandler
+        level: INFO
+        formatter: rsyslogdFormatter
+        address: '/dev/log'
+        facility: 'local5'
+    outputWatcherHandler:
+        class: logging.handlers.SysLogHandler
+        level: DEBUG
+        formatter: rsyslogdFormatter
+        address: '/dev/log'
+        facility: 'local4'
+    daemonSysLogHandler:
+        class: logging.handlers.SysLogHandler
+        level: INFO
+        formatter: rsyslogdDaemonFormatter
+        address: '/dev/log'
+        facility: 'local6'
+    mainStdErrHandler:
+        class: logging.StreamHandler
+        level: WARNING
+        formatter: stderrFormatter
+    debugHandler:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: dbgMessageFormatter
+    rawHandler:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: rawMessageFormatter
+
+loggers:
+    root:
+        level: WARNING
+        handlers: [nullHandler]
+    __main__:
+        level: WARNING
+        handlers: [mainSysLogHandler, mainStdErrHandler]
+    __daemon__:
+        level: WARNING
+        handlers: [daemonSysLogHandler]
+    __output_watcher__:
+        # The 'INFO' level inhibits the debug messages.
+        level: INFO
+        handlers: [outputWatcherHandler]
+    dbg:
+        # The 'INFO' level inhibits the debug messages.
+        level: INFO
+        handlers: [debugHandler]
+    raw:
+        level: DEBUG
+        handlers: [rawHandler]
