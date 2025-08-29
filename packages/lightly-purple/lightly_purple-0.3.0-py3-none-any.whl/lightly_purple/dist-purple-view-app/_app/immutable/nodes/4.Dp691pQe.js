@@ -1,0 +1,1 @@
+import{l as o}from"../chunks/DutOwosB.js";import{L as n}from"../chunks/Cfz7oBTV.js";const t=async({params:{dataset_id:a,sampleId:e}})=>({sample:(await o({sample_id:e,dataset_id:a})).data}),s=Object.freeze(Object.defineProperty({__proto__:null,load:t},Symbol.toStringTag,{value:"Module"}));export{n as component,s as universal};

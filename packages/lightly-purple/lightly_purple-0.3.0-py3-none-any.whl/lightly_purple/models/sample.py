@@ -1,0 +1,166 @@
+"""This module defines the User model for the application."""
+
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any, List, Optional
+from uuid import UUID, uuid4
+
+from sqlalchemy.orm import Mapped, Session
+from sqlmodel import Field, Relationship, SQLModel
+
+from lightly_purple.models.annotation.annotation_base import AnnotationView
+from lightly_purple.resolvers import metadata_resolver
+
+if TYPE_CHECKING:
+    from lightly_purple.models.annotation.annotation_base import (
+        AnnotationBaseTable,
+    )
+    from lightly_purple.models.metadata import (
+        SampleMetadataTable,
+        SampleMetadataView,
+    )
+    from lightly_purple.models.sample_embedding import SampleEmbeddingTable
+    from lightly_purple.models.tag import TagTable, TagView
+else:
+    AnnotationBaseTable = object
+    SampleEmbeddingTable = object
+    SampleMetadataTable = object
+    TagTable = object
+    TagView = object
+    SampleMetadataView = object
+
+
+class SampleBase(SQLModel):
+    """Base class for the Sample model."""
+
+    """The name of the image file."""
+    file_name: str
+
+    """The width of the image in pixels."""
+    width: int
+
+    """The height of the image in pixels."""
+    height: int
+
+    """The dataset ID to which the sample belongs."""
+    dataset_id: UUID = Field(default=None, foreign_key="datasets.dataset_id")
+
+    """The dataset image path."""
+    file_path_abs: str
+
+
+class SampleCreate(SampleBase):
+    """Sample class when inserting."""
+
+
+class SampleViewForAnnotation(SQLModel):
+    """Sample class for annotation view."""
+
+    """The name of the image file."""
+    file_path_abs: str
+    sample_id: UUID
+
+    """The width of the image in pixels."""
+    width: int
+
+    """The height of the image in pixels."""
+    height: int
+
+    created_at: datetime
+    updated_at: datetime
+
+
+class SampleTagLinkTable(SQLModel, table=True):
+    """Model to define links between Sample and Tag Many-to-Many."""
+
+    sample_id: Optional[UUID] = Field(
+        default=None, foreign_key="samples.sample_id", primary_key=True
+    )
+    tag_id: Optional[UUID] = Field(default=None, foreign_key="tags.tag_id", primary_key=True)
+
+
+class SampleTable(SampleBase, table=True):
+    """This class defines the Sample model."""
+
+    __tablename__ = "samples"
+    sample_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+    )
+    annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
+        back_populates="sample",
+    )
+
+    """The tag ids associated with the sample."""
+    tags: Mapped[List["TagTable"]] = Relationship(
+        back_populates="samples", link_model=SampleTagLinkTable
+    )
+    embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
+    metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
+
+    def __getitem__(self, key: str) -> Any:
+        """Provides dict-like access to sample metadata.
+
+        Args:
+            key: The metadata key to access.
+
+        Returns:
+            The metadata value for the given key, or None if the key doesn't
+            exist.
+        """
+        if self.metadata_dict is None:
+            return None
+        return self.metadata_dict.get_value(key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        """Sets a metadata key-value pair for this sample.
+
+        Args:
+            key: The metadata key.
+            value: The metadata value.
+
+        Note:
+            If the sample has no metadata, a new Metadata Table instance
+            will be created. Changes are automatically committed to the
+            database.
+
+        Raises:
+            RuntimeError: If no database session is found.
+        """
+        # Get the session from the instance
+        session = Session.object_session(self)
+        if session is None:
+            raise RuntimeError("No database session found for this instance")
+
+        # Use metadata_resolver to handle the database operations.
+        # Added type: ignore to avoid type checking issues. SQLAlchemy and
+        # SQLModel sessions are compatible at runtime but have different type
+        # annotations.
+        metadata_resolver.set_value_for_sample(
+            session=session,  # type: ignore[arg-type]
+            sample_id=self.sample_id,
+            key=key,
+            value=value,
+        )
+
+
+class SampleView(SQLModel):
+    """Sample class when retrieving."""
+
+    """The name of the image file."""
+    file_name: str
+    file_path_abs: str
+    sample_id: UUID
+    dataset_id: UUID
+    annotations: List["AnnotationView"] = Field([])
+    tags: List["TagView"] = Field([])
+    metadata_dict: Optional["SampleMetadataView"] = None
+    width: int
+    height: int
+
+
+class CountedSampleView(SQLModel):
+    """Response model for counted samples."""
+
+    data: List[SampleView]
+    total_count: int

@@ -1,0 +1,1 @@
+export const env={"PUBLIC_SAMPLES_URL":"/images","PUBLIC_PURPLE_API_URL":"/"}
