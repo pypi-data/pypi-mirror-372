@@ -1,0 +1,49 @@
+name: Publish (PyPI & TestPyPI via Trusted Publisher)
+
+on:
+  push:
+    tags:
+      - "v*"               # e.g. v0.3.0 or v0.3.0-rc1
+
+permissions:
+  id-token: write          # REQUIRED for OIDC (Trusted Publisher)
+  contents: read
+
+jobs:
+  build-and-publish-pypi:
+    # Runs only for normal releases e.g. v0.3.0 (no 'rc' in the tag)
+    if: startsWith(github.ref_name, 'v') && !contains(github.ref_name, 'rc')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build sdist & wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          # packages-index: pypi   # default; explicit not needed
+
+  build-and-publish-testpypi:
+    # Runs only for release-candidate/test tags e.g. v0.3.0-rc1
+    if: startsWith(github.ref_name, 'v') && contains(github.ref_name, 'rc')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build sdist & wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          packages-index: testpypi
