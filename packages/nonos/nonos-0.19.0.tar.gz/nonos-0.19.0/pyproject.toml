@@ -1,0 +1,161 @@
+[build-system]
+requires = ["flit_core >=3.11,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "nonos"
+version = "0.19.0"
+description = "A lightweight plotting library for protoplanetary disks simulations"
+authors = [
+    { name = "G. Wafflard-Fernandez" },
+    { name = "C.M.T. Robert" },
+]
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Matplotlib",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Typing :: Typed",
+]
+requires-python = ">=3.10"
+
+dependencies = [
+    "inifix>=5.1.0",
+    "matplotlib>=3.5.0",
+    "numpy>=1.21.2",
+    "typing_extensions >= 4.4.0 ; python_version < '3.12'",
+]
+
+[project.optional-dependencies]
+cli = [
+    "nonos-cli>=0.1.0",
+]
+all = [
+    "nonos[cli]",
+    "cblind>=2.3.0",
+    "cmocean>=3.0.3",
+    "cmyt>=2.0.0",
+    "lick>=0.5.1",
+    "scipy>=1.7.2",
+]
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.urls]
+Homepage = "https://github.com/la-niche/nonos"
+
+[dependency-groups]
+test = [
+    "cogapp>=3.3.0",
+    "pytest-mpl>=0.15.1",
+    "pytest>=8.0.0",
+]
+covcheck = [
+    {include-group = "test"},
+    "coverage[toml]; python_full_version < '3.11'",
+    "coverage>=7.6.12",
+    "numexpr>=2.10.2",
+]
+typecheck = [
+    "matplotlib>=3.8.0",
+    "mypy>=1.13.0",
+]
+docs = [
+    "nonos[cli]",
+    "mkdocs>=1.6.1",
+    "mkdocs-include-markdown-plugin>=7.1.2",
+    "mkdocs-material>=9.5.47",
+    "mkdocstrings[python]>=0.27.0",
+]
+
+[tool.ruff.lint]
+ignore = [
+    "E501",
+    "PTH123", # `open()` should be replaced by `Path.open()`
+]
+select = [
+    "E",
+    "F",
+    "W",
+    "ARG", # flake8-unused-arguments
+    "C4",  # flake8-comprehensions
+    "PTH", # flake8-use-pathlib
+    "B",   # flake8-bugbear
+    "YTT", # flake8-2020
+    "I",   # isort
+    "UP",  # pyupgrade
+    "RUF022", # unsorted-dunder-all
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["nonos", "nonos_cli"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+filterwarnings = [
+    "error",
+    'ignore:datetime\.datetime\.utcfromtimestamp\(\) is deprecated:DeprecationWarning', # https://github.com/dateutil/dateutil/pull/1285
+    'ignore:The py23 module has been deprecated and will be removed in a future release:DeprecationWarning',
+    "ignore:Passing 'N' to ListedColormap is deprecated since:DeprecationWarning", # https://github.com/matplotlib/cmocean/pull/114
+    "ignore:'mode' parameter is deprecated:DeprecationWarning", # https://github.com/matplotlib/matplotlib/pull/30221
+]
+
+[tool.mypy]
+python_version = "3.10"
+show_error_codes = true
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_unreachable = true
+show_error_context = true
+disallow_untyped_defs = false  # TODO: add missing annotations and switch this option to true
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = [
+    "src",
+    "tests",
+    "cli/src",
+    "cli/tests",
+]
+omit = [
+    "src/nonos/_backports.py",
+    "cli/src/nonos_cli/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+# use exclude_also to *extend* the default exclude_lines,
+# and allow purely defensive code patterns
+exclude_also = [
+    # the first two lines can be removed when coverage is bumped to >=7.10.0
+    "^\\s*(((async )?def .*?)?\\)(\\s*->.*?)?:\\s*)?\\.\\.\\.\\s*(#|$)",
+    "if (typing\\.)?TYPE_CHECKING:",
+
+    # actual extensions
+    "^\\s*raise NotImplementedError\\b",
+    "^\\s*raise RuntimeError\\b",
+    "^\\s*case _ as unreachable:",
+    "^\\s*assert_never\\b",
+]
+
+[tool.uv.workspace]
+members = [
+    "cli",
+]
+
+[tool.uv.sources]
+nonos-cli = { workspace = true }
