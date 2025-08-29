@@ -1,0 +1,216 @@
+Metadata-Version: 2.4
+Name: woo-commerce-sdk
+Version: 1.0.0
+Summary: WooCommerce API is a REST API for WordPress that enables developers to manage products, orders, customers, and store settings, making it easy to build and extend custom eCommerce solutions.
+Author-email: Hamza Shahzad <muhammad.hamza@apimatic.io>
+Project-URL: Documentation, https://docs.apimatic.io/
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: apimatic-core>=0.2.20,~=0.2.0
+Requires-Dist: apimatic-core-interfaces>=0.1.5,~=0.1.0
+Requires-Dist: apimatic-requests-client-adapter>=0.1.6,~=0.1.0
+Provides-Extra: testutils
+Requires-Dist: pytest>=7.2.2; extra == "testutils"
+Dynamic: license-file
+
+
+# Getting Started with WooCommerce REST API
+
+## Introduction
+
+Taken from: https://github.com/woocommerce/woocommerce-rest-api-docs
+
+### Introduction
+
+WooCommerce (WC) 2.6+ is fully integrated with the WordPress [REST](http://en.wikipedia.org/wiki/Representational_State_Transfer) API. This allows WC data to be created, read, updated, and deleted using requests in JSON format and using WordPress REST API Authentication methods and standard HTTP verbs which are understood by most HTTP clients.
+
+The current WP REST API integration version is `v3` which takes a first-order position in endpoints.
+
+The following table shows API versions present in each major version of WooCommerce:
+
+<table><thead>
+<tr>
+<th>API Version</th>
+<th>WC Version</th>
+<th>WP Version</th>
+<th>Documentation</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>`v3`</td>
+<td>3.5.x or later</td>
+<td>4.4 or later</td>
+<td>-</td>
+</tr>
+<tr>
+<td>`v2`</td>
+<td>3.0.x or later</td>
+<td>4.4 or later</td>
+<td>[v2 docs](https://woocommerce.github.io/woocommerce-rest-api-docs/wp-api-v2.html)</td>
+</tr>
+<tr>
+<td>`v1`</td>
+<td>2.6.x or later</td>
+<td>4.4 or later</td>
+<td>[v1 docs](https://woocommerce.github.io/woocommerce-rest-api-docs/wp-api-v1.html)</td>
+</tr>
+</tbody></table>
+
+
+Prior to 2.6, WooCommerce has had a REST API separate from WordPress which is now known as the legacy API. You can find the documentation for the legacy API separately.
+
+<table><thead>
+<tr>
+<th>API Version</th>
+<th>WC Version</th>
+<th>WP Version</th>
+<th>Documentation</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>`Legacy v3`</td>
+<td>2.4.x or later</td>
+<td>4.1 or later</td>
+<td>[Legacy v3 docs](https://woocommerce.github.io/woocommerce-rest-api-docs/v3.html)</td>
+</tr>
+<tr>
+<td>`Legacy v2`</td>
+<td>2.2.x or later</td>
+<td>4.1 or later</td>
+<td>[Legacy v2 docs](https://woocommerce.github.io/woocommerce-rest-api-docs/v2.html)</td>
+</tr>
+<tr>
+<td>`Legacy v1`</td>
+<td>2.1.x or later</td>
+<td>4.1 or later</td>
+<td>[Legacy v1 docs](https://woocommerce.github.io/woocommerce-rest-api-docs/v1.html)</td>
+</tr>
+</tbody></table>
+
+
+#### Requirements
+
+To use the latest version of the REST API you must be using:
+
+* WooCommerce 3.5+.
+* WordPress 4.4+.
+* Pretty permalinks in `Settings > Permalinks` so that the custom endpoints are supported. **Default permalinks will not work.**
+* You may access the API over either HTTP or HTTPS, but *HTTPS is recommended where possible*.
+
+If you use ModSecurity and see `501 Method Not Implemented` errors, see [this issue](https://github.com/woocommerce/woocommerce/issues/9838) for details.
+
+## Install the Package
+
+The package is compatible with Python versions `3.7+`.
+Install the package from PyPi using the following pip command:
+
+```bash
+pip install woo-commerce-sdk==1.0.0
+```
+
+You can also view the package at:
+https://pypi.python.org/pypi/woo-commerce-sdk/1.0.0
+
+## Test the SDK
+
+You can test the generated SDK and the server with test cases. `unittest` is used as the testing framework and `pytest` is used as the test runner. You can run the tests as follows:
+
+Navigate to the root directory of the SDK and run the following commands
+
+
+pip install -r test-requirements.txt
+pytest
+
+
+## Initialize the API Client
+
+**_Note:_** Documentation for the client can be found [here.](doc/client.md)
+
+The following parameters are configurable for the API Client:
+
+| Parameter | Type | Description |
+|  --- | --- | --- |
+| environment | `Environment` | The API environment. <br> **Default: `Environment.PRODUCTION`** |
+| http_client_instance | `HttpClient` | The Http Client passed from the sdk user for making requests |
+| override_http_client_configuration | `bool` | The value which determines to override properties of the passed Http Client from the sdk user |
+| http_call_back | `HttpCallBack` | The callback value that is invoked before and after an HTTP call is made to an endpoint |
+| timeout | `float` | The value to use for connection timeout. <br> **Default: 60** |
+| max_retries | `int` | The number of times to retry an endpoint call if it fails. <br> **Default: 0** |
+| backoff_factor | `float` | A backoff factor to apply between attempts after the second try. <br> **Default: 2** |
+| retry_statuses | `Array of int` | The http statuses on which retry is to be done. <br> **Default: [408, 413, 429, 500, 502, 503, 504, 521, 522, 524]** |
+| retry_methods | `Array of string` | The http methods on which retry is to be done. <br> **Default: ['GET', 'PUT']** |
+| basic_auth_credentials | [`BasicAuthCredentials`](__base_path/auth/basic-authentication.md) | The credential object for Basic Authentication |
+
+The API client can be initialized as follows:
+
+```python
+from woocommercerestapi.configuration import Environment
+from woocommercerestapi.http.auth.basic_auth import BasicAuthCredentials
+from woocommercerestapi.woocommercerestapi_client import WoocommercerestapiClient
+
+client = WoocommercerestapiClient(
+    basic_auth_credentials=BasicAuthCredentials(
+        username='username',
+        password='password'
+    ),
+    environment=Environment.PRODUCTION
+)
+```
+
+## Authorization
+
+This API uses the following authentication schemes.
+
+* [`basic (Basic Authentication)`](__base_path/auth/basic-authentication.md)
+
+## List of APIs
+
+* [Attributeid Terms](doc/controllers/attributeid-terms.md)
+* [Shippingclasses](doc/controllers/shippingclasses.md)
+* [Productid Variations](doc/controllers/productid-variations.md)
+* [Groupid](doc/controllers/groupid.md)
+* [Instanceid](doc/controllers/instanceid.md)
+* [Zoneid Methods](doc/controllers/zoneid-methods.md)
+* [Systemstatus](doc/controllers/systemstatus.md)
+* [Shippingmethods](doc/controllers/shippingmethods.md)
+* [Paymentgateways](doc/controllers/paymentgateways.md)
+* [Id](doc/controllers/id.md)
+* [Batch](doc/controllers/batch.md)
+* [Coupons](doc/controllers/coupons.md)
+* [Customers](doc/controllers/customers.md)
+* [Notes](doc/controllers/notes.md)
+* [Refunds](doc/controllers/refunds.md)
+* [Orders](doc/controllers/orders.md)
+* [Attributes](doc/controllers/attributes.md)
+* [Categories](doc/controllers/categories.md)
+* [Reviews](doc/controllers/reviews.md)
+* [Tags](doc/controllers/tags.md)
+* [Products](doc/controllers/products.md)
+* [Reports](doc/controllers/reports.md)
+* [Settings](doc/controllers/settings.md)
+* [Locations](doc/controllers/locations.md)
+* [Shipping Zones](doc/controllers/shipping-zones.md)
+* [Classes](doc/controllers/classes.md)
+* [Taxes](doc/controllers/taxes.md)
+* [Webhooks](doc/controllers/webhooks.md)
+* [Tools](doc/controllers/tools.md)
+* [Continents](doc/controllers/continents.md)
+* [Countries](doc/controllers/countries.md)
+* [Currencies](doc/controllers/currencies.md)
+* [Data](doc/controllers/data.md)
+
+## SDK Infrastructure
+
+### HTTP
+
+* [HttpResponse](doc/http-response.md)
+* [HttpRequest](doc/http-request.md)
+
+### Utilities
+
+* [ApiHelper](doc/api-helper.md)
+* [HttpDateTime](doc/http-date-time.md)
+* [RFC3339DateTime](doc/rfc3339-date-time.md)
+* [UnixDateTime](doc/unix-date-time.md)
+
