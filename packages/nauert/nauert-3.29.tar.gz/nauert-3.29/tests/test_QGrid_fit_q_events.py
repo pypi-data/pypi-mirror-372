@@ -1,0 +1,44 @@
+import abjad
+
+import nauert
+
+
+def test_QGrid_fit_q_events_01():
+    q_grid = nauert.QGrid()
+    a = nauert.QEventProxy(
+        nauert.SilentQEvent(abjad.duration.offset(0), ["A"]),
+        abjad.duration.offset(0),
+    )
+    b = nauert.QEventProxy(
+        nauert.SilentQEvent(abjad.duration.offset(1, 20), ["B"]),
+        abjad.duration.offset(1, 20),
+    )
+    c = nauert.QEventProxy(
+        nauert.SilentQEvent(abjad.duration.offset(9, 20), ["C"]),
+        abjad.duration.offset(9, 20),
+    )
+    d = nauert.QEventProxy(
+        nauert.SilentQEvent(abjad.duration.offset(1, 2), ["D"]),
+        abjad.duration.offset(1, 2),
+    )
+    e = nauert.QEventProxy(
+        nauert.SilentQEvent(abjad.duration.offset(11, 20), ["E"]),
+        abjad.duration.offset(11, 20),
+    )
+    f = nauert.QEventProxy(
+        nauert.SilentQEvent(abjad.duration.offset(19, 20), ["F"]),
+        abjad.duration.offset(19, 20),
+    )
+    g = nauert.QEventProxy(
+        nauert.SilentQEvent(abjad.duration.offset(1), ["G"]),
+        abjad.duration.offset(1),
+    )
+    q_grid.fit_q_events([a, b, c, d, e, f, g])
+    assert q_grid.leaves[0].q_event_proxies == [a, b, c, d]
+    assert q_grid.leaves[1].q_event_proxies == [e, f, g]
+
+    q_events = q_grid.subdivide_leaves([(0, (1, 1))])
+    q_grid.fit_q_events(q_events)
+    assert q_grid.leaves[0].q_event_proxies == [a, b]
+    assert q_grid.leaves[1].q_event_proxies == [c, d, e]
+    assert q_grid.leaves[2].q_event_proxies == [g, f]
