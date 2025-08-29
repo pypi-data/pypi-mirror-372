@@ -1,0 +1,67 @@
+name: Build and Publish
+on:
+  push:
+    tags:
+      - 'v*'
+      
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install UV
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Verify version consistency
+      run: |
+        # Extract version from tag
+        TAG_VERSION=${GITHUB_REF#refs/tags/v}
+        echo "Tag version: $TAG_VERSION"
+        
+        # Extract version from pyproject.toml
+        PROJECT_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+        echo "Project version: $PROJECT_VERSION"
+        
+        # Check if versions match
+        if [ "$TAG_VERSION" != "$PROJECT_VERSION" ]; then
+          echo "Version mismatch: tag=$TAG_VERSION, project=$PROJECT_VERSION"
+          exit 1
+        fi
+        echo "Version consistency verified: $TAG_VERSION"
+
+    - name: Install dependencies and build
+      run: |
+        uv sync
+        uv build
+        
+    - name: Verify build artifacts
+      run: |
+        echo "Build artifacts:"
+        ls -la dist/
+        
+        # Verify wheel and source distribution exist
+        if [ ! -f dist/*.whl ]; then
+          echo "Wheel file not found"
+          exit 1
+        fi
+        
+        if [ ! -f dist/*.tar.gz ]; then
+          echo "Source distribution not found"
+          exit 1
+        fi
+        
+        echo "Build verification successful"
+
+    - name: Publish to PyPI
+      env:
+        PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        uv publish --token $PYPI_API_TOKEN
