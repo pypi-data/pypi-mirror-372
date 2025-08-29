@@ -1,0 +1,89 @@
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  nats:
+    image: nats:latest
+    container_name: nats
+    ports:
+      - "4222:4222"
+      - "4223:4223"
+      - "6222:6222"
+      - "8222:8222"
+    logging: *logging
+
+  slim:
+    image: ghcr.io/agntcy/slim:0.4.0
+    container_name: slim-dataplane
+    ports:
+      - "46357:46357"
+    environment:
+      - PASSWORD=${SLIM_GATEWAY_PASSWORD:-dummy_password}
+      - CONFIG_PATH=/config.yaml
+    volumes:
+      - ./configs/slim/server-config.yaml:/config.yaml
+    command: ["/slim", "--config", "/config.yaml"]
+    networks:
+      - gateway
+
+  clickhouse-server:
+    image: clickhouse/clickhouse-server
+    container_name: clickhouse-server
+    ports:
+      - "9004:9000"
+      - "8123:8123"
+    environment:
+      CLICKHOUSE_USER: admin
+      CLICKHOUSE_PASSWORD: admin
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8123/ping",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    restart: unless-stopped
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./configs/otelcollector/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    command: ["--config", "/etc/otel-collector-config.yaml"]
+    depends_on:
+      clickhouse-server:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      clickhouse-server:
+        condition: service_healthy
+
+networks:
+  gateway:
+    driver: bridge
