@@ -1,0 +1,59 @@
+Metadata-Version: 2.4
+Name: bisheng-ragas
+Version: 1.0.3
+Description-Content-Type: text/plain
+License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: datasets
+Requires-Dist: tiktoken
+Requires-Dist: langchain
+Requires-Dist: openai>1
+Requires-Dist: pysbd>=0.3.4
+Requires-Dist: nest-asyncio
+Provides-Extra: all
+Requires-Dist: sentence-transformers; extra == "all"
+Dynamic: license-file
+
+# bisheng-ragas: Evaluation framework for your Retrieval Augmented Generation (RAG) pipelines
+## 快速开始
+安装包
+```bash
+pip install -e .
+```
+
+评分
+```python
+import httpx
+from datasets import Dataset
+from langchain_openai import ChatOpenAI
+from bisheng_ragas import evaluate
+from bisheng_ragas.llms.langchain import LangchainLLM
+from bisheng_ragas.metrics import AnswerCorrectnessBisheng
+
+data_samples = {
+    'question': ['When was the first super bowl?', 'Who won the most super bowls?'],
+    'answer': [
+        'The first superbowl was held on Jan 15, 1967',
+        'The most super bowls have been won by The New England Patriots',
+    ],
+    'ground_truths': [
+        ['The first superbowl was held on January 15, 1967.'],
+        ['The New England Patriots have won the Super Bowl a record six times'],
+    ],
+}
+_llm = ChatOpenAI(model="gpt-4-turbo-2024-04-09",
+                  http_client=httpx.Client(proxies=os.getenv('OPENAI_PROXY')),
+                  http_async_client=httpx.AsyncClient(proxies=os.getenv('OPENAI_PROXY')),
+                  temperature=temperature,
+)
+llm = LangchainLLM(_llm)
+answer_correctness_bisheng = AnswerCorrectnessBisheng(llm=llm)
+
+dataset = Dataset.from_dict(data_samples)
+score = evaluate(dataset, metrics=[answer_correctness_bisheng])
+print(score.to_pandas())
+```
+## 特别感谢
+
+bisheng-ragas主要借鉴了以下仓库：
+- https://github.com/explodinggradients/ragas 同步至v0.0.22（commit 41e9e54）
