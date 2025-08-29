@@ -1,0 +1,959 @@
+# -*- coding: utf-8 -*-
+
+"""
+Operations on Strings
+"""
+
+import re
+
+from mathics.builtin.atomic.strings import (
+    _evaluate_match,
+    _parallel_match,
+    _StringFind,
+    mathics_split,
+)
+from mathics.core.atoms import Integer, Integer1, Integer2, Integer3, String
+from mathics.core.attributes import (
+    A_FLAT,
+    A_LISTABLE,
+    A_ONE_IDENTITY,
+    A_PROTECTED,
+    A_READ_PROTECTED,
+)
+from mathics.core.builtin import Builtin, InfixOperator
+from mathics.core.convert.python import from_python
+from mathics.core.convert.regex import to_regex
+from mathics.core.evaluation import Evaluation
+from mathics.core.expression import BoxError, Expression, string_list
+from mathics.core.expression_predefined import MATHICS3_INFINITY
+from mathics.core.list import ListExpression
+from mathics.core.symbols import SymbolFalse, SymbolFullForm, SymbolList, SymbolTrue
+from mathics.core.systemsymbols import (
+    SymbolAll,
+    SymbolOutputForm,
+    SymbolStringInsert,
+    SymbolStringJoin,
+    SymbolStringPosition,
+    SymbolStringRiffle,
+    SymbolStringSplit,
+)
+from mathics.eval.list.eol import convert_seq, python_seq
+from mathics.eval.makeboxes import format_element
+from mathics.eval.strings import eval_StringFind
+
+
+class StringDrop(Builtin):
+    """
+    <url>
+    :WMA link:
+    https://reference.wolfram.com/language/ref/StringDrop.html</url>
+
+    <dl>
+      <dt>'StringDrop'["$string$", $n$]
+      <dd>gives $string$ with the first $n$ characters dropped.
+
+      <dt>'StringDrop'["$string$", -$n$]
+      <dd>gives $string$ with the last $n$ characters dropped.
+
+      <dt>'StringDrop'["$string$", {$n$}]
+      <dd>gives $string$ with the $n$-th character dropped.
+
+      <dt>'StringDrop'["$string$", {$m$, $n$}]
+      <dd>gives $string$ with the characters $m$ through $n$ dropped.
+    </dl>
+
+    >> StringDrop["abcde", 2]
+    = cde
+    >> StringDrop["abcde", -2]
+    = abc
+    >> StringDrop["abcde", {2}]
+    = acde
+    >> StringDrop["abcde", {2,3}]
+    = ade
+    >> StringDrop["abcd",{3,2}]
+    = abcd
+    >> StringDrop["abcd",0]
+    = abcd
+    """
+
+    messages = {
+        "strse": "String expected at position 1.",
+        "mseqs": "Integer or list of two Integers are expected at position 2.",
+        "drop": 'Cannot drop positions `1` through `2` in "`3`".',
+    }
+
+    summary_text = "drop a part of a string"
+
+    def eval_with_n(self, string, n, evaluation):
+        "StringDrop[string_,n_Integer]"
+        if not isinstance(string, String):
+            evaluation.message("StringDrop", "strse")
+            return
+        if isinstance(n, Integer):
+            pos = n.value
+            if pos > len(string.get_string_value()):
+                evaluation.message("StringDrop", "drop", 1, pos, string)
+                return
+            if pos < -len(string.get_string_value()):
+                evaluation.message("StringDrop", "drop", pos, -1, string)
+                return
+            if pos > 0:
+                return String(string.get_string_value()[pos:])
+            if pos < 0:
+                return String(string.get_string_value()[:(pos)])
+            if pos == 0:
+                return string
+        evaluation.message("StringDrop", "mseqs")
+        return
+
+    def eval_with_ni_nf(self, string, ni, nf, evaluation):
+        "StringDrop[string_,{ni_Integer,nf_Integer}]"
+        if not isinstance(string, String):
+            evaluation.message("StringDrop", "strse", string)
+            return
+
+        if ni.value == 0 or nf.value == 0:
+            evaluation.message("StringDrop", "drop", ni, nf)
+            return
+        fullstring = string.get_string_value()
+        lenfullstring = len(fullstring)
+        posi = ni.value
+        if posi < 0:
+            posi = lenfullstring + posi + 1
+        posf = nf.value
+        if posf < 0:
+            posf = lenfullstring + posf + 1
+        if posf > lenfullstring or posi > lenfullstring or posf <= 0 or posi <= 0:
+            # positions out or range
+            evaluation.message("StringDrop", "drop", ni, nf, fullstring)
+            return
+        if posf < posi:
+            return string  # this is what actually mma does
+        return String(fullstring[: (posi - 1)] + fullstring[posf:])
+
+    def eval_with_ni(self, string, ni, evaluation):
+        "StringDrop[string_,{ni_Integer}]"
+        if not isinstance(string, String):
+            evaluation.message("StringDrop", "strse", string)
+            return
+        if ni.value == 0:
+            evaluation.message("StringDrop", "drop", ni, ni)
+            return
+        fullstring = string.get_string_value()
+        lenfullstring = len(fullstring)
+        posi = ni.value
+        if posi < 0:
+            posi = lenfullstring + posi + 1
+        if posi > lenfullstring or posi <= 0:
+            evaluation.message("StringDrop", "drop", ni, ni, fullstring)
+            return
+        return String(fullstring[: (posi - 1)] + fullstring[posi:])
+
+    def eval(self, string, something, evaluation):
+        "StringDrop[string_,something___]"
+        if not isinstance(string, String):
+            evaluation.message("StringDrop", "strse")
+            return
+        evaluation.message("StringDrop", "mseqs")
+
+
+class StringInsert(Builtin):
+    """
+    <url>
+    :WMA link:
+    https://reference.wolfram.com/language/ref/StringInsert.html</url>
+
+    <dl>
+      <dt>'StringInsert'["$string$", "$snew$", $n$]
+      <dd>yields a string with $snew$ inserted starting at position $n$ in $string$.
+
+      <dt>'StringInsert'["$string$", "$snew$", -$n$]
+      <dd>inserts a at position $n$ from the end of "$string$".
+
+      <dt>'StringInsert'["$string$", "$snew$", {$n_1$, $n_2$, ...}]
+      <dd>inserts a copy of $snew$ at each position $n_i$ in $string$;
+        the $n_i$ are taken before any insertion is done.
+
+      <dt>'StringInsert'[{$s_1$, $s_2$, ...}, "$snew$", $n$]
+      <dd>gives the list of results for each of the $s_i$.
+    </dl>
+
+    >> StringInsert["noting", "h", 4]
+     = nothing
+
+    >> StringInsert["note", "d", -1]
+     = noted
+
+    >> StringInsert["here", "t", -5]
+     = there
+
+    >> StringInsert["adac", "he", {1, 5}]
+     = headache
+
+    >> StringInsert[{"something", "sometimes"}, " ", 5]
+     = {some thing, some times}
+
+    Insert dot as millar separators
+    >> StringInsert["1234567890123456", ".", Range[-16, -4, 3]]
+     = 1.234.567.890.123.456"""
+
+    messages = {
+        "string": "String expected at position `1` in `2`.",
+        "ins": "Cannot insert at position `1` in `2`.",
+    }
+
+    summary_text = "insert a string in a given position"
+
+    def _insert(self, str, add, lpos, evaluation):
+        for pos in lpos:
+            if abs(pos) < 1 or abs(pos) > len(str) + 1:
+                str_string = String(str)
+                add_string = String(add)
+                lpos_element = Integer(lpos[0]) if len(lpos) == 1 else from_python(lpos)
+                evaluation.message("StringInsert", "ins", Integer(pos), str_string)
+
+                # In Mathics-server, evaluation.format_output is modified.
+                # Let's avoid to use it if we want a front-end independent result.
+                # Eventually, we are going to replace this by a `MakeBoxes` call.
+                def do_format_output(expr, evaluation):
+                    try:
+                        boxed_expr = format_element(expr, evaluation, SymbolOutputForm)
+                    except BoxError:
+                        boxed_expr = format_element(expr, evaluation, SymbolFullForm)
+                    return boxed_expr.boxes_to_text()
+
+                return do_format_output(
+                    Expression(
+                        SymbolStringInsert,
+                        str_string,
+                        add_string,
+                        lpos_element,
+                    ),
+                    evaluation,
+                )
+
+        # Create new list of position which are rearranged
+        pos_limit = len(str) + 2
+        listpos = [p if p > 0 else pos_limit + p for p in lpos]
+        listpos.sort()
+
+        result = ""
+        start = 0
+        for pos in listpos:
+            stop = pos - 1
+            result += str[start:stop] + add
+            start = stop
+        else:
+            result += str[start : len(str)]
+
+        return result
+
+    def eval(self, strsource, strnew, pos, evaluation):
+        "StringInsert[strsource_, strnew_, pos_]"
+
+        exp = Expression(SymbolStringInsert, strsource, strnew, pos)
+
+        py_strnew = strnew.get_string_value()
+        if py_strnew is None:
+            evaluation.message("StringInsert", "string", Integer(2), exp)
+            return
+
+        # Check and create list of position
+        listpos = []
+        if pos.has_form("List", None):
+            elements = pos.get_elements()
+            if not elements:
+                return strsource
+            else:
+                for i, posi in enumerate(elements):
+                    py_posi = posi.get_int_value()
+                    if py_posi is None:
+                        evaluation.message("StringInsert", "psl", pos, exp)
+                        return
+                    listpos.append(py_posi)
+        else:
+            py_pos = pos.get_int_value()
+            if py_pos is None:
+                evaluation.message("StringInsert", "psl", pos, exp)
+                return
+            listpos.append(py_pos)
+
+        # Check and perform the insertion
+        if strsource.has_form("List", None):
+            py_strsource = [sub.get_string_value() for sub in strsource.elements]
+            if any(sub is None for sub in py_strsource):
+                evaluation.message("StringInsert", "strse", Integer1, exp)
+                return
+            return ListExpression(
+                *[
+                    String(self._insert(s, py_strnew, listpos, evaluation))
+                    for s in py_strsource
+                ]
+            )
+        else:
+            py_strsource = strsource.get_string_value()
+            if py_strsource is None:
+                evaluation.message("StringInsert", "strse", Integer1, exp)
+                return
+            return String(self._insert(py_strsource, py_strnew, listpos, evaluation))
+
+
+class StringJoin(InfixOperator):
+    """
+    <url>:WMA link:https://reference.wolfram.com/language/ref/StringJoin.html</url>
+
+    <dl>
+      <dt>'StringJoin'["$s_1$", "$s_2$", ...]
+      <dd>returns the concatenation of the strings $s_1$, $s_2$,  .
+    </dl>
+
+    >> StringJoin["a", "b", "c"]
+     = abc
+    >> "a" <> "b" <> "c" // InputForm
+     = "abc"
+
+    'StringJoin' flattens lists out:
+    >> StringJoin[{"a", "b"}] // InputForm
+     = "ab"
+    >> Print[StringJoin[{"Hello", " ", {"world"}}, "!"]]
+     | Hello world!
+    """
+
+    attributes = A_FLAT | A_ONE_IDENTITY | A_PROTECTED
+    summary_text = "join strings together"
+
+    def eval(self, items, evaluation):
+        "StringJoin[items___]"
+        result = ""
+        if hasattr(items, "flatten_with_respect_to_head"):
+            items = items.flatten_with_respect_to_head(SymbolList)
+        if items.get_head_name() == "System`List":
+            items = items.elements
+        else:
+            items = items.get_sequence()
+        for item in items:
+            if not isinstance(item, String):
+                evaluation.message("StringJoin", "string")
+                return
+            result += item.value
+        return String(result)
+
+
+class StringLength(Builtin):
+    """
+    <url>:WMA link:https://reference.wolfram.com/language/ref/StringLength.html</url>
+
+    <dl>
+      <dt>'StringLength'["$string$"]
+      <dd>gives the length of $string$.
+    </dl>
+
+    >> StringLength["abc"]
+     = 3
+    'StringLength' is listable:
+    >> StringLength[{"a", "bc"}]
+     = {1, 2}
+
+    >> StringLength[x]
+     : String expected.
+     = StringLength[x]
+    """
+
+    attributes = A_LISTABLE | A_PROTECTED
+
+    summary_text = "length of a string (in Unicode characters)"
+
+    def eval(self, str, evaluation):
+        "StringLength[str_]"
+        if not isinstance(str, String):
+            evaluation.message("StringLength", "string")
+            return
+        return Integer(len(str.value))
+
+
+class StringPosition(Builtin):
+    """
+    <url>:WMA link:https://reference.wolfram.com/language/ref/StringPosition.html</url>
+
+    <dl>
+      <dt>'StringPosition'["$string$", $patt$]
+      <dd>gives a list of starting and ending positions where $patt$ matches "$string$".
+      <dt>'StringPosition'["$string$", $patt$, $n$]
+      <dd>returns the first $n$ matches only.
+      <dt>'StringPosition'["$string$", {$patt_1$, $patt_2$, ...}, $n$]
+      <dd>matches multiple patterns.
+      <dt>'StringPosition'[{$s_1$, $s_2$, ...}, $patt$]
+      <dd>returns a list of matches for multiple strings.
+    </dl>
+
+    >> StringPosition["123ABCxyABCzzzABCABC", "ABC"]
+     = {{4, 6}, {9, 11}, {15, 17}, {18, 20}}
+
+    >> StringPosition["123ABCxyABCzzzABCABC", "ABC", 2]
+     = {{4, 6}, {9, 11}}
+
+    'StringPosition' can be useful for searching through text.
+    >> data = Import["ExampleData/EinsteinSzilLetter.txt", CharacterEncoding->"UTF8"];
+    >> StringPosition[data, "uranium"]
+     = {{299, 305}, {870, 876}, {1538, 1544}, {1671, 1677}, {2300, 2306}, {2784, 2790}, {3093, 3099}}
+
+    """
+
+    messages = {
+        "overall": "Overlaps -> All option is not currently implemented in Mathics.",
+        "innf": "Non-negative integer or Infinity expected at position `2` in `1`.",
+    }
+
+    options = {
+        "IgnoreCase": "False",
+        "MetaCharacters": "None",
+        "Overlaps": "True",
+    }
+
+    rules = {
+        "StringPosition[patt_][s_]": "StringPosition[s, patt]",
+    }
+
+    summary_text = "range of positions where substrings match a pattern"
+
+    def eval(self, string, patt, evaluation: Evaluation, options: dict):
+        "StringPosition[string_, patt_, OptionsPattern[StringPosition]]"
+        return self.eval_n(
+            string,
+            patt,
+            MATHICS3_INFINITY,
+            evaluation,
+            options,
+        )
+
+    def eval_n(self, string, patt, n, evaluation: Evaluation, options: dict):
+        "StringPosition[string_, patt_, n:(_Integer|DirectedInfinity[1]), OptionsPattern[StringPosition]]"
+        expr = Expression(SymbolStringPosition, string, patt, n)
+
+        # check n
+        if n.has_form("DirectedInfinity", 1):
+            py_n = float("inf")
+        else:
+            py_n = n.get_int_value()
+            if py_n is None or py_n < 0:
+                evaluation.message("StringPosition", "innf", expr, Integer3)
+                return
+
+        # check options
+        if options["System`Overlaps"] is SymbolTrue:
+            overlap = True
+        elif options["System`Overlaps"] is SymbolFalse:
+            overlap = False
+        elif options["System`Overlaps"] is SymbolAll:
+            # TODO
+            evaluation.message("StringPosition", "overall")
+            overlap = True
+        else:
+            overlap = False  # unknown options are treated as False
+
+        # convert patterns
+        if patt.has_form("List", None):
+            patts = patt.get_elements()
+        else:
+            patts = [patt]
+        re_patts = []
+        for p in patts:
+            py_p = to_regex(p, show_message=evaluation.message)
+            if py_p is None:
+                evaluation.message("StringExpression", "invld", p, patt)
+                return
+            re_patts.append(py_p)
+        compiled_patts = [re.compile(re_patt) for re_patt in re_patts]
+
+        # string or list of strings
+        if string.has_form("List", None):
+            py_strings = [s.get_string_value() for s in string.elements]
+            if None in py_strings:
+                return
+            results = [
+                self.do_apply(py_string, compiled_patts, py_n, overlap)
+                for py_string in py_strings
+            ]
+            return ListExpression(*results)
+        else:
+            py_string = string.get_string_value()
+            if py_string is None:
+                return
+            return self.do_apply(py_string, compiled_patts, py_n, overlap)
+
+    @staticmethod
+    def do_apply(py_string, compiled_patts, py_n, overlap):
+        result = []
+        start = 0
+        while start < len(py_string):
+            found_match = False
+            for compiled_patt in compiled_patts:
+                m = compiled_patt.match(py_string, start)
+                if m is None:
+                    continue
+                found_match = True
+                result.append([m.start() + 1, m.end()])  # 0 to 1 based indexing
+                if len(result) == py_n:
+                    return from_python(result)
+                if not overlap:
+                    start = m.end()
+            if overlap or not found_match:
+                start += 1
+        return from_python(result)
+
+
+class StringReplace(_StringFind):
+    """
+    <url>:WMA link:https://reference.wolfram.com/language/ref/StringReplace.html</url>
+
+    <dl>
+      <dt>'StringReplace'["$string$", "$a$"->"$b$"]
+      <dd>replaces each occurrence of $old$ with $new$ in $string$.
+      <dt>'StringReplace'["$string$", {"$s_1$"->"$sp_1$", "$s_2$"->"$sp_2$"}]
+      <dd>performs multiple replacements of each $si$ by the
+        corresponding $spi$ in $string$.
+      <dt>'StringReplace'["$string$", $srules$, $n$]
+      <dd>only performs the first $n$ replacements.
+      <dt>'StringReplace'[{"$string_1$", "$string_2$", ...}, $srules$]
+      <dd>performs the replacements specified by $srules$ on a list
+        of strings.
+    </dl>
+
+    StringReplace replaces all occurrences of one substring with another:
+    >> StringReplace["xyxyxyyyxxxyyxy", "xy" -> "A"]
+     = AAAyyxxAyA
+
+    Multiple replacements can be supplied:
+    >> StringReplace["xyzwxyzwxxyzxyzw", {"xyz" -> "A", "w" -> "BCD"}]
+     = ABCDABCDxAABCD
+
+    Only replace the first 2 occurrences:
+    >> StringReplace["xyxyxyyyxxxyyxy", "xy" -> "A", 2]
+     = AAxyyyxxxyyxy
+
+    Also works for multiple rules:
+    >> StringReplace["abba", {"a" -> "A", "b" -> "B"}, 2]
+     = ABba
+
+    StringReplace acts on lists of strings too:
+    >> StringReplace[{"xyxyxxy", "yxyxyxxxyyxy"}, "xy" -> "A"]
+     = {AAxA, yAAxxAyA}
+
+    StringReplace also can be used as an operator:
+    >> StringReplace["y" -> "ies"]["city"]
+     = cities
+    """
+
+    # TODO Special Characters
+    """
+    #> StringReplace["product: A \\[CirclePlus] B" , "\\[CirclePlus]" -> "x"]
+     = A x B
+    """
+
+    rules = {
+        "StringReplace[rule_][string_]": "StringReplace[string, rule]",
+    }
+
+    summary_text = "apply replace rules to substrings"
+
+    def _find(self, py_stri, py_rules, py_n, flags, evaluation):
+        def cases():
+            k = 0
+            for match, form in _parallel_match(py_stri, py_rules, flags, py_n):
+                start, end = match.span()
+                if start > k:
+                    yield String(py_stri[k:start])
+                yield _evaluate_match(form, match, evaluation)
+                k = end
+            if k < len(py_stri):
+                yield String(py_stri[k:])
+
+        return Expression(SymbolStringJoin, *list(cases()))
+
+    def eval(self, string, rule, n, evaluation: Evaluation, options: dict):
+        "%(name)s[string_, rule_, OptionsPattern[%(name)s], n_:System`Private`Null]"
+        # this pattern is a slight hack to get around missing Shortest/Longest.
+        return eval_StringFind(self, string, rule, n, evaluation, options, False)
+
+
+class StringReverse(Builtin):
+    """
+    <url>:WMA link:https://reference.wolfram.com/language/ref/StringReverse.html</url>
+
+    <dl>
+      <dt>'StringReverse'["$string$"]
+      <dd>reverses the order of the characters in "string".
+    </dl>
+
+      >> StringReverse["live"]
+       = evil
+    """
+
+    attributes = A_LISTABLE | A_PROTECTED
+    summary_text = "reverses the order of the characters in a string"
+
+    def eval(self, string, evaluation):
+        "StringReverse[string_String]"
+        return String(string.get_string_value()[::-1])
+
+
+class StringRiffle(Builtin):
+    """
+    <url>:WMA link:https://reference.wolfram.com/language/ref/StringRiffle.html</url>
+
+    <dl>
+      <dt>'StringRiffle[{s1, s2, s3, ...}]'
+      <dd>returns a new string by concatenating all the $si$, with spaces inserted between them.
+      <dt>'StringRiffle[list, sep]'
+      <dd>inserts the separator $sep$ between all elements in $list$.
+      <dt>'StringRiffle[list, {"left", "sep", "right"}]'
+      <dd>use $left$ and $right$ as delimiters after concatenation.
+
+    ## These 2 forms are not currently implemented
+    ## <dt>'StringRiffle[{{s11, s12, ...}, {s21, s22, ...}, ...}]'
+    ##   <dd>returns a new string by concatenating the $sij$, and inserting spaces at the lowest level and newlines at the higher level.
+    ## <dt>'StringRiffle[list, sep1, sep2, ...]'
+    ##   <dd>inserts separator $sepi$ between elements of list at level i.
+    </dl>
+
+    >> StringRiffle[{"a", "b", "c", "d", "e"}]
+     = a b c d e
+
+    >> StringRiffle[{"a", "b", "c", "d", "e"}, ", "]
+     = a, b, c, d, e
+
+    >> StringRiffle[{"a", "b", "c", "d", "e"}, {"(", " ", ")"}]
+     = (a b c d e)
+    """
+
+    attributes = A_PROTECTED | A_READ_PROTECTED
+
+    messages = {
+        "list": "List expected at position `1` in `2`.",
+        "argmu": "StringRiffle called with 1 argument; 2 or more arguments are expected.",
+        "argm": "StringRiffle called with 0 arguments; 2 or more arguments are expected.",
+        "string": "String expected at position `1` in `2`.",
+        "sublist": "Sublist form in position 1 is is not implemented yet.",
+        "mulsep": "Multiple separators form is not implemented yet.",
+    }
+
+    summary_text = "assemble a string from a list, inserting delimiters"
+
+    def eval(self, liststr, seps, evaluation):
+        "StringRiffle[liststr_, seps___]"
+        separators = seps.get_sequence()
+        exp = (
+            Expression(SymbolStringRiffle, liststr, seps)
+            if separators
+            else Expression(SymbolStringRiffle, liststr)
+        )
+
+        # Validate separators
+        if len(separators) > 1:
+            evaluation.message("StringRiffle", "mulsep")
+            return
+        elif len(separators) == 1:
+            if separators[0].has_form("List", None):
+                if len(separators[0].elements) != 3 or any(
+                    not isinstance(s, String) for s in separators[0].elements
+                ):
+                    evaluation.message("StringRiffle", "string", Integer2, exp)
+                    return
+            elif not isinstance(separators[0], String):
+                evaluation.message("StringRiffle", "string", Integer2, exp)
+                return
+
+        # Validate list of string
+        if not liststr.has_form("List", None):
+            evaluation.message("StringRiffle", "list", Integer1, exp)
+            return
+        elif any(element.has_form("List", None) for element in liststr.elements):
+            evaluation.message("StringRiffle", "sublist")
+            return
+
+        # Determine the separation token
+        left, right = "", ""
+        if len(separators) == 0:
+            sep = " "
+        else:
+            if separators[0].has_form("List", None):
+                left = separators[0].elements[0].value
+                sep = separators[0].elements[1].value
+                right = separators[0].elements[2].value
+            else:
+                sep = separators[0].get_string_value()
+
+        # Getting all together
+        result = left
+        for i in range(len(liststr.elements)):
+            text = format_element(
+                liststr.elements[i], evaluation, SymbolOutputForm
+            ).boxes_to_text(evaluation=evaluation)
+            if i == len(liststr.elements) - 1:
+                result += text + right
+            else:
+                result += text + sep
+
+        return String(result)
+
+
+class StringSplit(Builtin):
+    """
+    <url>:WMA link:https://reference.wolfram.com/language/ref/StringSplit.html</url>
+
+    <dl>
+      <dt>'StringSplit'[$s$]
+      <dd>splits the string $s$ at whitespace, discarding the whitespace and returning a list of strings.
+
+      <dt>'StringSplit'[$s$, $pattern$]
+      <dd>splits $s$ into substrings separated by delimiters matching the string expression $pattern$.
+
+      <dt>'StringSplit'[$s$, {$p_1$, $p_2$, ...}]
+      <dd>splits $s$ at any of the $p_i$ patterns.
+
+      <dt>'StringSplit'[{$s_1$, $s_2$, ...}, {$d_1$, $d_2$, ...}]
+      <dd>returns a list with the result of applying the function to each element.
+    </dl>
+
+
+    >> StringSplit["abc,123", ","]
+     = {abc, 123}
+
+    By default any number of whitespace characters are used to at a delimiter:
+    >> StringSplit["  abc    123  "]
+     = {abc, 123}
+
+    However if you want instead to use only a <i>single</i> character for each delimiter, use 'WhiteSpaceCharacter':
+    >> StringSplit["  abc    123  ", WhitespaceCharacter]
+     = {, , abc, , , , 123, , }
+
+    >> StringSplit["abc,123.456", {",", "."}]
+     = {abc, 123, 456}
+
+    >> StringSplit["a  b    c", RegularExpression[" +"]]
+     = {a, b, c}
+
+    >> StringSplit[{"a  b", "c  d"}, RegularExpression[" +"]]
+     = {{a, b}, {c, d}}
+
+    >> StringSplit["x", "x"]
+     = {}
+
+    Split using a delimiter that has nonzero list of 12's
+    >> StringSplit["12312123", "12"..]
+     = {3, 3}
+
+    """
+
+    messages = {
+        "pysplit": "As of Python 3.5 re.split does not handle empty pattern matches.",
+    }
+
+    options = {
+        "IgnoreCase": "False",
+        "MetaCharacters": "None",
+    }
+
+    rules = {
+        "StringSplit[s_]": "StringSplit[s, Whitespace]",
+    }
+
+    summary_text = "split strings at whitespace, or at a pattern"
+
+    def eval(self, string, patt, evaluation: Evaluation, options: dict):
+        "StringSplit[string_, patt_, OptionsPattern[%(name)s]]"
+
+        if string.get_head_name() == "System`List":
+            elements = [
+                self.eval(s, patt, evaluation, options) for s in string.elements
+            ]
+            return ListExpression(*elements)
+
+        py_string = string.get_string_value()
+
+        if py_string is None:
+            evaluation.message(
+                "StringSplit", "strse", Integer1, Expression(SymbolStringSplit, string)
+            )
+            return
+
+        if patt.has_form("List", None):
+            patts = patt.get_elements()
+        else:
+            patts = [patt]
+        re_patts = []
+        for p in patts:
+            py_p = to_regex(p, show_message=evaluation.message)
+            if py_p is None:
+                evaluation.message("StringExpression", "invld", p, patt)
+                return
+            re_patts.append(py_p)
+
+        flags = re.MULTILINE
+        if options["System`IgnoreCase"] is SymbolTrue:
+            flags = flags | re.IGNORECASE
+
+        result = [py_string]
+        for re_patt in re_patts:
+            result = [t for s in result for t in mathics_split(re_patt, s, flags=flags)]
+
+        return string_list(
+            SymbolList,
+            [
+                String(x)
+                for x in result
+                # Remove the empty matches only if we aren't splitting by
+                # whitespace because Python's RegEx matches " " as ""
+                if x != "" or patts[0].to_python() in ("", "System`WhitespaceCharacter")
+            ],
+            evaluation,
+        )
+
+
+class StringTake(Builtin):
+    """
+    <url>:WMA link:https://reference.wolfram.com/language/ref/StringTake.html</url>
+
+    <dl>
+      <dt>'StringTake'["$string$", $n$]
+      <dd>gives the first $n$ characters in $string$.
+
+      <dt>'StringTake'["$string$", -$n$]
+      <dd>gives the last $n$ characters in $string$.
+
+      <dt>'StringTake'["$string$", {$n$}]
+      <dd>gives the $n$th character in $string$.
+
+      <dt>'StringTake'["$string$", {$m$, $n$}]
+      <dd>gives characters $m$ through $n$ in $string$.
+
+      <dt>'StringTake'["$string$", {$m$, $n$, $s$}]
+      <dd>gives characters $m$ through $n$ in steps of $s$.
+
+      <dt>'StringTake'[{$s_1$, $s_2$, ...} $spec$}]
+      <dd>gives the list of results for each of the $si$.
+    </dl>
+
+    >> StringTake["abcde", 2]
+     = ab
+    >> StringTake["abcde", 0]
+     = #<--#
+    >> StringTake["abcde", -2]
+     = de
+    >> StringTake["abcde", {2}]
+     = b
+    >> StringTake["abcd", {2,3}]
+     = bc
+    >> StringTake["abcdefgh", {1, 5, 2}]
+     = ace
+
+    Take the last 2 characters from several strings:
+    >> StringTake[{"abcdef", "stuv", "xyzw"}, -2]
+     = {ef, uv, zw}
+
+    StringTake also supports standard sequence specifications
+    >> StringTake["abcdef", All]
+     = abcdef
+    """
+
+    messages = {
+        # FIXME: mseqs should be: Sequence specification (+n, -n, {+n}, {-n}, {m, n}, or {m, n, s}) or a list
+        # of sequence specifications expected at position 2 in
+        "mseqs": "Integer or a list of sequence specifications expected at position 2.",
+        # FIXME: we can't used stre from General because we do not have the expr context
+        "strse": "String or list of strings expected at position 1.",
+        "take": 'Cannot take positions `1` through `2` in "`3`".',
+    }
+
+    summary_text = "sub-string from a range of positions"
+
+    def eval(self, string: String, seqspec, evaluation: Evaluation):
+        "StringTake[string_String, seqspec_]"
+        result = string.get_string_value()
+        if result is None:
+            evaluation.message("StringTake", "strse", Integer1, string)
+            return
+
+        if isinstance(seqspec, Integer):
+            pos = seqspec.get_int_value()
+            if pos >= 0:
+                seq = (1, pos, 1)
+            else:
+                seq = (pos, None, 1)
+        else:
+            seq = convert_seq(seqspec)
+
+        if seq is None:
+            evaluation.message("StringTake", "mseqs")
+            return
+
+        start, stop, step = seq
+        py_slice = python_seq(start, stop, step, len(result))
+
+        if py_slice is None:
+            evaluation.message("StringTake", "take", start, stop, string)
+            return
+
+        return String(result[py_slice])
+
+    def eval_strings(self, strings, spec, evaluation):
+        "StringTake[strings__, spec_]"
+        result_list = []
+        for string in strings.elements:
+            result = self.eval(string, spec, evaluation)
+            if result is None:
+                return None
+            result_list.append(result)
+        return ListExpression(*result_list)
+
+
+class StringTrim(Builtin):
+    """
+    <url>:WMA link:https://reference.wolfram.com/language/ref/StringTrim.html</url>
+
+    <dl>
+      <dt>'StringTrim'[$s$]
+      <dd>returns a version of $s$ with whitespace removed from start and end.
+    </dl>
+
+    >> StringJoin["a", StringTrim["  \\tb\\n "], "c"]
+     = abc
+
+    >> StringTrim["ababaxababyaabab", RegularExpression["(ab)+"]]
+     = axababya
+    """
+
+    summary_text = "trim whitespace etc. from strings"
+
+    def eval(self, s, evaluation):
+        "StringTrim[s_String]"
+        return String(s.get_string_value().strip(" \t\n"))
+
+    def eval_pattern(self, expression, s, patt, evaluation):
+        "expression: StringTrim[s_String, patt_]"
+        text = s.get_string_value()
+        if not text:
+            return s
+
+        py_patt = to_regex(patt, show_message=evaluation.message)
+        if py_patt is None:
+            evaluation.message("StringExpression", "invld", patt, expression)
+            return
+
+        if not py_patt.startswith(r"\A"):
+            left_patt = r"\A" + py_patt
+        else:
+            left_patt = py_patt
+
+        if not py_patt.endswith(r"\Z"):
+            right_patt = py_patt + r"\Z"
+        else:
+            right_patt = py_patt
+
+        m = re.search(left_patt, text)
+        left = m.end(0) if m else 0
+
+        m = re.search(right_patt, text)
+        right = m.start(0) if m else len(text)
+
+        return String(text[left:right])
