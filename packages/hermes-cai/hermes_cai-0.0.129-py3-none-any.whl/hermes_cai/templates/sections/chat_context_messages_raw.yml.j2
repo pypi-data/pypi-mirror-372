@@ -1,0 +1,75 @@
+{# Description: Never truncate the last 3 turns. #}
+{% if safety_instructions %}
+- name: "safety_instructions"
+  content: |
+    {{ settings.start_token }}{{ escape_special_characters(safety_instructions) }}{{ settings.eom }}
+    {%- set settings.start_token = settings.bom -%}
+{% endif %}
+
+{%- set pretruncated_messages = pretruncate_messages(chat_context_messages, token_limit) -%}
+{% for cc_msg in pretruncated_messages %}
+  {% if template_params and template_params.max_chat_history %}
+    {% set max_chat_history = template_params.max_chat_history %}
+  {% else %}
+    {% set max_chat_history = pretruncated_messages|length %}
+  {% endif %}
+  {% if loop.index > (pretruncated_messages|length - max_chat_history) %}
+    {% if not should_remove_safety_truncated_messages or not cc_msg.is_safety_truncated %}
+      {% set qual_author_msg =  canonicalize_user_name(cc_msg.author) + ": " + cc_msg.text %}
+      {% if cc_msg.attachments_content %}
+        {% if cc_msg.attachments_type == 'TYPE_STICKER' %}
+          {% if template_params.sticker_prompt_format_prefix is defined and template_params.sticker_prompt_format_suffix is defined %}
+            {% set img_msg = template_params.sticker_prompt_format_prefix ~ canonicalize_user_name(cc_msg.author) ~ template_params.sticker_prompt_format_suffix ~ cc_msg.attachments_content %}
+          {% else %}
+            {% set img_msg = canonicalize_user_name(cc_msg.author) ~ ": I hand you " ~ cc_msg.attachments_content %}
+          {% endif %}
+        {% else %}
+          {% if template_params.image_prompt_format_prefix is defined and template_params.image_prompt_format_suffix is defined %}
+            {% set img_msg = template_params.image_prompt_format_prefix ~ canonicalize_user_name(cc_msg.author) ~ template_params.image_prompt_format_suffix ~ cc_msg.attachments_content %}
+          {% else %}
+            {% set img_msg = narrator_name ~ ": You're looking at the contents shared by " ~ canonicalize_user_name(cc_msg.author) ~ ": " ~ cc_msg.attachments_content %}
+          {% endif %}
+        {% endif %}
+      {% endif %}
+      {% if cc_msg.lores and cc_msg.lores|length > 0 %}
+        {% set lores_list = [] %}
+        {% for lk, lv in cc_msg.lores.items() -%}
+          {% set tmp = lores_list.append(lk + " - " + lv) %}
+        {% endfor %}
+        {% set lores = lores_list|join('\\n') %}
+        {% set lores = narrator_name + ": " + lores %}
+      {% endif %}
+      {% if cc_msg.is_summary|default(false) %}
+- name: "summary_message_{{ loop.index }}"
+      {% else %}
+- name: "message_{{ loop.index }}"
+      {% endif %}
+      {% if loop.index < (pretruncated_messages|length - 3) %}
+  truncation_priority: 5
+      {% endif %}
+  content: |
+      {% if lores %}
+        {{ settings.start_token }}{{ escape_special_characters(lores) }}{{ settings.eom }}
+        {%- set settings.start_token = settings.bom -%}
+      {% endif %}
+        {{ settings.start_token }}{{ escape_special_characters(qual_author_msg) }}{{ settings.eom }}
+      {%- set settings.start_token = settings.bom -%}
+      {% if img_msg %}
+        {{ settings.start_token }}{{ escape_special_characters(img_msg) }}{{ settings.eom }}
+        {%- set settings.start_token = settings.bom -%}
+      {% endif %}
+      {% if template_params and template_params.use_continuations and loop.index == pretruncated_messages|length and reply_prompt.startswith(canonicalize_user_name(cc_msg.author) + ":") %}
+- name: "continuation_message"
+  truncation_priority: 5
+  content: |
+        {% if template_params.continuation_message is defined %}
+          {% set injected_msg = narrator_name ~ ": " ~ template_params.continuation_message %}
+        {% else %}
+          {% set injected_msg = narrator_name ~ ": *continue*" %}
+        {% endif %}
+          {{ settings.start_token }}{{ escape_special_characters(injected_msg) }}{{ settings.eom }}
+        {%- set settings.start_token = settings.bom -%}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endfor %}

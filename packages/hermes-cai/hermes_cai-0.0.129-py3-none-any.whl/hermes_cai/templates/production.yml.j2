@@ -1,0 +1,22 @@
+{# Description: Default production template. #}
+{% set settings = namespace() %}
+
+{% from 'macros/global_settings.yml.j2' import init_settings %}
+{{ init_settings(settings) }}
+
+{# WARNING: This name `bod_ts` must be first part in the template! #}
+{% include 'sections/bod_timestamp.yml.j2' %}
+
+{# TODO: refactor this section as soon as it does not conflict with character_definition_raw.yml.j2. #}
+{% for message in character_definition_messages %}
+- name: "character_definition_message_{{ loop.index }}"
+  content: |
+    {{ settings.start_token }}{{ maybe_inject_narrator(escape_special_characters(message)) }}{{ settings.eom }}
+{% set settings.start_token = settings.bom %}
+{% endfor %}
+
+{% include 'sections/pinned_history.yml.j2' %}
+
+{% include 'sections/chat_history.yml.j2' %}
+
+{% include 'sections/reply_prompt.yml.j2' %}
