@@ -1,0 +1,364 @@
+
+# Getting Started with OpenAI API
+
+## Introduction
+
+<img src="https://content.pstmn.io/8cd5c341-3e7a-4a7e-b83d-23f7cf048a34/b3BlbmFpLmpwZw==">
+
+
+Welcome to the OpenAI Postman Collection! This collection provides a comprehensive set of examples to help you get started with the OpenAI API. Easily walkthrough multiple usecases, API Capabilities, and OpenAI's assistant APIs.
+
+The OpenAI API provides a simple interface for developers to create an intelligence layer in their applications powered by OpenAI's state-of-the-art models. The [Chat Completions ](https://www.postman.com/devrel/openai/request/xqcsuot/chat-completions?action=share&source=copy-link&creator=21505573&ctx=documentation) endpoint powers ChatGPT and provides a straightforward way to generate text responses.
+
+> **Note**: This collection is part of a workspace curated by the Postman team to help you explore and work with useful APIs. Learn how to contribute to this collaborative space and its collections [here](https://learning.postman.com/docs/collaborating-in-postman/using-version-control/version-control-overview/#creating-pull-requests).
+
+---
+
+
+### Getting Started
+
+#### Step 1: Fork the Collection
+
+Fork the Collection manually or by clicking the Run in Postman button  
+[<img src="https://run.pstmn.io/button.svg" alt="Run In Postman">](https://god.gw.postman.com/run-collection/13183464-90abb798-cb85-43cb-ba3a-ae7941e968da?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D13183464-90abb798-cb85-43cb-ba3a-ae7941e968da%26entityType%3Dcollection%26workspaceId%3D6f729c41-9538-4a0f-a4e0-8a02d92d1e73)
+
+#### **Step 2: Setup your account**
+
+Create an [OpenAI account](https://platform.openai.com/signup) or [sign in](https://platform.openai.com/login) to an existing one.
+
+#### Step 3: Fetch your API key
+
+Next, navigate to the [API keys page](https://platform.openai.com/account/api-keys) and click on the "Create new secret key" button.
+
+Give your key a name, select a project, and configure all relevant permissions for this API key.
+
+<img src="https://content.pstmn.io/39a27206-d751-40b3-b9bd-2f7287aea9b6/U2NyZWVuc2hvdCAyMDI0LTA4LTAyIGF0IDcuNDcuMDLigK9QTS5wbmc=">
+
+
+Create the secret key.
+
+<img src="https://content.pstmn.io/ea46e770-5e33-45fd-ad85-e7b26eb387e4/U2NyZWVuc2hvdCAyMDI0LTA4LTAyIGF0IDcuNTIuMDLigK9QTS5wbmc=">
+
+
+Once the Secret Key is created, copy it to your clipboard by clicking the copy button and select "Done" to close the open prompt.
+
+#### Step 4: Configure the API Key in Postman
+
+Postman provides you with a [Vault](https://learning.postman.com/docs/sending-requests/postman-vault/postman-vault-secrets/) that let's you store sensitive data locally. Data stored in this vault is not synced with Postman Cloud and can only be accessed in your local Postman Instance.
+
+Using the table below as a guide, add your keys to your vault. A reference to a secret `{{vault:openai-secret-key}}}` has been added to the [collection authorization tab](https://www.postman.com/devrel/openai/collection/k25n3c8/chatgpt-api?tab=authorization) as a Bearer token to be automatically used with all requests in this workspace. If you do not use the same variable name in your vault, please update the authorization tab accordingly.
+
+| **Key** | Value | Allowed Domains |
+| --- | --- | --- |
+| `openai-secret-key` | your_key_value | [https://api.openai.com](https://api.openai.com) |
+
+---
+
+
+#### **There are three folders in this collection.**
+
+1. **OpenAI API - Use Cases**: Documents several interesting use cases of the OpenAI API.
+
+2. **OpenAI API capabilities**: Documents the OpenAI API and includes most of the requests and interfaces that the API exposes. It makes use of the scripts tab to build basic workflows where necessary and test for assertions against the API response.
+
+3. **OpenAI Assistants API**: Documents the new Assistants API (in Beta) which is designed to help developers build powerful AI assistants capable of performing a variety of tasks
+
+### **OpenAI API Use Cases**
+
+- [Text Generation](https://www.postman.com/devrel/openai/request/xqcsuot/chat-completions?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- [Function Calling](https://www.postman.com/devrel/openai/request/x65tdyb/chat-completions-with-function-calling?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- Build a simple FAQ system
+  
+  - [Create Embeddings of FAQ Answers](https://www.postman.com/devrel/openai/request/tni6s2k/create-embeddings-of-faq-answers?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Create Embedding of User Input](https://www.postman.com/devrel/openai/request/mmo8o9u/create-embedding-of-user-input?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+### OpenAI API Capabilities
+
+- [Chat Completions](https://www.postman.com/devrel/openai/request/z1m5sfw/chat-completions?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Chat Completions Reasoning](https://www.postman.com/devrel/openai/request/9ukc9z1/chat-completions-reasoning?action=share&source=copy-link&creator=40440015&ctx=documentation)
+
+- [Structured Output - Chat Completions](https://www.postman.com/devrel/openai/request/ug5r387/chat-completions-text-generation?action=share&source=copy-link&creator=40440015&ctx=documentation)
+
+- [Predicted Output - Chat Completions](https://www.postman.com/devrel/openai/request/cvvwqox/chat-completions-text-generation?action=share&source=copy-link&creator=40440015&ctx=documentation)
+
+- [Embeddings](https://www.postman.com/devrel/openai/request/o51r0bp/embeddings?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- Fine Tuning
+  
+  - [Upload Training File](https://www.postman.com/devrel/openai/request/aat4yv1/upload-training-file?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Create a Fine Tuning Job](https://www.postman.com/devrel/openai/request/lyz6y8a/create-fine-tuning-job?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Enable Weights and Biases Integrations](https://www.postman.com/devrel/openai/request/ndutt0y/enable-weights-and-biases-integration?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [List Fine Tuning Jobs](https://www.postman.com/devrel/openai/request/l2zxkvt/list-fine-tuning-jobs?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [List Fine Tuning Events](https://www.postman.com/devrel/openai/request/fp95wua/list-fine-tuning-events?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [List Fine Tuning Checkpoints](https://www.postman.com/devrel/openai/request/33whmks/list-fine-tuning-checkpoints?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Retrieve Fine Tuning Jobs](https://www.postman.com/devrel/openai/request/kbdjtu8/retrieve-fine-tuning-jobs?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Cancel Fine Tuning Jobs](https://www.postman.com/devrel/openai/request/q0quai9/cancel-fine-tuning-jobs?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- Batch API Requests
+  
+  - [Get Batches](https://www.postman.com/devrel/openai/request/usyj5nr/get-batches?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Retrieve Batch](https://www.postman.com/devrel/openai/request/0toz44d/retrieve-batch?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Cancel Batch](https://www.postman.com/devrel/openai/request/c9zmbrq/cancel-batch?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [List Batch](https://www.postman.com/devrel/openai/request/ayowh6p/list-batch?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Create Image Variation](https://www.postman.com/devrel/openai/request/6ffvuh8/create-image-variation?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- Files
+  
+  - [Upload Files](https://www.postman.com/devrel/openai/request/rixfdg5/upload-files?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [List Files](https://www.postman.com/devrel/openai/request/xgnko2p/list-files?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Retrieve File](https://www.postman.com/devrel/openai/request/1e1ogge/retrieve-file?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Delete File](https://www.postman.com/devrel/openai/request/e4ogrmh/delete-file?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Retrieve File Contents](https://www.postman.com/devrel/openai/request/seq7fpr/retrieve-file-contents?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- Image Generation
+  
+  - [Generate Image](https://www.postman.com/devrel/openai/request/riub8s3/generate-image?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Create Image Edit](https://www.postman.com/devrel/openai/request/8c7f7d8/create-image-edit?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- Models
+  
+  - [List Models](https://www.postman.com/devrel/openai/request/1p8b6v6/list-models?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Retrieve Models](https://www.postman.com/devrel/openai/request/ns0dwtr/retrieve-models?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Delete Fine Tuned Model](https://www.postman.com/devrel/openai/request/0ketmr9/delete-fine-tuned-model?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- [Moderations](https://www.postman.com/devrel/openai/request/6quoxk9/moderations?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+### OpenAI Assistants API
+
+- [Create Assistant](https://www.postman.com/devrel/openai/request/clib2ud/create-assistant?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- [List Assistant](https://www.postman.com/devrel/openai/request/vvly6fi/list-assistants?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- [Retrieve Assistants](https://www.postman.com/devrel/openai/request/ijtxfc3/retrieve-assistants?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- [Modify Assistants](https://www.postman.com/devrel/openai/request/13183464-f11b5312-5201-4af0-9733-cf30662b2c28?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- [Delete Assistants](https://www.postman.com/devrel/openai/request/13183464-21b031b2-6a14-4ea8-9cec-72571edeeaef?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- Threads
+  
+  - [Create Thread](https://www.postman.com/devrel/openai/request/7i3zquh/create-thread?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Retrieve Thread](https://www.postman.com/devrel/openai/request/13183464-1afecebb-dcd8-422d-9134-3dfda0a37696?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Modify Thread](https://www.postman.com/devrel/openai/request/13183464-d2a14163-8517-4da7-acc9-c1c5ed8dd480?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Delete Thread](https://www.postman.com/devrel/openai/request/13183464-9f769a5b-58d0-4a52-b7c9-d1772d2989ab?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - Messages
+    
+    - [Create Message in a Thread](https://www.postman.com/devrel/openai/request/yr8dk7b/create-message-in-a-thread?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [List Messages in a Thread](https://www.postman.com/devrel/openai/request/v5529lf/list-messages-in-a-thread?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Get Message in Thread](https://www.postman.com/devrel/openai/request/7cql7ma/get-message-in-thread?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Modify Message in Thread](https://www.postman.com/devrel/openai/request/45p5h7p/modify-message-in-thread?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Delete Message in Thread](https://www.postman.com/devrel/openai/request/13183464-896019ed-3e96-4410-9c20-316519ed771c?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - Runs
+    
+    - [Create Thread and Run](https://www.postman.com/devrel/openai/request/ox2r344/create-thread-and-run?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Create Run](https://www.postman.com/devrel/openai/request/kivksuw/create-run?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [List Run](https://www.postman.com/devrel/openai/request/13183464-896b5cc4-095f-4cfd-8991-cb0bf376dd68?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Get Run](https://www.postman.com/devrel/openai/request/13183464-aca95589-be99-433e-8ade-8da750cd5880?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Modify Run](https://www.postman.com/devrel/openai/request/13183464-42914896-b918-4292-8f42-f1dbbabce670?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Submit Tool Outputs](https://www.postman.com/devrel/openai/request/13183464-2acc62e5-f7a3-46aa-b280-c0a437deaddd?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Cancel Run](https://www.postman.com/devrel/openai/request/13183464-41bf75a5-8858-4065-b352-e9b01e5ed614?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [List Run Steps](https://www.postman.com/devrel/openai/request/13183464-b6f2c46f-6452-4537-9abb-3399f018129a?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Get Run Steps](https://www.postman.com/devrel/openai/request/13183464-b4b82005-2019-4654-b366-4a91e2403c5b?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Create Thread](https://www.postman.com/devrel/openai/request/7i3zquh/create-thread?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Retrieve Thread](https://www.postman.com/devrel/openai/request/3hxjbdy/retrieve-thread?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Modify Thread](https://www.postman.com/devrel/openai/request/l58xz2x/modify-thread?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Delete Thread](https://www.postman.com/devrel/openai/request/6bce2v2/delete-thread?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+- Vector Store
+  
+  - [Create Vector Store](https://www.postman.com/devrel/openai/request/4f23w75/create-vector-store?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [List Vector Stores](https://www.postman.com/devrel/openai/request/13183464-7b8692b4-3cba-4cd5-8c95-16f522ce1fc7?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Retrieve Vector Store](https://www.postman.com/devrel/openai/request/13183464-741392e9-4db0-4eaf-a895-c032fdf25e4c?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Modify Vector Store](https://www.postman.com/devrel/openai/request/13183464-b65844bb-07fc-489b-b8c4-10d2a1be4b49?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - [Delete Vector Store](https://www.postman.com/devrel/openai/request/13183464-e5e58ddb-127b-491b-9dd9-8cd4d942368a?action=share&source=copy-link&creator=5078742&ctx=documentation)
+  
+  - Vectore Store Files
+    
+    - [Create Vectore Store File](https://www.postman.com/devrel/openai/request/cfi9sn5/create-vector-store-file?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [List Vector Store File](https://www.postman.com/devrel/openai/request/mu44w08/list-vector-store-file?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Get Vector Store File](https://www.postman.com/devrel/openai/request/gz7wx0x/get-vector-store-file?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - [Delete Vector Store File](https://www.postman.com/devrel/openai/request/13183464-c2986e32-db57-4cc6-8c1c-cc5f08a35586?action=share&source=copy-link&creator=5078742&ctx=documentation)
+    
+    - Batches
+      
+      - [Vector Store File Batch](https://www.postman.com/devrel/openai/request/o8eu86g/vector-store-file-batch?action=share&source=copy-link&creator=5078742&ctx=documentation)
+      
+      - [Get Vector Store File Batch](https://www.postman.com/devrel/openai/request/13183464-94431874-72e3-4516-8447-28570283b47b?action=share&source=copy-link&creator=5078742&ctx=documentation)
+      
+      - [Cancel Vectore Store File Batch](https://www.postman.com/devrel/openai/request/13183464-c31b8300-f4f1-45a9-bb93-2b87401989d0?action=share&source=copy-link&creator=5078742&ctx=documentation)
+      
+      - [List Vector Stores in a Files Batch](https://www.postman.com/devrel/openai/request/13183464-a6ed0a7d-3334-41cb-a968-431b1baf0762?action=share&source=copy-link&creator=5078742&ctx=documentation)
+
+---
+
+
+---
+
+
+#### Getting Help
+
+We want you to get the best support you can when working with this workspace. If you're stuck and you need help regarding OpenAI specific issues, we recommend that you explore the following channels.
+
+- [OpenAI Help Center](https://help.openai.com/en/)
+
+- [OpenAI Developer Forum](https://community.openai.com/)
+
+For Postman specific questions or feedback about this workspace:
+
+- [Postman's Community Forum](https://community.postman.com/t/ai-provider-workspaces-and-collections/74143) - Provide feedback and ask questions about this workspace, ask general Postman questions, understand how to use a feature, how to build a workflow, etc.
+
+For Postman specific issues:
+
+- [Postman Github Issues](https://github.com/postmanlabs/postman-app-support) - Submit feature requests, bug reports, etc here
+
+## Install the Package
+
+The package is compatible with Python versions `3.7+`.
+Install the package from PyPi using the following pip command:
+
+```bash
+pip install Apimatic-open-api-sdk==1.0.0
+```
+
+You can also view the package at:
+https://pypi.python.org/pypi/Apimatic-open-api-sdk/1.0.0
+
+## Test the SDK
+
+You can test the generated SDK and the server with test cases. `unittest` is used as the testing framework and `pytest` is used as the test runner. You can run the tests as follows:
+
+Navigate to the root directory of the SDK and run the following commands
+
+
+pip install -r test-requirements.txt
+pytest
+
+
+## Initialize the API Client
+
+**_Note:_** Documentation for the client can be found [here.](doc/client.md)
+
+The following parameters are configurable for the API Client:
+
+| Parameter | Type | Description |
+|  --- | --- | --- |
+| environment | `Environment` | The API environment. <br> **Default: `Environment.PRODUCTION`** |
+| http_client_instance | `HttpClient` | The Http Client passed from the sdk user for making requests |
+| override_http_client_configuration | `bool` | The value which determines to override properties of the passed Http Client from the sdk user |
+| http_call_back | `HttpCallBack` | The callback value that is invoked before and after an HTTP call is made to an endpoint |
+| timeout | `float` | The value to use for connection timeout. <br> **Default: 60** |
+| max_retries | `int` | The number of times to retry an endpoint call if it fails. <br> **Default: 0** |
+| backoff_factor | `float` | A backoff factor to apply between attempts after the second try. <br> **Default: 2** |
+| retry_statuses | `Array of int` | The http statuses on which retry is to be done. <br> **Default: [408, 413, 429, 500, 502, 503, 504, 521, 522, 524]** |
+| retry_methods | `Array of string` | The http methods on which retry is to be done. <br> **Default: ['GET', 'PUT']** |
+| bearer_auth_credentials | [`BearerAuthCredentials`](__base_path/auth/oauth-2-bearer-token.md) | The credential object for OAuth 2 Bearer token |
+
+The API client can be initialized as follows:
+
+```python
+from openaiapi.configuration import Environment
+from openaiapi.http.auth.o_auth_2 import BearerAuthCredentials
+from openaiapi.openaiapi_client import OpenaiapiClient
+
+client = OpenaiapiClient(
+    bearer_auth_credentials=BearerAuthCredentials(
+        access_token='AccessToken'
+    ),
+    environment=Environment.PRODUCTION
+)
+```
+
+## Authorization
+
+This API uses the following authentication schemes.
+
+* [`bearer (OAuth 2 Bearer token)`](__base_path/auth/oauth-2-bearer-token.md)
+
+## List of APIs
+
+* [Text Generation-Chat Completions API](doc/controllers/text-generation-chat-completions-api.md)
+* [Function Calling-Chat Completions API](doc/controllers/function-calling-chat-completions-api.md)
+* [Builda Simple FAQ System-Embeddings API](doc/controllers/builda-simple-faq-system-embeddings-api.md)
+* [Chat Completions](doc/controllers/chat-completions.md)
+* [Structured Outputs](doc/controllers/structured-outputs.md)
+* [Predicted Outputs](doc/controllers/predicted-outputs.md)
+* [Fine Tuning](doc/controllers/fine-tuning.md)
+* [Batch API Requests](doc/controllers/batch-api-requests.md)
+* [Image Generation](doc/controllers/image-generation.md)
+* [Vector Store Files](doc/controllers/vector-store-files.md)
+* [Vector Store](doc/controllers/vector-store.md)
+* [Open AI Assistants API-Beta](doc/controllers/open-ai-assistants-api-beta.md)
+* [Reasoning](doc/controllers/reasoning.md)
+* [Embeddings](doc/controllers/embeddings.md)
+* [Files](doc/controllers/files.md)
+* [Models](doc/controllers/models.md)
+* [Moderations](doc/controllers/moderations.md)
+* [Messages](doc/controllers/messages.md)
+* [Runs](doc/controllers/runs.md)
+* [Threads](doc/controllers/threads.md)
+* [Batches](doc/controllers/batches.md)
+
+## SDK Infrastructure
+
+### HTTP
+
+* [HttpResponse](doc/http-response.md)
+* [HttpRequest](doc/http-request.md)
+
+### Utilities
+
+* [ApiHelper](doc/api-helper.md)
+* [HttpDateTime](doc/http-date-time.md)
+* [RFC3339DateTime](doc/rfc3339-date-time.md)
+* [UnixDateTime](doc/unix-date-time.md)
+
