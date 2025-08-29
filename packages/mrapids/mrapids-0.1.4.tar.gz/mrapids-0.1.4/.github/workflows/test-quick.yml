@@ -1,0 +1,40 @@
+name: Quick Installation Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_manager:
+        description: 'Package manager to test'
+        required: true
+        type: choice
+        options:
+          - npm
+          - cargo
+          - pip
+          - all
+
+jobs:
+  quick-test:
+    name: Quick Test
+    runs-on: self-hosted
+    steps:
+      - name: Test requested package manager
+        run: |
+          PM="${{ github.event.inputs.package_manager }}"
+          
+          if [[ "$PM" == "npm" || "$PM" == "all" ]]; then
+            echo "📦 Testing NPM..."
+            npm list -g @mrapids/cli || echo "NPM: Not installed"
+          fi
+          
+          if [[ "$PM" == "cargo" || "$PM" == "all" ]]; then
+            echo "🦀 Testing Cargo..."
+            cargo install --list | grep mrapids || echo "Cargo: Not installed"
+          fi
+          
+          if [[ "$PM" == "pip" || "$PM" == "all" ]]; then
+            echo "🐍 Testing pip..."
+            pip show mrapids || echo "pip: Not installed"
+          fi
+          
+          echo "✅ Test complete"

@@ -1,0 +1,238 @@
+# Swagger 2.0 validation rules
+# Based on OpenAPI (Swagger) 2.0 specification requirements
+
+rules:
+  # Required Fields
+  swagger-version:
+    description: Swagger version must be "2.0"
+    message: "Swagger version must be '2.0'"
+    severity: error
+    given: $
+    then:
+      field: swagger
+      function: pattern
+      functionOptions:
+        match: "^2\\.0$"
+        
+  info-required:
+    description: Info object is required
+    message: "Info object is required"
+    severity: error
+    given: $
+    then:
+      field: info
+      function: truthy
+      
+  info-title:
+    description: Info must have title
+    message: "Info object must have a title"
+    severity: error
+    given: $.info
+    then:
+      field: title
+      function: truthy
+      
+  info-version:
+    description: Info must have version
+    message: "Info object must have a version"
+    severity: error
+    given: $.info
+    then:
+      field: version
+      function: truthy
+      
+  paths-required:
+    description: Paths object is required
+    message: "Paths object is required"
+    severity: error
+    given: $
+    then:
+      field: paths
+      function: truthy
+      
+  # Swagger 2.0 specific
+  host-valid:
+    description: Host must be valid if specified
+    message: "Host must not include protocol or path"
+    severity: error
+    given: $.host
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^https?://|/"
+        
+  base-path-valid:
+    description: Base path must start with /
+    message: "Base path must start with /"
+    severity: error
+    given: $.basePath
+    then:
+      function: pattern
+      functionOptions:
+        match: "^/"
+        
+  schemes-valid:
+    description: Schemes must be valid
+    message: "{{path}} - Invalid scheme, must be: http, https, ws, or wss"
+    severity: error
+    given: $.schemes[*]
+    then:
+      function: enumeration
+      functionOptions:
+        values: ["http", "https", "ws", "wss"]
+        
+  # Operation Rules
+  operation-responses:
+    description: Operations must have responses
+    message: "{{path}} - Operation must define at least one response"
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete,options,head]
+    then:
+      field: responses
+      function: truthy
+      
+  operation-id-unique:
+    description: Operation IDs must be unique
+    message: "Operation IDs must be unique across the entire spec"
+    severity: error
+    given: $.paths[*][*]
+    then:
+      field: operationId
+      function: unique
+      
+  # Parameter Rules
+  parameter-name-required:
+    description: Parameters must have name
+    message: "{{path}} - Parameter must have a name"
+    severity: error
+    given: $..parameters[*]
+    then:
+      field: name
+      function: truthy
+      
+  parameter-in-required:
+    description: Parameters must specify location
+    message: "{{path}} - Parameter must specify 'in' (query, header, path, formData, body)"
+    severity: error
+    given: $..parameters[*]
+    then:
+      field: in
+      function: enumeration
+      functionOptions:
+        values: ["query", "header", "path", "formData", "body"]
+        
+  parameter-type-required:
+    description: Non-body parameters must have type
+    message: "{{path}} - Parameter must have 'type' (for non-body parameters)"
+    severity: error
+    given: $..parameters[?(@.in != 'body')]
+    then:
+      field: type
+      function: truthy
+      
+  body-parameter-schema:
+    description: Body parameters must have schema
+    message: "{{path}} - Body parameter must have 'schema'"
+    severity: error
+    given: $..parameters[?(@.in == 'body')]
+    then:
+      field: schema
+      function: truthy
+      
+  path-parameter-required:
+    description: Path parameters must be required
+    message: "{{path}} - Path parameter must have required=true"
+    severity: error
+    given: $..parameters[?(@.in == 'path')]
+    then:
+      field: required
+      function: truthy
+      
+  # Response Rules
+  response-description:
+    description: Responses must have description
+    message: "{{path}} - Response must have a description"
+    severity: error
+    given: $.paths[*][*].responses[*]
+    then:
+      field: description
+      function: truthy
+      
+  # Definition Rules
+  definition-type:
+    description: Definitions should specify type
+    message: "{{path}} - Definition should specify 'type' or use composition"
+    severity: warning
+    given: $.definitions[*]
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: ["type"]
+            - required: ["$ref"]
+            - required: ["allOf"]
+            
+  # Reference Rules
+  valid-ref-format:
+    description: $ref must be a valid JSON reference
+    message: "{{path}} - Invalid $ref format: {{value}}"
+    severity: error
+    given: $..$ref
+    then:
+      function: pattern
+      functionOptions:
+        match: "^#/|^https?://|^\\.\\./|^\\./|^[^#]*\\.ya?ml#"
+        
+  # Security Rules
+  security-definition-valid:
+    description: Security definitions must be valid
+    message: "{{path}} - Security definition must have valid type"
+    severity: error
+    given: $.securityDefinitions[*]
+    then:
+      field: type
+      function: enumeration
+      functionOptions:
+        values: ["basic", "apiKey", "oauth2"]
+        
+  # Best Practices
+  operation-id-required:
+    description: Operations should have operationId
+    message: "{{path}} - Operation should have operationId for code generation"
+    severity: warning
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      field: operationId
+      function: truthy
+      
+  operation-summary:
+    description: Operations should have summary
+    message: "{{path}} - Operation should have a summary"
+    severity: info
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      field: summary
+      function: truthy
+      
+  produces-consumes:
+    description: API should declare produces/consumes
+    message: "API should declare 'produces' and 'consumes' media types"
+    severity: info
+    given: $
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: ["produces"]
+            - required: ["consumes"]
+            
+  tags-used:
+    description: Operations should use tags
+    message: "{{path}} - Consider using tags to group operations"
+    severity: info
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      field: tags
+      function: truthy

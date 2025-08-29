@@ -1,0 +1,238 @@
+# OpenAPI 3.0.x validation rules
+# Based on OpenAPI Specification 3.0.x requirements
+
+rules:
+  # Required Fields
+  openapi-version:
+    description: OpenAPI version must be specified
+    message: "OpenAPI version must be specified as '3.0.x'"
+    severity: error
+    given: $
+    then:
+      field: openapi
+      function: pattern
+      functionOptions:
+        match: "^3\\.0\\.[0-3]$"
+        
+  info-required:
+    description: Info object is required
+    message: "Info object is required"
+    severity: error
+    given: $
+    then:
+      field: info
+      function: truthy
+      
+  info-title:
+    description: Info must have title
+    message: "Info object must have a title"
+    severity: error
+    given: $.info
+    then:
+      field: title
+      function: truthy
+      
+  info-version:
+    description: Info must have version
+    message: "Info object must have a version"
+    severity: error
+    given: $.info
+    then:
+      field: version
+      function: truthy
+      
+  paths-required:
+    description: Paths object is required
+    message: "Paths object is required (or webhooks/components for 3.1)"
+    severity: error
+    given: $
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: ["paths"]
+            - required: ["webhooks"]
+            - required: ["components"]
+            
+  # Operation Rules
+  operation-id-required:
+    description: Operations must have operationId
+    message: "{{path}} - Operation must have operationId"
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete,options,head,trace]
+    then:
+      field: operationId
+      function: truthy
+      
+  operation-id-unique:
+    description: Operation IDs must be unique
+    message: "Operation IDs must be unique across the entire spec"
+    severity: error
+    given: $.paths[*][*]
+    then:
+      field: operationId
+      function: unique
+      
+  operation-responses:
+    description: Operations must have responses
+    message: "{{path}} - Operation must define at least one response"
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete,options,head,trace]
+    then:
+      field: responses
+      function: truthy
+      
+  # Parameter Rules
+  parameter-name-required:
+    description: Parameters must have name
+    message: "{{path}} - Parameter must have a name"
+    severity: error
+    given: $..parameters[*]
+    then:
+      field: name
+      function: truthy
+      
+  parameter-in-required:
+    description: Parameters must specify location
+    message: "{{path}} - Parameter must specify 'in' (query, header, path, cookie)"
+    severity: error
+    given: $..parameters[*]
+    then:
+      field: in
+      function: enumeration
+      functionOptions:
+        values: ["query", "header", "path", "cookie"]
+        
+  path-parameter-required:
+    description: Path parameters must be required
+    message: "{{path}} - Path parameter must have required=true"
+    severity: error
+    given: $..parameters[?(@.in == 'path')]
+    then:
+      field: required
+      function: truthy
+      
+  parameter-schema-required:
+    description: Parameters must have schema or content
+    message: "{{path}} - Parameter must have either 'schema' or 'content'"
+    severity: error
+    given: $..parameters[*]
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: ["schema"]
+            - required: ["content"]
+            
+  # Response Rules
+  response-description:
+    description: Responses must have description
+    message: "{{path}} - Response must have a description"
+    severity: error
+    given: $.paths[*][*].responses[*]
+    then:
+      field: description
+      function: truthy
+      
+  # Request Body Rules
+  request-body-content:
+    description: Request body must have content
+    message: "{{path}} - Request body must specify 'content'"
+    severity: error
+    given: $..requestBody
+    then:
+      field: content
+      function: truthy
+      
+  # Schema Rules
+  schema-type:
+    description: Schemas should specify type
+    message: "{{path}} - Schema should specify 'type'"
+    severity: warning
+    given: $..schema
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: ["type"]
+            - required: ["$ref"]
+            - required: ["allOf"]
+            - required: ["oneOf"]
+            - required: ["anyOf"]
+            
+  # Reference Rules
+  valid-ref-format:
+    description: $ref must be a valid JSON reference
+    message: "{{path}} - Invalid $ref format: {{value}}"
+    severity: error
+    given: $..$ref
+    then:
+      function: pattern
+      functionOptions:
+        match: "^#/|^https?://|^\\.\\./|^\\./|^[^#]*\\.ya?ml#"
+        
+  # Server Rules
+  server-url:
+    description: Server must have URL
+    message: "{{path}} - Server must have a URL"
+    severity: error
+    given: $.servers[*]
+    then:
+      field: url
+      function: truthy
+      
+  server-url-valid:
+    description: Server URL must be valid
+    message: "{{path}} - Server URL must be a valid URL or contain variables"
+    severity: error
+    given: $.servers[*].url
+    then:
+      function: pattern
+      functionOptions:
+        match: "^(https?://|/|\\{)"
+        
+  # Tag Rules
+  tag-name:
+    description: Tags must have name
+    message: "{{path}} - Tag must have a name"
+    severity: error
+    given: $.tags[*]
+    then:
+      field: name
+      function: truthy
+      
+  # Best Practices
+  operation-summary:
+    description: Operations should have summary
+    message: "{{path}} - Operation should have a summary"
+    severity: info
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      field: summary
+      function: truthy
+      
+  operation-description:
+    description: Operations should have description
+    message: "{{path}} - Consider adding a description"
+    severity: info
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      field: description
+      function: truthy
+      
+  example-values:
+    description: Schemas should include examples
+    message: "{{path}} - Consider adding example values"
+    severity: info
+    given: $..schema[?(@.type)]
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: ["example"]
+            - required: ["examples"]
+            - required: ["default"]

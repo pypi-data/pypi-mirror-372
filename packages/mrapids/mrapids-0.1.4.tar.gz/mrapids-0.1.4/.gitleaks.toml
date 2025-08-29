@@ -1,0 +1,99 @@
+# Gitleaks configuration file
+# https://github.com/gitleaks/gitleaks
+
+title = "MicroRapids API Runtime Gitleaks Configuration"
+
+[extend]
+# Extend the base configuration
+useDefault = true
+
+[allowlist]
+description = "Allowlisted files and paths"
+paths = [
+    # Ignore test files with mock credentials
+    '''test[s]?\/.*''',
+    '''.*_test\.rs$''',
+    '''examples\/.*''',
+    # Ignore documentation
+    '''\.md$''',
+    '''docs\/.*''',
+    # Ignore lock files
+    '''Cargo\.lock$''',
+    # Ignore compiled files
+    '''target\/.*''',
+]
+
+# Custom rules for additional security
+[[rules]]
+id = "microrapids-api-key"
+description = "MicroRapids API Key"
+regex = '''(?i)(microrapids[_\-]?api[_\-]?key|MICRORAPIDS_API_KEY)['"]?\s*[:=]\s*['"]?[a-zA-Z0-9+/]{20,}['"]?'''
+tags = ["api", "key", "microrapids"]
+
+[[rules]]
+id = "private-key-file"
+description = "Private Key File Reference"
+regex = '''(?i)(private[_\-]?key|priv[_\-]?key|privkey).*\.(pem|key|pfx|p12|jks)'''
+tags = ["private", "key", "file"]
+
+[[rules]]
+id = "jwt-secret"
+description = "JWT Secret"
+regex = '''(?i)(jwt[_\-]?secret|JWT_SECRET)['"]?\s*[:=]\s*['"]?[a-zA-Z0-9+/=]{16,}['"]?'''
+tags = ["jwt", "secret"]
+
+[[rules]]
+id = "database-connection-string"
+description = "Database Connection String"
+regex = '''(?i)(postgres|postgresql|mysql|mongodb|redis):\/\/[^:]+:[^@]+@[^\/]+'''
+tags = ["database", "connection"]
+
+[[rules]]
+id = "oauth-secret"
+description = "OAuth Client Secret"
+regex = '''(?i)(client[_\-]?secret|CLIENT_SECRET)['"]?\s*[:=]\s*['"]?[a-zA-Z0-9+/=]{20,}['"]?'''
+tags = ["oauth", "secret"]
+
+# Additional entropy checks
+[[rules]]
+id = "high-entropy-base64"
+description = "High Entropy Base64 String"
+regex = '''[a-zA-Z0-9+/]{40,}={0,2}'''
+entropy = 4.5
+tags = ["entropy", "base64"]
+
+[[rules]]
+id = "high-entropy-hex"
+description = "High Entropy Hex String"
+regex = '''[a-f0-9]{40,}'''
+entropy = 4.5
+tags = ["entropy", "hex"]
+
+# Commit allowlist for false positives
+[allowlist.commits]
+commits = [
+    # Add commit SHAs here for commits that contain false positives
+    # "commit-sha-here",
+]
+
+# Path-specific rules
+[[rules]]
+id = "env-file"
+description = "Environment file that may contain secrets"
+path = '''\.env.*'''
+regex = '''.*'''
+tags = ["env", "file"]
+
+# Ignore certain patterns in specific files
+[allowlist.regexes]
+regexes = [
+    # Example API endpoints (not actual keys)
+    '''https:\/\/api\.example\.com\/.*''',
+    # Mock/test credentials
+    '''test[_\-]?api[_\-]?key''',
+    '''dummy[_\-]?secret''',
+    '''fake[_\-]?password''',
+    # Documentation examples
+    '''your[_\-]?api[_\-]?key[_\-]?here''',
+    '''<[A-Z_]+>''',  # Placeholder patterns like <API_KEY>
+]

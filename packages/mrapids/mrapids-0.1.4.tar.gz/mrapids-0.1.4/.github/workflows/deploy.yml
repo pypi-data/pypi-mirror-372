@@ -1,0 +1,482 @@
+name: Deployment Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      version:
+        description: 'Version to deploy (leave empty for latest)'
+        required: false
+        type: string
+
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+
+  release:
+    types: [published]
+
+env:
+  CARGO_TERM_COLOR: always
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Determine deployment environment
+  determine-environment:
+    name: Determine Environment
+    runs-on: self-hosted
+    outputs:
+      environment: ${{ steps.determine.outputs.environment }}
+      version: ${{ steps.determine.outputs.version }}
+    steps:
+      - name: Determine Environment and Version
+        id: determine
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.inputs.version || github.sha }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" == "release" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/tags/v"* ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "environment=development" >> $GITHUB_OUTPUT
+            echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "environment=development" >> $GITHUB_OUTPUT
+            echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+  # Build and test
+  build:
+    name: Build and Test
+    runs-on: self-hosted
+    needs: determine-environment
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-deploy-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run Tests
+        run: cargo test --all-features --release
+
+      - name: Build Release Binary
+        run: cargo build --release --all-features
+
+      - name: Create Deployment Artifact
+        id: artifact
+        run: |
+          VERSION=${{ needs.determine-environment.outputs.version }}
+          ARTIFACT_NAME="mrapids-${VERSION}-linux-x86_64"
+          
+          mkdir -p deployment
+          cp target/release/mrapids deployment/
+          cp README.md deployment/
+          cp SECURITY.md deployment/
+          
+          # Create version file
+          echo "{
+            \"version\": \"${VERSION}\",
+            \"commit\": \"${{ github.sha }}\",
+            \"built_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+            \"built_by\": \"${{ github.actor }}\"
+          }" > deployment/version.json
+          
+          tar -czf ${ARTIFACT_NAME}.tar.gz -C deployment .
+          echo "name=${ARTIFACT_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-artifact
+          path: "*.tar.gz"
+          retention-days: 30
+
+  # Build Docker image
+  docker:
+    name: Build Docker Image
+    runs-on: self-hosted
+    needs: [determine-environment, build]
+    if: true  # Re-enabled with self-hosted runner
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=${{ needs.determine-environment.outputs.environment }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.determine-environment.outputs.version }}
+            COMMIT=${{ github.sha }}
+
+  # Deploy to development
+  deploy-development:
+    name: Deploy to Development
+    runs-on: self-hosted
+    needs: [determine-environment, build]
+    if: needs.determine-environment.outputs.environment == 'development'
+    environment:
+      name: development
+      url: https://dev.api.microrapids.com
+    steps:
+      - name: Deploy to Development
+        run: |
+          echo "🚀 Deploying to Development environment"
+          echo "Version: ${{ needs.determine-environment.outputs.version }}"
+          
+          # Add actual deployment commands here
+          # Example: kubectl, terraform, ansible, etc.
+
+      - name: Smoke Tests
+        run: |
+          echo "Running smoke tests on development..."
+          # Add smoke test commands
+
+      - name: Notify Deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (context.eventName === 'push') {
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: context.sha,
+                state: 'success',
+                context: 'deployment/development',
+                description: 'Deployed to development',
+                target_url: 'https://dev.api.microrapids.com'
+              });
+            }
+
+  # Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: self-hosted
+    needs: [determine-environment, build]
+    if: needs.determine-environment.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.api.microrapids.com
+    steps:
+      - name: Deploy to Staging
+        run: |
+          echo "🚀 Deploying to Staging environment"
+          echo "Version: ${{ needs.determine-environment.outputs.version }}"
+          
+          # Add actual deployment commands here
+
+      - name: Run E2E Tests
+        run: |
+          echo "Running E2E tests on staging..."
+          # Add E2E test commands
+
+      - name: Performance Tests
+        run: |
+          echo "Running performance tests..."
+          # Add performance test commands
+
+  # Deploy to production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: self-hosted
+    needs: [determine-environment, build]
+    if: needs.determine-environment.outputs.environment == 'production'
+    environment:
+      name: production
+      url: https://api.microrapids.com
+    steps:
+      - name: Pre-deployment Checks
+        run: |
+          echo "Running pre-deployment checks..."
+          # Add health checks, database migrations, etc.
+
+      - name: Deploy to Production (Blue)
+        run: |
+          echo "🚀 Deploying to Production (Blue environment)"
+          echo "Version: ${{ needs.determine-environment.outputs.version }}"
+          
+          # Deploy to blue environment first
+
+      - name: Smoke Tests (Blue)
+        run: |
+          echo "Running smoke tests on blue environment..."
+          # Test blue environment
+
+      - name: Switch Traffic to Blue
+        run: |
+          echo "Switching traffic to blue environment..."
+          # Update load balancer/ingress
+
+      - name: Monitor Deployment
+        run: |
+          echo "Monitoring deployment for 5 minutes..."
+          # Monitor metrics, errors, etc.
+
+      - name: Rollback on Failure
+        if: failure()
+        run: |
+          echo "⚠️ Deployment failed, rolling back..."
+          # Rollback commands
+
+  # Publish Rust to WASM/NPM Package
+  publish-npm-wasm:
+    name: 📦 Publish NPM Package (WASM)
+    runs-on: self-hosted
+    needs: [determine-environment, build]
+    if: |
+      needs.determine-environment.outputs.environment == 'production' &&
+      (github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v'))
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust and wasm-pack
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      
+      - name: Build WASM Package
+        run: |
+          # Add wasm target
+          rustup target add wasm32-unknown-unknown
+          
+          # Build with wasm-pack
+          wasm-pack build --target nodejs --out-dir pkg --scope microrapids
+          
+          # Update package.json with GitHub registry
+          cd pkg
+          npm pkg set name="@microrapids/api-runtime-wasm"
+          npm pkg set version="${{ needs.determine-environment.outputs.version }}"
+          npm pkg set publishConfig.registry="https://npm.pkg.github.com"
+          npm pkg set repository.url="https://github.com/${{ github.repository }}"
+      
+      - name: Configure NPM for GitHub Packages
+        run: |
+          echo "@microrapids:registry=https://npm.pkg.github.com" > pkg/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> pkg/.npmrc
+      
+      - name: Publish to GitHub Packages NPM
+        run: |
+          cd pkg
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publish Python Package with PyO3
+  publish-python-wheel:
+    name: 🐍 Publish Python Package
+    runs-on: self-hosted
+    needs: [determine-environment, build]
+    if: |
+      needs.determine-environment.outputs.environment == 'production' &&
+      (github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v'))
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install maturin
+        run: |
+          pip install maturin
+      
+      - name: Build Python Wheels
+        run: |
+          # Build for multiple Python versions
+          maturin build --release --out dist
+      
+      - name: Upload to GitHub Packages (Generic)
+        run: |
+          VERSION="${{ needs.determine-environment.outputs.version }}"
+          for wheel in dist/*.whl; do
+            filename=$(basename "$wheel")
+            curl -X PUT \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$wheel" \
+              "https://uploads.github.com/repos/${{ github.repository }}/packages/pypi/mrapids/${VERSION}/${filename}"
+          done
+      
+      - name: Create pip install instructions
+        run: |
+          echo "### Python Package Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Install with:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "pip install https://github.com/${{ github.repository }}/releases/download/${{ needs.determine-environment.outputs.version }}/mrapids-${{ needs.determine-environment.outputs.version }}-cp311-cp311-linux_x86_64.whl" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # Publish to crates.io (Rust native)
+  publish-rust-crate:
+    name: 🦀 Publish Rust Crate
+    runs-on: self-hosted
+    needs: [determine-environment, build]
+    if: |
+      needs.determine-environment.outputs.environment == 'production' &&
+      (github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v'))
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Update version in Cargo.toml
+        run: |
+          VERSION="${{ needs.determine-environment.outputs.version }}"
+          # Remove 'v' prefix if present
+          VERSION="${VERSION#v}"
+          sed -i "s/^version = .*/version = \"$VERSION\"/" Cargo.toml
+      
+      - name: Publish to crates.io
+        run: |
+          # Skip if token not set
+          if [ -z "${{ secrets.CRATES_IO_TOKEN }}" ]; then
+            echo "::notice::Skipping crates.io publish (CRATES_IO_TOKEN not set)"
+            echo "Users can still install via: cargo add --git https://github.com/${{ github.repository }}"
+          else
+            cargo publish --token ${{ secrets.CRATES_IO_TOKEN }} || echo "::warning::Could not publish to crates.io (name might be taken)"
+          fi
+        continue-on-error: true
+
+  # Post-deployment tasks
+  post-deployment:
+    name: Post Deployment
+    runs-on: self-hosted
+    needs: [determine-environment, build]
+    if: always()
+    steps:
+      - name: Update Deployment Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const environment = '${{ needs.determine-environment.outputs.environment }}';
+            const version = '${{ needs.determine-environment.outputs.version }}';
+            const status = '${{ job.status }}';
+            
+            const message = status === 'success' 
+              ? `✅ Successfully deployed ${version} to ${environment}`
+              : `❌ Failed to deploy ${version} to ${environment}`;
+            
+            // Create deployment status
+            if (context.eventName === 'push' || context.eventName === 'release') {
+              await github.rest.repos.createDeployment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: context.ref,
+                environment: environment,
+                description: message,
+                auto_merge: false,
+                required_contexts: [],
+                production_environment: environment === 'production'
+              });
+            }
+
+      - name: Send Notifications
+        if: needs.determine-environment.outputs.environment == 'production'
+        run: |
+          echo "Sending deployment notifications..."
+          # Send Slack/Discord/Email notifications
+
+      - name: Update Documentation
+        if: needs.determine-environment.outputs.environment == 'production'
+        run: |
+          echo "Updating API documentation..."
+          # Update API docs, changelog, etc.
+
+      - name: Create GitHub Release
+        if: |
+          needs.determine-environment.outputs.environment == 'production' &&
+          startsWith(github.ref, 'refs/tags/v')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `Release ${tag}`,
+              body: `## What's Changed
+              
+              See [CHANGELOG.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CHANGELOG.md) for details.
+              
+              ## Deployment
+              - Environment: Production
+              - Version: ${tag}
+              - Deployed by: @${context.actor}`,
+              draft: false,
+              prerelease: false
+            });

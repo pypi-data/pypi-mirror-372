@@ -1,0 +1,128 @@
+rules:
+  # Rust-specific security rules
+  - id: hardcoded-secret
+    pattern-either:
+      - pattern: |
+          let $VAR = "$SECRET";
+      - pattern: |
+          const $VAR: &str = "$SECRET";
+      - pattern: |
+          static $VAR: &str = "$SECRET";
+    metavariable-regex:
+      metavariable: $SECRET
+      regex: '(?i)(password|passwd|pwd|secret|key|token|api_key|apikey|auth|private)'
+    message: Potential hardcoded secret found
+    languages: [rust]
+    severity: ERROR
+
+  - id: unsafe-command-injection
+    patterns:
+      - pattern-either:
+          - pattern: std::process::Command::new($CMD)
+          - pattern: Command::new($CMD)
+      - pattern-not: Command::new("...")
+    message: |
+      Potential command injection. Ensure $CMD is properly sanitized.
+    languages: [rust]
+    severity: WARNING
+
+  - id: path-traversal
+    patterns:
+      - pattern-either:
+          - pattern: std::fs::read_to_string($PATH)
+          - pattern: std::fs::File::open($PATH)
+          - pattern: std::fs::read($PATH)
+      - pattern-not: std::fs::read_to_string("...")
+    message: |
+      Potential path traversal vulnerability. Validate and sanitize $PATH.
+    languages: [rust]
+    severity: WARNING
+
+  - id: unsafe-deserialization
+    patterns:
+      - pattern-either:
+          - pattern: serde_json::from_str($INPUT)
+          - pattern: serde_yaml::from_str($INPUT)
+          - pattern: toml::from_str($INPUT)
+      - pattern-not-inside: |
+          match ... {
+            Ok(...) => ...,
+            Err(...) => ...,
+          }
+    message: |
+      Unsafe deserialization without error handling. This could lead to DoS.
+    languages: [rust]
+    severity: WARNING
+
+  - id: sql-injection
+    patterns:
+      - pattern: |
+          format!("... {} ...", $VAR)
+      - metavariable-regex:
+          metavariable: $FORMAT_STR
+          regex: '(?i)(select|insert|update|delete|drop)'
+    message: |
+      Potential SQL injection. Use parameterized queries instead.
+    languages: [rust]
+    severity: ERROR
+
+  - id: weak-crypto
+    pattern-either:
+      - pattern: md5::compute(...)
+      - pattern: sha1::Sha1::new()
+      - pattern: |
+          use md5;
+      - pattern: |
+          use sha1;
+    message: |
+      Weak cryptographic algorithm detected. Use SHA-256 or stronger.
+    languages: [rust]
+    severity: WARNING
+
+  - id: missing-tls-verification
+    patterns:
+      - pattern: |
+          reqwest::Client::builder()...danger_accept_invalid_certs(true)
+    message: |
+      TLS certificate verification disabled. This is insecure.
+    languages: [rust]
+    severity: ERROR
+
+  - id: insecure-random
+    patterns:
+      - pattern: rand::random()
+      - pattern-not-inside: |
+          use rand::rngs::OsRng;
+    message: |
+      Use cryptographically secure random number generator (OsRng)
+    languages: [rust]
+    severity: WARNING
+
+  # MicroRapid specific rules
+  - id: mrapids-auth-token-exposure
+    patterns:
+      - pattern-either:
+          - pattern: println!("... {} ...", $TOKEN)
+          - pattern: eprintln!("... {} ...", $TOKEN)
+          - pattern: format!("... {} ...", $TOKEN)
+      - metavariable-pattern:
+          metavariable: $TOKEN
+          pattern-either:
+            - pattern: $AUTH.token
+            - pattern: $CREDS.password
+            - pattern: $ENV.secret
+    message: |
+      Potential authentication token exposure in logs
+    languages: [rust]
+    severity: ERROR
+
+  - id: mrapids-unsafe-api-call
+    patterns:
+      - pattern: |
+          reqwest::get($URL).await
+      - pattern-not: |
+          reqwest::get("https://...")
+    message: |
+      Ensure API URLs are validated and use HTTPS
+    languages: [rust]
+    severity: WARNING

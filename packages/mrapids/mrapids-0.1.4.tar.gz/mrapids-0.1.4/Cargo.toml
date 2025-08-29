@@ -1,0 +1,114 @@
+
+[package]
+name = "mrapids"
+version = "0.1.0"
+edition = "2021"
+authors = ["MicroRapid Team"]
+description = "Your OpenAPI, but executable"
+license = "MIT"
+repository = "https://github.com/deepwissen/api-runtime"
+keywords = ["openapi", "api", "testing", "cli", "graphql"]
+categories = ["command-line-utilities", "development-tools", "web-programming"]
+readme = "README.md"
+
+[lib]
+name = "mrapids"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]  # cdylib for Python, rlib for Rust
+
+[dependencies]
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+colored = "2.1"
+
+# HTTP
+reqwest = { version = "0.11", features = ["json", "blocking", "stream"] }
+url = "2.5"
+http = "0.2"
+
+# Async runtime
+tokio = { version = "1.36", features = ["full"] }
+futures = "0.3"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# Text processing
+regex = "1.10"
+base64 = "0.22"
+urlencoding = "2.1"
+handlebars = "5.1"
+
+# Environment
+dotenv = "0.15"
+
+# Progress indicators
+indicatif = "0.17"
+
+# File system
+dirs = "5.0"
+
+# OpenAPI
+openapiv3 = "2.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# OAuth & Security
+aes-gcm = "0.10"
+argon2 = "0.5"
+rand = "0.8"
+sha2 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
+hostname = "0.4"
+open = "5.0"
+
+# Pretty output
+prettytable-rs = "0.10"
+
+# For API module
+schemars = { version = "0.8", features = ["chrono"] }
+serde_repr = "0.1"
+uuid = { version = "1.7", features = ["v4", "serde", "js"] }
+
+# For Policy engine
+glob = "0.3"
+toml = "0.8"
+
+# Python bindings
+pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
+
+# WASM bindings
+wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+web-sys = { version = "0.3", optional = true }
+js-sys = { version = "0.3", optional = true }
+
+# Fix getrandom for WASM
+getrandom = { version = "0.2", features = ["js"] }
+
+[features]
+default = []
+python = ["pyo3"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "web-sys", "js-sys"]
+
+[profile.release]
+opt-level = "z"       # Optimize for size
+lto = true           # Enable Link Time Optimization
+codegen-units = 1    # Single codegen unit for better optimization
+strip = true         # Strip symbols (requires Rust 1.59+)
+panic = "abort"      # Smaller panic handler
+
+# Alternative profile for faster builds during development
+[profile.release-fast]
+inherits = "release"
+opt-level = 3        # Optimize for speed
+lto = "thin"        # Faster LTO
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
+tempfile = "3.10"
