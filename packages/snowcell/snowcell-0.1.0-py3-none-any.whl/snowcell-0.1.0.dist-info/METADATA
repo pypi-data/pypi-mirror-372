@@ -1,0 +1,180 @@
+Metadata-Version: 2.4
+Name: snowcell
+Version: 0.1.0
+Summary: Python SDK for Snowcell inference
+Author: Snowcell
+License: MIT License
+        
+        Copyright (c) 2025 Snowcell
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the “Software”), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+        THE SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/snowcell-cloud/sdk-python
+Project-URL: Repository, https://github.com/snowcell-cloud/sdk-python
+Classifier: Development Status :: 3 - Alpha
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: httpx<0.29,>=0.27
+Requires-Dist: pydantic<3,>=2
+Requires-Dist: typing-extensions>=4.8; python_version < "3.11"
+Dynamic: license-file
+
+# Snowcell Python SDK
+
+Python SDK for the **Snowcell** API.
+
+This is a lightweight alternative to the OpenAI SDK that can be integrated into your applications. 
+
+---
+
+## Install
+
+```bash
+pip install snowcell
+```
+
+---
+
+## Quickstart
+
+```python
+import os
+from snowcell import Snowcell
+
+client = Snowcell(api_token=os.environ["SNOWCELL_API_TOKEN"])
+
+res = client.chat.create(
+    model="Meditron3-8B",
+    messages=[{"role": "user", "content": "Say hello."}],
+    max_tokens=50,
+)
+print(res.choices[0].message.content)
+```
+
+### Streaming
+
+```python
+from snowcell import Snowcell
+
+client = Snowcell(api_token="YOUR_API_TOKEN")
+
+for event in client.chat.stream(
+    model="Meditron3-8B",
+    messages=[{"role": "user", "content": "Write one short sentence."}],
+    max_tokens=40,
+):
+    # Each `event` is a dict parsed from SSE "data:" lines
+    print(event)
+```
+
+---
+
+## API
+
+### Client
+
+```python
+from snowcell import Snowcell
+
+client = Snowcell(
+  api_token="...", # or set SNOWCELL_API_TOKEN env var
+)
+```
+
+### Chat
+
+```python
+res = client.chat.create(
+    model="Meditron3-8B",
+    messages=[{"role": "user", "content": "Explain attention in one line."}],
+    max_tokens=80,
+)
+print(res.choices[0].message.content)
+```
+
+Async:
+
+```python
+res = await client.chat.acreate(model="Meditron3-8B", messages=[{"role":"user","content":"Hi"}], max_tokens=80)
+```
+
+Streaming:
+
+```python
+for evt in client.chat.stream(model="Meditron3-8B", messages=[{"role":"user","content":"Hi"}], max_tokens=80):
+    print(evt)
+```
+
+### Completions
+
+```python
+res = client.completions.create(
+    model="Meditron3-8B",
+    prompt="Hello world!",
+    max_tokens=32,
+)
+print(res.choices[0].text)
+```
+
+Async:
+
+```python
+res = await client.completions.acreate(model="Meditron3-8B", prompt="Hello world!", max_tokens=32)
+```
+
+---
+
+## Configuration
+
+You can set these environment variables instead of passing args:
+
+- `SNOWCELL_API_TOKEN` – bearer token for authentication
+- `SNOWCELL_INFERENCE_BASE_URL` – override the inference origin (e.g., `http://127.0.0.1:11434` for local testing)
+
+The SDK sends `User-Agent: snowcell-python/<version>` and uses timeouts tuned for LLMs: `connect=5s`, `write=30s`, `read=300s`.
+
+---
+
+## Errors
+
+The SDK raises `SnowcellError` for 4xx/5xx responses with server details included. Common cases:
+
+- `401/403` – check your token / project permissions
+- `422` – request validation error (inspect the server message)
+- `429` – rate limited; retry after the indicated delay
+- `5xx`  – transient server error; try again later
+
+---
+
+## Versioning
+
+- Initial public release: **0.1.0** (chat, completions; sync/async; streaming for chat)
+- Backwards-compatible fixes → patch bump (`0.1.x`)
+- New features/endpoints → minor bump (`0.x.y`)
+
+See [`CHANGELOG.md`](./CHANGELOG.md).
+
+---
+
+## License
+
+MIT – see [`LICENSE`](./LICENSE).
