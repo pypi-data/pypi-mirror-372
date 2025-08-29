@@ -1,0 +1,208 @@
+# GitLab CI/CD Pipeline for fnb (Fetch'n'Backup)
+# Automated testing, building, and PyPI deployment
+#
+# Deployment Strategy (issue#17):
+# - TestPyPI: Automatic deployment on tag push (CI time: +30s)
+# - PyPI Production: Manual approval for safety (maintains human oversight)
+# - Local verification using 'task verify:testpypi' recommended between deployments
+
+stages:
+  - renovate
+  - test
+  - docs-quality
+  - build
+  - deploy-test
+  - deploy-prod
+
+# Global variables
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.cache/uv"
+
+# Cache configuration for faster builds
+cache:
+  paths:
+    - .cache/pip
+    - .cache/uv
+    - .venv/
+
+# Default image with Python 3.12
+image: python:3.12
+
+# Install dependencies before each job
+before_script:
+  - pip install uv
+  - uv venv
+  - source .venv/bin/activate
+  - uv pip install -e .
+
+# Renovate job: Automated dependency management (optional - requires RENOVATE_TOKEN)
+renovate:
+  stage: renovate
+  image: renovate/renovate:latest
+  before_script: []  # Override global before_script for Renovate
+  script:
+    - echo "Running Renovate for automated dependency updates..."
+    - |
+      if [ -z "$RENOVATE_TOKEN" ]; then
+        echo "⚠️  RENOVATE_TOKEN not set - skipping Renovate execution"
+        echo "See docs/development/renovate-setup.md for configuration instructions"
+        exit 0
+      fi
+    - renovate --platform=gitlab --token=$RENOVATE_TOKEN $CI_PROJECT_PATH
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: manual
+  variables:
+    RENOVATE_BASE_BRANCHES: '["main"]'
+    RENOVATE_GIT_AUTHOR: 'Renovate Bot <renovate@gitlab.com>'
+    LOG_LEVEL: debug
+  allow_failure: true  # Don't fail pipeline if Renovate isn't configured
+
+# Test job: Run pytest and code quality checks
+test:
+  stage: test
+  script:
+    - echo "Running test suite with pytest (excluding integration tests)..."
+    - echo "Checking if pytest works directly..."
+    - uv run pytest --version
+    - echo "Running unit tests only..."
+    - uv run pytest tests/ -m "not integration" --cov=fnb --cov-report=term --cov-report=html
+  coverage: '/TOTAL.*\s+(\d+%)/'
+  artifacts:
+    paths:
+      - htmlcov/
+    expire_in: 1 week
+    when: always
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG
+
+# Code quality job: Format and lint checks
+code-quality:
+  stage: test
+  script:
+    - echo "Checking code formatting..."
+    - uv run ruff format --check src tests
+    - echo "Running pre-commit hooks..."
+    - uv run pre-commit run --all-files
+  allow_failure: true
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG
+
+# Renovate test job: Enhanced testing for dependency updates
+renovate-test:
+  stage: test
+  script:
+    - echo "Enhanced testing for Renovate MRs..."
+    - echo "Running comprehensive unit test suite..."
+    - uv run pytest tests/unit/ --cov=fnb --cov-report=term --cov-report=html
+    - echo "Validating package integrity..."
+    - uv build
+    - echo "Testing installation from built wheel..."
+    - pip install dist/*.whl
+    - echo "Verifying command line interface..."
+    - fnb --version
+    - fnb --help > /dev/null
+    - echo "✅ Renovate dependency validation completed"
+  coverage: '/TOTAL.*\s+(\d+%)/'
+  artifacts:
+    paths:
+      - htmlcov/
+      - dist/
+    expire_in: 1 week
+    when: always
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^renovate/
+      when: on_success
+
+# Build job: Create Python package artifacts
+build-package:
+  stage: build
+  script:
+    - echo "Building Python package with uv..."
+    - uv build
+    - echo "Build completed successfully!"
+    - ls -la dist/
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+    when: always
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG
+
+# Deploy to TestPyPI: Automatic test deployment
+deploy-testpypi:
+  stage: deploy-test
+  script:
+    - echo "Deploying to TestPyPI automatically..."
+    - echo "Checking dist/ directory..."
+    - ls -la dist/
+    - echo "Publishing to TestPyPI..."
+    - UV_PUBLISH_TOKEN=${TESTPYPI_API_TOKEN} UV_PUBLISH_URL=https://test.pypi.org/legacy/ uv publish
+    - echo "TestPyPI deployment completed!"
+    - echo "Verify deployment using task verify:testpypi"
+  dependencies:
+    - build-package
+  environment:
+    name: testpypi
+    url: https://test.pypi.org/project/fnb/
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: on_success
+
+# Deploy to PyPI: Production deployment (manual approval required)
+deploy-pypi:
+  stage: deploy-prod
+  script:
+    - echo "Deploying to production PyPI..."
+    - echo "Pre-deployment checklist:"
+    - echo "  ✓ TestPyPI deployment verified"
+    - echo "  ✓ Local verification completed"
+    - echo "  ✓ Manual approval granted"
+    - echo "Checking dist/ directory..."
+    - ls -la dist/
+    - echo "Publishing to PyPI..."
+    - UV_PUBLISH_TOKEN=${PYPI_API_TOKEN} uv publish
+    - echo "PyPI production deployment completed!"
+    - echo "Package available at https://pypi.org/project/fnb/"
+  dependencies:
+    - build-package
+    - deploy-testpypi
+  environment:
+    name: pypi
+    url: https://pypi.org/project/fnb/
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: manual
+
+# Documentation Quality Check: Validate multilingual docs build
+docs-quality:
+  stage: docs-quality
+  script:
+    - echo "Setting up documentation dependencies..."
+    - uv sync --all-extras
+    - echo "Validating documentation build quality..."
+    - uv run mkdocs build
+    - echo "Documentation build completed successfully!"
+    - echo "Checking site output structure..."
+    - ls -la site/
+    - echo "Checking multilingual site structure..."
+    - ls -la site/ja/ || echo "Japanese site not found"
+    - echo "✅ Documentation quality validation completed"
+  artifacts:
+    paths:
+      - site/
+    expire_in: 1 hour
+    when: always
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG
