@@ -1,0 +1,48 @@
+{#- Some applications should use a different configurable name #}
+{%- if application_name in ("LHCb", "Noether") %}
+    {%- set configurable_name = "LHCbApp" %}
+{%- elif application_name == "Castelao" %}
+    {%- set configurable_name = "DaVinci" %}
+{%- else -%}
+    {%- set configurable_name = application_name %}
+{%- endif -%}
+
+{%- if application_name == "Franklin" %}
+import os
+import Configurables
+
+franklin_base_name = os.environ.get("FRANKLIN_BASE_NAME")
+if franklin_base_name is None:
+    raise ValueError("FRANKLIN_BASE_NAME environment variable not found")
+
+{{ configurable_name }} = getattr(Configurables, franklin_base_name)
+{%- else %}
+from Configurables import {{ configurable_name }}
+{%- endif %}
+
+
+{%- if turbo %}
+{{ configurable_name }}().Turbo = True
+{%- else %}
+try:
+    {{ configurable_name }}().Turbo = False
+except AttributeError:
+    # Older DaVinci versions don't support Turbo at all
+    pass
+{%- endif %}
+{%- if root_in_tes is not none %}
+{{ configurable_name }}().RootInTES = '{{ root_in_tes }}'
+{%- endif %}
+
+{{ configurable_name }}().InputType = '{{ input_type }}'
+{{ configurable_name }}().DataType = '{{ data_type }}'
+{{ configurable_name }}().Simulation = {{ simulation }}
+{{ configurable_name }}().Lumi = {{ luminosity }}
+
+{%- if simulation %}
+{{ configurable_name }}().DDDBtag = '{{ dddb_tag }}'
+{{ configurable_name }}().CondDBtag = '{{ conddb_tag }}'
+{%- else %}
+from Configurables import CondDB
+CondDB(LatestGlobalTagByDataType={{ configurable_name }}().DataType)
+{%- endif %}
