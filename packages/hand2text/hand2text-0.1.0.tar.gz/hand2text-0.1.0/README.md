@@ -1,0 +1,141 @@
+# Hand2Text
+
+A Python package that converts handwritten PDF notes to text.
+
+## Overview
+
+Hand2Text is a tool that extracts and transcribes handwritten notes from PDF documents. It uses a pipeline approach:
+
+1. **PDF to Images**: Converts each page of the PDF to an image
+2. **Text Extraction**: Uses one of two methods to extract text:
+   - **Vision LLM** (Preferred): Uses OpenAI's vision-capable models to directly transcribe handwritten text
+   - **OCR + LLM** (Fallback): Uses Tesseract OCR to extract text, then OpenAI's GPT to refine and correct it
+
+## Installation
+
+### Prerequisites
+
+- Python 3.10 or higher
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) (required for fallback method)
+- OpenAI API key
+
+### Setup
+
+1. Clone the repository
+2. Install dependencies with Poetry:
+   ```bash
+   poetry install
+   ```
+3. Create a `.env` file with your OpenAI API key:
+   ```
+   OPENAI_API_KEY=your_key_here
+   TESSERACT_PATH=C:\Program Files\Tesseract-OCR\tesseract.exe  # Windows example
+   ```
+
+## Usage
+
+### Command Line
+
+Use the CLI to process PDF files:
+
+```bash
+poetry run python cli.py path/to/your/notes.pdf
+```
+
+Optional arguments:
+- `--img-out` - Directory for output images (default: "output-image")
+- `--txt-out` - Directory for output text files (default: "output-text")
+
+### Python API
+
+```python
+from main import main
+
+main("path/to/your/notes.pdf", "output-image", "output-text")
+```
+
+## How It Works
+
+### PDF to Image Conversion
+
+The `pdf2img` module uses PyMuPDF to convert each page of the PDF to a PNG image.
+
+### Text Extraction
+
+Hand2Text uses two methods for text extraction:
+
+#### Primary Method: Vision LLM
+
+The `vision_llm` module sends the image directly to OpenAI's vision-capable models (GPT-4o, GPT-4-vision-preview, or similar) to transcribe the handwritten text. This method typically provides the best results for handwriting.
+
+#### Fallback Method: OCR + LLM Refinement
+
+If vision models are unavailable, Hand2Text falls back to:
+
+1. **OCR**: The `ocr` module uses Tesseract with preprocessing to improve handwriting recognition
+2. **Refinement**: The `llm.refine` module sends the OCR output to OpenAI's GPT-3.5 to clean and correct the text
+
+## Project Structure
+
+```
+hand2text/
+├── cli.py                  # Command line interface
+├── main.py                 # Main application logic
+├── llm/
+│   ├── refine.py           # LLM text refinement
+│   └── vision_llm.py       # Vision LLM transcription
+├── ocr/
+│   └── ocr.py              # OCR processing with Tesseract
+└── pdf2img/
+    └── converter.py        # PDF to image conversion
+```
+
+## Documentation
+
+### cli.py
+- **run()**: Parses command-line arguments and calls `main()`.
+  - Usage: `poetry run python cli.py <pdf_path> [--img-out DIR] [--txt-out DIR]`
+
+### main.py
+- **main(pdf_path, output_img_folder, output_txt_folder)**: Orchestrates the pipeline: PDF → images → text extraction → save text files.
+  - Args:
+    - `pdf_path` (str): Path to the input PDF file
+    - `output_img_folder` (str): Directory for output images
+    - `output_txt_folder` (str): Directory for output text files
+
+### pdf2img/converter.py
+- **pdf_to_images(pdf_path: str, output_folder: str) -> None**
+  - Converts each page of a PDF into a PNG image in the output folder.
+  - Args:
+    - `pdf_path`: Path to the PDF file
+    - `output_folder`: Directory to save images
+
+### ocr/ocr.py
+- **image_to_text(image_path: str) -> str**
+  - Runs Tesseract OCR (with preprocessing) on an image and returns the extracted text.
+  - Args:
+    - `image_path`: Path to the image file
+  - Returns: Extracted text (str)
+- **preprocess_image(image: PIL.Image) -> PIL.Image**
+  - Preprocesses the image (grayscale, contrast, sharpen, threshold) to improve OCR accuracy.
+
+### llm/refine.py
+- **refine_text(raw_text: str, is_empty: bool = False) -> str**
+  - Uses OpenAI GPT to clean up and correct OCR output. If `is_empty` is True, returns a helpful message.
+  - Args:
+    - `raw_text`: Text from OCR
+    - `is_empty`: Whether OCR failed
+  - Returns: Refined text (str)
+
+### llm/vision_llm.py
+- **vision_llm_transcribe(image_path: str) -> str**
+  - Uses OpenAI's vision models (tries `gpt-4o`, `gpt-4-vision-preview`, `gpt-4-turbo`) to transcribe handwritten text from an image. Falls back to OCR+LLM if all fail.
+  - Args:
+    - `image_path`: Path to the image file
+  - Returns: Transcribed text (str)
+
+## Notes
+
+- The Vision LLM method requires access to OpenAI's vision-capable models
+- For best results with the OCR fallback method, ensure handwriting is clear and well-lit
+- Performance may vary based on handwriting style and image quality
