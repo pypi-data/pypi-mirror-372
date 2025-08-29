@@ -1,0 +1,39 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  deploy-package:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_IMAGE: build
+      PYPI_PUBLISH_TOKEN: ${{ secrets.PYPI_PUBLISH_TOKEN }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Check the package version is the same as the tag
+        run: |
+          version=$(python3 setup.py --version)
+          if [ "${{ github.ref }}" != "refs/tags/v${version}" ]; then
+            echo "version in setup.py (v${version}) is different to the given tag (${{ github.ref }})"
+            exit 1;
+          fi
+      - name: Build docker image
+        run: docker build --tag $DOCKER_IMAGE .
+      - name: Publish package to pypi
+        run: docker run -e UV_PUBLISH_TOKEN=$PYPI_PUBLISH_TOKEN $DOCKER_IMAGE /bin/bash -c " make publish"
+  create-release:
+    needs: deploy-package
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Create Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
