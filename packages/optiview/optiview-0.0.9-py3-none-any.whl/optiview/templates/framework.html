@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SiMa.ai OptiView</title>
+  <link rel="icon" type="image/png" href="/static/icons/fav.png" />
+  <!-- Fonts and Styles -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/editor.css" />
+  <link rel="stylesheet" href="/static/css/toast.css" />
+  <link rel="stylesheet" href="/static/css/info.css" />
+  <link rel="stylesheet" href="/static/css/mediasrc.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/material.min.css" />
+
+  <!-- CodeMirror Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/meta.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsonlint/1.6.0/jsonlint.min.js"></script>
+
+  <!-- Convert ANSI output to HTML -->
+  <script src="https://cdn.jsdelivr.net/npm/ansi_up@5.1.0/ansi_up.min.js"></script>
+
+</head>
+
+<body>
+  <!-- Fixed Header -->
+  <header>
+    <div class="header-content">
+      <img src="/static/icons/logo.svg" alt="SiMa Logo" class="logo" />
+      <span class="title-text">OptiView</span>
+    </div>
+  </header>
+  <!-- Scrollable Main Area -->
+  <main class="main-scroll-area">
+    <div id="editTab" class="tab-content">
+      <div class="editor-toolbar">
+        <button id="btnSettingsPopup" title="Settings">
+          <img src="/static/icons/menu.png" alt="Settings" />
+        </button>
+        <button id="btnSave" title="Save">
+          <img src="/static/icons/save.png" alt="Save" />
+        </button>
+        <button id="btnUndo" title="Undo">
+          <img src="/static/icons/undo.png" alt="Undo" />
+        </button>
+        <button id="btnRedo" title="Redo">
+          <img src="/static/icons/redo.png" alt="Redo" />
+        </button>
+        <button id="btnGstEdit" title="GstEdit">
+          <img src="/static/icons/gst_edit.png" alt="Redo" />
+        </button>
+        <select id="folderFilter" title="Filter by app">
+          <option value="__all__">All pipelines</option>
+        </select>
+
+        <button id="btnPlay" title="Start selected app" disabled>
+          <img id="rocketIcon" src="/static/icons/rocket.png" alt="Run" />
+        </button>
+        
+        <div class="toolbar-right">
+          <button id="btnUpload" title="Upload">
+            <img src="/static/icons/upload.png" alt="Upload" />
+          </button>
+        </div>        
+      </div>
+
+      <div class="code-editor-layout">
+        <div id="fileTree" class="file-tree"></div>
+        <div class="editor-pane">
+          <textarea id="codeEditor"></textarea>
+        </div>
+      </div>
+
+      <!-- Hidden log panel -->
+      <div id="logOverlay" class="log-overlay hidden">
+        <div class="log-header">
+          <div class="log-tabs">
+            <button class="log-tab active" data-log="gst_app">applog</button>
+            <button class="log-tab" data-log="EV74">ev74</button>
+            <button class="log-tab" data-log="syslog">syslog</button>
+          </div>
+          <button id="btnToggleLogs" title="Minimize/Restore">
+            <img id="btnToggleLogsIcon" src="/static/icons/minimize.png" alt="Toggle Logs" />
+          </button>
+        </div>
+        <div class="log-resizer"></div>
+        <div id="logContent">
+          <pre id="logOutput-gst_app" class="log-output active"></pre>
+          <pre id="logOutput-EV74" class="log-output"></pre>
+          <pre id="logOutput-syslog" class="log-output"></pre>
+        </div>
+        <div id="logResizer" class="log-resizer"></div>
+      </div>
+      <button id="btnRestoreLogs" title="Restore Logs">▲ Logs</button>
+
+    </div>
+    <div id="monitorTab" class="tab-content" style="display: none;">
+      <iframe id="monitorIframe" src="" width="100%" height="100%" frameborder="0"></iframe>
+    </div>
+  </main>
+  </div>
+
+  <!-- HTML: General Upload Dialog Component -->
+  <div id="uploadDialog" class="upload-dialog hidden">
+    <div class="upload-box">
+      <h2 id="uploadTitle">Upload File</h2>
+      <progress id="uploadProgress" value="0" max="100" class="hidden"></progress>
+      <div id="uploadStatus" class="upload-status"></div>
+      <div class="upload-buttons">
+        <label class="custom-file-upload">
+          <input type="file" id="uploadInput" />
+          Choose a file
+        </label>
+        <button id="uploadCancel">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Popup Overlay -->
+  <div id="infoOverlay" class="hidden">
+    <div id="infoPopup" class="info-popup">
+      <div class="info-popup-content">
+        <div class="info-popup-header">
+          <span class="info-popup-title">Media Info</span>
+          <button id="infoPopupClose">&times;</button>
+        </div>
+        <div class="info-popup-body">
+          <table class="info-popup-table">
+            <tbody id="infoPopupTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="gstEditDialog" class="modal hidden">
+    <div class="modal-content">
+      <h3>Edit GStreamer Pipeline</h3>
+  
+      <div class="editor-help-wrapper">
+        <textarea id="gstEditor"></textarea>
+      
+        <div id="helpPanel" class="help-panel">
+          <div class="help-header">
+            <span id="helpTitle">GStreamer Help</span>
+          </div>
+          <div id="helpContent">
+            <p style="opacity: 0.7; font-style: italic;">
+              Click on a plugin name or select a keyword to get help.
+            </p>
+          </div>
+        </div>
+      </div>
+  
+      <div class="modal-buttons">
+        <!-- <button class="app-button" id="gstEditVisualize">Validate</button> -->
+        <button class="app-button" id="gstEditSave">Save</button>
+        <button class="app-button" id="gstEditCancel">Cancel</button>
+      </div>
+    </div>
+    <div class="placeholder-editor-modal hidden" id="placeholderEditorModal">
+      <div class="modal-content">
+        <h3>Edit Placeholder</h3>
+        <p id="placeholderEditorDesc" class="description">Please enter a value for this parameter.</p>
+        <input type="text" id="placeholderEditorInput" />
+        <div class="modal-buttons">
+          <button id="placeholderEditorCancel">Cancel</button>
+          <button id="placeholderEditorSave">Save</button>
+        </div>
+      </div>
+    </div>  
+  </div>  
+
+
+  <div id="settingsPopupOverlay" class="settings-popup-overlay hidden">
+    <div class="settings-popup-modal">
+      <div class="settings-popup-header">
+        <span class="settings-popup-title">Settings</span>
+        <button id="settingsPopupClose" title="Close">&times;</button>
+      </div>
+      <div class="settings-popup-body">
+        <div class="settings-tab-header">
+          <button class="settings-tab-link active" data-tab="popup-media-files">Media Files</button>
+          <button class="settings-tab-link" data-tab="popup-media-sources">Media Sources</button>
+          <button class="settings-tab-link" data-tab="popup-launch-options">Launch Options</button>
+          <button class="settings-tab-link" data-tab="popup-remote-devkit">Remote DevKit</button>
+        </div>
+        <div class="settings-tab-body">
+
+          <!-- Media Files Tab -->
+          <div id="popup-media-files" class="settings-tab-section active">
+            <div class="media-browser-layout">
+              <div id="popupMediaFileTree" class="file-tree"></div>
+              <div class="media-browser-pane">
+                <div id="popupMediaFilePreview" class="media-preview">
+                  <div id="popupPreviewContent"></div>
+                  <div id="popupPreviewActions" class="preview-actions hidden">
+                    <button id="popupPreviewUploadBtn" title="Upload">
+                      <img src="/static/icons/upload.png" alt="Upload" />
+                    </button>
+                    <button id="popupPreviewInfoBtn" title="Info">
+                      <img src="/static/icons/info.png" alt="Info" />
+                    </button>
+                    <button id="popupPreviewDeleteBtn" title="Delete">
+                      <img src="/static/icons/delete.png" alt="Delete" />
+                    </button>
+                    <button id="popupPreviewAssignBtn" title="Assign to media source">
+                      <img src="/static/icons/assign.png" alt="Assign" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Media Sources Tab -->
+          <div id="popup-media-sources" class="settings-tab-section">
+            <div id="popup-media-source-rows"></div>
+          </div>
+
+          <!-- Launch Options Tab -->
+          <div id="popup-launch-options" class="settings-tab-section">
+            <div class="launch-options-panel">
+              <div class="launch-options-table">
+                <div class="launch-options-row">
+                  <div class="launch-options-label"><label for="gstDebugLevel">GStreamer Debug Level:</label></div>
+                  <div class="launch-options-control">
+                    <select id="gstDebugLevel" name="gstDebugLevel">
+                      <option value="0">0 - None</option>
+                      <option value="1">1 - Error</option>
+                      <option value="2">2 - Warning</option>
+                      <option value="3">3 - Info</option>
+                      <option value="4">4 - Debug</option>
+                      <option value="5">5 - Log</option>
+                    </select>
+                  </div>
+                </div>
+                <!-- Add more rows here as needed -->
+              </div>
+            </div>
+          </div>
+
+        <!-- Remote DevKit Tab -->
+        <div id="popup-remote-devkit" class="settings-tab-section">
+          <div class="remote-devkit-panel">
+            <div class="remote-devkit-help" style="padding: 0 20px; margin-bottom: 15px; font-size: 14px; line-height: 1.4; color: #555;">
+              OptiView allows you to connect to a Sima.ai DevKit over the network. Please ensure that the machine running OptiView can reach the DevKit’s IP address.
+              You must also enter the <strong>root password</strong> for the DevKit to enable full access and configuration.
+            </div>            
+            <div class="remote-devkit-table">
+
+              <!-- Row 1: IP Address -->
+              <div class="remote-devkit-row">
+                <label class="remote-devkit-label" for="devkitIp">IP Address:</label>
+                <input class="remote-devkit-input" type="text" id="devkitIp" name="devkitIp" value="127.0.0.1" />
+              </div>
+
+              <!-- Row 2: Root Password -->
+              <div class="remote-devkit-row">
+                <label class="remote-devkit-label" for="rootPassword">Root Password:</label>
+                <input class="remote-devkit-input" type="password" id="rootPassword" name="rootPassword" value="" />
+              </div>
+
+              <!-- Row 3: Test & Save Button -->
+              <div class="remote-devkit-row" style="text-align: right; margin-top: 10px;">
+                <button id="testSaveBtn" class="remote-devkit-button">Test & Save</button>
+                <button id="clearSaveBtn" class="remote-devkit-button">Clear & Save</button>
+              </div>              
+            </div>
+          </div>
+        </div>
+
+
+        </div>
+        <div class="settings-popup-footer" id="settingsPopupFooter">
+          <span id="settingsPopupHelpText">Browse and manage your uploaded media files.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Assign Source Popup -->
+  <div id="assign-src-popup" class="assign-src-overlay hidden">
+    <div class="assign-src-modal">
+      <h3>Assign To A Media Source</h3>
+      <p>A media source is a live RTSP stream as input for your ML inferencing pipeline.</p>
+
+      <label for="assign-source-select">Select Source:</label>
+      <select id="assign-source-select">
+        <option value="">-- Choose a source (1–8) --</option>
+        <option value="1">Source 1</option>
+        <option value="2">Source 2</option>
+        <option value="3">Source 3</option>
+        <option value="4">Source 4</option>
+        <option value="5">Source 5</option>
+        <option value="6">Source 6</option>
+        <option value="7">Source 7</option>
+        <option value="8">Source 8</option>
+      </select>
+
+      <div class="assign-src-actions">
+        <div class="assign-src-actions">
+          <button id="assign-save-btn" class="assign-button" disabled>Assign</button>
+          <button id="assign-cancel-btn" class="assign-button">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Fixed Bottom Toolbar -->
+  <div class="bottom-toolbar">
+    <div class="tabs">
+      <button data-tab="editTab" title="Edit">
+        <img src="/static/icons/coding.png" alt="Edit" />
+      </button>
+      <button data-tab="monitorTab" title="Monitor">
+        <img src="/static/icons/view.png" alt="Monitor" />
+      </button>
+    </div>
+    <div class="status">
+      <span id="boardVersion">Board: --</span>
+      <span id="cpuStatus">CPU: --%</span>
+      <span id="ramStatus">RAM: --%</span>
+      <span id="mlaStatus">MLA: --</span>
+      <span id="storageStatus">Storage: --</span>
+    </div>
+    <div class="mode-toggle" title="Toggle Theme" id="modeToggleBtn">
+      <img id="modeToggleIcon" src="/static/icons/darkmode.png" alt="Mode" />
+    </div>
+  </div>
+
+
+
+  <!-- JS -->
+  <script src="/static/js/scripts.js"></script>
+  <script src="/static/js/editor.js"></script>
+  <script src="/static/js/toast.js"></script>
+  <link rel="stylesheet" href="/static/css/upload.css" />
+  <script src="/static/js/upload.js"></script>
+  <script src="/static/js/mediasrc.js"></script>
+  <script src="/static/js/settings-popup.js"></script>
+  <script src="/static/js/info.js"></script>
+  <script src="/static/js/assign-src.js"></script>
+  <script src="/static/js/gst-editor.js"></script>
+  <link rel="stylesheet" href="/static/css/app-button.css" />
+  <link rel="stylesheet" href="/static/css/assign-src.css" />
+  <link rel="stylesheet" href="/static/css/settings-popup.css" />
+  <link rel="stylesheet" href="/static/css/gst-editor.css" />
+
+</body>
+
+</html>
