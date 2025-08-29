@@ -1,0 +1,46 @@
+name: Check
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  run-checks:
+    name: Check python-${{ matrix.python-version }}, ${{ matrix.os }}
+    timeout-minutes: 5
+
+    strategy:
+      matrix:
+        os:
+          - "ubuntu-latest"
+        python-version:
+          - "3.12"
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Check Python lint
+        run: uvx ruff check . --config pyproject.toml
+
+      - name: Check Python formatting
+        run: uvx ruff format --check .  --config pyproject.toml
+
+      - name: Check Scenarios formatting
+        run: |
+          npm ci
+          npx prettier --check "scenarios/**/*.{toml,json,yaml}"
+
+  typos:
+    runs-on: ubuntu-latest
+    name: Check typos
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crate-ci/typos@master

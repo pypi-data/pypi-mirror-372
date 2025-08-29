@@ -1,0 +1,108 @@
+name: Publish
+
+env:
+  # Enable colored output
+  # https://github.com/actions/runner/issues/241
+  PY_COLORS: 1
+
+permissions:
+  id-token: write # Needed for AWS CodeArtifact OIDC
+  contents: write # Needed for GH pages updates
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  push:
+    branches:
+      - main
+
+jobs:
+  publish-packages:
+    name: Publish python-${{ matrix.python-version }}, ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        python-version:
+          - "3.12"
+
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install zsh
+        run: |
+          sudo apt-get update
+          sudo apt-get install zsh
+
+      - name: Install packages
+        run: |
+          uv sync --extra index
+
+      - name: Collect scenarios
+        run: |
+          scenarios=(scenarios/**/*.(json|yaml|toml))
+
+          # Display for debug
+          for scenario in $scenarios
+          do
+            echo "$scenario"
+          done
+          echo "SCENARIOS=$scenarios" >> "$GITHUB_ENV"
+
+          # Assigning a glob to a variable in `bash` is such a pain I don't want to talk about it
+          # instead we just use zsh
+        shell: zsh {0}
+
+      - name: View scenarios
+        run: |
+          uv run -- packse view $SCENARIOS
+
+      - name: Build scenarios
+        run: |
+          uv run -- packse build --skip-root --no-hash $SCENARIOS
+
+      - name: Publish scenarios [local]
+        if: github.ref != 'refs/heads/main'
+        run: |
+          # Start the local index server, do not allow packages from PyPI
+          index_url=$(uv run -- packse index up --bg --offline --dist-dir "./published")
+
+          # Publish the packages
+          uv run -- packse publish --anonymous --index-url "$index_url" dist/*
+
+          # Shutdown the index server
+          uv run -- packse index down
+
+      - name: Publish scenarios [gh pages]
+        if: github.ref == 'refs/heads/main'
+        run: |
+          commit=$(./scripts/version parts | jq -r ".short_hash")
+          uv run -- packse index build --no-hash --dist-dir ./dist $SCENARIOS
+
+          git fetch origin gh-pages
+          git branch gh-pages FETCH_HEAD
+          git checkout gh-pages
+
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+          mkdir "$commit"
+          cp -r index/* "./$commit"
+          git add "$commit"
+          git commit -m "Publish scenarios for $commit"
+          git push --set-upstream origin gh-pages

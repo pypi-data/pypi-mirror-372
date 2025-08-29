@@ -1,0 +1,70 @@
+name: Release
+
+permissions:
+  contents: write # for GitHub Pages updates
+  id-token: write # for PyPI trusted publishing
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+rc[0-9]+"
+      - "[0-9]+.[0-9]+[ab][0-9]+"
+
+jobs:
+  release-package:
+    name: Release to PyPI
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Set up uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Publish package
+        run: |
+          sed -i -e "s/0.0.0/${GITHUB_REF#refs/*/}/" pyproject.toml
+          uv build
+          uv publish
+
+  release-scenarios:
+    name: Publish scenarios
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v3
+      
+      - name: Install packages
+        run: |
+          uv sync --all-extras
+
+      - name: Publish scenarios to GitHub Pages
+        run: |
+          uv run -- packse index build --no-hash scenarios/
+
+          git fetch origin gh-pages
+          git branch gh-pages FETCH_HEAD
+          git checkout gh-pages
+
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+          mkdir "${GITHUB_REF#refs/*/}"
+          cp -r index/* "${GITHUB_REF#refs/*/}"
+          git add "${GITHUB_REF#refs/*/}"
+          git commit -m "Publish scenarios for $commit"
+          git push --set-upstream origin gh-pages
