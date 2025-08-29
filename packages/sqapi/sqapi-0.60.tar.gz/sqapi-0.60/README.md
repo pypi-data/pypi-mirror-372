@@ -1,0 +1,176 @@
+# SQAPI
+
+`sqapi` is a python package that simplifies interactions with the 
+[SQUIDLE+ API](https://squidle.org/api/help?template=api_help_page.html).
+It can be used for everything from creating simple queries through to integrating automated 
+labelling from machine learning algorithms and plenty other cool things.
+
+### Installation
+To install the `sqapi` module, you can use `pip`
+```shell
+pip install sqapi 
+```
+
+### What is this?
+The `sqapi` module helps to build the `HTTP` requests that are sent to the [SQUIDLE+](squidle.org) `API`. These are 
+`GET`, `POST`, `PATCH` or `DELETE` requests. Setting `verbosity=2` on the `sqapi` module will print the `HTTP` 
+requests that are being made.
+
+`sqapi` takes care of authentication, and simplifies the creation of API queries. 
+For example:
+
+```python
+from sqapi.api import SQAPI
+
+api = SQAPI(host=<HOST>, api_key=<API_KEY>, verbosity=2)  # instantiate the sqapi module
+r=api.get(<ENDPOINT>)              # define a get request using a specific endpoint
+r.filter(<NAME>,<OPERATORE>,<VALUE>) # define a filter to compare a property with a value using an operator
+data = r.execute().json()            # perform the request & return result as JSON dict (don't set template)
+```
+
+For more information about structuring queries, check out the [Making API queries](https://squidle.org/api/help?template=api_help_page.html#api_query)
+section of the SQ+ API documentation page.
+
+Instantiating `sqapi` without an API key argument will prompt for a user login, i.e.:
+```python
+sqapi = SQAPI(host=<HOST>, verbosity=2)  # instantiate the sqapi module
+```
+
+You can also use it to apply built-in templates to the data that comes out of the API:
+```python
+r.template(<TEMPLATE>)               # format the output of the request using an inbuilt HTML template
+html = r.execute().text              # perform the request & return result as text (eg: for html)
+```
+
+> **IMPORTANT:** in order to proceed, you will need a user account on [SQUIDLE+](https://squidle.org). You will also 
+> need to activate your API key.
+
+## Examples
+### Creating queries
+This is by no means an extensive list of possible API queries. The API is extensive and the models are documented
+[here](https://squidle.org/api/help?template=api_help_page.html) and the creation of queries is documented 
+[here](https://squidle.org/api/help?template=api_help_page.html#api_query). `SQAPI` enables a convenient mechanism 
+for creating these queries inside of Python. For example, a basic API query to list all the annotations that have valid 
+labels starting with 'ecklonia' within a spatially constrained bounding box would be:
+```json
+{
+   "filters": [
+      {
+         "name": "label",
+         "op": "has",
+         "val": {
+            "name": "name",
+            "op": "ilike",
+            "val": "ecklonia%"
+         }
+      },
+      {
+         "name": "point",
+         "op": "has",
+         "val": {
+            "name": "media",
+            "op": "has",
+            "val": {
+               "name": "poses",
+               "op": "any",
+               "val": {
+                  "name": "geom",
+                  "op": "geo_in_bbox",
+                  "val": [
+                     {
+                        "lat": -32.020013585799155,
+                        "lon": 115.49980113118502
+                     },
+                     {
+                        "lat": -32.01995006531625,
+                        "lon": 115.49987604949759
+                     }
+                  ]
+               }
+            }
+         }
+      }
+   ]
+}
+```
+The result of that query can be accessed dynamically through 
+[here as pretty JSON](https://squidle.org/api/annotation?template=json.html&q={"filters":[{"name":"point","op":"has","val":{"name":"has_xy","op":"eq","val":true}},{"name":"point","op":"has","val":{"name":"media","op":"has","val":{"name":"poses","op":"any","val":{"name":"geom","op":"geo_in_bbox","val":[{"lat":-32.020013585799155,"lon":115.49980113118502},{"lat":-32.01995006531625,"lon":115.49987604949759}]}}}}]}) or
+[here as raw JSON](https://squidle.org/api/annotation?q={"filters":[{"name":"point","op":"has","val":{"name":"has_xy","op":"eq","val":true}},{"name":"point","op":"has","val":{"name":"media","op":"has","val":{"name":"poses","op":"any","val":{"name":"geom","op":"geo_in_bbox","val":[{"lat":-32.020013585799155,"lon":115.49980113118502},{"lat":-32.01995006531625,"lon":115.49987604949759}]}}}}]}) or 
+[here with a template](https://squidle.org/iframe/api/annotation?template=models/annotation/list_thumbnails.html&q={"filters":[{"name":"point","op":"has","val":{"name":"has_xy","op":"eq","val":true}},{"name":"point","op":"has","val":{"name":"media","op":"has","val":{"name":"poses","op":"any","val":{"name":"geom","op":"geo_in_bbox","val":[{"lat":-32.020013585799155,"lon":115.49980113118502},{"lat":-32.01995006531625,"lon":115.49987604949759}]}}}}]}&include_link=true).
+Note with a logged in browser session, that link will extract cropped thumbnails around each annotation, but without logging in,
+you'll just see a thumbnail the whole image associated with that annotation.
+The Python code required to build that query could be something like:
+```python
+from sqapi.api import SQAPI, query_filter as qf
+api = SQAPI(host="https://squidle.org", )   # optionally pass in api_key to avoid log in prompt
+r = api.get("/api/annotation")
+r.filter("label", "has", qf("name","ilike","ecklonia%"))   # filter for label name, % here is a wildcard matching anything
+bbox = [{"lat": -32.020013585799155,"lon": 115.49980113118502},{"lat": -32.01995006531625,"lon": 115.49987604949759}]
+r.filter("point", "has", qf("media", "has", qf("poses", "any", qf("geom", "geo_in_bbox", bbox))))  # filter within bounding box
+```
+
+### Exporting a dataset
+Coming soon...
+
+### Uploading a Media Item
+```python
+from sqapi.api import SQAPI
+import json
+api = SQAPI(host="http://localhost:5000", )
+data = {
+  "key": "20101010101010100_CAMID",
+  "deployment_id": 15640,
+  "timestamp_start": "2010-10-10T10:10:10.100",
+  "pose": {
+    "lat": -43.2,
+    "lon": 150.5,
+    "dep": 10.4,
+    "alt": 2.0,
+    "data": {        # optional data to attach to pose (key-value pair, where val is float)
+      "test": 123,
+      "field": 321
+    }
+  },
+  "data": {}   # optional data to attach to frame (JSON)
+}
+
+r=api.upload_file("/api/media/save", file_path="path/to/image.jpg", data=dict(json=json.dumps(data))).execute()
+print(r.json())
+```
+
+### Adding an Annotation to a Media Object
+This involves a few operations, which are typically done in separate steps:
+
+1. Add the `media` object to the `media_collection` 
+2. Add the annotation `point` with an empty `annotation` to the `annotation_set`
+3. Set the `label_id` of the `annotation` to associate the `label`
+
+If you're building up an annotation set directly from a list of media, that can be a bit cumbersome
+and here is a shortcut, which allows you to do all of this in a single API call:
+```python
+from sqapi.api import SQAPI
+api = SQAPI(host="http://localhost:5000", )
+
+MEDIA_ID=8230624
+ANNOTATION_SET_ID=12488
+LABEL_ID=13308
+IMG_WIDTH=640
+IMG_HEIGHT=480
+
+payload = {
+    "annotation_set_id":ANNOTATION_SET_ID,
+    "set_media": {"id": MEDIA_ID},
+    "annotation_label": {"id":LABEL_ID,"comment":"something","likelihood":1.0,"needs_review":True},
+    "pixels": {"polygon":[[50, 50],[250, 50],[250, 250],[50, 250],[50, 50]],"width":IMG_WIDTH,"height":IMG_HEIGHT},
+    # "x":0.5, "y":0.5, "polygon":[[p1x, p1y],...],
+    "is_targeted":True
+}
+r = api.post('/api/point', json_data=payload).execute()
+print(r.json())
+```
+
+
+
+### Machine learning integration
+The [sqbot](https://bitbucket.org/ariell/sqbot/) repository, which is based on this module (`sqapi`) has has tools and 
+templates for deploying ML allgorithms in Squidle+.
