@@ -1,0 +1,48 @@
+# The Docker image that will be used to build your app
+default:
+  image: python:latest
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  DOC_DIR: "docs" # Adjust this if your documentation directory is different
+
+# https://pip.pypa.io/en/stable/topics/caching/
+cache:
+  paths:
+    - .cache/pip
+
+# Functions that should be executed before the build script is run
+before_script:
+  - pip install uv
+
+stages: # List of stages for jobs and their order of execution
+  - test
+  - deploy
+
+.standard-rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # Run for MRs
+
+# format code and lint with ruff
+lint:
+  stage: test
+  extends:
+    - .standard-rules # Reuse the configuration in `.standard-rules` here
+  script:
+    - uv sync --group dev
+    - uv run ruff format
+    - uv run ruff check --fix
+
+pages:
+  stage: deploy
+  script:
+    - uv sync --group docs
+    - uv run sphinx-build -b html $DOC_DIR/source public
+  artifacts:
+    paths:
+      # The folder that contains the files to be exposed at the Page URL
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
