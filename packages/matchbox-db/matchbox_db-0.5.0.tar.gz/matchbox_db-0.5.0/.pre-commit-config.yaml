@@ -1,0 +1,35 @@
+repos:
+- repo: local
+  hooks:
+    # Run the ruff linter and formatter using just command
+    - id: ruff
+      name: ruff
+      description: "Format Python code using ruff format via just command"
+      entry: just format
+      language: system
+      types_or: [python, pyi]
+      pass_filenames: false
+
+    # Check for secrets
+    - id: trufflehog
+      name: TruffleHog
+      description: "Detect secrets in your data."
+      entry: bash -c "docker run -v "$(pwd):/repo" -i --rm trufflesecurity/trufflehog:latest git file:///repo  --since-commit HEAD --branch $(git branch --show-current) --fail"
+      language: system
+      stages: ["pre-commit", "pre-push"]
+
+    # Verify MkDocs build
+    - id: mkdocs
+      name: mkdocs
+      description: "Verify MkDocs documentation builds without errors"
+      entry: uv run mkdocs build --strict
+      language: system
+      pass_filenames: false
+
+    # Check for missing migrations
+    - id: alembic
+      name: Alembic
+      description: "Check for missing migrations"
+      entry: just migration-check
+      language: system
+      pass_filenames: false
