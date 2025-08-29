@@ -1,0 +1,335 @@
+#!python
+'''
+    %(prog)s - A \x1b[1mS\x1b[moftware \x1b[1mPA\x1b[mckage \x1b[1mM\x1b[manager
+    interface utility for Unixen.
+    © 2024 Mike Miller, License: GPLv3+
+
+    %(prog)s \x1b[3m[options]\x1b[m sub-command \x1b[3mmoar-args\x1b[m
+
+    # additional/customized sub-commands for
+'''
+import os
+import signal
+import sys
+from os.path import exists, join
+from argparse import ArgumentParser
+from platform import freedesktop_os_release
+
+
+# defaults
+CONFIG_INI = '''
+[spam_needs_sudo]
+autoremove
+check-update
+clean
+config-manager
+dist-upgrade
+downgrade
+history
+install
+mark
+purge
+reinstall
+remove
+selfupdate
+system-upgrade
+update
+upgrade
+
+[spam_aliases]
+inf = infile
+# old list package files alias
+lsf = contents
+ls = list
+lsi = list_installed
+po = policy
+pr = provides
+pu = purge
+rm = remove
+se = search
+up = upgrade
+in =  install
+
+
+# below are sections for different platforms
+
+[fedora]
+spam_exec = dnf
+add = config-manager --add-repo
+clean = clean packages; autoremove
+contents = repoquery -l --cacheonly
+# below doesnt need separate command
+infile = install
+info = info --cacheonly
+list_installed = list --installed,
+provides = provides --disablerepo=\\*
+purge = remove
+search = search --cacheonly
+show = info --cacheonly
+update = check-update --refresh
+upgrade =
+    upgrade;
+    ! [ -f /usr/bin/flatpak ] && flatpak || true;
+    ! [ -f /usr/bin/fwupdmgr ] && fwupdmgr
+
+[debian]
+spam_exec = apt
+add = !add-apt-repository
+clean = clean; autoremove
+contents = !dpkg-query --listfiles
+infile = !sudo dpkg --install
+info = show
+list_installed = list --installed
+provides = !dpkg --search
+upgrade = update; dist-upgrade
+upgrade =
+    update; dist-upgrade;
+    ! [ -f /usr/bin/flatpak ] && flatpak || true;
+    ! [ -f /usr/bin/fwupdmgr ] && fwupdmgr
+
+[mac_ports]
+spam_exec = port
+clean = clean --all all; reclaim
+info = info; variants
+remove = uninstall --follow-dependents
+search = search --line --name
+update = sync
+upgrade = -v selfupdate; upgrade outdated
+
+[openwrt]
+spam_exec = opkg
+contents = files
+info = show; status
+list_installed = list-installed
+provides = search
+purge = remove
+search = find
+upgrade = update;!owut check;!echo run⏵ owut upgrade
+
+[ubuntu]
+spam_extends = debian
+
+[linuxmint]
+spam_extends = debian
+# foo = bar  # how to override parent entries
+
+[redhat]
+spam_extends = fedora
+'''
+
+needs_sudo = set()
+aliases = {}
+platform_cmds = {}
+
+
+def get_config(filename='config.ini'):
+    ''' Loads the config.ini file if available; writes it if not. '''
+    from configparser import ConfigParser
+
+    # find system - need to do first so we can print aliases if need be
+    if sys.platform == 'darwin':
+        platform_id = 'mac_ports' if exists('/opt/local/bin/port') else None
+    else:  # tron leotards
+        release_info = freedesktop_os_release()
+        if '-d' in sys.argv:  # pre parse debug :-/
+            print('release_info:', release_info)
+
+        platform_id = release_info.get('ID')
+
+    # find path to .ini
+    conf_folder = (
+        os.getenv('XDG_CONFIG_HOME') or join(os.getenv('HOME', ''), '.config')
+    )
+    conf_folder = join(conf_folder, 'spam')
+    path = join(conf_folder, filename)
+
+    # load config
+    config = ConfigParser(allow_no_value=True, interpolation=None)
+
+    # an empty result means not found:
+    if not config.read(path):
+        # read embedded defaults
+        config.read_string(CONFIG_INI)
+        # but also write to path for next time
+        os.makedirs(conf_folder, exist_ok=True)
+        with open(path, 'w', encoding='utf8') as outfile:
+            num = outfile.write(CONFIG_INI)
+            print_msg(f'{num} bytes written to {path!r}.')
+
+    # load cmds that need sudo
+    section_name = 'spam_needs_sudo'
+    if config.has_section(section_name):
+        if _ := config.options(section_name):
+            needs_sudo.update(_)
+            config.remove_section(section_name)
+    else:
+        print(f'Warning: config.ini section [{section_name}] not found.')
+
+    # load aliases
+    section_name = 'spam_aliases'
+    if config.has_section(section_name):
+        if _ := config.items(section_name):
+            aliases.update(_)
+            config.remove_section(section_name)
+    else:
+        print(f'Warning: config.ini section [{section_name}] not found.')
+
+    # load platform section
+    executable = None
+    if config.has_section(platform_id):
+        if section_map := dict(config.items(platform_id)):  # convert
+
+            if source_id := section_map.pop('spam_extends', None):
+                # found extension, load source section first
+                #~ print_msg(f'[{platform_id}] extended from [{source_id}]')
+                if config.has_section(source_id):
+                    platform_cmds.update(config.items(source_id))
+                    if section_map:  # any child overwrites left?
+                        platform_cmds.update(section_map)
+                else:
+                    print_msg(
+                        f'Error: section {source_id!r} not found.', sgr='91;1'
+                    )
+                    sys.exit(os.EX_UNAVAILABLE)  # kerblooey!
+            else:
+                # update global from original section
+                platform_cmds.update(section_map)
+
+            executable = platform_cmds.pop('spam_exec', None)
+    else:
+        print(f'Error: config.ini section [{platform_id}] not found.', file=sys.stderr)
+        sys.exit(os.EX_UNAVAILABLE)
+
+    return platform_id, executable
+
+
+def print_msg(message, sgr='2', file=sys.stderr):
+    ''' Print to stderr in a dim style (via ANSI sequence). '''
+    print(f'\x1b[{sgr}m⏵', message, '\x1b[m', file=file)
+
+
+def setup(argv):
+    ''' Parse command line, validate, initialize logging, etc. '''
+    # load config early
+    platform_id, executable = get_config()
+
+    _usage = (
+        f'{__doc__.rstrip()} {platform_id}/\x1b[1m{executable}\x1b[m:\n    '
+        f'{", ".join(platform_cmds.keys())}\n '
+    )  # important, ends in nbsp to prevent another strip by argparse
+
+    # check & prepare args
+    parser = ArgumentParser(add_help=False, usage=_usage)
+    parser.add_argument('-d', '--debug', action='store_true', help='print…')
+    parser.add_argument('-D', '--dry-run', action='store_true',
+        help='Stop short of actually running the commands.')
+    parser.add_argument(
+        '--version', action='store_true', help='print version number and exit.'
+    )
+    parser.add_argument(
+        'sub_command', metavar='sub-command', nargs='?',
+        help='package manager sub-command.')
+    try:
+        args, moar_args = parser.parse_known_args(argv[1:])
+    except SystemExit:
+        exit(os.EX_OK)  # EX_USAGE, many false positives, need to differentiate
+
+    # save for main
+    args.executable = executable
+    args.platform_id = platform_id
+    if args.debug:
+        print('\nargs:', args)
+        print('moar:', moar_args)
+        print('\nneeds_sudo:', needs_sudo)
+        print('\nplatform_cmds:', platform_cmds)
+        print('\naliases:', aliases, '\n')
+
+    # Check for sub-command --help and pass thru, handle here:
+    if args.version:
+        from importlib.metadata import version
+        print('spam-util', version('spam-util'))
+        sys.exit(os.EX_OK)
+
+    if '--help' in moar_args or '-h' in moar_args:  # asked for help
+        needs_sudo.clear()  # deactivate
+
+    if not executable:
+        print('Error:', f'package manager not found for {platform_id!r}.',
+              file=sys.stderr)
+        sys.exit(os.EX_UNAVAILABLE)
+
+    if not platform_id:
+        print('Error:', 'platform_id not found.', file=sys.stderr)
+        sys.exit(os.EX_UNAVAILABLE)
+
+    if not args.sub_command:
+        parser.print_help()
+        sys.exit(os.EX_USAGE)
+
+    return args, moar_args
+
+
+def main(args, moar_args):
+    from subprocess import call
+
+    if args.debug:
+        print('subcmd 0:', args.sub_command)
+
+    # expand alias, if needed
+    sub_command = aliases.get(args.sub_command, args.sub_command)
+    if args.debug:
+        print('unalias1:', repr(sub_command))
+
+    # expand command, if needed
+    sub_command = platform_cmds.get(sub_command, sub_command)
+    if args.debug:
+        print('platfm 2:', repr(sub_command))
+
+    # there may be multiple commands; run each
+    for sub_command in sub_command.split(';'):
+        # allow extra space, multiple lines:
+        sub_command = sub_command.strip()
+        if args.debug:
+            print('subcmd 3:', repr(sub_command))
+
+        cmd_list = [args.executable]  # Starten-Sie
+        if sub_command.startswith('!'):         # runs stand-alone
+            tokens = sub_command[1:].split()    # rm prefix, may have spaces
+            cmd_list.clear()
+        else:                                   # is a sub command
+            tokens = sub_command.split()        # may have spaces
+            if not args.platform_id == 'openwrt':  # owrt typically uses root
+                # TODO: check if still needed by mac_ports
+                #~ without_switches = [
+                    #~ s for s in sub_command if not s.startswith('-')
+                #~ ]
+                #~ if without_switches[0] in needs_sudo:
+                if tokens[0] in needs_sudo:
+                    cmd_list.insert(0, 'sudo')
+
+        if args.debug:
+            print('split; 4:', repr(sub_command))
+
+        cmd_list.extend(tokens)
+        cmd_list.extend(moar_args)
+
+        # cmd_line should be a string when shell=True :-/
+        cmd_line = ' '.join(cmd_list)
+        if args.debug:
+            print('cmd_list:', cmd_list)
+        print_msg(cmd_line)
+        if not args.dry_run:
+            if error_code := call(cmd_line, shell=True):
+                return error_code  # if >=1, return immediately
+
+        print()
+
+    return os.EX_OK
+
+
+# http://youtu.be/0hiUuL5uTKc?t=8s
+try:
+    sys.exit(main(*setup(sys.argv)))
+except KeyboardInterrupt:
+    print('\nWarning: Ctrl+C entered, exiting.', file=sys.stderr)
+    sys.exit(128 + signal.SIGINT)
