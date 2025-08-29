@@ -1,0 +1,272 @@
+Metadata-Version: 2.4
+Name: detector-sdk
+Version: 0.1.0
+Summary: Environment-aware Detector SDK for unified detector endpoints
+Author: Fortix
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pydantic>=2.6
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: click>=8.1
+Dynamic: license-file
+
+# Detector SDK
+
+Environment-aware SDK for defining detector endpoints via `detector.yaml` and optional `detector.rc`.
+
+## Quickstart
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+
+# Initialize a project
+detector init
+
+# Show endpoint
+detector show-endpoint
+```
+
+## Configuration
+
+Order of precedence (low to high):
+
+- detector.yaml / detector.yml
+- detector.rc (key=value lines)
+- Environment variables: APIKEY, SOURCE, STORE, NETWORK, SEMVER
+- Environment for logging: DETECTOR_LOG_LEVEL, DETECTOR_LOG_JSON, DETECTOR_LOG_DEST
+
+Example detector.yaml:
+
+```yaml
+APIKEY: YOUR_API_KEY
+SOURCE: example/source
+STORE: s3://bucket/path
+NETWORK: public
+SEMVER: 0.1.0
+LOG:
+  level: INFO
+  json: true
+  destination: stdout
+TRANSPORT:
+  type: stdout
+  stdout:
+    pretty: true
+INPUT:
+  type: local_dir
+  local_dir:
+    path: ./inbox
+    pattern: "*.mp4"
+    poll_interval_sec: 1.0
+EXTRA:
+  foo: bar
+```
+
+Show endpoint as JSON:
+
+```bash
+detector show-endpoint --format json
+```
+
+## Transport and Client
+
+Configure transport in `detector.yaml`:
+
+```yaml
+TRANSPORT:
+  type: stdout # or http
+  http:
+    url: http://localhost:8080/detector
+    timeout_seconds: 5.0
+    headers: {}
+  stdout:
+    pretty: true
+```
+
+Environment overrides:
+
+- `DETECTOR_TRANSPORT_TYPE`
+- `DETECTOR_TRANSPORT_HTTP_URL`
+- `DETECTOR_TRANSPORT_STDOUT_PRETTY`
+
+CLI examples:
+
+```bash
+detector register
+detector heartbeat --metric playing=true
+detector send-event --type video.play --data '{"file":"sample.mp4","positionMs":0}'
+```
+
+Python example:
+
+```python
+from detector_sdk import DetectorClient
+
+client = DetectorClient()
+client.register()
+client.heartbeat({"playing": True})
+client.send_event("video.play", {"file": "sample.mp4", "positionMs": 0})
+```
+
+### Echo server (dev)
+
+Run a local echo server and test HTTP transport:
+
+```bash
+# Start echo server
+detector echo-server --port 8090
+
+# In another shell, set HTTP transport and register
+DETECTOR_TRANSPORT_TYPE=http \
+DETECTOR_TRANSPORT_HTTP_URL=http://127.0.0.1:8090/detector \
+detector register
+```
+
+## Inference runner (watch local inbox)
+
+Configure input:
+
+```yaml
+INPUT:
+  type: local_dir
+  local_dir:
+    path: ./inbox
+    pattern: "*.mp4"
+    poll_interval_sec: 1.0
+```
+
+Run and invoke a shell command for each file (use `{file}` placeholder):
+
+```bash
+detector run --command "echo Processing {file}"
+```
+
+Or integrate via Python handler:
+
+```python
+from pathlib import Path
+from detector_sdk import DetectorClient
+from detector_sdk.runner import DetectorRunner
+
+def handle_video(file: Path, client: DetectorClient, cfg):
+    client.send_event("video.received", {"file": str(file)})
+    # call your inference here
+    client.send_event("video.finished", {"file": str(file), "status": "ok"})
+
+DetectorRunner(handler=handle_video).run()
+```
+
+## Publish and consume via GitHub
+
+There are two common ways to distribute this SDK from GitHub: install directly from a Git tag/commit, or use GitHub Packages (Python registry).
+
+> Private repos: Prefer SSH URLs for direct installs, or GitHub Packages with an authenticated client. Ensure the consuming user/bot has access to the repo or the package in the org. Never hardcode tokens in scripts.
+
+### Install directly from a Git tag/commit
+
+Replace `<ORG>` and `<REPO>` with your repository path and `v0.1.0` with a tag/commit:
+
+```bash
+pip install "git+https://github.com/<ORG>/<REPO>.git@v0.1.0#egg=detector-sdk"
+```
+
+For private repos, prefer SSH (no tokens in CLI history):
+
+```bash
+pip install "git+ssh://git@github.com/<ORG>/<REPO>.git@v0.1.0#egg=detector-sdk"
+```
+
+Pros: no registry setup, fast to share prereleases. Cons: slower installs; no immutable releases.
+
+### Publish to GitHub Packages (Python registry)
+
+1. Build the package
+
+```bash
+python -m pip install --upgrade build twine
+python -m build
+```
+
+2. Authenticate (one-time). Create a GitHub Personal Access Token with `read:packages` and `write:packages` scopes. If your org enforces SSO, enable SSO on the token. Fine‑grained tokens can be scoped to the specific repo.
+
+Option A: `~/.pypirc`
+
+```ini
+[distutils]
+index-servers =
+    github
+
+[github]
+repository = https://pypi.pkg.github.com/<ORG>
+username = <GITHUB_USERNAME>
+password = <GITHUB_TOKEN>
+```
+
+Upload with:
+
+```bash
+python -m twine upload --repository github dist/*
+```
+
+Option B: pass repository URL directly
+
+```bash
+TWINE_USERNAME=<GITHUB_USERNAME> \
+TWINE_PASSWORD=<GITHUB_TOKEN> \
+python -m twine upload --repository-url https://pypi.pkg.github.com/<ORG>/ dist/*
+```
+
+3. Install from GitHub Packages
+
+```bash
+pip install detector-sdk \
+  --index-url https://pypi.pkg.github.com/<ORG>/ \
+  --extra-index-url https://pypi.org/simple
+```
+
+Tip: authenticate `pip` via `~/.netrc` (avoids exposing tokens on CLI):
+
+```netrc
+machine pypi.pkg.github.com
+  login <GITHUB_USERNAME>
+  password <GITHUB_TOKEN>
+```
+
+In CI, prefer `${{ secrets.GITHUB_TOKEN }}` (has org/package read within the repo scope) or an org secret PAT:
+
+```yaml
+- name: Install detector-sdk from GitHub Packages
+  env:
+    PIP_INDEX_URL: https://pypi.pkg.github.com/<ORG>/
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: |
+    python -m pip install --upgrade pip
+    pip config set global.index-url "$PIP_INDEX_URL"
+    pip config set global.extra-index-url https://pypi.org/simple
+    pip install detector-sdk
+```
+
+### Optional: GitHub Actions release to GitHub Packages
+
+```yaml
+name: publish
+on:
+  push:
+    tags: ["v*.*.*"]
+jobs:
+  gpr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: python -m pip install --upgrade build twine
+      - run: python -m build
+      - env:
+          TWINE_USERNAME: ${{ github.actor }}
+          TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: python -m twine upload --repository-url https://pypi.pkg.github.com/<ORG>/ dist/*
+```
+
+Replace `<ORG>`, `<REPO>`, usernames, and tokens appropriately. For public distribution, prefer PyPI via Trusted Publishing.
