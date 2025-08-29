@@ -1,0 +1,64 @@
+Metadata-Version: 2.2
+Name: numba-lapack
+Version: 0.1.0
+Summary: UNSAFE Numba intrinsics for BLAS/LAPACK via SciPy C-API
+Author: Mikołaj Tadeusz Żychowicz
+License: Copyright (c) 2025, Mikołaj Tadeusz Żychowicz
+        All rights reserved.
+        
+        Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+        
+            1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+            2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+            3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+        
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Project-URL: Homepage, https://github.com/MTZ-dev/numba-lapack
+Project-URL: Issues, https://github.com/MTZ-dev/numba-lapack/issues
+Keywords: numba,blas,lapack,scipy,jit
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.24
+Requires-Dist: scipy>=1.10
+Requires-Dist: numba>=0.59
+Requires-Dist: llvmlite>=0.42
+
+<p align="center">
+  <picture>
+    <source srcset="https://raw.githubusercontent.com/MTZ-dev/numba-lapack/main/docs/_static/logo.svg" type="image/svg+xml">
+    <img src="https://raw.githubusercontent.com/MTZ-dev/numba-lapack/main/docs/_static/logo.png"
+         alt="numba-lapack"
+         width="180">
+  </picture>
+</p>
+
+# numba-lapack
+
+UNSAFE, zero-overhead Numba intrinsics that expose the full BLAS/LAPACK C-APIs
+via SciPy’s `__pyx_capi__`. Call BLAS/LAPACK directly from `@njit` in nopython mode.
+
+> ⚠️ **Unsafe means unsafe**: raw pointer semantics; you are responsible for valid pointers, shapes, and leading dimensions.
+
+## Highlights
+
+- Auto-discovers `scipy.linalg.cython_blas` and `cython_lapack` symbols at import.
+- Generates Numba `@intrinsic` wrappers with the *exact* ABI (no Python overhead).
+- Accepts arrays, typed pointers, or by-ref scalars for pointer parameters.
+- Ships type stubs so IDEs can see function names & arg docs.
+
+## Quick start
+
+```python
+import numpy as np
+from numba import njit
+from numba_lapack import dgemm
+
+@njit(cache=True)
+def gemm_nn(A, B, C, alpha, beta):
+    m, k = A.shape
+    _, n = B.shape
+    dgemm(np.uint8(ord('N')), np.uint8(ord('N')),
+          m, n, k, alpha, A, m, B, k, beta, C, m)
