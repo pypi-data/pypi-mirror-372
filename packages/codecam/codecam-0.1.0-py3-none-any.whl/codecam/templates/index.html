@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>codecam</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        textarea { width: 100%; height: 400px; margin-top: 20px; }
+        .button-group { margin-bottom: 10px; }
+        .file-list { margin-bottom: 20px; }
+        .tree { list-style-type: none; padding-left: 20px; }
+        .tree li { 
+            position: relative;
+            padding-left: 20px;
+            border-left: 1px solid #ccc;
+            margin-left: 20px;
+            list-style: none; /* Remove default list styling */
+        }
+        .tree li::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 0;
+            bottom: 10px;
+            width: 1px;
+            background: #ccc;
+        }
+        .tree li:last-child::before {
+            height: 10px;
+        }
+        .tree li::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: -20px;
+            right: 0; /* Extend the line to the right */
+            height: 1px;
+            background: #ccc;
+        }
+        .tree li:last-child::after {
+            width: 20px; /* Do not extend the line for the last child */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="button-group">
+        <input type="text" id="path" placeholder="Enter path or leave empty for current directory">
+        <button onclick="browse()">list files</button>
+        <button onclick="checkAll()">check all</button>
+        <button onclick="uncheckAll()">uncheck all</button>
+    </div>
+
+    <div class="button-group">
+        <input type="text" id="repo_url" placeholder="Enter GitHub repo URL">
+        <input type="text" id="clone_dir" placeholder="Enter directory to clone into" value="cloned_repo">
+        <button onclick="cloneRepo()">Clone Repo</button>
+    </div>
+
+    <div id="files" class="file-list"></div>
+    <button onclick="generate()">generate</button>
+    <textarea id="result"></textarea>
+
+    <script>
+        const currentDirectory = "{{ current_directory }}";
+        let selectedFiles = {{ selected_files | tojson | safe }};
+
+        function browse() {
+            const path = document.getElementById('path').value;
+            fetch('/browse', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path })
+            }).then(response => response.json())
+              .then(data => {
+                const filesDiv = document.getElementById('files');
+                filesDiv.innerHTML = '';
+
+                if (data.files && Array.isArray(data.files)) {
+                    const fileTree = buildFileTree(data.files);
+                    filesDiv.appendChild(fileTree);
+                } else {
+                    filesDiv.innerHTML = 'No files found or invalid path.';
+                }
+            });
+        }
+
+        function buildFileTree(files) {
+            const fileTree = document.createElement('ul');
+            fileTree.classList.add('tree');
+            const fileMap = {};
+
+            files.forEach(file => {
+                const parts = file.split('/');
+                let current = fileMap;
+
+                parts.forEach((part, index) => {
+                    if (!current[part]) {
+                        current[part] = {
+                            children: {},
+                            isFile: index === parts.length - 1,
+                            fullPath: file
+                        };
+                    }
+                    current = current[part].children;
+                });
+            });
+
+            function createTreeElement(fileNode, path) {
+                const li = document.createElement('li');
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = path;
+                checkbox.checked = selectedFiles.includes(path);
+
+                checkbox.addEventListener('change', () => {
+                    checkAllInDirectory(path, checkbox.checked);
+                });
+
+                const text = document.createTextNode(fileNode.isFile ? path : (path === '.' ? currentDirectory : path.split('/').pop()));
+
+                li.appendChild(checkbox);
+                li.appendChild(text);
+
+                if (Object.keys(fileNode.children).length > 0) {
+                    const ul = document.createElement('ul');
+                    ul.classList.add('tree');
+                    for (const key in fileNode.children) {
+                        ul.appendChild(createTreeElement(fileNode.children[key], `${path}/${key}`));
+                    }
+                    li.appendChild(ul);
+                }
+
+                return li;
+            }
+
+            for (const key in fileMap) {
+                fileTree.appendChild(createTreeElement(fileMap[key], key));
+            }
+
+            return fileTree;
+        }
+
+        function checkAllInDirectory(directory, check) {
+            const checkboxes = document.querySelectorAll('#files input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                const relativePath = checkbox.value.replace(/^\.\//, ''); // Remove leading "./"
+                const directoryPath = directory.replace(/^\.\//, ''); // Remove leading "./" from directory
+                if (directoryPath === '.' || relativePath.startsWith(directoryPath + '/')) {
+                    checkbox.checked = check;
+                }
+            });
+        }
+
+        function checkAll() {
+            const checkboxes = document.querySelectorAll('#files input[type="checkbox"]');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+        }
+
+        function uncheckAll() {
+            const checkboxes = document.querySelectorAll('#files input[type="checkbox"]');
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+        }
+
+        function generate() {
+            const checkboxes = document.querySelectorAll('#files input:checked');
+            const files = Array.from(checkboxes).map(checkbox => checkbox.value);
+            fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ files })
+            }).then(response => response.json())
+              .then(data => {
+                document.getElementById('result').value = data.result;
+              });
+        }
+
+        function cloneRepo() {
+            const repo_url = document.getElementById('repo_url').value;
+            const clone_dir = document.getElementById('clone_dir').value;
+            fetch('/clone', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ repo_url, clone_dir })
+            }).then(response => response.json())
+              .then(data => {
+                alert(data.stdout);
+                if (!data.stderr) {
+                    browse(); // Refresh file list after cloning
+                }
+            });
+        }
+
+        window.onload = function () {
+            browse();
+        }
+
+    function shutdownServer() {
+        // keepalive ensures the POST is sent even during unload
+        navigator.sendBeacon
+        ? navigator.sendBeacon('/shutdown', new Blob([], {type: 'application/json'}))
+        : fetch('/shutdown', {method: 'POST', keepalive: true});
+    }
+
+    window.addEventListener('unload', shutdownServer);
+
+    </script>
+</body>
+
+</html>
