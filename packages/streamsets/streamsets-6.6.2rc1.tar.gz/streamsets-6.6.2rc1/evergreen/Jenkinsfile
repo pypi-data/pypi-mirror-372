@@ -1,0 +1,197 @@
+def buildTag = "6.x"
+def buildImage = "streamsets/sdk-test-env:${buildTag}"
+pipeline {
+    agent {
+        label 'testframework-builder'
+    }
+    triggers {
+        cron(env.BRANCH_NAME == 'master' ? '0 8 * * *' : '')
+    }
+    parameters {
+        booleanParam 'run_integration_test'
+        booleanParam 'run_documentation_test'
+    }
+    stages {
+        stage('Notify Gerrit') {
+            steps {
+                gerritReview labels: [Verified: 0], message: "Build Started: ${env.BUILD_URL}"
+            }
+        }
+        stage('Build Test Image') {
+            when {
+                expression {
+                    return hasChangesIn('python/evergreen/Dockerfile')
+                }
+            }
+            steps {
+                script {
+                    if (env.GIT_BRANCH != '${buildTag}') {
+                        buildImage = "streamsets/sdk-test-env:${env.GERRIT_CHANGE_NUMBER}"
+                    }
+                    def image = docker.build("${buildImage}", 'python/evergreen/')
+                    docker.withRegistry('https://registry.hub.docker.com', 'b33a63ed-a958-451f-9746-b136483beb8f') {
+                        image.push()
+                    }
+                }
+            }
+        }
+        stage('Lint & Format') {
+            agent {
+                docker {
+                    image 'python:3.10'
+                    reuseNode true
+                }
+            }
+            steps {
+                withEnv(["HOME=${env.WORKSPACE}"]) {
+                    sh 'pip install pre-commit --user'
+                    sh '.local/bin/pre-commit run --config python/evergreen/.pre-commit-config.yaml --all-files --show-diff-on-failure --verbose'
+                }
+            }
+        }
+        stage('Unit Tests') {
+            agent {
+                docker {
+                    args '-v /var/run/docker.sock:/var/run/docker.sock -u root:root'
+                    image "${buildImage}"
+                    reuseNode true
+                }
+            }
+            steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    withEnv(["HOME=${env.WORKSPACE}"]) {
+                        script {
+                            sh 'tox -c python/tox.ini -e unit-37,unit-38,unit-39'
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit 'python/results_unit_37.xml'
+                    junit 'python/results_unit_38.xml'
+                    junit 'python/results_unit_39.xml'
+                }
+                success {
+                    step([$class: 'CoberturaPublisher', coberturaReportFile: "python/coverage_unit_37.xml"])
+                    step([$class: 'CoberturaPublisher', coberturaReportFile: "python/coverage_unit_38.xml"])
+                    step([$class: 'CoberturaPublisher', coberturaReportFile: "python/coverage_unit_39.xml"])
+                }
+            }
+        }
+        stage('Integration Tests') {
+            when {
+                anyOf {
+                    allOf {
+                        expression {
+                            params.run_integration_test
+                        }
+                        triggeredBy cause: "UserIdCause"
+                    }
+                    branch 'master'
+                }
+                beforeAgent true
+            }
+            agent {
+                docker {
+                    args '-v /var/run/docker.sock:/var/run/docker.sock -u root:root'
+                    image "${buildImage}"
+                    label 'DataOps_SDK'
+                }
+            }
+            steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    withEnv(["HOME=${env.WORKSPACE}", "ASTER_URL=https://dev.login.streamsets.com",
+                             "SDC_VERSION=5.2.0", "TRANSFORMER_VERSION=4.2.0", "SUBNET_IDS=[subnet-319c5468]",
+                             "VPC_ID=vpc-12279b77", "SECURITY_GROUP_ID=sg-03434536f7156364d", "REGION=us-west-2",
+                             "INSTANCE_PROFILE='arn:aws:iam::316386816690:instance-profile/csp-test-role'"]) {
+                        withCredentials([usernamePassword(credentialsId: 'ebf3adfe-5bed-4de2-8137-677723792dd1',
+                                                          passwordVariable: 'SCH_TOKEN',
+                                                          usernameVariable: 'SCH_CREDENTIAL_ID'),
+                                         [$class: 'AmazonWebServicesCredentialsBinding',
+                                          credentialsId: '50cddd55-b7a4-4fc1-a0e3-064c17af537c',
+                                          accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                                          secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
+                                         ]) {
+                            sh 'tox -c python/tox.ini -e integration-37'
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit 'python/results_integration_37.xml'
+                }
+                success {
+                    step([$class: 'CoberturaPublisher', coberturaReportFile: "python/coverage_integration_37.xml"])
+                }
+            }
+        }
+        stage('Documentation Build') {
+            when {
+                anyOf {
+                    allOf {
+                        expression {
+                            params.run_documentation_test
+                        }
+                        triggeredBy cause: "UserIdCause"
+                    }
+                    branch 'master'
+                }
+                beforeAgent true
+            }
+            agent {
+                docker {
+                    args '-v /var/run/docker.sock:/var/run/docker.sock -u root:root'
+                    image "${buildImage}"
+                    reuseNode true
+                }
+            }
+            steps {
+                withEnv(["HOME=${env.WORKSPACE}"]) {
+                    sh 'tox -c python/tox.ini -e docs'
+                }
+            }
+        }
+    }
+    post {
+        success {
+            gerritReview labels: [Verified: 1], message: "SUCCESS: ${env.BUILD_URL}"
+        }
+        unstable {
+            gerritReview labels: [Verified: 0], message: "UNSTABLE: ${env.BUILD_URL}"
+            script {
+                if (env.BRANCH_NAME == 'master')
+                    slackSend(
+                        channel: "#eng-productivity-cp",
+                        message:"Evergreen Master run is unstable (1 or more test stages failed) - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+                    )
+            }
+        }
+        failure {
+            gerritReview labels: [Verified: -1], message: "FAILURE: ${env.BUILD_URL}"
+            script {
+                if (env.BRANCH_NAME == 'master')
+                    slackSend(
+                        channel: "#eng-productivity-cp",
+                        message:"Evergreen Master run has failed - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+                    )
+            }
+        }
+        cleanup {
+            cleanWs()
+        }
+    }
+}
+
+def boolean hasChangesIn(String module) {
+  def gitCommand = "git diff-tree --no-commit-id --name-only -r ${env.GIT_COMMIT} -- '${module}'"
+  def output = sh(script: gitCommand, returnStdout: true).trim()
+
+  if (output) {
+    echo "Changes detected in module: '${module}'"
+    return true
+  } else {
+    return false
+  }
+}
