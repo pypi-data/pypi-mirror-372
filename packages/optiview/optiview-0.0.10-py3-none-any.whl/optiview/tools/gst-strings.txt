@@ -1,0 +1,115 @@
+
+rtspsrc location=rtsp://127.0.0.1:8554/src1 ! rtph264depay ! tee name=t t. ! queue ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=127.0.0.1 port=9002 sync=false async=false t. ! queue ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=127.0.0.1 port=9003 sync=false async=false
+
+
+rtspsrc location=rtsp://127.0.0.1:8554/src1
+! rtph264depay
+tee name=t t.
+  ! queue
+  ! h264parse
+  ! rtph264pay config-interval=1 pt=96
+  ! udpsink host=127.0.0.1 port=9000 sync=false async=false t.
+  ! queue
+  ! h264parse
+  ! rtph264pay config-interval=1 pt=96
+  ! h264parse
+  ! 'video/x-h264, parsed=true, stream-format=(string)byte-stream, alignment=(string)au, width=(int)[1,4096], height=(int)[1,4096]'
+  ! simaaidecoder sima-allocator-type=2 name='decoder' next-element='CVU'
+  tee name=source
+  ! 'video/x-raw'
+  ! simaaiprocesscvu name=simaai_preprocess num-buffers=5
+  ! simaaiprocessmla name=simaai_process_mla num-buffers=5
+  ! simaaiboxdecode name='simaai_boxdecode'
+  ! 'application/vnd.simaai.tensor'
+  overlay. source.
+  ! 'video/x-raw'
+  ! simaai-overlay2 name=overlay render-info='input::decoder,bbox::simaai_boxdecode' labels-file='/data/simaai/applications/YoloV7/share/overlay/labels.txt'
+  ! simaaiencoder enc-bitrate=4000 name=encoder
+  ! h264parse
+  ! rtph264pay
+  ! udpsink host=127.0.0.1 port=9001
+
+rtspsrc location=rtsp://127.0.0.1:8554/src1
+! rtph264depay
+tee name=t t.
+  ! queue
+  ! h264parse
+  ! rtph264pay config-interval=1 pt=96
+  ! udpsink host=127.0.0.1 port=9000 sync=false async=false  t.
+  ! queue
+  ! h264parse
+  ! video/x-h264, parsed=true, stream-format=byte-stream, alignment=au, width=[1,4096], height=[1,4096]
+  ! simaaidecoder sima-allocator-type=2 name=decoder next-element=CVU
+  tee name=source source.
+    ! queue
+    ! video/x-raw
+    ! simaaiprocesscvu name=simaai_preprocess num-buffers=5
+    ! simaaiprocessmla name=simaai_process_mla num-buffers=5
+    ! simaaiboxdecode name=simaai_boxdecode
+    ! application/vnd.simaai.tensor
+    overlay. source.
+    ! queue
+    ! video/x-raw
+    ! simaai-overlay2 name=overlay render-info=input::decoder,bbox::simaai_boxdecode labels-file=/data/simaai/applications/YoloV7/share/overlay/labels.txt
+    ! simaaiencoder enc-bitrate=4000 name=encoder
+    ! h264parse
+    ! rtph264pay
+    ! udpsink host=127.0.0.1 port=9001
+
+rtspsrc location=rtsp://127.0.0.1:8554/src1 ! rtph264depay ! tee name=t t. ! queue ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=127.0.0.1 port=9000 sync=false async=false  t. ! queue ! h264parse ! video/x-h264, parsed=true, stream-format=byte-stream, alignment=au, width=[1,4096], height=[1,4096] ! simaaidecoder sima-allocator-type=2 name=decoder next-element=CVU ! tee name=source source. ! queue ! video/x-raw ! simaaiprocesscvu name=simaai_preprocess num-buffers=5 ! simaaiprocessmla name=simaai_process_mla num-buffers=5 ! simaaiboxdecode name=simaai_boxdecode ! application/vnd.simaai.tensor ! overlay. source. ! queue ! video/x-raw ! simaai-overlay2 name=overlay render-info=input::decoder,bbox::simaai_boxdecode labels-file=/data/simaai/applications/YoloV7/share/overlay/labels.txt ! simaaiencoder enc-bitrate=4000 name=encoder ! h264parse ! rtph264pay ! udpsink host=127.0.0.1 port=9001\
+
+
+No Syntax error:
+rtspsrc location=rtsp://127.0.0.1:8554/src1
+! rtph264depay
+tee name=t t.
+  ! queue
+  ! h264parse
+  ! rtph264pay config-interval=1 pt=96
+  ! udpsink host=127.0.0.1 port=9000 sync=false async=false t.
+  ! queue
+  ! h264parse
+  ! video/x-h264, parsed=true, stream-format=byte-stream, alignment=au, width=[1,4096], height=[1,4096]
+  ! simaaidecoder sima-allocator-type=2 name=decoder next-element=CVU
+  tee name=source source.
+    ! queue
+    ! video/x-raw
+    ! simaaiprocesscvu name=simaai_preprocess num-buffers=5
+    ! simaaiprocessmla name=simaai_process_mla num-buffers=5
+    ! simaaiboxdecode name=simaai_boxdecode
+    ! application/vnd.simaai.tensor
+    overlay. source.
+    ! queue
+    ! video/x-raw
+    ! simaai-overlay2 name=overlay render-info=input::decoder,bbox::simaai_boxdecode labels-file=/data/simaai/applications/YoloV7/share/overlay/labels.txt
+    ! simaaiencoder enc-bitrate=4000 name=encoder
+    ! h264parse
+    ! rtph264pay
+    ! udpsink host=127.0.0.1 port=9001
+
+
+# Result tee to multiple UDP sinks
+rtspsrc location=rtsp://127.0.0.1:8554/src1
+! rtph264depay wait-for-keyframe=true
+! h264parse
+! 'video/x-h264, parsed=true, stream-format=(string)byte-stream, alignment=(string)au, width=(int)[1,4096], height=(int)[1,4096]'
+! simaaidecoder sima-allocator-type=2 name='decoder' next-element='CVU'
+tee name=source
+  ! 'video/x-raw'
+  ! simaaiprocesscvu name=simaai_preprocess num-buffers=5
+  ! simaaiprocessmla name=simaai_process_mla num-buffers=5
+  ! simaaiboxdecode name='simaai_boxdecode'
+  ! 'application/vnd.simaai.tensor'
+  overlay. source.
+  ! 'video/x-raw'
+  ! simaai-overlay2 name=overlay render-info='input::decoder,bbox::simaai_boxdecode' labels-file='/data/simaai/applications/YoloV7/share/overlay/labels.txt'
+  ! simaaiencoder enc-bitrate=6000 name=encoder
+  ! h264parse config-interval=1
+  ! video/x-h264, stream-format=byte-stream, alignment=au
+  tee name=t t.
+    ! queue
+    ! rtph264pay config-interval=1 pt=96
+    ! udpsink host=127.0.0.1 port=9000 sync=false async=false t.
+    ! queue
+    ! rtph264pay config-interval=1 pt=96
+    ! udpsink host=127.0.0.1 port=9001 sync=false async=false
