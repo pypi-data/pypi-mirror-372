@@ -1,0 +1,156 @@
+[project]
+name = "sopa"
+version = "2.1.3"
+description = "Spatial-omics pipeline and analysis"
+authors = [{ name = "Quentin Blampey", email = "quentin.blampey@gmail.com" }]
+requires-python = ">=3.10,<3.13"
+readme = "README.md"
+license = "BSD-3-Clause"
+classifiers = [
+  "License :: OSI Approved :: BSD License",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "spatialdata>=0.4.0",
+  "spatialdata-io>=0.3.0",
+  "spatialdata-plot>=0.2.10",
+  "scanpy>=1.10.4",
+  "anndata>=0.11.0",
+  "typer>=0.9.0",
+  "dask[distributed]>=2024.4.1",
+]
+
+[project.optional-dependencies]
+cellpose = ["cellpose>=3.0.5", "torch>=2.1.1", "opencv-python>=4.8.0"]
+stardist = [
+  "tensorflow>=2.18.0",
+  "stardist>=0.9.1",
+  "numpy<2.0.0",                    # TODO: remove this once numpy>=2.0.0 is supported by stardist
+  "spatialdata<0.5.0",              # same as above
+  "multiscale-spatial-image<2.0.3", # same as above
+  "spatial-image<1.2.2",            # same as above
+]
+baysor = ["toml>=0.10.2", "loompy>=3.0.7"]
+wsi = ["tiffslide>=2.3.1", "torch>=2.1.1", "igraph>=0.11.0", "torchvision>=0.20.0"]
+
+[dependency-groups]
+dev = [
+  "ruff>=0.11.4",
+  "ty>=0.0.1a6",
+  "pytest>=7.1.3",
+  "pytest-cov>=4.0.0",
+  "ipykernel>=6.25.2",
+  "ipywidgets>=8.1.7",
+  "mkdocs-material>=9.3.2",
+  "mkdocs-jupyter>=0.24.6",
+  "mkdocstrings>=0.23.0",
+  "mkdocstrings-python>=1.7.3",
+]
+
+[project.urls]
+Homepage = "https://gustaveroussy.github.io/sopa"
+Repository = "https://github.com/gustaveroussy/sopa"
+Documentation = "https://gustaveroussy.github.io/sopa"
+
+[project.scripts]
+sopa = "sopa.main:app"
+
+[tool.hatch.build.targets.sdist]
+include = ["sopa"]
+
+[tool.hatch.build.targets.wheel]
+include = ["sopa"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+
+[tool.mypy]
+files = ["sopa"]
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+fix = true
+
+[tool.ruff.lint]
+select = [
+  # flake8-2020
+  "YTT",
+  # flake8-bandit
+  "S",
+  # flake8-bugbear
+  "B",
+  # flake8-builtins
+  "A",
+  # flake8-comprehensions
+  "C4",
+  # flake8-debugger
+  "T10",
+  # flake8-simplify
+  "SIM",
+  # isort
+  "I",
+  # mccabe
+  "C90",
+  # pycodestyle
+  "E",
+  "W",
+  # pyflakes
+  "F",
+  # pygrep-hooks
+  "PGH",
+  # pyupgrade
+  "UP",
+  # ruff
+  "RUF",
+  # tryceratops
+  "TRY",
+]
+ignore = [
+  # LineTooLong
+  "E501",
+  # DoNotAssignLambda
+  "E731",
+  # DoNotUseAssert
+  "S101",
+  "TRY003",
+  "RUF012",
+  "B904",
+  "E722",
+  "C901",
+  "S314",   # Using `xml` to parse untrusted data is known to be vulnerable to XML attacks; use `defusedxml` equivalents
+  "S602",   # `subprocess` call with `shell=True` identified, security issue
+  "C901",   # Function is too complex (too many arguments)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+"__init__.py" = ["F401", "I001"]
+"main.py" = ["F401"]
+"*.ipynb" = ["F401"]
+"sopa/cli/**" = ["B008"]
+
+[tool.ruff.format]
+preview = true
+
+[tool.coverage.report]
+skip_empty = true
+
+[tool.coverage.run]
+branch = true
+source = ["sopa"]
