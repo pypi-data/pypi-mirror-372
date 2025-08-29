@@ -1,0 +1,32 @@
+# DVD IFO Parser and Utilities
+
+## Library
+
+So far the VTS IFO file is 100% parsed, at least as far as I've been able to find definitions for the fields. To use the library simply install the `dvdutil` library via your preferred method (`pyenv venv` or `pdm` suggested) and import the library.
+
+```bash
+pdm add dvdutil
+```
+
+```python
+from dvd.ifo import vts
+
+with open("/path/to/VTS_XX_0.IFO", "rb") as ifo_file:
+    ifo = vts.VTS_IFO.from_bytes(ifo_file)
+
+print(ifo.vts_vobs_video_attrs.resolution)
+```
+
+## Title Extracter
+
+Also included is a script to extract titles from a DVD title set, including all of the source DVD's video, audio, and subtitle tracks without transcoding but in a matroska container. The idea is to back up the DVD's original content but to split it into individual title videos for easier consumption so you don't have to use the DVD menus every time, but without any transcoding so that there is no loss of fidelity or additional artifacts. To use this run the `title_extracter.py` script:
+
+```bash
+extract-titles --out /path/to/output-dir /path/to/input/VTS_XX_0.IFO
+```
+
+You will need `ffmpeg` and `ffprobe` in your path for this to work. You can specify a directory for temporary files to be placed in (there will be a fair number of these as the script needs to calculate video lengths to better time chapter alignments).
+
+If you prefer to not use the additional hard drive space or just want the conversion as fast as possible you can use the `--fast` option. This requires only `ffmpeg` in your path and will read directly from the VOB files and pipe the data directly to ffmpeg. Note that there are downsides to fast mode. The first is that the chapter markers are more likely to drift from their intended locations as the video goes on. The second is that the streams in the output files may be in different order in different title files. For example, if your source DVD has 2 episodes of a show in the same Title Set and has two audio streams, one in English and one in Japanese, the first episode's video might have English as audio stream 1, Japanese as stream 2, and the second episode might have them the other way, with Japanese first.
+
+If you want to go even further and get a shell script to run yourself to perform the "fast" extraction you can add `--shell` to `--fast` and your output will be a shell script and various `txt` files with chapter metadata. The shell script will use `cat`, `dd`, and `ffmpeg` to do the quick and dirty extraction of titles to mkv files. It will have the same downsides as the `--fast` option.
