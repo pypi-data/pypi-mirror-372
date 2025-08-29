@@ -1,0 +1,169 @@
+[build-system]
+requires    = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chuk-tool-processor"
+version = "0.6.13"
+description = "Async-native framework for registering, discovering, and executing tools referenced in LLM responses"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "CHUK Team", email = "chrishayuk@somejunkmailbox.com"},
+]
+maintainers = [
+    {name = "CHUK Team", email = "chrishayuk@somejunkmailbox.com"},
+]
+keywords = [
+    "llm",
+    "tools", 
+    "async",
+    "ai",
+    "openai",
+    "mcp",
+    "model-context-protocol",
+    "tool-calling",
+    "function-calling"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Framework :: AsyncIO",
+    "Typing :: Typed",
+]
+dependencies = [
+    "chuk-mcp>=0.5.2",
+    "dotenv>=0.9.9",
+    "psutil>=7.0.0",
+    "pydantic>=2.11.3",
+    "uuid>=1.30",
+]
+
+# Tell setuptools to look in src/ for your a2a package
+[tool.setuptools.packages.find]
+where   = ["src"]
+include = ["chuk_tool_processor*"]
+
+# pytest settings so it finds your src/ layout automatically
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-v --cov=src --cov-report=term --cov-report=xml --cov-report=html"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_mode = "strict"
+minversion = "8.0"
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=0.26.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=5.0.0",
+    "colorama>=0.4.6",
+    "uvicorn>=0.34.2",
+    "fastapi>=0.115.12",
+    "langchain>=0.3.25",
+    "ruff>=0.7.1",
+    "mypy>=1.13.0",
+    "pre-commit>=3.8.0",
+    "coverage[toml]>=7.6.0",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__main__.py",
+    "*/sample_tools/*",
+    "src/sample_tools/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if False:",
+    "if TYPE_CHECKING:",
+]
+skip_covered = false
+show_missing = true
+precision = 2
+omit = [
+    "*/sample_tools/*",
+    "src/sample_tools/*",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+warn_no_return = true
+warn_unreachable = false
+strict_equality = false
+
+# Ignore import errors for packages without type stubs
+[[tool.mypy.overrides]]
+module = [
+    "chuk_mcp.*",
+    "httpx_sse.*",
+]
+ignore_missing_imports = true
+
+# Be less strict for test files
+[[tool.mypy.overrides]]
+module = ["tests.*", "sample_tools.*"]
+ignore_errors = true
+
+# Be more lenient for complex MCP integration code
+[[tool.mypy.overrides]]
+module = [
+    "chuk_tool_processor.mcp.*",
+    "chuk_tool_processor.plugins.*",
+    "chuk_tool_processor.registry.decorators",
+    "chuk_tool_processor.registry.auto_register",
+    "chuk_tool_processor.core.processor",
+    "chuk_tool_processor.execution.wrappers.*",
+    "chuk_tool_processor.execution.strategies.*",
+    "chuk_tool_processor.execution.tool_executor",
+    "chuk_tool_processor.models.validated_tool",
+]
+ignore_errors = true
+
+# Less strict for other modules
+[[tool.mypy.overrides]]
+module = [
+    "chuk_tool_processor.registry.*",
+    "chuk_tool_processor.core.*",
+    "chuk_tool_processor.execution.*",
+    "chuk_tool_processor.logging.*",
+]
+warn_return_any = false
+warn_no_return = false
+no_implicit_optional = false
+strict_optional = false
+check_untyped_defs = false
+disallow_untyped_defs = false
+
+[tool.isort]
+profile = "black"
+line_length = 120
+skip_gitignore = true
