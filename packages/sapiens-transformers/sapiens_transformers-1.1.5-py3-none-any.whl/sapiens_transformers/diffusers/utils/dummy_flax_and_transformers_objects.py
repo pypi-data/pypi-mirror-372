@@ -1,0 +1,50 @@
+'''
+    #################################################################################################################################################################################################
+    # This code library is an adaptation of the original Transformers and was designed, developed and programmed by Sapiens Technology®.                                                            #
+    # Any alteration and/or disclosure of this code without prior authorization is strictly prohibited and is subject to legal action that will be forwarded by the Sapiens Technology® legal team. #
+    # This set of algorithms aims to download, train, fine-tune and/or infer large language models from various sources and slopes.                                                                 #
+    #################################################################################################################################################################################################
+'''
+from ..utils import DummyObject, requires_backends
+class FlaxStableDiffusionControlNetPipeline(metaclass=DummyObject):
+    _backends = ['flax', 'sapiens_transformers']
+    def __init__(self, *args, **kwargs): requires_backends(self, ['flax', 'sapiens_transformers'])
+    @classmethod
+    def from_config(cls, *args, **kwargs): requires_backends(cls, ['flax', 'sapiens_transformers'])
+    @classmethod
+    def from_pretrained(cls, *args, **kwargs): requires_backends(cls, ['flax', 'sapiens_transformers'])
+class FlaxStableDiffusionImg2ImgPipeline(metaclass=DummyObject):
+    _backends = ['flax', 'sapiens_transformers']
+    def __init__(self, *args, **kwargs): requires_backends(self, ['flax', 'sapiens_transformers'])
+    @classmethod
+    def from_config(cls, *args, **kwargs): requires_backends(cls, ['flax', 'sapiens_transformers'])
+    @classmethod
+    def from_pretrained(cls, *args, **kwargs): requires_backends(cls, ['flax', 'sapiens_transformers'])
+class FlaxStableDiffusionInpaintPipeline(metaclass=DummyObject):
+    _backends = ['flax', 'sapiens_transformers']
+    def __init__(self, *args, **kwargs): requires_backends(self, ['flax', 'sapiens_transformers'])
+    @classmethod
+    def from_config(cls, *args, **kwargs): requires_backends(cls, ['flax', 'sapiens_transformers'])
+    @classmethod
+    def from_pretrained(cls, *args, **kwargs): requires_backends(cls, ['flax', 'sapiens_transformers'])
+class FlaxStableDiffusionPipeline(metaclass=DummyObject):
+    _backends = ['flax', 'sapiens_transformers']
+    def __init__(self, *args, **kwargs): requires_backends(self, ['flax', 'sapiens_transformers'])
+    @classmethod
+    def from_config(cls, *args, **kwargs): requires_backends(cls, ['flax', 'sapiens_transformers'])
+    @classmethod
+    def from_pretrained(cls, *args, **kwargs): requires_backends(cls, ['flax', 'sapiens_transformers'])
+class FlaxStableDiffusionXLPipeline(metaclass=DummyObject):
+    _backends = ['flax', 'sapiens_transformers']
+    def __init__(self, *args, **kwargs): requires_backends(self, ['flax', 'sapiens_transformers'])
+    @classmethod
+    def from_config(cls, *args, **kwargs): requires_backends(cls, ['flax', 'sapiens_transformers'])
+    @classmethod
+    def from_pretrained(cls, *args, **kwargs): requires_backends(cls, ['flax', 'sapiens_transformers'])
+'''
+    #################################################################################################################################################################################################
+    # This code library is an adaptation of the original Transformers and was designed, developed and programmed by Sapiens Technology®.                                                            #
+    # Any alteration and/or disclosure of this code without prior authorization is strictly prohibited and is subject to legal action that will be forwarded by the Sapiens Technology® legal team. #
+    # This set of algorithms aims to download, train, fine-tune and/or infer large language models from various sources and slopes.                                                                 #
+    #################################################################################################################################################################################################
+'''
