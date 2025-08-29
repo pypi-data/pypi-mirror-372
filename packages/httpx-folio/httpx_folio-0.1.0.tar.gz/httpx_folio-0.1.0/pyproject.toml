@@ -1,0 +1,119 @@
+[project]
+name = "httpx-folio"
+version = "0.1.0"
+description = "FOLIO related niceties for the next generation HTTP client for Python"
+authors = [
+    { name = "Katherine Bargar", email = "kbargar@fivecolleges.edu" },
+]
+dependencies = [
+    "httpx>=0.20.0",
+    "httpx-retries>=0.4.1",
+]
+requires-python = ">=3.9"
+readme = "README.md"
+
+[project.license]
+text = "Apache-2.0"
+
+[project.urls]
+Homepage = "https://github.com/Five-Colleges-Incorporated/httpx-folio"
+"Bug Tracker" = "https://github.com/Five-Colleges-Incorporated/httpx-folio/issues"
+
+[build-system]
+requires = [
+    "pdm-backend",
+]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = true
+package-dir = "src"
+
+[tool.pdm.scripts]
+test-quick = "python -m pytest -vv -k 'not Integration' {args}"
+
+[tool.pdm.scripts.test]
+composite = [
+    "rm -f .coverage",
+    "python -m coverage run -m pytest -vv {args}",
+    "python -m coverage report",
+]
+
+[tool.pdm.scripts.lock]
+composite = [
+    "rm -f pylock.toml",
+    "pdm lock --python=3.9",
+    "pdm lock --lockfile pylock.maximal.toml --python=3.13",
+    "pdm lock --strategy direct_minimal_versions --lockfile pylock.minimal.toml --python=3.9",
+]
+
+[tool.pdm.scripts.test-install]
+composite = [
+    "pdm sync --lockfile=pylock.minimal.toml",
+    "pdm sync --lockfile=pylock.toml",
+]
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+addopts = [
+    "--import-mode=importlib",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+include = [
+    "src/**",
+]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+
+[tool.ruff]
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "ALL",
+]
+fixable = [
+    "ALL",
+]
+ignore = [
+    "FBT",
+    "D105",
+    "FIX002",
+    "TD002",
+    "TD003",
+    "COM812",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "D",
+    "S",
+    "INP001",
+    "N813",
+    "PLC0415",
+    "PLR2004",
+]
+
+[tool.ruff.lint.flake8-annotations]
+mypy-init-return = true
+
+[dependency-groups]
+lint = [
+    "ruff==0.12.10",
+    "mypy==1.17.1",
+    "pre-commit-hooks==6.0.0",
+]
+test = [
+    "pytest==8.4.1",
+    "pytest-cases==3.9.1",
+    "coverage==7.10.5",
+    "pytest-asyncio==1.1.0",
+]
