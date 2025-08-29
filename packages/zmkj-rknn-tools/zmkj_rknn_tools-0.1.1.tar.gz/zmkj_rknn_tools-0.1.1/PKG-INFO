@@ -1,0 +1,412 @@
+Metadata-Version: 2.4
+Name: zmkj-rknn-tools
+Version: 0.1.1
+Summary: 瑞芯微端侧的辅助快速验证工具
+Author-email: 壹世朱名 <nx740@qq.com>
+Maintainer-email: 壹世朱名 <nx740@qq.com>
+License: MIT
+Project-URL: Homepage, https://github.com/xuntee/rknn-tools
+Project-URL: Repository, https://github.com/xuntee/rknn-tools
+Project-URL: Documentation, https://github.com/xuntee/rknn-tools#readme
+Project-URL: Bug Tracker, https://github.com/xuntee/rknn-tools/issues
+Project-URL: Changelog, https://github.com/xuntee/rknn-tools/blob/main/CHANGELOG.md
+Keywords: rknn,rockchip,yolov8,object detection,edge computing
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: opencv-python>=4.5.0
+Requires-Dist: pillow>=8.0.0
+Requires-Dist: tqdm>=4.60.0
+Provides-Extra: rknn
+Requires-Dist: rknn-toolkit2>=1.4.0; extra == "rknn"
+Requires-Dist: rknn-toolkit-lite2>=1.4.0; extra == "rknn"
+Provides-Extra: yolo
+Requires-Dist: zmkj-rknn-yolov8>=0.1.0; extra == "yolo"
+Requires-Dist: ultralytics>=8.0.0; extra == "yolo"
+Provides-Extra: viz
+Requires-Dist: supervision>=0.15.0; extra == "viz"
+Requires-Dist: matplotlib>=3.5.0; extra == "viz"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: isort>=5.10.0; extra == "dev"
+Requires-Dist: flake8>=5.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: pre-commit>=2.20.0; extra == "dev"
+Provides-Extra: docs
+Requires-Dist: sphinx>=5.0.0; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=1.0.0; extra == "docs"
+Requires-Dist: myst-parser>=0.18.0; extra == "docs"
+Provides-Extra: examples-data
+Requires-Dist: zmkj-rknn-examples-data>=0.1.0; extra == "examples-data"
+Provides-Extra: all
+Requires-Dist: zmkj-rknn-tools[rknn,viz,yolo]; extra == "all"
+Provides-Extra: full
+Requires-Dist: zmkj-rknn-tools[all,dev,docs,examples-data]; extra == "full"
+Dynamic: license-file
+
+# RKNN-Tools
+
+[![PyPI version](https://badge.fury.io/py/rknn-tools.svg)](https://badge.fury.io/py/rknn-tools)
+[![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/release/python-360/)
+
+## 简介
+
+RKNN-Tools 是一个专为瑞芯微（Rockchip）芯片设计的端侧推理辅助工具包，旨在简化模型转换、部署和验证流程。该工具包支持从 YOLOv8 模型到 RKNN 模型的转换，并提供完整的推理、后处理和可视化功能。
+
+## 特性
+
+- **模型转换**：支持 YOLOv8 模型（.pt）到 ONNX 再到 RKNN 的转换流程
+- **推理引擎**：高效的 RKNN 模型推理实现，支持图像和视频输入
+- **后处理优化**：针对 YOLOv8 的高效后处理算法，包括分布式焦点损失（DFL）解码和快速 NMS
+- **可视化工具**：集成 Supervision 库，提供丰富的可视化功能，支持高质量的目标检测结果展示
+- **性能优化**：支持图像下采样、缓存机制和跳帧处理等优化技术
+- **中文文档**：详尽的中文注释和文档
+
+## 安装
+
+### 基础安装
+
+```bash
+pip install zmkj-rknn-tools
+```
+
+### 按需安装功能模块
+
+根据您的需求选择安装不同的功能模块：
+
+```bash
+# 安装 RKNN 核心功能
+pip install zmkj-rknn-tools[rknn]
+
+# 安装 YOLOv8 支持
+pip install zmkj-rknn-tools[yolo]
+
+# 安装可视化功能
+pip install zmkj-rknn-tools[viz]
+
+# 安装所有功能
+pip install zmkj-rknn-tools[all]
+
+# 开发环境（包含测试、格式化等工具）
+pip install zmkj-rknn-tools[dev]
+
+# 完整安装（所有功能 + 开发工具）
+pip install zmkj-rknn-tools[full]
+```
+
+### 开发安装
+
+如果需要调试或修改代码，可以克隆仓库并安装：
+
+```bash
+git clone https://github.com/xuntee/rknn-tools.git
+cd rknn-tools
+python3 -m venv venv_tools
+source venv_tools/bin/activate
+pip install -e .[full]
+
+# 运行示例
+python zmkj_rknn_tools/examples/model_conversion.py --pt zmkj_rknn_tools/examples/yolov8s.pt
+python zmkj_rknn_tools/examples/video_inference.py --model zmkj_rknn_tools/examples/yolov8s.rknn --input zmkj_rknn_tools/examples/people-walking.mp4 
+python zmkj_rknn_tools/examples/image_inference.py --model zmkj_rknn_tools/examples/yolov8s.rknn --input zmkj_rknn_tools/examples/bus.jpg 
+
+# 构建和发布
+python -m build
+twine upload dist/*
+```
+
+### 命令行工具
+
+安装后可以直接使用命令行工具：
+
+```bash
+# 模型转换
+rknn-convert --input model.pt --output model.onnx --format onnx
+rknn-convert --input model.onnx --output model.rknn --format rknn --platform rk3576
+
+# 推理检测
+rknn-detect --model model.rknn --input image.jpg --output result.jpg --show
+rknn-detect --model model.rknn --input video.mp4 --output result.mp4
+rknn-detect --model model.rknn --input 0 --show  # 摄像头
+
+# 环境验证
+rknn-verify
+```
+
+## 环境要求
+
+- Python 3.6+
+- 已测试环境：RK3576，Python 3.10.12
+
+## 快速开始
+
+### 模型转换
+
+#### 1. PyTorch 模型转 ONNX
+
+```python
+from zmkj_rknn_tools.converter import pt_to_onnx
+
+# 转换 YOLOv8 模型到 ONNX
+pt_to_onnx(model_path="yolov8s.pt", output_path="yolov8s.onnx")
+```
+
+#### 2. ONNX 模型转 RKNN
+
+```python
+from zmkj_rknn_tools.converter import onnx_to_rknn
+
+# 转换 ONNX 模型到 RKNN
+onnx_to_rknn(
+    model_path="yolov8s.onnx",
+    output_path="yolov8s.rknn",
+    platform="rk3576",
+    do_quantization=False
+)
+```
+
+### 图像推理
+
+```python
+from zmkj_rknn_tools.detector import YOLOv8Detector, CLASSES
+import cv2
+import supervision as sv
+import numpy as np
+
+# 自定义可视化函数
+def visualize_detections(image, boxes, classes, scores):
+    # 创建图像副本
+    img_result = image.copy()
+    
+    # 如果没有检测到目标，直接返回原图
+    if len(boxes) == 0:
+        return img_result
+    
+    # 转换为supervision格式的检测结果
+    detections = sv.Detections(
+        xyxy=boxes,
+        class_id=classes.astype(int),
+        confidence=scores
+    )
+    
+    # 创建标签注释器
+    label_annotator = sv.LabelAnnotator(
+        text_position=sv.Position.TOP_LEFT,
+        text_scale=0.5,
+        text_thickness=1,
+        text_padding=5,
+        color_lookup=sv.ColorLookup.CLASS
+    )
+    
+    # 创建边界框注释器
+    box_annotator = sv.BoxAnnotator(
+        thickness=2,
+        color_lookup=sv.ColorLookup.CLASS
+    )
+    
+    # 生成标签
+    labels = [f"{CLASSES[class_id]} {confidence:.2f}" 
+             for class_id, confidence in zip(detections.class_id, detections.confidence)]
+    
+    # 绘制边界框和标签
+    img_result = box_annotator.annotate(scene=img_result, detections=detections)
+    img_result = label_annotator.annotate(scene=img_result, detections=detections, labels=labels)
+    
+    return img_result
+
+# 初始化检测器
+detector = YOLOv8Detector(model_path="yolov8s.rknn")
+
+# 读取图像
+image = cv2.imread("test.jpg")
+
+# 执行检测
+boxes, classes, scores, inference_time, process_time = detector.detect(
+    image=image,
+    conf_thresh=0.25,
+    nms_thresh=0.45
+)
+
+# 可视化结果
+result_image = visualize_detections(image, boxes, classes, scores)
+
+# 显示结果
+cv2.imshow("Result", result_image)
+cv2.waitKey(0)
+
+# 释放资源
+detector.release()
+```
+
+### 视频/摄像头推理
+
+```python
+from zmkj_rknn_tools.detector import YOLOv8Detector, CLASSES
+import cv2
+import time
+import supervision as sv
+import numpy as np
+
+# 自定义可视化函数
+def visualize_detections(image, boxes, classes, scores):
+    # 创建图像副本
+    img_result = image.copy()
+    
+    # 如果没有检测到目标，直接返回原图
+    if len(boxes) == 0:
+        return img_result
+    
+    # 转换为supervision格式的检测结果
+    detections = sv.Detections(
+        xyxy=boxes,
+        class_id=classes.astype(int),
+        confidence=scores
+    )
+    
+    # 创建标签注释器
+    label_annotator = sv.LabelAnnotator(
+        text_position=sv.Position.TOP_LEFT,
+        text_scale=0.5,
+        text_thickness=1,
+        text_padding=5,
+        color_lookup=sv.ColorLookup.CLASS
+    )
+    
+    # 创建边界框注释器
+    box_annotator = sv.BoxAnnotator(
+        thickness=2,
+        color_lookup=sv.ColorLookup.CLASS
+    )
+    
+    # 生成标签
+    labels = [f"{CLASSES[class_id]} {confidence:.2f}" 
+             for class_id, confidence in zip(detections.class_id, detections.confidence)]
+    
+    # 绘制边界框和标签
+    img_result = box_annotator.annotate(scene=img_result, detections=detections)
+    img_result = label_annotator.annotate(scene=img_result, detections=detections, labels=labels)
+    
+    return img_result
+
+# 自定义FPS绘制函数
+def draw_fps(image, fps, position=(10, 30), text_scale=0.7, color=(0, 0, 255), thickness=2):
+    # 创建图像副本
+    img_result = image.copy()
+    
+    # 创建文本注释器
+    text_annotator = sv.TextAnnotator(
+        text_scale=text_scale,
+        text_thickness=thickness,
+        text_color=color
+    )
+    
+    # 格式化FPS文本
+    fps_text = f"FPS: {fps:.2f}"
+    
+    # 绘制文本
+    img_result = text_annotator.annotate(scene=img_result, text=fps_text, position=position)
+    
+    return img_result
+
+# 初始化检测器
+detector = YOLOv8Detector(model_path="yolov8s.rknn")
+
+# 打开视频文件或摄像头
+cap = cv2.VideoCapture("test.mp4")  # 或者使用摄像头 cv2.VideoCapture(0)
+
+# 性能统计
+frame_count = 0
+start_time = time.time()
+
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+    
+    # 执行检测
+    boxes, classes, scores, inference_time, process_time = detector.detect(
+        image=frame,
+        conf_thresh=0.25,
+        nms_thresh=0.45
+    )
+    
+    # 更新性能统计
+    frame_count += 1
+    
+    # 可视化结果
+    result_frame = visualize_detections(frame, boxes, classes, scores)
+    
+    # 计算FPS
+    elapsed_time = time.time() - start_time
+    fps = frame_count / elapsed_time
+    result_frame = draw_fps(result_frame, fps)
+    
+    # 显示结果
+    cv2.imshow("Result", result_frame)
+    
+    # 按ESC键退出
+    if cv2.waitKey(1) == 27:
+        break
+
+# 释放资源
+cap.release()
+cv2.destroyAllWindows()
+detector.release()
+```
+
+## 高级用法
+
+### 配置优化参数
+
+```python
+from zmkj_rknn_tools.detector import YOLOv8Detector
+from zmkj_rknn_tools.config import update_config
+
+# 更新配置参数
+update_config({
+    'downscale_factor': 2,     # 高分辨率图像下采样因子
+    'use_fast_nms': True,      # 使用快速NMS算法
+    'use_parallel': True,      # 使用并行处理
+    'skip_frames': 1,          # 跳帧处理（0表示不跳帧）
+    'cache_size': 10           # 缓存大小
+})
+
+# 初始化检测器
+detector = YOLOv8Detector(model_path="yolov8s.rknn")
+```
+
+### 自定义后处理
+
+```python
+from zmkj_rknn_tools.postprocess import post_process
+
+# 自定义后处理
+boxes, classes, scores = post_process(
+    input_data=model_outputs,
+    conf_thresh=0.25,
+    nms_thresh=0.45
+)
+```
+
+## 贡献
+
+欢迎提交问题和拉取请求，共同改进这个项目！
+
+## 许可证
+
+[MIT](LICENSE)
