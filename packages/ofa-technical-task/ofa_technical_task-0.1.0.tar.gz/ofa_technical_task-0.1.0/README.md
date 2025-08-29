@@ -1,0 +1,121 @@
+# 📄 Document Analysis & RAG Chatbot
+
+This is a Streamlit application that lets you upload PDF documents, analyze their content, and interact with them using a Retrieval-Augmented Generation (RAG) chatbot.
+
+## ✨ Features
+
+  - **Document Ingestion**: Upload PDF files to the application. The content is extracted using PyMuPDF and saved for analysis.
+  - **Document Analysis Dashboard**: Get key insights from your documents, including overall sentiment, readability scores, word counts, and topic modeling using LDA.
+  - **RAG Chatbot**: Chat with your documents. The chatbot retrieves relevant text chunks from a ChromaDB vector store and uses an OpenAI large language model to generate answers.
+  - **Dockerized**: The application is containerized with Docker for easy deployment and portability.
+
+-----
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+  - **Docker Desktop**: Required to build and run the application in a container.
+  - **OpenAI API Key**: An API key is needed to use the OpenAI embeddings and language model.
+
+### 1\. Local Setup (Without Docker)
+
+1.  **Clone the repository**:
+
+    ```bash
+    git clone <your-repository-url>
+    cd <your-repository-name>
+    ```
+
+2.  **Install dependencies**:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3.  **Set your OpenAI API Key**:
+    You need to set your OpenAI API key as an environment variable.
+
+      * **Windows (Command Prompt):**
+        ```bash
+        set OPENAI_API_KEY="your_api_key_here"
+        ```
+      * **macOS/Linux (Terminal):**
+        ```bash
+        export OPENAI_API_KEY="your_api_key_here"
+        ```
+
+4.  **Run the application**:
+
+    ```bash
+    streamlit run main.py
+    ```
+
+### 2\. Docker Setup (Recommended)
+
+Using Docker is the recommended way to run this application, as it ensures all dependencies and configurations are handled consistently.
+
+1.  **Create `.dockerignore`**:
+    To prevent unnecessary or sensitive files from being included in your Docker image, create a `.dockerignore` file in your project's root directory.
+
+    ```
+    # Git
+    .git
+
+    # Docker
+    Dockerfile
+    .dockerignore
+
+    # Streamlit config and caches
+    .streamlit
+    .venv
+    .cache
+
+    # Python-specific files
+    __pycache__/
+    *.pyc
+
+    # Data and database directories
+    data/
+    chroma_db/
+    ```
+
+2.  **Build the Docker image**:
+    Navigate to your project's root directory in a terminal and run the following command. This will build the image and tag it as `rag-app`.
+
+    ```bash
+    docker build -t rag-app .
+    ```
+
+3.  **Run the Docker container**:
+    Run the container using the following command. This command maps the application's port and sets the OpenAI API key via an environment variable. It also mounts volumes for your `data` and `chroma_db` directories to persist uploaded documents and the vector database.
+
+      * **Windows:**
+        ```bash
+        docker run -p 8501:8501 -e OPENAI_API_KEY="your_api_key_here" -v C:\path\to\your\data:/app/data -v C:\path\to\your\chroma_db:/app/chroma_db rag-app
+        ```
+      * **macOS/Linux:**
+        ```bash
+        docker run -p 8501:8501 -e OPENAI_API_KEY="your_api_key_here" -v /path/to/your/data:/app/data -v /path/to/your/chroma_db:/app/chroma_db rag-app
+        ```
+
+    **Note**: Replace `C:\path\to\your` or `/path/to/your` with the absolute path to your project directory.
+
+4.  **Access the application**:
+    Once the container is running, open your web browser and navigate to **`http://localhost:8501`**.
+
+-----
+
+## 📁 Folder Structure
+
+```
+.
+├── data/
+│   ├── documents/      # Uploaded PDFs are stored here
+│   └── ocr/            # Extracted text (JSON) is stored here
+├── chroma_db/          # The persistent ChromaDB vector store
+├── .dockerignore       # Specifies files to exclude from the Docker image
+├── Dockerfile          # Instructions for building the Docker image
+├── requirements.txt    # Python dependencies
+└── main.py             # Main Streamlit application script
+```
