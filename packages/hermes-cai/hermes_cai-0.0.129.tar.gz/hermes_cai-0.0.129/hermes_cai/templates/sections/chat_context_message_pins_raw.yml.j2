@@ -1,0 +1,34 @@
+{# Setup some bookkeeping. #}
+{% set ns = namespace() %}
+{% set ns.previous_pin_idx = -1 %}
+
+{% for cc_msg in chat_context_messages %}
+  {% if cc_msg.is_pinned and (not should_remove_safety_truncated_messages or not cc_msg.is_safety_truncated) %}
+
+    {# If there's messages between this and the previous pin, add an interleaved message. #}
+    {% if ns.previous_pin_idx == -1 and loop.index0 > 0 or ns.previous_pin_idx >= 0 and ns.previous_pin_idx < loop.index0 - 1 %}
+- name: "pin_interleave_message_at_{{ loop.index }}"
+  truncation_priority: 4
+  content: |
+    {{ settings.start_token }}narrator: [some messages omitted]{{ settings.eom }}
+      {%- set settings.start_token = settings.bom -%}
+    {% endif %}
+    {% set ns.previous_pin_idx = loop.index0 %}
+
+    {% set qual_author_msg =  canonicalize_user_name(cc_msg.author) + ": " + cc_msg.text %}
+- name: "pinned_message_{{ loop.index }}"
+  truncation_priority: 4
+  content: |
+    {{ settings.start_token }}{{ escape_special_characters(qual_author_msg) }}{{ settings.eom }}
+    {% set settings.start_token = settings.bom %}
+  {% endif %}
+{% endfor %}
+
+{# If there's at least one pinned message, add an interleaved message in the end. #}
+{% if ns.previous_pin_idx != -1 %}
+- name: "pin_interleave_message_end"
+  truncation_priority: 4
+  content: |
+    {{ settings.start_token }}narrator: [some messages omitted]{{ settings.eom }}
+      {%- set settings.start_token = settings.bom -%}
+{% endif %}

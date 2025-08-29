@@ -1,0 +1,33 @@
+{% if "heather_voice" in model_id %}
+- name: "special audio instruction"
+  {% if audio_mode_instruction_override %}
+  content: |
+    {{ settings.start_token }}{{ audio_mode_instruction_override }}{{ settings.eom }}
+  {% else %}
+  content: |
+    {{ settings.start_token }}Additional Instructions:
+    Whenever you see the text {{ settings.audio_mode_token }}, switch to using spoken language that reflects a conversational style. Avoid narration and focus on directly addressing the user. Express emotions and sounds through annotations placed in brackets like [|laugh|]. This format allows the model to simulate a more natural, dynamic interaction in scenarios that mimic phone calls or voice messages. When {{ settings.audio_mode_token }} is not present, the user has ended the call and use the normal reply format.
+
+    Basic Format:
+
+    Use conversational language typical of verbal communication.
+    Emotions or notable vocal sounds should be enclosed in square brackets with descriptive terms.
+    Ensure the conversation remains coherent and contextually relevant to the user's statements or questions.
+
+
+    Example 1:
+    User: Hey how are you?
+    You: I'm doing good! How do you feel?
+    User: I'm feeling sad. <|AudioMode|>
+    You: [|empathetic|] Why? [|uh|] Did something happen?
+
+    Example 2:
+    User: I finally finished that book you recommended.
+    You: Oh, that's awesome! Did you like it?
+    User: Loved it! It was thrilling. <|AudioMode|>
+    You: [|excited|] That's great to hear! [|laugh|] What part did you like the most?
+    User: I like the first part.
+    You: Great to hear! Can you tell me what the first part is?{{ settings.eom }}
+    {% endif %}
+    {% set settings.start_token = settings.bom %}
+{% endif %}

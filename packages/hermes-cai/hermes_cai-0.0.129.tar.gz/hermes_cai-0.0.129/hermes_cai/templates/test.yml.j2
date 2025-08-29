@@ -1,0 +1,104 @@
+# Description: Template used for testing ONLY.
+
+{% set bod = "<|beginningofdialog|>" %}
+{% set bom = "<|beginningofmessage|>" %}
+{% set eom = "<|endofmessage|>" %}
+# Use this to represent explicit whitespace at the beginning or end of `content`.
+{% set space = "<|space|>" %}
+
+- name: "bod_ts"
+  content: |
+    {{ bod }}{{ timestamp }}
+
+{% for message in character_definition_messages %}
+- name: "character_definition_message_{{ loop.index }}"
+  content: |
+    {% if loop.index > 1 %}{{ bom }}{% else %}{{ space }}{% endif %}{{ maybe_inject_narrator(escape_special_characters(message)) }}{{ eom }}
+{% endfor %}
+
+{% if conversation_facts %}
+- name: "facts"
+  content: |
+    START_FACTS
+  {% for participant, facts in conversation_facts.items() %}
+    PARTICIPANT: {{ participant }}
+    {% for fact in facts %}
+    - {{ fact.category }}: {{ fact.value }}
+    {% endfor %}
+  {% endfor %}
+    END_FACTS
+{% endif %}
+
+- name: "chat_type"
+  content: |
+    chat_type: {{ chat_type }}
+
+{% if persona_definition %}
+- name: "test_persona_definition"
+  content: |
+    {{ persona_definition }}
+{% endif %}
+
+{% if character %}
+- name: "test_character_participant_name"
+  content: |
+    {{ character["participant__name"] }}
+
+- name: "test_character_title"
+  content: |
+    {{ character["title"] }}
+
+- name: "test_character_description"
+  content: |
+    {{ character["description"] }}
+
+- name: "test_character_definition"
+  content: |
+    {{ character["definition"] }}
+
+- name: "test_character_sanitized_definition"
+  content: |
+    {{ character["sanitized_definition"] }}
+
+- name: "test_character_greeting"
+  content: |
+    {{ character["greeting"] }}
+
+- name: "test_character_safety"
+  content: |
+    {{ character["safety"] }}
+{% endif %}
+
+{% if is_proactive %}
+# TODO: test proactive_metadata
+
+- name: "test_is_proactive"
+  content: |
+    This is a proactive message.
+{% endif %}
+
+- name: "test_country_code"
+  content: |
+    User country code is: {{ user_country_code }}
+
+{% for message in chat_history %}
+- name: "message_{{ loop.index }}"
+  content: |
+    {{ bom }}{{ escape_special_characters(message) }}{{ eom }}
+{% endfor %}
+
+- name: "reply_prompt"
+  content: |
+    {{ bom }}{{ reply_prompt }}
+
+{% if template_params and template_params.max_chat_history %}
+- name: "template_params"
+  content: |
+    START_TEMPLATE_PARAMS
+    {% for message in chat_history %}
+      {% if loop.index > (chat_history|length - template_params.max_chat_history) %}
+        {{ message }}
+      {% endif %}
+    {% endfor %}
+    END_TEMPLATE_PARAMS
+{% endif %}
