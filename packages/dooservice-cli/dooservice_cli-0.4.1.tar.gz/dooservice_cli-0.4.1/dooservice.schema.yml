@@ -1,0 +1,359 @@
+version: '1.0'  # Versión del esquema de configuración. Se usa para detectar cambios incompatibles en la estructura.
+
+# =======================================
+# Gestión de Dominios y SSL
+# =======================================
+domains:
+  default_provider: <string: 'letsencrypt' | 'cloudflare' | 'zerossl' | 'other'>  # Proveedor SSL por defecto si no se especifica en cada dominio
+  default_ssl: <boolean>                         # Activar SSL (HTTPS) por defecto
+  default_force_ssl: <boolean>                   # Redirigir HTTP → HTTPS
+  default_redirect_www: <boolean>                # Redirección entre www y sin www
+  default_hsts: <boolean>                        # Activar cabecera HSTS (HTTP Strict Transport Security)
+
+  providers:
+    letsencrypt:
+      email: <string: ${env_vars.LETSENCRYPT_EMAIL}>  # Email de registro en Let's Encrypt
+    cloudflare:
+      api_token: <string: ${env_vars.CLOUDFLARE_API_TOKEN}>  # Token de API para autenticación en Cloudflare
+      zone_id: <string: ${env_vars.CLOUDFLARE_ZONE_ID}>      # ID de zona DNS en Cloudflare
+    zerossl:
+      api_key: <string: ${env_vars.ZEROSSL_API_KEY}>         # Clave de API para ZeroSSL
+
+  base_domains:
+    - name: <string>                             # Dominio base (ej. example.com)
+      ssl_provider: <string: 'letsencrypt' | 'cloudflare' | 'zerossl' | 'other'>  # Override del proveedor SSL
+      ssl: <boolean>                             # Habilitar SSL para este dominio
+      force_ssl: <boolean>                       # Redirigir a HTTPS este dominio
+      redirect_www: <boolean>                    # Redirigir www↔sin-www
+      hsts: <boolean>                            # Activar o desactivar HSTS
+      cname_target: <string|null>                # Destino CNAME si se desea redirigir el dominio
+      dns_challenge: <boolean>                   # Si se usa validación DNS para emisión de SSL
+
+# =======================================
+# Configuración Global de Backups
+# =======================================
+backup:
+  enabled: <boolean: true>                      # Activar sistema de backup globalmente
+  output_dir: <string: '/opt/dooservice/backups'> # Directorio de almacenamiento de backups
+  format: <string: 'zip' | 'dump'>            # Formato de backup por defecto
+  retention:                                    # Políticas de retención de backups
+    days: <integer: 30>                         # Días a mantener backups (0 = sin límite)
+    max_backups: <integer: 10>                  # Número máximo de backups (0 = sin límite)
+  auto_backup:                                  # Configuración global de backup automático
+    enabled: <boolean: false>                   # Activar backup automático globalmente
+    format: <string: 'zip' | 'dump'>            # Formato de backup automático
+    schedule:                                   # Configuración de programación de backups automáticos
+      frequency: <string: 'daily' | 'weekly' | 'monthly'> # Frecuencia de backups automáticos
+      time: <string: '02:00'>                   # Hora de ejecución del backup automático (formato HH:MM)
+
+# =======================================
+# Configuración Global de Snapshots  
+# =======================================
+snapshot:
+  enabled: <boolean: true>                        # Activar sistema de snapshots globalmente
+  default_storage_dir: <string: '/opt/dooservice/snapshots'> # Directorio por defecto para snapshots
+  retention:
+    days: <integer: 60>                           # Días a mantener snapshots por defecto
+    max_snapshots: <integer: 100>                 # Número máximo de snapshots global
+
+# =======================================
+# Configuración Global de GitHub Integration
+# =======================================
+github:
+  enabled: <boolean: true>                        # Activar integración con GitHub globalmente
+  oauth:
+    client_id: <string: ${env_vars.GITHUB_CLIENT_ID}>    # ID de aplicación OAuth de GitHub
+    client_secret: <string: ${env_vars.GITHUB_CLIENT_SECRET}> # Secret de aplicación OAuth de GitHub
+    redirect_uri: <string: 'http://localhost:8080/auth/callback'> # URI de redirección OAuth
+    scopes: <array: ['repo', 'read:user', 'admin:public_key']> # Permisos OAuth solicitados
+  webhook:
+    enabled: <boolean: true>                      # Activar webhook listener
+    default_host: <string: 'localhost'>          # Host por defecto para webhook listener
+    default_port: <integer: 8080>                 # Puerto por defecto para webhook listener
+    default_secret: <string: ${env_vars.GITHUB_WEBHOOK_SECRET}> # Secret por defecto para webhooks
+    auto_start: <boolean: false>                  # Iniciar listener automáticamente
+
+# =======================================
+# Definición de Repositorios Globales
+# =======================================
+repositories:
+  <repository_name>:                             # Identificador único del repositorio
+    source_type: <string: 'git' | 'zip' | 'local' | 'tar.gz'>  # Método de obtención del repositorio
+    path: <string: '${data_dir}/${repository_name}'>  # Ruta local de almacenamiento
+    type: <string: 'git' | 'github' | 'gitlab'>  # Tipo de repositorio Git
+    url: <string>                                # URL del repositorio
+    branch: <string>                             # Rama a usar
+    ssh_key_path: <string: '${data_dir}/ssh/${repository_name}_key'>  # Clave SSH si se requiere
+    submodules: <boolean>                        # Incluir submódulos del repositorio
+    github:                                      # Configuración GitHub para este repositorio
+      auto_watch: <boolean: true>                # Observar automáticamente todas las instancias que usen este repositorio
+      default_action: <string|array: 'pull+restart' | ['backup', 'pull+restart']>  # Acción por defecto (simple o múltiple)
+      watchers: <array>                          # Lista específica de watchers (opcional)
+        - instance: <string>                     # Nombre de instancia específica
+          action: <string|array: 'pull' | 'restart' | 'pull+restart' | 'sync' | 'sync+restart' | 'backup' | 'snapshot' | ['backup', 'pull+restart']>  # Acción a ejecutar (simple o múltiple)
+          enabled: <boolean: true>               # Activar este watcher
+      exclude_instances: <array: [<string>]>     # Instancias a excluir del auto-watch
+
+# =======================================
+# Definición de Instancias Odoo
+# =======================================
+instances:
+  <name>:                               # Nombre único de la instancia
+    odoo_version: <string: '14.0' | '15.0' | '16.0' | '17.0' | '18.0'>  # Versión de Odoo
+    # -----------------------------------
+    # Configuración de backup por instancia
+    # -----------------------------------
+    auto_backup:
+      enabled: <boolean: true>  
+      db_name: <string: '${name}_db'>         # Nombre de la base de datos a respaldar
+
+    data_dir: <string: '/opt/odoo-data/${name}'>  # Directorio raíz de la data
+
+    # -----------------------------------
+    # Rutas internas
+    # -----------------------------------
+    paths:
+      config: <string: '${data_dir}/etc/odoo.conf'>          # Archivo de configuración de Odoo
+      addons: <string: '${data_dir}/addons'>                 # Ruta de addons personalizados
+      logs: <string: '${data_dir}/logs'>                     # Carpeta de logs
+      filestore: <string: '${data_dir}/filestore'>           # Ruta del filestore de Odoo para backups
+
+    # -----------------------------------
+    # Puertos expuestos
+    # -----------------------------------
+    ports:
+      http: <str: ${env_vars.ODOO_HTTP_PORT}>                 # Puerto HTTP
+      longpolling: <str: ${env_vars.ODOO_LONGPOLLING_PORT}>   # Puerto para longpolling
+
+    # -----------------------------------
+    # Repositorios específicos de la instancia
+    # -----------------------------------
+    repositories:
+      <repository_name>:
+        source_type: <string>
+        path: <string: '${data_dir}/repos/${repository_name}'>
+        type: <string>
+        url: <string>
+        branch: <string>
+        ssh_key_path: <string: '${data_dir}/ssh/${repository_name}_key'>
+        submodules: <boolean>
+        github:                                      # Configuración GitHub para este repositorio
+          auto_watch: <boolean: true>                # Observar automáticamente todas las instancias que usen este repositorio
+          default_action: <string|array: 'pull+restart' | ['backup', 'pull+restart']>  # Acción por defecto (simple o múltiple)
+          watchers: <array>                          # Lista específica de watchers (opcional)
+            - instance: <string>                     # Nombre de instancia específica
+              action: <string|array: 'pull' | 'restart' | 'pull+restart' | 'sync' | 'sync+restart' | 'backup' | 'snapshot' | ['backup', 'pull+restart']>  # Acción a ejecutar (simple o múltiple)
+              enabled: <boolean: true>               # Activar este watcher
+          exclude_instances: <array: [<string>]>     # Instancias a excluir del auto-watch
+
+    # -----------------------------------
+    # Variables de entorno (agrupadas por tipo)
+    # -----------------------------------
+    env_vars:
+      ## 🌐 Configuración de red y puertos
+      ODOO_HTTP_PORT: <integer>              # Puerto HTTP externo
+      ODOO_LONGPOLLING_PORT: <integer>  # Puerto de longpolling
+
+      # FOR ODOO CONF
+      ## 🔐 Credenciales de base de datos
+      DB_HOST: <string>                    # Host del servidor PostgreSQL
+      DB_PORT: <integer>                   # Puerto PostgreSQL
+      DB_USER: <string>                    # Usuario de base de datos
+      DB_PASSWORD: <string>            # Contraseña del usuario
+      ADMIN_PASSWORD: <string>      # Contraseña del superadministrador de Odoo (también usado como admin_passwd para backups)
+
+      ## ⚙️ Parámetros de rendimiento y recursos
+      WORKERS: <integer>                          # Cantidad de workers (recomendado >= 2)
+      LIMIT_MEMORY_SOFT: <integer>                # Límite suave de memoria
+      LIMIT_MEMORY_HARD: <integer>                # Límite duro de memoria
+      LIMIT_REQUEST: <integer>                    # Máximo de requests antes de reiniciar el worker
+      LIMIT_TIME_CPU: <integer>                   # Tiempo máximo de CPU por request (en segundos)
+      LIMIT_TIME_REAL: <integer>                  # Tiempo real máximo por request
+      MAX_CRON_THREADS: <integer>                 # Hilos para tareas programadas (cron)
+
+      ## 🛠️ Configuraciones generales de Odoo
+      PROXY_MODE: <boolean>                       # Activar si está detrás de un proxy
+      LIST_DB: <boolean>                          # Mostrar listado de bases de datos
+      TIMEZONE: <string>                          # Zona horaria del servidor
+
+      # FOR DOMAIN
+      ## 🔒 Proveedores SSL y API keys
+      LETSENCRYPT_EMAIL: <string>        # Email para Let's Encrypt
+      CLOUDFLARE_API_TOKEN: <string>  # Token API Cloudflare
+      CLOUDFLARE_ZONE_ID: <string>      # ID de zona Cloudflare
+      ZEROSSL_API_KEY: <string>            # API Key de ZeroSSL
+
+      # FOR GITHUB INTEGRATION
+      ## 🐙 GitHub OAuth y Webhooks
+      GITHUB_CLIENT_ID: <string>           # ID de aplicación GitHub OAuth
+      GITHUB_CLIENT_SECRET: <string>       # Secret de aplicación GitHub OAuth
+      GITHUB_WEBHOOK_SECRET: <string>      # Secret para verificación de webhooks
+
+    # -----------------------------------
+    # Configuración de dominio de la instancia
+    # -----------------------------------
+    domain:
+      base: <string: '${name}.example.com'>       # Dominio completo (FQDN)
+      subdomain: <string: '${name}'>              # Subdominio
+      use_root_domain: <boolean>                  # Usar dominio raíz directamente
+
+    # -----------------------------------
+    # Dependencias de Python
+    # -----------------------------------
+    python_dependencies: <array of string>         # Lista de paquetes a instalar con pip
+
+    # -----------------------------------
+    # Configuración de Snapshots
+    # -----------------------------------
+    snapshot:
+      enabled: <boolean: true>                      # Activar sistema de snapshots
+      storage_dir: <string: '${data_dir}/snapshots'> # Directorio de almacenamiento de snapshots
+      include_backup_by_default: <boolean: true>    # Incluir backup completo en snapshots por defecto
+      retention:
+        days: <integer: 60>                         # Días a mantener snapshots (0 = sin límite)
+        max_snapshots: <integer: 20>                # Número máximo de snapshots (0 = sin límite)
+
+
+    # -----------------------------------
+    # Configuración de despliegue
+    # -----------------------------------
+    deployment:
+      type: <string: 'system' | 'docker'>         # Tipo de despliegue (nativo o contenedor)
+
+      docker:
+        web:
+          image: <string: 'odoo:${odoo_version}'>
+          container_name: <string: 'odoo_${name}'>
+          restart_policy: <string: 'no' | 'on-failure' | 'always' | 'unless-stopped'>
+          volumes:
+            - <string: '${paths.addons}:/mnt/extra-addons'>
+            - <string: '${paths.config}:/etc/odoo/odoo.conf'>
+            - <string: '${paths.logs}:/var/log/odoo'>
+          networks:
+            - <string: 'net_${name}'>
+          environment: <dict>                      # Claves y valores para el entorno del contenedor.
+          ports:
+            - <string: '${env_vars.ODOO_HTTP_PORT}:8069'>
+            - <string: '${env_vars.ODOO_LONGPOLLING_PORT}:8072'>
+          depends_on:
+            - <string: 'db_${name}'>
+          healthcheck:
+            test: <array of string>                # Comando de healthcheck. E.g., ["CMD", "pg_isready", "-U", "odoo"]
+            interval: <string: '30s'>              # Intervalo entre checks (e.g., '30s', '1m')
+            timeout: <string: '30s'>               # Tiempo de espera por check
+            retries: <integer: 3>                  # Reintentos antes de marcar como 'unhealthy'
+            start_period: <string: '0s'>           # Periodo de gracia inicial
+
+        db:
+          image: <string>
+          container_name: <string: 'db_${name}'>
+          restart_policy: <string: 'no' | 'on-failure' | 'always' | 'unless-stopped'>
+          volumes:
+            - <string: '${data_dir}/db:/var/lib/postgresql/data'>
+          ports:
+            - <string: '${env_vars.DB_PORT}:5432'>
+          networks:
+            - <string: 'net_${name}'>
+          environment: <dict>                      # Claves y valores para el entorno del contenedor.
+          healthcheck:
+            test: <array of string>                # Comando de healthcheck. E.g., ["CMD", "pg_isready", "-U", "postgres"]
+            interval: <string: '10s'>
+            timeout: <string: '5s'>
+            retries: <integer: 5>
+            start_period: <string: '5s'>
+
+# ===========================================
+# 📋 CONDITIONS AND CONFIGURATION POLICIES
+# ===========================================
+
+# 1. FLEXIBLE DOCKER CONFIGURATION:
+#    - It is not mandatory to define both `web` and `db` under `deployment.docker`.
+#    - When using an external database (e.g., managed PostgreSQL), you can omit the `db` section entirely.
+#    - In such cases, ensure all required DB variables (DB_HOST, DB_PORT, etc.) are set via `env_vars`.
+#    - The `depends_on` field inside `web` can be omitted or adjusted accordingly.
+
+# 2. GLOBAL VS INLINE DEFINITIONS:
+#    - Both `repositories` and `domains` can be defined globally and referenced by name in each instance.
+#    - Inline definitions inside `instances` override global definitions for that instance.
+#    - Prefer global definitions to promote reuse and consistency.
+
+# 3. MINIMUM REQUIRED FIELDS PER INSTANCE:
+#    - Every instance must include at least:
+#        - `odoo_version`
+#        - `data_dir`
+#        - `paths.config`
+#        - `deployment.type`
+#    - If `deployment.type` is `docker`, the `deployment.docker.web` section must also be defined.
+
+# 4. DYNAMIC PATHS AND VARIABLES:
+#    - Use `${data_dir}`, `${paths.config}`, etc. to define dynamic paths.
+#    - Use `${env_vars.VARIABLE}` to denote values that will be resolved at runtime from environment context.
+#    - 🔄 Note: You may use literal (hardcoded) values instead of `${env_vars....}` in any field that supports environment resolution.
+
+# 5. INSTANCE ISOLATION:
+#    - Each instance should have its own isolated `data_dir`, ports, and configurations.
+#    - Avoid reusing host ports or directories between instances to prevent conflicts.
+
+# 6. DOMAIN RESOLUTION:
+#    - Define the `domain` section per instance.
+#    - You may reference global `base_domains` or define a fully inline domain per instance.
+
+# 7. ODOO VERSION & DOCKER IMAGE COMPATIBILITY:
+#    - Ensure `odoo_version` matches the version tag of the Docker image (e.g., `odoo:17.0`).
+#    - Supported versions: `14.0` through `18.0`.
+
+# 8. DOCKER RESTART POLICIES:
+#    - Valid values: `no`, `on-failure`, `always`, `unless-stopped`.
+#    - Use `always` in production; `on-failure` for dev/test environments.
+
+# 9. DOCKER NETWORK CONFIGURATION:
+#    - All Docker services must share the same virtual network (e.g., `net_${name}`).
+#    - Enables secure internal communication between `web` and `db` containers.
+
+# =======================================
+# 🧠 CONSIDERATIONS & BEST PRACTICES
+# =======================================
+
+# 1. ENVIRONMENT VARIABLE MANAGEMENT:
+#    - All environment values should be defined inside `env_vars`.
+#    - During instance creation, these `env_vars` will be written into the file at `paths.env_file`.
+#    - Do not manually define or maintain the `.env_file`; it is auto-generated.
+#    - 🔄 Note: Any `env_vars` field can accept a hardcoded literal value instead of an environment reference.
+
+# 2. ENV_VAR PRECEDENCE:
+#    - `env_vars` is the single source of truth and overrides any inherited values.
+#    - Avoid combining `env_file` and `env_vars` manually — only use `env_vars`.
+
+# 3. FIXED CONTAINER PORTS:
+#    - Internal container ports are fixed (8069 for Odoo HTTP, 8072 for longpolling, 5432 for PostgreSQL).
+#    - Map these to different host ports via `${env_vars....}` to avoid conflicts between instances.
+
+# 4. PATH EVALUATION:
+#    - Paths such as `${data_dir}` or `${paths.config}` are dynamically interpolated.
+#    - Absolute paths are discouraged unless explicitly required by your infrastructure.
+
+# 5. PER-INSTANCE ISOLATION:
+#    - Assign unique `data_dir`, ports, and domains to each instance.
+#    - This ensures complete runtime separation and avoids cross-interference.
+
+# 6. RECOMMENDED STRUCTURE:
+#    - Define reusable repositories and domains globally.
+#    - Customize or override values inside each instance only when necessary.
+
+# =======================================
+# 🧩 ABOUT DOMAINS AND REPOSITORIES
+# =======================================
+
+# ➤ DOMAINS (`domains`)
+#    - Defined globally under `domains.base_domains`, or inline inside an `instance`.
+#    - Use global definitions when multiple instances share the same provider or settings.
+#    - Use inline definition for custom per-instance domain logic.
+
+# ➤ REPOSITORIES (`repositories`)
+#    - Global repository definitions enable sharing code between instances.
+#    - Inline overrides are allowed for per-instance branches or credentials.
+#    - Supports GitHub, GitLab, private repos with SSH, or zipped/archived sources.
+
+# 📝 RECOMMENDATION:
+#    - Favor global definitions for clarity and maintainability.
+#    - Override locally only when a specific customization is needed.
