@@ -1,0 +1,338 @@
+[project]
+name = "ubo-app"
+dynamic = ["version"]
+description = "Ubo main app, running on device initialization. A platform for running other apps."
+license = "Apache-2.0"
+authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+readme = "README.md"
+requires-python = ">=3.11, <3.12"
+keywords = ['ubo', 'ubo-pod', 'raspberry pi', 'rpi', 'home assistance']
+dependencies = [
+  "aiofiles==24.1.0",
+  "aiohttp==3.12.9",
+  "aiostream==0.6.4",
+  "dill==0.4.0",
+  "docker==7.1.0",
+  "fasteners==0.19",
+  "google-cloud-aiplatform==1.96.0",
+  "google-cloud-speech==2.32.0",
+  "headless-kivy==0.12.4",
+  "netifaces==0.11.0",
+  "ollama==0.5.1",
+  "platformdirs==4.3.8",
+  "piper-tts==1.3.0",
+  "psutil==7.0.0",
+  "pulsectl==24.12.0",
+  "pvorca==1.1.1",
+  "pypng==0.20220715.0",
+  "python-debouncer==0.1.5",
+  "python-dotenv==1.1.0",
+  "python-fake==0.2.0",
+  "python-redux==0.24.1.dev1250523103975755100",
+  "python-strtobool==1.0.3",
+  "pyzbar==0.1.9",
+  "quart==0.20.0",
+  "rpi-ws281x==5.0.0 ; platform_machine == 'aarch64'",
+  "sdbus-networkmanager==2.0.0 ; platform_machine == 'aarch64'",
+  "sentry-sdk==2.29.1",
+  "simpleaudio==1.0.4",
+  "soxr==0.5.0.post1",
+  "tenacity==9.1.2",
+  "ubo-app-raw-bindings==1.6.0",
+  "ubo-gui==0.13.17",
+  "vosk==0.3.44",
+  # Adafruit dependencies
+  "adafruit-circuitpython-aw9523==1.1.12",
+  "adafruit-circuitpython-irremote==5.0.4",
+  "adafruit-circuitpython-neopixel==6.3.16",
+  "adafruit-circuitpython-pct2075==1.1.24",
+  "adafruit-circuitpython-rgb-display==3.14.0",
+  "adafruit-circuitpython-veml7700==2.1.3",
+  "adafruit-circuitpython-pixelbuf==2.0.8",
+  "adafruit-blinka-raspberry-pi5-neopixel==1.0.0rc2 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
+  # RPi dependencies
+  "onnxruntime>=1.22.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
+  "pyalsaaudio==0.11.0 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
+  "rpi-lgpio==0.6 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
+  # Desktop dependencies
+  "pyaudio==0.2.14 ; platform_machine != 'aarch64' or sys_platform != 'linux'",
+  "gpiozero==2.0.1 ; platform_machine != 'aarch64'",
+  # gRPC
+  "betterproto[compiler]==2.0.0b7",
+]
+
+[tool.uv]
+dev-dependencies = [
+  "grpcio-tools>=1.66.1",
+  "hatch-vcs>=0.5.0",
+  "headless-kivy [test]>=0.12.4",
+  "ipdb>=0.13.13",
+  "ipython>=8.23.0",
+  "pdbpp>=0.10.3",
+  "poethepoet>=0.36.0",
+  "pyfakefs>=5.7.4",
+  "pyright>=1.1.401",
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.23.5.post1",
+  "pytest-cov>=4.1.0",
+  "pytest-mock>=3.14.0",
+  "pytest-repeat>=0.9.3",
+  "pytest-timeout>=2.3.1",
+  "pytest-xdist>=3.5.0",
+  "ruff>=0.12.10",
+  "toml>=0.10.2",
+]
+
+[tool.uv.sources]
+ubo-app-raw-bindings = { workspace = true }
+ubo-version-scheme = { workspace = true }
+
+[tool.uv.workspace]
+members = ["ubo_app/rpc", "version_scheme"]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "code"
+path = "version.py"
+expression = "get_version()"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "ubo_app/_version.py"
+
+[tool.hatch.build]
+packages = ["ubo_app"]
+exclude = [
+  "ubo_app/services/090-web-ui/web-app/node_modules",
+  "ubo_app/services/*/ubo-service",
+]
+artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
+
+[project.optional-dependencies]
+test-investigation = ["graphviz>=0.20.3", "objgraph>=3.6.2"]
+
+[project.scripts]
+ubo = "ubo_app.main:main"
+ubo-bootstrap = "ubo_app.system.bootstrap:main"
+ubo-system = "ubo_app.system.system_manager.main:main"
+ubo-hotspot-config = "ubo_app.system.hotspot_config:main"
+ubo-redirect-server = "ubo_app.system.redirect_server:main"
+
+
+[tool.poe.tasks]
+version = "uvx --with hatch-vcs hatch version"
+"lint:self" = "ruff check ."
+"lint:rpc" = "poe --directory=ubo_app/rpc lint"
+"lint:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint"
+lint = ['lint:self', 'lint:rpc', 'lint:assistant']
+"lint:fix:self" = "ruff check . --fix --unsafe-fixes"
+"lint:fix:rpc" = "poe --directory=ubo_app/rpc lint --fix --unsafe-fixes"
+"lint:fix:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint --fix --unsafe-fixes"
+"lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant"]
+"typecheck:self" = "pyright -p pyproject.toml ."
+"typecheck:rpc" = "poe --directory=ubo_app/rpc typecheck"
+"typecheck:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service typecheck"
+typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant"]
+test = "pytest"
+sanity = ["typecheck", "lint", "test"]
+build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
+build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install --include=dev && npm run compile && npm run build'"
+
+
+"proto:lint" = "buf format -w ubo_app/rpc/proto/"
+"proto:generate:raw" = "python ubo_app/rpc/generator/generate_proto.py"
+"proto:generate" = ["proto:generate:raw", "proto:lint"]
+
+"proto:compile:raw" = "sh -c 'mkdir -p ubo_app/rpc/ubo_bindings && python -m grpc_tools.protoc -I ubo_app/rpc/proto/ --python_betterproto_opt=typing.310 --python_betterproto_out=ubo_app/rpc/ubo_bindings/ ubo_app/rpc/proto/store/v1/store.proto ubo_app/rpc/proto/secrets/v1/secrets.proto'"
+"proto:compile" = ["proto:compile:raw", "lint:fix:rpc"]
+
+"proto" = ["proto:generate", "proto:compile"]
+
+
+"device:deploy" = "poe deploy-to-device"
+"device:deploy:deps" = "poe deploy-to-device --deps"
+"device:deploy:kill" = "poe deploy-to-device --kill"
+"device:deploy:restart" = "poe deploy-to-device --restart"
+"device:deploy:bootstrap" = "poe deploy-to-device --bootstrap --restart"
+"device:deploy:complete" = "poe deploy-to-device --deps --bootstrap --restart"
+"device:deploy:env" = "poe deploy-to-device --env"
+
+"device:test" = "poe test-on-device --copy --run --results"
+"device:test:deps" = "poe test-on-device --deps"
+"device:test:copy" = "poe test-on-device --copy"
+"device:test:run" = "poe test-on-device --run"
+"device:test:results" = "poe test-on-device --results"
+"device:test:complete" = "poe test-on-device --deps --copy --run --results"
+
+[tool.poe.tasks.test-on-device]
+args = [
+  { name = "deps", type = "boolean" },
+  { name = "copy", type = "boolean" },
+  { name = "run", type = "boolean" },
+  { name = "results", type = "boolean" },
+  { name = "index", type = "integer", default = '1' },
+]
+cmd = "scripts/test_on_device.sh"
+
+[tool.poe.tasks.deploy-to-device]
+args = [
+  { name = "deps", type = "boolean" },
+  { name = "kill", type = "boolean" },
+  { name = "restart", type = "boolean" },
+  { name = "bootstrap", type = "boolean" },
+  { name = "env", type = "boolean" },
+  { name = "offline", type = "boolean" },
+  { name = "index", type = "integer", default = '1' },
+]
+cmd = "scripts/deploy.sh"
+
+[tool.ruff]
+target-version = 'py311'
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["INP001", "PLR0911", "D203", "D213", "PLC0415", "TD003"]
+fixable = ["ALL"]
+unfixable = []
+logger-objects = ['ubo_app.logger.logger']
+
+[tool.ruff.lint.flake8-builtins]
+builtins-ignorelist = ["type", "id"]
+builtins-allowed-modules = ["types"]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "single"
+multiline-quotes = "double"
+
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "PLR0913", "PLR0915", "PLR2004"]
+"test_*.py" = ["S101", "PLR0913", "PLR0915", "PLR2004"]
+"**/reducer.py" = ["C901", "PLR0912", "PLR0915"]
+"ubo_app/services/*/ubo_handle.py" = ["TC004"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.isort]
+profile = "black"
+
+[tool.pyright]
+exclude = [
+  "typings",
+  ".trunk",
+  "ubo_app/rpc/ubo_bindings",
+  "ubo_app/services/*/ubo-service",
+  "**/.venv",
+  "dist/",
+]
+disableTaggedHints = true
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/000-audio"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/000-display"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/000-keypad"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/010-notifications"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/010-speech-synthesis"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/020-keyboard"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/030-ethernet"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/030-ip"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/030-wifi"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/040-camera"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/040-rgb-ring"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/040-sensors"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-lightdm"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-rpi-connect"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-ssh"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-users"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-vscode"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/080-docker"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-assistant"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-file-system"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-infrared"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-speech-recognition"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-web-ui"
+extraPaths = ["."]
+
+[tool.pytest.ini_options]
+markers = ["persistent_store: run test with provided persistent store"]
+asyncio_mode = "auto"
+filterwarnings = [
+  "ignore: setDaemon\\(\\) is deprecated, set the daemon attribute instead:DeprecationWarning",
+  "ignore:'imghdr' is deprecated:DeprecationWarning",
+]
+timeout = 160
+verbosity_assertions = 2
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:"]

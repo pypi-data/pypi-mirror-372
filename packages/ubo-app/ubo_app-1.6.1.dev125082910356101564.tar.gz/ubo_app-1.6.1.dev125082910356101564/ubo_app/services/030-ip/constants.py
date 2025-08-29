@@ -1,0 +1,3 @@
+# ruff: noqa: D100
+INTERNET_STATE_ICON_ID = 'ip:internet-state'
+INTERNET_STATE_ICON_PRIORITY = -11
