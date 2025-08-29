@@ -1,0 +1,144 @@
+Metadata-Version: 2.4
+Name: viadot2
+Version: 2.2.13
+Summary: A simple data ingestion library to guide data flows from some places to other places.
+Author-email: acivitillo <acivitillo@dyvenia.com>, trymzet <mzawadzki@dyvenia.com>
+License-File: LICENSE
+Requires-Python: >=3.10
+Requires-Dist: aiohttp>=3.10.5
+Requires-Dist: aiolimiter>=1.1.0
+Requires-Dist: awswrangler>=3.12.1
+Requires-Dist: dbt-adapters==1.14.3
+Requires-Dist: dbt-core<1.10,>=1.8.1
+Requires-Dist: defusedxml>=0.7.1
+Requires-Dist: duckdb<2,>1.0.0
+Requires-Dist: imagehash>=4.2.1
+Requires-Dist: lumacli<0.3.0,>=0.2.8
+Requires-Dist: numpy<2.0,>=1.23.4
+Requires-Dist: o365>=2.0.36
+Requires-Dist: openpyxl>=3.1.0
+Requires-Dist: pandas-gbq==0.23.1
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: paramiko>=3.5.0
+Requires-Dist: prefect-github>=0.2.7
+Requires-Dist: prefect-shell<=0.2.6
+Requires-Dist: prefect-slack<=0.2.7
+Requires-Dist: prefect-sqlalchemy>=0.4.3
+Requires-Dist: prefect<3,>=2.19.7
+Requires-Dist: pyarrow>=18.0.0
+Requires-Dist: pydantic<3,>=2.0.0
+Requires-Dist: pygit2<1.15.0,>=1.13.3
+Requires-Dist: pyodbc>=5.1.0
+Requires-Dist: requests>=2.32.3
+Requires-Dist: sendgrid>=6.11.0
+Requires-Dist: shapely>=1.8.0
+Requires-Dist: sharepy>=2.0.0
+Requires-Dist: simple-salesforce==1.12.6
+Requires-Dist: smbprotocol>=1.15.0
+Requires-Dist: sql-metadata>=2.11.0
+Requires-Dist: sqlalchemy==2.0.*
+Requires-Dist: tabulate>=0.9.0
+Requires-Dist: tm1py>=2.0.4
+Requires-Dist: trino==0.328.*
+Requires-Dist: visions>=0.6.4
+Requires-Dist: xlrd>=2.0.2
+Provides-Extra: aws
+Requires-Dist: awswrangler>=3.12.1; extra == 'aws'
+Requires-Dist: boto3==1.34.106; extra == 'aws'
+Requires-Dist: dbt-redshift<1.10,>=1.8.1; extra == 'aws'
+Requires-Dist: minio<8.0,>=7.0; extra == 'aws'
+Requires-Dist: prefect-aws>=0.4.19; extra == 'aws'
+Requires-Dist: s3fs==2024.6.0; extra == 'aws'
+Provides-Extra: azure
+Requires-Dist: adlfs==2024.4.1; extra == 'azure'
+Requires-Dist: azure-core==1.30.1; extra == 'azure'
+Requires-Dist: azure-identity>=1.16.0; extra == 'azure'
+Requires-Dist: azure-storage-blob==12.20.0; extra == 'azure'
+Requires-Dist: dbt-sqlserver<1.10,>=1.8.1; extra == 'azure'
+Requires-Dist: prefect-azure-dyvenia[key-vault]==0.1.0; extra == 'azure'
+Requires-Dist: prefect-github; extra == 'azure'
+Provides-Extra: databricks
+Requires-Dist: databricks-connect==11.3.*; extra == 'databricks'
+Provides-Extra: sap
+Requires-Dist: pyrfc==3.3.1; extra == 'sap'
+Description-Content-Type: text/markdown
+
+# Viadot
+
+[![Rye](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/rye/main/artwork/badge.json)](https://rye.astral.sh)
+[![formatting](https://img.shields.io/badge/style-ruff-41B5BE?style=flat)](https://img.shields.io/badge/style-ruff-41B5BE?style=flat)
+
+---
+
+**Documentation**: <a href="https://dyvenia.github.io/viadot/" target="_blank">https://viadot.docs.dyvenia.com</a>
+
+**Source Code**: <a href="https://github.com/dyvenia/viadot/tree/main" target="_blank">https://github.com/dyvenia/viadot/tree/main</a>
+
+---
+
+A simple data ingestion library to guide data flows from some places to other places.
+
+## Getting Data from a Source
+
+Viadot supports several API and RDBMS sources, private and public. Currently, we support the UK Carbon Intensity public API and base the examples on it.
+
+```python
+from viadot.sources.uk_carbon_intensity import UKCarbonIntensity
+
+ukci = UKCarbonIntensity()
+ukci.query("/intensity")
+df = ukci.to_df()
+
+print(df)
+```
+
+**Output:**
+| | from | to | forecast | actual | index |
+| ---: | :---------------- | :---------------- | -------: | -----: | :------- |
+| 0 | 2021-08-10T11:00Z | 2021-08-10T11:30Z | 211 | 216 | moderate |
+
+The above `df` is a pandas `DataFrame` object. It contains data downloaded by `viadot` from the Carbon Intensity UK API.
+
+## Loading data to a destination
+
+Depending on the destination, `viadot` provides different methods of uploading data. For instance, for databases, this would be bulk inserts. For data lakes, it would be file uploads.
+
+For example:
+
+```python hl_lines="2 8-9"
+from viadot.sources import UKCarbonIntensity
+from viadot.sources import AzureDataLake
+
+ukci = UKCarbonIntensity()
+ukci.query("/intensity")
+df = ukci.to_df()
+
+adls = AzureDataLake(config_key="my_adls_creds")
+adls.from_df(df, "my_folder/my_file.parquet")
+```
+
+## Getting started
+
+### Prerequisites
+
+We use [Rye](https://rye-up.com/). You can install it like so:
+
+```console
+curl -sSf https://rye.astral.sh/get | bash
+```
+
+### Installation
+
+```console
+pip install viadot2
+```
+
+### Configuration
+
+In order to start using sources, you must configure them with required credentials. Credentials can be specified either in the viadot config file (by default, `$HOME/.config/viadot/config.yaml`), or passed directly to each source's `credentials` parameter.
+
+You can find specific information about each source's credentials in [the documentation](https://viadot.docs.dyvenia.com/references/sources/sql_sources).
+
+### Next steps
+
+Check out the [documentation](https://viadot.docs.dyvenia.com) for more information on how to use `viadot`.
