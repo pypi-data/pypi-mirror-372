@@ -1,0 +1,145 @@
+Metadata-Version: 2.4
+Name: dccXMLJSONConv
+Version: 3.0.0.dev8
+Summary: Python module for converting XML DCC (https://www.ptb.de/dcc/) to JSON and vice versa
+Author-email: "Benedikt Seeger,Thomas Bruns, Vanessa Stehr" <benedikt.seeger@ptb.de>
+License: LGPL-2.1-or-later
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: jinja2
+Requires-Dist: lxml
+Requires-Dist: xmlschema
+Requires-Dist: importlib_resources
+Provides-Extra: web
+Requires-Dist: fastapi; extra == "web"
+Requires-Dist: uvicorn; extra == "web"
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: build; extra == "dev"
+Requires-Dist: httpx; extra == "dev"
+Dynamic: license-file
+
+# DCC XML<-->JSON Conversion
+Thie Package contains an Libary for XML<-->JSON Conversion for the DCC (Digital Calibration Certificate).
+Witch contains an Python Module for the conversion. Aswell as an tornador REST-API Server to remote call this conversion.
+## Conversion Rules
+The python Module [xmlschema](https://pypi.org/project/xmlschema/) is used to convert the XML to JSON and vice versa.
+Since we want to convert xml fragments to json and vice versa, the libary performes template insertion if the conversion failed with the given data.
+The default position for template insertion is in a 'dcc:data' element with in the file [minimalDCC_3_3_0_jinjaTemplate.xml](src/dccXMLJSONConv/data/minimalDCC_3_4_0_rc_2_jinjaTemplate.xml)
+
+### Installation
+To use the conversion libary, install the package with pip:
+
+```bash
+pip install dccXMLJSONConv
+```
+to use the REST-API server install the package with the web option:
+```bash
+pip install dccXMLJSONConv .[web]
+```
+# Usage of local conversion Libary:
+
+```python
+#Imports
+import json
+from dccXMLJSONConv.dccConv import XMLToJson,JSONToXML
+
+
+jsonDict=json.loads('COPY CONTENT FROM EXAMPLE ABOVE')
+xmlSTr='COPY CONTENT FROM EXAMPLE ABOVE'
+xmltoJsonDict=XMLToJson(xmlSTr)
+jsontoXMLStr=JSONToXML(jsonDict)
+```
+
+# Using the dcc_rest_server
+
+1. Install Additional requrenments , namly `fastapi~=0.70.0` and `uvicorn~=0.27.1` from [requirementsServer.txt](requirementsServer.txt)
+```bash
+pip install -r requirementsServer.txt
+```
+2. Start the dcc_server with
+
+```bash
+cd ~/repos/dcc_XMLJSONConv/src/dccXMLJSONConv
+(venv) seeger01@n23017:~/repos/dccXMLJSONConv/src/dcc_XMLJSONConv$ uvicorn dccServer:app --reload
+INFO:     Will watch for changes in these directories: ['/home/seeger01/repos/dccXMLJSONConv/src/dccXMLJSONConv']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [16614] using StatReload
+INFO:     Started server process [16616]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
+The REST-Server is now runing on Port `8000` use the `--port ` and `--host` params to change port and host.
+
+```bash
+(venv) seeger01@n23017:~/repos/dccXMLJSONConv/src/dccXMLJSONConv$ uvicorn dccServer:app --reload --port 8001 --host 127.0.0.2
+INFO:     Will watch for changes in these directories: ['/home/seeger01/repos/dccXMLJSONConv/src/dccXMLJSONConv']
+INFO:     Uvicorn running on http://127.0.0.2:8001 (Press CTRL+C to quit)
+```
+
+# REST API Documentation
+
+This document outlines the REST API endpoints available in the application, detailing the request methods, endpoints, expected request bodies, and response formats.
+
+## Endpoints
+
+| Endpoint       | Method | Description                                            | Request Body                                                      | Response                                           |
+|----------------|--------|--------------------------------------------------------|-------------------------------------------------------------------|----------------------------------------------------|
+| `/`            | GET    | Returns a greeting message and usage instructions.     | N/A                                                               | `{ "message": "<instructions>" }`                  |
+| `/dcc2json/`   | POST   | Converts XML string input to JSON format.              | `{ "xml": "<XML string>" }`                                       | JSON object representing the original XML.         |
+| `/json2dcc/`   | POST   | Converts JSON input to XML string format.              | `{ "js": <JSON object> }`                                         | XML string representing the original JSON.         |
+
+## Details
+
+### `/`
+
+- **Method**: GET
+- **Description**: Provides a greeting message along with instructions for using the available endpoints.
+- **Request Body**: None
+- **Response**: 
+  - **Status Code**: 200 OK
+  - **Body**: 
+    ```json
+    {
+      "message": "Hello!\nBetter use the URL /json2dcc/?js={...} \n or /dcc2json (POST method)"
+    }
+    ```
+
+### `/dcc2json/`
+
+- **Method**: POST
+- **Description**: Accepts an XML string and converts it into a JSON representation.
+- **Request Body**: Required. The body should contain an XML string within a JSON object under the key `"xml"`.
+- **Response**:
+  - **Status Code**: 200 OK for successful conversion; 400 Bad Request for empty input.
+  - **Body**: JSON object representing the parsed XML.
+
+### `/json2dcc/`
+
+- **Method**: POST
+- **Description**: Accepts a JSON object and converts it into an XML string.
+- **Request Body**: Required. The body should contain a JSON object under the key `"js"`.
+- **Response**:
+  - **Status Code**: 200 OK for successful conversion; 400 Bad Request for empty input.
+  - **Body**: XML string representing the JSON object.
+
+## Further usage examples
+
+For detailed usage examples, including request and response examples, refer to the automated tests provided in[test_dccXMLJSONConv.py](test/test_dccXMLJSONConv.py) and [test_dcc_server.py](test/test_dcc_server.py) .
+
+## Update repeatable Fieldnames from schema URL
+The skript [listTypeFinder.py][src/dcc_XMLJSONConv/listTypeFinder.py] can be used to update the list of repeated fields.
+Either with the functions in the skript (see Docstings for further Information)
+or calling the script with the XSD Url and optinal the output path like
+```bash
+(venv) user@host:~/repos/dccXMLJSONConv/src/dccXMLJSONConv$ python3 ./listTypeFinder.py https://ptb.de/dcc/v3.2.1/dcc.xsd tmp.json
+List types have been written to tmp.json
+```
+
+# dcc_rest_server debugging and launching with Pycharm
+For Pycharm debuigging see : [https://www.jetbrains.com/help/pycharm/fastapi-project.html#run-debug-configuration}(https://www.jetbrains.com/help/pycharm/fastapi-project.html#run-debug-configuration)
+Create new fastApi launch configuration instead of python 
