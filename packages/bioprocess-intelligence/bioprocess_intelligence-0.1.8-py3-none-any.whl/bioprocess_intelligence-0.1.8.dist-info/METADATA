@@ -1,0 +1,259 @@
+Metadata-Version: 2.4
+Name: bioprocess_intelligence
+Version: 0.1.8
+Summary: A Python client for interacting with the Bioprocess Intelligence platform
+Author: WisdomEngine GmbH
+Author-email: support@wisdomengine.de
+License: Proprietary - Free for academic use, commercial license required
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Bio-Informatics
+Classifier: License :: Other/Proprietary License
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.31.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: pyyaml>=6.0.1
+Requires-Dist: tabulate>=0.9.0
+Requires-Dist: backoff>=2.2.1
+Requires-Dist: gql>=3.5.2
+Requires-Dist: graphql-core>=3.2.4
+Requires-Dist: openpyxl>=3.1.5
+Requires-Dist: propcache>=0.3.0
+Requires-Dist: roman-numerals-py>=3.1.0
+Requires-Dist: requests-toolbelt>=1.0.0
+Requires-Dist: beautifulsoup4>=4.13.0
+Requires-Dist: typing_extensions>=4.12.0
+Requires-Dist: anyio>=4.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: sphinx>=8.0.0; extra == "dev"
+Requires-Dist: furo>=2024.8.0; extra == "dev"
+Requires-Dist: sphinx-basic-ng>=1.0.0b2; extra == "dev"
+Requires-Dist: sphinxcontrib-applehelp>=2.0.0; extra == "dev"
+Requires-Dist: sphinxcontrib-devhelp>=2.0.0; extra == "dev"
+Requires-Dist: sphinxcontrib-htmlhelp>=2.1.0; extra == "dev"
+Requires-Dist: sphinxcontrib-jsmath>=1.0.1; extra == "dev"
+Requires-Dist: sphinxcontrib-qthelp>=2.0.0; extra == "dev"
+Requires-Dist: sphinxcontrib-serializinghtml>=2.0.0; extra == "dev"
+Requires-Dist: Pygments>=2.19.0; extra == "dev"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: license
+Dynamic: license-file
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Bioprocess Intelligence Python Client
+
+This is the official Python client for interacting with [Bioprocess Intelligence](https://bioprocessintelligence.com/) – a comprehensive platform for digital bioprocess development and operation.
+
+The client provides programmatic access to the Bioprocess Intelligence API, enabling users to integrate, manage, and analyze bioprocess data. It supports common operations such as managing teams, collections, and processes, and importing structured data from various formats.
+
+As the platform evolves, the client will be extended to cover additional capabilities including real-time data integration, statistical analysis, mechanistic modeling, and more.
+
+---
+
+## Features
+
+- Authenticate using environment variables.
+- List teams and collections.
+- Create, retrieve, update, and delete processes.
+- Import process data from YAML content.
+- Monitor background tasks.
+
+---
+
+## Installation
+
+```bash
+pip install bioprocess-intelligence
+```
+
+---
+
+## Getting Started
+
+### Authentication Methods
+
+The client supports two authentication methods:
+
+#### 1. Username/Password Authentication
+
+1. Create a `.env` file in your project root:
+
+```
+BPI_API_URL=https://your-api-url
+BPI_USERNAME=your_username
+BPI_PASSWORD=your_password
+```
+
+2. Initialize the client:
+
+```python
+from bioprocess_intelligence.client import BioprocessIntelligenceClient
+import os
+from dotenv import load_dotenv
+from pathlib import Path
+
+load_dotenv(Path(__file__).parent / ".env")
+
+client = BioprocessIntelligenceClient(
+    api_url=os.getenv("BPI_API_URL"),
+    username=os.getenv("BPI_USERNAME"),
+    password=os.getenv("BPI_PASSWORD")
+)
+```
+
+#### 2. Microsoft Azure Active Directory (AAD) Authentication
+
+For applications using Microsoft authentication, you can authenticate using a Microsoft ID token:
+
+```python
+# After obtaining Microsoft ID token from your frontend/browser
+client = BioprocessIntelligenceClient(
+    api_url="https://your-api-url",
+    microsoft_id_token="eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIs..."
+)
+```
+
+---
+
+## Example Usage
+
+### List Teams
+
+```python
+teams = client.list_teams()
+print("Teams:", teams)
+```
+
+### Get Collections in a Team
+
+```python
+collections = client.list_collections(team_id=5)
+```
+
+### Get or Create a Process
+
+```python
+try:
+    process = client.get_process(name="New process", collection_id=123)
+except:
+    process = client.create_process(
+        name="New process",
+        collection_id=123
+    )
+```
+
+### Update a Process
+
+```python
+process = client.update_process(
+    process_id=process['id'],
+    name="Updated name",
+    description="Updated description",
+    start_time="2024-01-01T10:00:00+01:00",
+    end_time="2024-01-07T15:00:00+01:00"
+)
+```
+
+### Delete a Process
+
+```python
+client.delete_process(process['id'])
+```
+
+---
+
+## Importing Process Data
+
+### From YAML Content
+
+```python
+from pathlib import Path
+
+script_dir = Path(__file__).parent
+yaml_file = script_dir / "files/process_import_template_v1.yaml"
+
+try:
+    content = yaml_file.read_text(encoding="utf-8")
+    result = client.import_process_from_yaml(
+        collection_id=123,
+        content=content,
+        timezone="UTC"
+    )
+    print("Import result:", result)
+    client.monitor_background_task(result["backgroundTaskId"])
+except Exception as e:
+    print(f"Error importing process from YAML: {e}")
+```
+
+This allows you to send the full YAML string directly to the API, without using file uploads.
+
+---
+
+## Background Task Monitoring
+
+Many operations like data imports run as background tasks. You can monitor their progress:
+
+```python
+# Import data (returns background task info)
+result = client.import_process_from_yaml(
+    collection_id=123,
+    content=yaml_content,
+    timezone="UTC"
+)
+
+# Monitor the background task until completion
+task_id = result["backgroundTaskId"]
+status_info = client.monitor_background_task(task_id)
+print("Task completed:", status_info)
+```
+
+## Process Retrieval
+
+### Get Process by ID
+
+```python
+process = client.get_process(process_id="456")
+```
+
+### Get Process by Name and Collection
+
+```python
+# Retrieve a process by its name within a specific collection
+process = client.get_process(
+    name="P_20250101_A02", 
+    collection_id=123
+)
+print("Found process:", process['id'])
+```
+
+This is particularly useful after importing YAML data when you know the process name but need to retrieve the generated process ID for further operations.
+
+---
+
+## Error Handling
+
+Make sure to wrap API calls in try-except blocks to handle errors gracefully, especially when importing data or querying resources.
+
+---
+
+## License
+
+This client is proprietary software distributed in binary form.
+
+- **Free for academic and non-commercial research use**
+- **A commercial license is required for any commercial or for-profit use**
+
+To request a commercial license, please contact us at [support@wisdomengine.de](mailto:support@wisdomengine.de).
