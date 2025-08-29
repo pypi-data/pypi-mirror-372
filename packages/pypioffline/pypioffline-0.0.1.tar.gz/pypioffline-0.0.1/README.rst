@@ -1,0 +1,192 @@
+pypioffline
+===========
+
+Create a local PyPI repository to use pip offline.
+
+Overview
+--------
+
+**pypioffline** is a tool for mirroring packages from PyPI to a local repository, allowing you to install Python packages with pip even when offline. 
+It supports filtering by Python version, package type, extension, and platform, and can serve the repository via HTTP for use with 
+pip's `--index-url`.
+
+**pypioffline** does not perform any dependency resolution; it simply downloads and caches packages based on your configuration.
+
+It is meant for people who need to mirror all pypi packages for a specific version/platform into air-gapped environments.
+
+By default it will download the latest version of all packages available on PyPI for a default python version and platform. See ```pypioffline config```
+for the default config.
+
+When first run it will take a while to download all the package metadata. As of 2025-08-28 this was 672k packages. The metadata will be cached locally to prevent
+unnecessary load on the PyPI servers. The default is for the cache to only be updated after 1 week. There are command line options to override this.
+
+Features
+--------
+
+- Download and cache PyPI packages locally
+- Filter packages by Python version, type, extension, and platform
+- Prune old package versions, keeping only the latest
+- Serve your local repository via HTTP
+- Search for packages in the local cache
+- Configurable via JSON file and command-line options
+
+Installation
+------------
+
+Install via pip:
+
+.. code-block:: bash
+
+    pip install pypioffline
+
+Or clone the repository:
+
+.. code-block:: bash
+
+    git clone https://github.com/hippysurfer/pypioffline.git
+    cd pypioffline
+    pip install -r requirements.txt
+
+
+Typical Usage
+-------------
+
+Start by creating a configuration file (optional) (this will typically take a few hours depending on your connection speed):
+
+.. code-block:: bash
+
+    pypioffline config --full > ~/.pypioffline
+
+
+Review the config file and adjust settings as needed.
+
+Then sync the repository (this may take many hours as it downloads packages):
+
+.. code-block:: bash
+
+    pypioffline sync
+
+You can now copy the content of the repository directory to your offline environment and serve it via HTTP.
+
+For testing purposes you can run a local HTTP server:
+
+.. code-block:: bash
+
+    pypioffline serve
+
+And point a pip client to it:
+
+.. code-block:: bash
+
+    pip install --index-url http://localhost:8000/simple/ <package>
+
+Examples
+--------
+
+This will download all packages for Python 3.10 and Linux platform, both wheels and 
+source distributions:
+
+.. code-block:: bash
+
+    pypioffline --repository ~/pypioffline \
+          sync --python-versions cp310 py3 py2.py3 py3.10 py310 any \
+               --package-types bdist_wheel sdist \
+               --extensions whl tgz gz \
+               --platforms linux any
+
+The equivalent config file would be:
+
+.. code-block:: json
+
+    {
+        "repository": "~/pypioffline",
+        "python_versions": ["cp310", "py3", "py2.py3", "py3.10", "py310", "any"],
+        "package_types": ["bdist_wheel", "sdist"],
+        "extensions": ["whl", "tgz", "gz"],
+        "platforms": ["linux", "any"]
+    }
+
+Downloading list of packages
+----------------------------
+
+You can search for packages by name and by regex:
+
+.. code-block:: bash
+
+    pypioffline search <package-name-or-regex>
+
+.. code-block:: bash
+
+    pypioffline search --regex '^requests$'
+
+
+You can download a specific package by name:
+
+.. code-block:: bash
+
+    pypioffline sync --package <package-name>
+
+You can download a list of packages by providing a text file with one package name per line:
+
+.. code-block:: bash
+
+    pypioffline search --regex '^requests$' > requests_packages.txt
+    pypioffline sync --package-file requests_packages.txt
+
+**NOTE** *pypioffline* does not perform any dependency resolution. You need to provide the full list of packages you want to download. Use can use
+```pip download <package-name> -d <target-directory>``` to download a package and its dependencies. 
+
+Detailed Usage
+--------------
+
+See the help for details on all commands and options:
+
+.. code-block:: bash
+
+    pypioffline --help
+    pypioffline <command> --help
+
+Configuration
+-------------
+
+You can configure pypioffline using a JSON file. Example:
+
+.. code-block:: json
+
+    {
+        "repository": "~/tmp/pypioffline",
+        "processes": 20,
+        "python_versions": ["cp310", "py3", "py2.py3", "py3.10", "py310", "any"],
+        "package_types": ["bdist_wheel", "sdist"],
+        "extensions": ["whl", "tgz", "gz"],
+        "platforms": ["linux", "any"]
+    }
+
+Command-line options override config file settings.
+
+Using with pip
+--------------
+
+After syncing and serving your repository, you can install packages using pip:
+
+.. code-block:: bash
+
+    pip install --index-url http://localhost:8080/simple/ <package>
+
+History
+-------
+
+This package was inspired by `minirepo`_. I started to add a few features to minirepo but I got a little carried away. By the 
+time I was happy I realized that I change just about everything so I decided to release my version as a new package.
+
+.. _minirepo: https://pypi.org/project/minirepo/
+
+License
+-------
+
+MIT License. See LICENSE for details.
+
+Author
+------
+
+hippysurfer <hippysurfer+pypioffline@gmail.com>
