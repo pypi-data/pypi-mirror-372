@@ -1,0 +1,40 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0
+
+jobs:
+  generate-and-publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write  # Required for trusted publishing to PyPI
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Extract version from tag
+      id: version
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        VERSION=${TAG_NAME#v}  # Remove 'v' prefix
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version-file: '.python-version'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+
+    - name: Build the package and push it to PyPI
+      run: |
+        uv build
+        uv publish

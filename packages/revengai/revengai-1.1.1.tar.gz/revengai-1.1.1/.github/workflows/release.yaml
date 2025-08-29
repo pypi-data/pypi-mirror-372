@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+    release:
+      runs-on: reveng-small
+      steps:
+        - uses: actions/checkout@v4
+
+        - uses: actions/setup-go@v5
+          with:
+            go-version: 'stable'
+
+        - name: Generate a token
+          id: generate-token
+          uses: actions/create-github-app-token@v1
+          with:
+            app-id: ${{ vars.REVENG_APP_ID }}
+            private-key: ${{ secrets.REVENG_APP_PRIVATE_KEY }}
+
+        - uses: go-semantic-release/action@v1
+          id: semrel
+          env:
+            GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+
+        - name: Notify the releases channel about the release
+          if: steps.semrel.outputs.version != ''
+          uses: slackapi/slack-github-action@v2.0.0
+          env:
+            REPO_URL: "${{github.server_url}}/${{github.repository}}"
+            RELEASE_URL: "${{github.server_url}}/${{github.repository}}/releases/tag/v${{ steps.semrel.outputs.version }}"
+          with:
+            webhook: ${{ secrets.RELEASES_SLACK_WEBHOOK }}
+            webhook-type: incoming-webhook
+            payload: |
+              text: "<${{ env.RELEASE_URL }}|v${{ steps.semrel.outputs.version }}> has been released for <${{ env.REPO_URL }}|${{ github.repository }}>"
