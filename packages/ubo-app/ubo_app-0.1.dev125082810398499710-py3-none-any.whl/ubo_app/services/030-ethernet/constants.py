@@ -1,0 +1,3 @@
+# ruff: noqa: D100
+ETHERNET_STATE_ICON_ID = 'ethernet:state'
+ETHERNET_STATE_ICON_PRIORITY = -13
