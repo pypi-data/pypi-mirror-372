@@ -1,0 +1,645 @@
+Metadata-Version: 2.1
+Name: responses-validator
+Version: 0.3.0
+Summary: Write response validation scripts for requests using flexible YAML syntax, including: status_code, headers, text, and json()
+Keywords: requests,httpx,validator,validation,assertion,assert,check,matcher,testing,declarative,yaml,json,schema,jsonschema,jsonpath,api,rest,http,response,qa,automation,monitoring,utility,library
+Author-Email: dongfangtianyu <7629022+dongfangtianyu@users.noreply.github.com>
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Topic :: Software Development :: Testing
+Classifier: Topic :: Software Development :: Testing :: Acceptance
+Classifier: Topic :: Software Development :: Testing :: Mocking
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Typing :: Typed
+Requires-Python: >=3.12
+Requires-Dist: genson~=1.2.2
+Requires-Dist: jsonschema~=4.21.1
+Requires-Dist: jsonpath~=0.82.2
+Requires-Dist: mypy~=1.8.0
+Description-Content-Type: text/markdown
+
+
+# responses-validator
+
+A more convenient HTTP response assertion tool, designed for the `requests` library (also compatible with `httpx`). It supports writing flexible response validation scripts using YAML syntax, including validation for status codes, headers, text content, and JSON data, inspired by GitHub Actions.
+
+## Introduction
+
+`responses-validator` is a Python library for validating HTTP responses. It provides a declarative way to define complex response validation rules, supporting multiple validation modes such as wildcards, regular expressions, and JSON Schema. It is an indispensable tool for API testing, interface monitoring, and automation workflows.
+
+The core philosophy of `responses-validator` is to **separate validation rules from test code**. In traditional testing, assertion logic is often tightly coupled with the code, making it difficult to maintain. This library abstracts validation rules into separate **YAML files**, implementing a "validation as data" pattern. This approach offers several benefits:
+
+- **Separation of Concerns**: Test engineers or QA can focus on writing and maintaining YAML validation files without needing to delve into the internal workings of the test framework.
+- **Readability and Maintainability**: YAML-formatted validation rules are easier to read and manage than Python code, especially when there are many assertions.
+- **Reusability**: The same set of validation rules can be easily reused across different test cases, or even different projects.
+
+## Features
+
+- 🚀 **Easy to Use**: Supports both YAML configuration and Python code.
+- 🎯 **Multiple Validation Modes**: Supports exact matching, wildcards, regular expressions, JSON Path, and more.
+- 📝 **Detailed Error Messages**: Provides clear reasons for validation failures.
+- 🔧 **Highly Customizable**: Supports custom validation functions.
+- 📋 **Type Hinting**: Full support for type annotations.
+- 🌟 **Flexible Validation Rules**: Each field supports both simple and detailed configuration methods.
+
+## Installation
+
+**Requirements: Python >= 3.12**
+
+```
+pip install responses-validator
+```
+
+## Basic Usage
+
+### YAML Mode
+
+```python
+import requests
+from responses_validator import validator
+from yaml import safe_load
+
+# Define validation rules (YAML format)
+yaml_text = """
+status_code: 200
+headers:
+  content-type: 'application/json'
+json:
+  id: 1
+  name: "*"
+text: "*success*"
+"""
+validate_config = safe_load(yaml_text)
+
+# Send request and assert
+resp = requests.get("https://api.example.com/users/1")
+validator(resp, **validate_config) # Throws an exception if validation fails
+```
+
+### Python Mode
+
+```python
+import requests
+from responses_validator import validator
+
+# Send request
+resp = requests.get("https://api.example.com/users/1")
+
+# Use Python arguments directly
+errors = validator(
+    resp,
+    status_code=200,
+    headers={"content-type": "application/json*"},
+    json={"id": 1, "name": "*"},
+    text="*success*",
+    raise_exception=False  # Don't raise an exception, return error information instead
+)
+
+if errors:
+    print("Validation failed:", errors)
+else:
+    print("Validation successful!")
+```
+
+## Advanced Usage
+
+### Status Code Validation
+
+Status code validation supports a single value, wildcards, and multiple values (separated by `|`):
+
+```yaml
+---
+# Single status code
+status_code: 200
+
+---
+# Wildcard matching
+status_code: "2*"  # Matches all 2xx status codes. Note: quotes are required when using special characters.
+
+---
+# Multiple possible status codes
+status_code: "200 | 201 | 204"
+
+---
+# Complex matching
+status_code: "20* | 30*"  # Matches 2xx or 3xx status codes
+```
+
+### Text Validation
+
+Text supports both simple strings and detailed configurations (for detailed configuration, refer to `TextFieldDict`):
+
+```yaml
+---
+# Simple string matching (uses glob mode by default)
+text: "Welcome*" # Note: quotes are required when using special characters.
+
+---
+# Number
+text: 12345 # Numbers are automatically converted to strings
+
+---
+# Detailed configuration: you can define value, mode, and msg (failure message)
+text: # Exactly the same as the first validation
+  value: "Welcome *"
+  mode: glob  # Use glob for wildcard matching
+
+---
+# Exact matching
+text:
+  value: "Welcome home"
+  mode: same  # same mode for exact matching
+  msg: Response content must be exactly 'Welcome home'!
+
+---
+# Regular expression matching
+text:
+  value: "^Welcome (?:to )?[a-zA-Z]+$"
+  mode: re # re mode for regular expression matching
+  msg: Response content must start with 'Welcome' or 'Welcome to'
+
+---
+# Custom function validation
+text:
+  value: "lambda text: len(text) > 100"
+  mode: function
+  msg: Response text length must be greater than 100 characters
+```
+
+### Headers Validation
+
+Headers are a dictionary (key-value pairs). Each key is a request header, and its value is a mini **Text validation**.
+
+```yaml
+---
+# Simple key-value matching
+headers:
+  content-type: "application/json"
+  server: "nginx*"  # Supports wildcards
+
+---
+# Detailed configuration
+headers:
+  content-type:
+    value: "application/json"
+    mode: same  # Exact match
+    msg: Response type must be JSON
+  
+  server:
+    value: "nginx.*"
+    mode: re  # Regular expression match
+    msg: Server must be nginx
+  
+  x-rate-limit-remaining:
+    value: "lambda x: int(x) > 0"
+    mode: function  # Custom function validation
+    msg: API call limit has been reached
+
+---
+# Mixed usage
+headers:
+  content-type: "application/json"  # Simple mode
+  server:  # Detailed mode
+    value: "nginx*"
+    mode: glob
+    msg: Server must be nginx
+```
+
+### Cookies Validation
+
+Cookies validation is identical to Headers validation:
+
+```yaml
+---
+# Simple key-value matching
+cookies:
+  session_id: "*"
+  user_token: "abc*"
+
+---
+# Detailed configuration
+cookies:
+  session_id:
+    value: "*"
+    mode: glob
+    msg: Session ID cannot be empty
+  
+  user_token:
+    value: "[a-f0-9]{32}"
+    mode: re
+    msg: User token format is incorrect
+  
+  expires:
+    value: "lambda x: int(x) > 1234567890"
+    mode: function
+    msg: Cookie must not be expired
+```
+
+### JSON Validation
+
+JSON validation is the most powerful feature, supporting multiple validation modes (for detailed configuration, refer to `JSONFieldDict`):
+
+```yaml
+---
+# Simple partial matching (glob mode by default)
+json:
+  id: 1
+  name: John
+  # The actual response can contain other fields
+
+---
+# Partial array matching
+json:
+  users:
+    - id: 1
+      name: John
+    # The actual array can contain more elements
+
+---
+# Detailed configuration - Exact matching
+json:
+  value:
+    id: 1
+    name: John
+    email: "john@example.com"
+  mode: same  # Must match exactly
+  msg: JSON structure and content must be identical
+
+---
+# JSON Schema validation
+json:
+  value: # No need to provide a schema, just an example that conforms to the schema.
+    id: 99999
+    name: string
+    email: eamil@example.com
+  mode: schema
+  msg: JSON must conform to the same schema as the value
+
+---
+# JSONPath validation
+json:
+  value:
+    "$.users[*].name": ["John", "Jane"]
+    "$.total_count": 2 # Will be automatically converted to a list
+    "$.data.status": active # Will be automatically converted to a list
+  mode: jsonpath
+  msg: JSONPath query result does not match
+
+---
+# KeyPath validation
+json:
+  value:
+    "users[0].name": John  # This field uses the text `globe` mode
+    "data.status":         # This field uses the text `function` mode
+      value: "lambda data: data =='active' "
+      model: function
+  mode: keypath
+  msg: KeyPath verification failed
+  
+---
+# Custom function validation
+json:
+  value: "mymodule.validators.validate_user_response"
+  mode: function
+  msg: User response validation failed
+
+---
+# Lambda function validation
+json:
+  value: "lambda data: data.get('id', 0) > 0"
+  mode: function
+  msg: User ID must be greater than 0
+```
+
+### Response Validation
+
+For custom complex validation needs, you can implement a custom function to validate the entire Response object.
+
+The function should accept one positional argument (`resp`) and return a boolean value (`True`: validation passed; `False`: validation failed):
+
+```python
+# my_funcs.py
+def ret_true(resp):
+    print(f"call ret_true: {resp=}")
+    return True
+
+def ret_false(resp):
+    print(f"call ret_false: {resp=}")
+    return False
+```
+
+```yaml
+---
+# Import a function from a file
+function: 'my_funcs.ret_true'
+
+---
+# Status code validation
+function: "lambda resp: resp.status_code == 200"
+
+---
+# Status code range validation
+function: "lambda resp: 200 <= resp.status_code < 300"
+
+---
+# JSON data validation
+function: "lambda resp: resp.json().get('status') == 'success'"
+
+---
+# Array length validation
+function: "lambda resp: len(resp.json().get('data', [])) > 0"
+
+---
+# Text content validation
+function: "lambda resp: 'error' not in resp.text.lower()"
+
+---
+# Composite condition validation
+function: "lambda resp: resp.status_code == 200 and resp.json().get('total', 0) > 10"
+```
+
+## Detailed Configuration Structure
+
+### TextFieldDict
+
+Used for validating text-based content like `text`, `headers`, and `cookies`:
+
+```python
+from typing import TypedDict, NotRequired, Required
+from responses_validator.fields import TextFieldMode
+
+class TextFieldDict(TypedDict):
+    name: NotRequired[str]          # Field name (set automatically, usually not specified manually)
+    value: Required[str]            # Validation value (required)
+    mode: NotRequired[TextFieldMode]  # Validation mode (optional, defaults to glob)
+    msg: NotRequired[str]           # Custom error message (optional)
+```
+
+**About `name`**:
+
+- When validating `text`, the `name` field is automatically populated with `text`.
+- When validating `headers` and `cookies`, the `name` field is automatically populated with the dictionary key (e.g., `content-type`).
+
+**Supported Validation Modes (`TextFieldMode`):**
+
+- `same`: Exact match; the value must be perfectly equal.
+- `glob`: Wildcard matching; supports `*` and `?` (default mode).
+- `re`: Regular expression matching.
+- `function`: Custom function validation. The `value` should be a string in one of two formats:
+  1.  **Module import path**: e.g., `"mymodule.validators.validate_session"`
+  2.  **Lambda expression**: e.g., `"lambda x: int(x) > 0"`
+
+**Example:**
+
+```yaml
+# Examples of various TextFieldDict usages
+headers:
+  # glob mode (default)
+  content-type: "application/*"
+  
+  # same mode
+  server:
+    value: "nginx/1.21.5"
+    mode: same
+    msg: Server version must match exactly
+  
+  # re mode
+  x-request-id:
+    value: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    mode: re
+    msg: Request ID must be a standard UUID format
+  
+  # function mode
+  content-length:
+    value: "lambda x: int(x) > 0"
+    mode: function
+    msg: Content length must be greater than 0
+
+text:
+  value: "Welcome, .*!"
+  mode: re
+  msg: Welcome message format is incorrect
+
+cookies:
+  session:
+    value: "mymodule.validators.validate_session"
+    mode: function
+    msg: Session validation failed
+```
+
+### JSONFieldDict
+
+The detailed assertion dictionary structure for `json`:
+
+```python
+from typing import TypedDict, NotRequired, Required, Union
+from responses_validator.fields import JSONFieldMode
+
+class JSONFieldDict(TypedDict):
+    name: NotRequired[str]              # Field name (set automatically)
+    value: Required[Union[dict, str]]   # Validation value, can be a dict or string (required)
+    mode: NotRequired[JSONFieldMode]    # Validation mode (optional, defaults to `glob`)
+    msg: NotRequired[str]               # Custom error message (optional)
+```
+
+**About `name`**:
+
+- When validating `json`, the `name` field is automatically populated with `json`.
+
+**Supported Validation Modes (`JSONFieldMode`):**
+
+- `glob`: Partial matching, recursively matches a subset of the JSON structure (default mode).
+- `same`: Exact matching; the JSON must be completely identical.
+- `"schema"`: JSON Schema validation; validates that the actual JSON and expected JSON have the same schema.
+- `"jsonpath"`: JSONPath expression validation; uses path queries.
+- `"keypath"`: Simple selection, advanced verification; Perform 'TextFieldDict' multimodal validation on each field.
+- `function`: Custom function validation. The `value` should be a string in one of two formats:
+  1.  **Module import path**: e.g., `"mymodule.validators.validate_user"`
+  2.  **Lambda expression**: e.g., `"lambda data: data['id'] > 0"`
+
+**Detailed Examples:**
+
+```yaml
+---
+json:
+  # glob mode - Partial matching (default)
+  value:
+    user:
+      id: 1
+      name: John
+    # The actual JSON can have more fields, as long as it includes these
+  mode: glob
+  msg: User information does not match
+
+---
+json:
+  # same mode - Exact matching
+  mode: same
+  msg: Response structure and content must match exactly
+  value:
+    status: success
+    data: [{"user":{"id":1, "name":"aaa"}}, {"user":{"id":2, "name":"bb"}}]
+    count: 2
+
+---
+json:
+  # schema mode - JSON Schema validation
+  value:
+    status: string
+    data: []
+    count: 0
+  mode: schema
+  msg: Response structure must match exactly
+---
+json:
+  # jsonpath mode - Path query validation
+  value:
+    "$.users[*].id": [1, 2, 3]       # Key is the jsonpath, value is the expected result (list)
+    "$.users[0].name": ["John"]          
+    "$.total": 3                     # If the value is not a list, it's automatically converted
+    "$.status": success              
+  mode: jsonpath
+  msg: JSONPath query result does not meet expectations
+
+---
+json:
+  # function mode - Module function
+  value: "validators.complex_json_validator"
+  mode: function
+  msg: Complex JSON validation failed
+
+---
+json:
+  # function mode - Lambda expression
+  value: "lambda data: len(data.get('users', [])) > 0 and all('email' in user for user in data['users'])"
+  mode: function
+  msg: All users must have an email field
+```
+
+## Complete Example
+
+```yaml
+# test_api.yaml
+# A complete validation configuration example
+
+status_code: "200 | 201"
+
+headers:
+  content-type: "application/json*"
+  server:
+    value: "nginx.*"
+    mode: re
+    msg: Must be an nginx server
+  x-rate-limit-remaining:
+    value: "lambda x: int(x) > 10"
+    mode: function
+    msg: API call quota is insufficient
+
+cookies:
+  session_id: "*"
+  auth_token:
+    value: "[a-f0-9]{64}"
+    mode: re
+    msg: Authentication token format is incorrect
+
+text:
+  value: "*success*"
+  mode: glob
+  msg: Response text must contain the success flag
+
+json:
+  value:
+    "$.data[*].id": [1, 2, 3]
+    "$.meta.total": 3
+    "$.status": ok
+  mode: jsonpath
+  msg: Data structure validation failed
+
+function: "lambda resp: resp.elapsed.total_seconds() < 2.0"
+```
+
+## Error Handling
+
+When validation fails, the library provides detailed error messages:
+
+```python
+from responses_validator import validator, ResponseAssertionError
+import requests
+
+resp = requests.get('https://api.example.com')
+
+try:
+    # Exception-raising mode
+    validator(resp, status_code=200, raise_exception=True)
+    print("✅ Validation passed!")
+except ResponseAssertionError as e:
+    print(f"❌ Validation failed: {e}")
+
+# Or, non-exception-raising mode
+errors = validator(resp, status_code=200, raise_exception=False)
+if errors:
+    for field, message in errors.items():
+        print(f"{field}: {message}")
+else:
+    print("✅ Validation passed!")
+```
+
+## Best Practices
+
+1.  **Use YAML Configuration**: For complex validation rules, it is recommended to manage them in YAML files.
+2.  **Choose Validation Modes Wisely**: Select the appropriate validation mode based on your needs to avoid over-complication.
+3.  **Provide Clear Error Messages**: Provide clear error messages (`msg`) for important validation rules.
+4.  **Modularize Validation Functions**: Extract complex validation logic into separate, reusable functions.
+5.  **Performance Considerations**: For high-frequency validations, prioritize simpler validation modes.
+
+## FAQ
+
+**Q: How do I validate a specific element in an array?**
+
+A: Use the JSONPath mode, for example, `"$.users[0].name": ["John"]`.
+
+**Q: Are Headers and Cookies case-sensitive?**
+
+A: No, the library automatically converts keys to lowercase for matching.
+
+**Q: Are there security restrictions on Lambda expressions?**
+
+A: Yes, Lambda expressions are executed in a restricted environment and can only use the following built-in functions:
+- Basic types: `len`, `str`, `int`, `float`, `bool`, `list`, `dict`, `tuple`, `set`
+- Math functions: `abs`, `max`, `min`, `sum`
+- Logical functions: `any`, `all`
+- Other safe functions: `sorted`, `reversed`, `enumerate`, `zip`, `range`, `isinstance`, `hasattr`, `getattr`
+- Allowed modules: `re` (for regular expressions)
+
+**Q: How can I use simple and detailed configurations at the same time?**
+
+A: You can mix them. For any given field, the detailed configuration will take precedence.
+
+
+**Q: `jsonpath` VS `keypath`: How to choose?**
+
+**A:**
+
+| Comparison | jsonpath | keypath |
+|---|---|---|
+| Example | `$.user_list.[?(@.age >=18)].name` | `user_list[2].name` |
+| Syntax | Complex syntax, powerful features | Simple value retrieval expression |
+| Result | List | String |
+| Validation | Validates if the query results are equal | Uses Text validation |
+| Advantage | Powerful features of jsonpath expressions | Multiple modes of Text validation |
+
+In short:
+
+*   In jsonpath mode, all fields undergo **equality validation**.
+*   In keypath mode, individual fields can use **different validation modes**.
+
+## Feedback
+
+
+
+wx: python_sanmu
