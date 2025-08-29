@@ -1,0 +1,17 @@
+from typing import Any, Type
+
+from tramp.optionals import Optional
+
+from bevy.containers import Container
+from bevy.hooks import hooks
+
+
+@hooks.HANDLE_UNSUPPORTED_DEPENDENCY
+def type_factory[T](container: Container, dependency: Type[T], context: dict[str, Any]) -> Optional[T]:
+    """This hook adds a dependency factory that injects an instances of the dependency type."""
+    if isinstance(dependency, type):
+        value = container.call(dependency)
+        container.add(dependency, value)
+        return Optional.Some(value)
+
+    return Optional.Nothing()
