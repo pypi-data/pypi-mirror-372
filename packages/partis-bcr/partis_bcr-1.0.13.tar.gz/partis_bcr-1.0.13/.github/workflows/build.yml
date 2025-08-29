@@ -1,0 +1,129 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+    steps:
+    - uses: actions/checkout@v3
+    - name: Checkout tags
+      run: git fetch --unshallow origin +refs/tags/*:refs/tags/*
+    - name: Set git branch variable
+      run: echo ::set-env name=BRANCH::$(git branch --show-current)
+    - name: Set git tag variable
+      run: if [ $BRANCH == "main" ];then echo ::set-env name=TAG::$(git describe --tags);else echo ::set-env name=TAG::$BRANCH;fi
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+    - name: Build the Docker image
+      run: docker build . -t quay.io/matsengrp/partis:$TAG
+    # - name: Run tests in the Docker image  # eh, would need to install simulation stuff to do this, and not worth it at the moment (the quick test is run at the end of the docker build above)
+    #   run: docker run quay.io/matsengrp/partis:$TAG /bin/bash -c "/partis/test/test.py --run-all"
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-13]
+        python-version: ['3.12']
+        install-method: ['pip', 'pipx']
+      fail-fast: false
+
+    env:
+      TERM: xterm
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Checkout ham submodule
+      if: matrix.install-method == 'pip'
+      run: |
+        git submodule update --init packages/ham
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt update
+        sudo apt install -y python3 python3-pip python-is-python3 pipx build-essential cmake libgsl-dev libyaml-cpp-dev scons mafft ncurses-base ncurses-bin r-base
+        # sudo apt install libbpp-core libbpp-seq  # which packages do i actually have to write here?
+
+    - name: Install system dependencies (macOS)
+      if: startsWith(matrix.os, 'macos')
+      run: |
+        brew install python3 pipx cmake gsl yaml-cpp scons mafft r
+        # brew tap jydu/homebrew-biopp
+        # brew install libbpp-core bppsuite  # which packages do i actually have to write here?
+        brew install --cask font-lato
+
+    # - name: Install R tree generation packages  # could turn this back on, but it's really slow and not super important (and is unnecessary with --no-tree-gen arg below), although note we're still installing R above
+    #   run: |
+    #     R --slave -e 'dir.create(c(Sys.getenv("R_LIBS_USER")), recursive=TRUE); install.packages(c("TreeSim", "TreeSimGM", "geiger", "MASS"), repos="http://cran.rstudio.com/", dependencies=TRUE, lib=c(Sys.getenv("R_LIBS_USER")))'
+
+    - name: Install with pip
+      if: matrix.install-method == 'pip'
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -e . -v
+
+    - name: Install with pipx
+      if: matrix.install-method == 'pipx'
+      run: |
+        pipx install partis-bcr
+
+    - name: Test partis help
+      run: |
+        partis --help
+
+    - name: Test scripts work
+      run: |
+        split-loci.py --help
+
+    - name: Run quick test
+      run: |
+        partis-test.py --quick
+
+    - name: Run full test
+      run: |
+        # if [[ "${{ matrix.install-method }}" == "pipx" || "${{ matrix.os }}" == macos* ]]; then
+        if [[ "${{ matrix.os }}" == macos* ]]; then
+          partis-test.py --no-simu
+          partis-test.py --paired --no-simu
+        else
+          partis-test.py --no-per-base-mutation --no-tree-gen
+          partis-test.py --paired --no-per-base-mutation --no-tree-gen
+        fi
+
+    - name: Build and publish to PyPI
+      if: matrix.install-method == 'pip' && github.event_name == 'push'  #  && github.ref == 'refs/heads/main'  #  && matrix.os == 'ubuntu-latest'
+      run: |
+        python -m pip install build twine
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          python setup.py bdist_wheel --plat-name manylinux1_x86_64
+          python -m build --sdist 2>&1 | grep -v 'adding .test/\|adding .data/\|creating partis_bcr.*/test/\|copying docs/\|copying data/\|copying packages/\|copying python/.*/test/\|copying build/.*/test/'
+          python -m twine check dist/*
+          python -m twine upload dist/*
+        else
+          python -m build --wheel 2>&1 | grep -v 'adding .test/\|adding .data/\|creating partis_bcr.*/test/\|copying docs/\|copying data/\|copying packages/\|copying python/.*/test/\|copying build/.*/test/'
+          python -m twine check dist/*.whl
+          python -m twine upload dist/*.whl
+        fi
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
