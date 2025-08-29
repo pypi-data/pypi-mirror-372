@@ -1,0 +1,340 @@
+version: '1.1'
+
+# =======================================
+# Global Definitions
+# =======================================
+
+# Global snapshot configuration  
+snapshot:
+  enabled: true
+  default_storage_dir: '/opt/dooservice/snapshots'
+  retention:
+    days: 60  # Keep snapshots for 60 days
+    max_snapshots: 100  # Maximum 100 snapshots globally
+
+# Global backup configuration
+backup:
+  enabled: true  # Enable backup system globally
+  output_dir: '/opt/dooservice/backups'  # Directory to store backups
+  compression: true  # Compress backup files by default
+  includes:  # Default inclusions for manual backups
+    include_database: true  # Include database in backups by default
+    include_filestore: true  # Include filestore in backups by default
+  retention:  # Backup retention policies
+    days: 30  # Keep backups for 30 days (0 = no limit)
+    max_backups: 10  # Maximum number of backups to keep (0 = no limit)
+  auto_backup:  # Global automatic backup configuration
+    enabled: true  # Enable automatic backups globally
+    schedule:  # Schedule configuration for automatic backups
+      frequency: 'daily'  # daily, weekly, monthly
+      time: '00:05'  # Time to run backups (HH:MM format)
+
+# =======================================
+# Global GitHub Integration Configuration
+# =======================================
+github:
+  enabled: true
+  oauth:
+    client_id: "your_github_oauth_client_id"
+    client_secret: "your_github_oauth_client_secret"
+    redirect_uri: "http://localhost:7071/auth/callback"
+    scopes:
+      - repo
+      - read:user
+      - admin:public_key
+  webhook:
+    enabled: true
+    default_host: 0.0.0.0
+    default_port: 7070
+    default_secret: your_webhook_secret_token
+    auto_start: false
+
+# =======================================
+# Domain Management Configuration
+# =======================================
+domains:
+  base_domains:
+    - "example.com"
+    - "dev.example.com"
+  ssl:
+    provider: "letsencrypt"  # Options: letsencrypt, custom, disabled
+    email: "admin@example.com"  # Required for Let's Encrypt
+    # custom_cert_path: "/path/to/cert.pem"  # Only if provider is "custom"
+    # custom_key_path: "/path/to/private.key"  # Only if provider is "custom"
+
+repositories:
+  # Example repository configurations based on real usage
+  odoo_facturacion_addons:
+    source_type: 'git'
+    type: 'github'
+    url: 'https://github.com/your-org/odoo-facturacion.git'
+    branch: 'v18.2'
+    submodules: false
+
+  odoo_sale_addons:
+    source_type: 'git'
+    type: 'github'
+    url: 'https://github.com/your-org/odoo-sale.git'
+    branch: 'v18.2'
+    submodules: false
+    github:
+      auto_watch: true
+      default_action: 'pull+restart'
+      
+  odoo_reports_addons:
+    source_type: 'git'
+    type: 'github'
+    url: 'https://github.com/your-org/odoo-reports.git'
+    branch: 'v18.2'
+    submodules: false
+    github:
+      auto_watch: true
+      default_action: 'pull+restart'
+      
+  odoo_utils_addons:
+    source_type: 'git'
+    type: 'github'
+    url: 'https://github.com/your-org/odoo-utils.git'
+    branch: 'main'
+    submodules: false
+    github:
+      auto_watch: true
+      default_action: 'pull+restart'
+      
+  odoo_stock_addons:
+    source_type: 'git'
+    type: 'github'
+    url: 'https://github.com/your-org/odoo-stock.git'
+    branch: 'main'
+    submodules: false
+    github:
+      auto_watch: true
+      default_action: 'pull+restart'
+      
+  odoo_project_addons:
+    source_type: 'git'
+    type: 'github'
+    url: 'https://github.com/your-org/odoo-project.git'
+    branch: 'main'
+    submodules: false
+    github:
+      auto_watch: true
+      default_action: 'pull+restart'
+
+  # Community repository example
+  oca_web_addons:
+    source_type: 'git'
+    type: 'github'
+    url: 'https://github.com/OCA/web.git'
+    branch: '18.0'
+    submodules: false
+
+# =======================================
+# Instances
+# =======================================
+
+instances:
+  # Production instance example based on real configuration
+  production_instance:
+    odoo_version: '18.0'
+    data_dir: '/opt/odoo-data/${name}'
+
+    # Instance-specific automatic backup configuration
+    auto_backup:
+      enabled: true  # Enable automatic backups for this instance
+      db_name: 'prod-database'  # Name of the database to backup
+  
+    paths:
+      config: '${data_dir}/etc/odoo.conf'
+      addons: '${data_dir}/addons'
+      logs: '${data_dir}/logs'
+      filestore: '${data_dir}/filestore'
+
+    ports:
+      http: '8069'
+      longpolling: '8072'
+
+    repositories:
+      - odoo_facturacion_addons
+      - odoo_sale_addons
+      - odoo_reports_addons
+      - odoo_utils_addons
+      - odoo_stock_addons
+      - odoo_project_addons
+
+    python_dependencies:
+      - dropbox
+      - pyncclient
+      - boto3
+      - nextcloud-api-wrapper
+      - paramiko
+
+    # Instance-specific snapshot configuration (optional - overrides global settings)
+    snapshot:
+      enabled: true
+      storage_dir: '${data_dir}/snapshots'
+      include_backup_by_default: true
+      retention:
+        days: 30  # Keep instance snapshots for 30 days
+        max_snapshots: 10  # Keep maximum 10 snapshots for this instance
+
+    env_vars:
+      # -- Odoo Connection Settings (for odoo.conf)
+      DB_HOST: 'db_${name}'
+      DB_PORT: '5432'
+      DB_USER: '${name}_user_db'
+      DB_PASSWORD: 'your-secure-db-password'
+      ADMIN_PASSWD: 'your-secure-admin-password=='
+      WORKERS: 1
+      LIMIT_MEMORY_HARD: 2684354560
+      LIMIT_MEMORY_SOFT: 2147483648
+      TIMEZONE: 'America/Lima'
+
+      # -- Host ports (can be overridden by environment)
+      ODOO_HTTP_PORT: '8069'
+      ODOO_LONGPOLLING_PORT: '8072'
+
+  # Development instance example
+  development_instance:
+    odoo_version: '18.0'
+    data_dir: '/opt/odoo-data/${name}'
+    
+    auto_backup:
+      enabled: false  # Disable automatic backups for development
+
+    paths:
+      config: '${data_dir}/etc/odoo.conf'
+      addons: '${data_dir}/addons'
+      logs: '${data_dir}/logs'
+      filestore: '${data_dir}/filestore'
+
+    ports:
+      http: '8079'
+      longpolling: '8082'
+
+    repositories:
+      - odoo_utils_addons
+      - oca_web_addons
+
+    python_dependencies:
+      - debugpy  # For debugging
+      - watchdog  # For file watching
+
+    snapshot:
+      enabled: true
+      storage_dir: '${data_dir}/snapshots'
+      retention:
+        days: 7
+        max_snapshots: 5
+
+    env_vars:
+      DB_HOST: 'db_${name}'
+      DB_PORT: '5433'  # Different port for dev
+      DB_USER: 'dev_user'
+      DB_PASSWORD: 'dev-password'
+      ADMIN_PASSWD: 'dev-admin-password'
+      WORKERS: 0  # Single-threaded for debugging
+      LIMIT_MEMORY_HARD: 1073741824
+      LIMIT_MEMORY_SOFT: 536870912
+      TIMEZONE: 'UTC'
+      ODOO_HTTP_PORT: '8079'
+      ODOO_LONGPOLLING_PORT: '8082'
+
+    deployment:
+      type: 'docker'
+      docker:
+        web:
+          image: 'odoo:${odoo_version}'
+          container_name: 'web_${name}'
+          restart_policy: 'unless-stopped'
+          volumes:
+            - '${paths.addons}:/mnt/extra-addons'
+            - '${paths.config}:/etc/odoo/odoo.conf'
+            - '${paths.logs}:/var/log/odoo'
+            - '${paths.filestore}:/var/lib/odoo/filestore'
+          networks:
+            - 'net_${name}'
+          ports:
+            - '${env_vars.ODOO_HTTP_PORT}:8069'
+            - '${env_vars.ODOO_LONGPOLLING_PORT}:8072'
+          depends_on:
+            - 'db_${name}'
+          environment:
+            TZ: '${env_vars.TIMEZONE}'
+          healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8069"]
+            interval: "30s"
+            timeout: "10s"
+            retries: 3
+            start_period: "30s"
+
+        db:
+          image: 'postgres:15'
+          container_name: 'db_${name}'
+          restart_policy: 'unless-stopped'
+          volumes:
+            - '${data_dir}/postgresql:/var/lib/postgresql/data'
+          networks:
+            - 'net_${name}'
+          ports:
+            - '${env_vars.DB_PORT}:5432'
+          environment:
+            TZ: '${env_vars.TIMEZONE}'
+            POSTGRES_USER: '${env_vars.DB_USER}'
+            POSTGRES_PASSWORD: '${env_vars.DB_PASSWORD}'
+            POSTGRES_DB: 'postgres'
+          healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${env_vars.DB_USER}"]
+            interval: "10s"
+            timeout: "5s"
+            retries: 5
+
+    deployment:
+      type: 'docker'
+      docker:
+        web:
+          image: 'odoo:${odoo_version}'
+          user: 'root'
+          container_name: 'web_${name}'
+          restart_policy: 'unless-stopped'
+          volumes:
+            - '${paths.addons}:/mnt/extra-addons'
+            - '${paths.config}:/etc/odoo/odoo.conf'
+            - '${paths.logs}:/var/log/odoo'
+            - '${paths.filestore}:/root/.local/share/Odoo'
+          networks:
+            - 'net_${name}'
+          ports:
+            - '${env_vars.ODOO_HTTP_PORT}:8069'
+            - '${env_vars.ODOO_LONGPOLLING_PORT}:8072'
+          depends_on:
+            - 'db_${name}'
+          environment:
+            TZ: '${env_vars.TIMEZONE}'
+          healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8069"]
+            interval: "30s"
+            timeout: "10s"
+            retries: 3
+            start_period: "30s"
+
+        db:
+          image: 'postgres:15'
+          container_name: 'db_${name}'
+          restart_policy: 'unless-stopped'
+          volumes:
+            - '${data_dir}/postgresql:/var/lib/postgresql/data'
+          networks:
+            - 'net_${name}'
+          ports:
+            - '${env_vars.DB_PORT}:5432'
+          environment:
+            TZ: '${env_vars.TIMEZONE}'
+            POSTGRES_USER: '${env_vars.DB_USER}'
+            POSTGRES_PASSWORD: '${env_vars.DB_PASSWORD}'
+            POSTGRES_DB: 'postgres'
+          healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${env_vars.DB_USER}"]
+            interval: "10s"
+            timeout: "5s"
+            retries: 5
