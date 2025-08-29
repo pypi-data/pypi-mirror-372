@@ -1,0 +1,29 @@
+name: Build Docs
+
+on: [ push, pull_request ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv pip install -U -r requirements.txt
+        env:
+          UV_SYSTEM_PYTHON: 1
+
+      - name: Build docs
+        working-directory: ./docs
+        run: sphinx-build -T -E -W --keep-going -b html "." "_build"
