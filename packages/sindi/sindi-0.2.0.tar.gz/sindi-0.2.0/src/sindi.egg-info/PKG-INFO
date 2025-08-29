@@ -1,0 +1,90 @@
+Metadata-Version: 2.4
+Name: sindi
+Version: 0.2.0
+Summary: SInDi: Semantic Invariant Differencing for Solidity Smart Contracts
+Home-page: https://github.com/mojtaba-eshghie/Sindi
+Author: Mojtaba Eshghie
+Author-email: eshghie@kth.se
+License: MIT
+Project-URL: Source, https://github.com/mojtaba-eshghie/Sindi
+Project-URL: Author Website, https://eshghie.com/
+Project-URL: Issues, https://github.com/mojtaba-eshghie/Sindi/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: sympy>=1.13
+Requires-Dist: colorama>=0.4.6
+Requires-Dist: pyyaml>=6.0.1
+Requires-Dist: z3-solver>=4.12.4.0
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license
+Dynamic: license-file
+Dynamic: project-url
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Δ Sindi: Semantic Invariant Differencing for Solidity Smart Contracts
+
+SInDi compares two **Solidity boolean predicates** (e.g., `require` guards) and decides whether they are **equivalent**, or **one is stronger**.
+
+- **Docs & source:** GitHub → https://github.com/mojtaba-eshghie/SInDi  
+- **Author:** https://eshghie.com/
+
+## Install
+
+```bash
+pip install sindi
+````
+
+## Quick usage
+
+### Library
+
+```python
+from sindi import Comparator, ComparatorRulesOnly
+
+cmp = Comparator()
+print(cmp.compare("a > b", "a >= b"))
+# "The first predicate is stronger."
+
+light = ComparatorRulesOnly()
+print(light.compare("a > b * 2", "a > b"))
+# "The first predicate is stronger."
+```
+
+### CLI
+
+```bash
+# Compare (full)
+sindi compare "msg.sender == msg.origin && a >= b" "msg.sender == msg.origin"
+
+# Light comparator (no SMT)
+sindi compare "a > b * 2" "a > b" --light
+
+# Rewrite / tokenize / parse / simplify
+sindi rewrite "isOwner() && now >= 0"
+sindi tokenize "..." --json
+sindi parse "..." --tree
+sindi simplify "..." --show-sympy --json
+```
+
+## API (tiny)
+
+* `Comparator().compare(p1: str, p2: str) -> str`
+  Full semantic differencing (SymPy + selective Z3 where needed).
+
+* `ComparatorRulesOnly().compare(p1: str, p2: str) -> str`
+  Lightweight, **solver-free** structural/rewrites reasoning.
+
+---
+
+*Notes:* Functions & arrays are treated as uninterpreted symbols for reasoning. Division is modeled as `a * b**-1`. Variables are assumed non-negative in SMT checks.
