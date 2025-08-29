@@ -1,0 +1,101 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "environ-odoo-config"
+version = "0.2.1"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    "Programming Language :: Python :: 3 :: Only",
+    "Framework :: Odoo",
+    "Framework :: Odoo :: 12.0",
+    "Framework :: Odoo :: 13.0",
+    "Framework :: Odoo :: 14.0",
+    "Framework :: Odoo :: 15.0",
+    "Framework :: Odoo :: 16.0",
+    "Framework :: Odoo :: 17.0",
+    "Framework :: Odoo :: 18.0",
+    "Typing :: Typed",
+]
+dependencies = [
+    "addons-installer>=3,<4",
+    "python-dotenv~=1.0;python_version>'3.7'",
+    "python-dotenv==0.21.1;python_version=='3.7'",
+    "typing-extensions>=4.3.0,<5",
+    "get-annotations>=0.1.2;python_version<'3.10'",
+    "importlib-metadata>=6.7.0",
+]
+
+[project.scripts]
+odoo-env2config = "environ_odoo_config.cli:env_to_config"
+
+[project.entry-points."environ_odoo_config.mapper"]
+clevercloud_db = "environ_odoo_config.mappers.cc_postgresql:clevercloud_postgresql"
+session_redis = "environ_odoo_config.mappers.session_redis:redis_session"
+oca_queue_job = "environ_odoo_config.mappers.oca:queue_job"
+
+[project.entry-points."environ_odoo_config.entry_extensions"]
+nginx_ext = "environ_odoo_config.converters.extensions.nginx:NginxHttpExtension"
+
+[project.entry-points."environ_odoo_config.converter"]
+addons_path = "environ_odoo_config.converters.addons_path:ConfigConverterAddonsPath"
+database ="environ_odoo_config.converters.database:ConfigConverterDatabase"
+geo_ip_db ="environ_odoo_config.converters.geo_ip_db:ConfigConverterGeoIPDb"
+http ="environ_odoo_config.converters.http:ConfigConverterHttp"
+gevent ="environ_odoo_config.converters.gevent:ConfigConverterGevent"
+smtp ="environ_odoo_config.converters.smtp:ConfigConverterSmtp"
+i18n ="environ_odoo_config.converters.i18n:ConfigConverterI18n"
+log ="environ_odoo_config.converters.log:ConfigConverterLogging"
+misc ="environ_odoo_config.converters.misc:ConfigConverterMisc"
+process_limit = "environ_odoo_config.converters.process_limit:ConfigConverterLimit"
+test ="environ_odoo_config.converters.test:ConfigConverterTest"
+update_init ="environ_odoo_config.converters.update_init:ConfigConverterUpdateInit"
+wide_modules ="environ_odoo_config.converters.wide_modules:ConfigConverterServerWideModule"
+workers ="environ_odoo_config.converters.workers:ConfigConverterWorkers"
+oca_queue_job ="environ_odoo_config.converters.oca_queue_job:ConfigConverterQueueJob"
+
+[project.entry-points."environ_odoo_config.server_wide_module"]
+web = "environ_odoo_config.converters.wide_modules:always_true"
+base = "environ_odoo_config.converters.wide_modules:always_true"
+queue_job = "environ_odoo_config.converters.oca_queue_job:if_converter_enable"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/environ_odoo_config", "src/odoo"]
+
+# https://docs.astral.sh/uv/reference/settings/
+[tool.uv]
+required-version = ">=0.6.0"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+]
+mkdocs = [
+    "mkdocs",
+    "mkdocstrings",
+    "mkdocstrings-python",
+    "mkdocs-material",
+    "mkdocs-literate-nav",
+    "mkdocs-gen-files",
+    "mkdocs-section-index",
+]
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "debug"
+cov_fail_under = 80
+
+[tool.coverage.run]
+omit = [
+    "*/odoo/addons/*"
+]
