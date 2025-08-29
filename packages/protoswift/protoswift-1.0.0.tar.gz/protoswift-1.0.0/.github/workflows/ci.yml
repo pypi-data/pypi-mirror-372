@@ -1,0 +1,29 @@
+# .github/workflows/ci.yml
+name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Create virtualenv
+        run: uv venv
+
+      - name: Install package + test deps
+        run: |
+          uv pip install -e .
+          uv pip install pytest pytest-cov
+
+      - name: Run tests (via uv)
+        run: uv run pytest -q --cov=protoswift --cov-report=term-missing
