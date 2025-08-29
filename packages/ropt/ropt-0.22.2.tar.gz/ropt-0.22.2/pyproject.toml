@@ -1,0 +1,126 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ropt"
+description = "The ropt ensemble optimizer module"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+requires-python = ">=3.11"
+dynamic = ["version"]
+dependencies = [
+    "numpy",
+    "pydantic",
+    "scipy>=1.15"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/TNO-ropt/ropt"
+"Repository" = "https://github.com/TNO-ropt/ropt"
+"Bug Tracker" = "https://github.com/TNO-ropt/ropt/issues"
+"Documentation" = "https://tno-ropt.github.io/ropt"
+
+[project.optional-dependencies]
+pandas = ["pandas"]
+
+[project.entry-points."ropt.plugins.optimizer"]
+scipy = "ropt.plugins.optimizer.scipy:SciPyOptimizerPlugin"
+external = "ropt.plugins.optimizer.external:ExternalOptimizerPlugin"
+
+[project.entry-points."ropt.plugins.sampler"]
+scipy = "ropt.plugins.sampler.scipy:SciPySamplerPlugin"
+
+[project.entry-points."ropt.plugins.realization_filter"]
+default = "ropt.plugins.realization_filter.default:DefaultRealizationFilterPlugin"
+
+[project.entry-points."ropt.plugins.function_estimator"]
+default = "ropt.plugins.function_estimator.default:DefaultFunctionEstimatorPlugin"
+
+[project.entry-points."ropt.plugins.event_handler"]
+default = "ropt.plugins.plan.default:DefaultEventHandlerPlugin"
+
+[project.entry-points."ropt.plugins.plan_step"]
+default = "ropt.plugins.plan.default:DefaultPlanStepPlugin"
+
+[project.entry-points."ropt.plugins.evaluator"]
+default = "ropt.plugins.plan.default:DefaultEvaluatorPlugin"
+
+[project.scripts]
+ropt_plugin_optimizer = "ropt.plugins.optimizer.external:ropt_plugin_optimizer"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ropt = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = { attr = "ropt.version.__version__" }
+
+[tool.setuptools_scm]
+write_to = "src/ropt/version.py"
+
+[tool.pytest.ini_options]
+markers = ["slow: slow test marker", "external: external optimizer marker"]
+filterwarnings = [
+    "error",
+    'ignore:numpy.ndarray size changed, may indicate binary incompatibility.*:RuntimeWarning',
+]
+
+[tool.ruff.format]
+exclude = ["src/ropt/version.py", "build"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812", # missing-trailing-comma
+    "E501",   # line-too-lone
+    "S101",   # assert
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "E402",    # module-import-not-at-top-of-file
+    "D",       # pydocstyle
+    "ANN401",  # anytype
+    "FBT",     # flake8-boolean-trap
+    "PLR2004", # magic-value-comparison
+    "PLR0913", # too-many-arguments
+]
+"examples/*" = [
+    "INP001", # implicit-namespace-package
+    "T201",   # print
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["scipy.*"]
+ignore_missing_imports = true
+
+[tool.uv]
+dev-dependencies = [
+    "mike>=2.1.3",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.5.35",
+    "mkdocstrings[python]>=0.26.1",
+    "mypy>=1.11.2",
+    "pandas-stubs>=2.0.2.230605",
+    "pytest>=8.3.3",
+    "ruff>=0.6.5",
+]
