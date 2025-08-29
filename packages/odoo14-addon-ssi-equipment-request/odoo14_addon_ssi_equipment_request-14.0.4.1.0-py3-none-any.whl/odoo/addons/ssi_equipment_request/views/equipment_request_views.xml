@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--Copyright 2023 OpenSynergy Indonesia-->
+<!--Copyright 2023 PT. Simetri Sinergi Indonesia-->
+<!--License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).-->
+<odoo>
+<record id="equipment_request_view_tree" model="ir.ui.view">
+    <field name="name">equipment_request - Tree</field>
+    <field name="model">equipment_request</field>
+    <field name="inherit_id" ref="ssi_transaction_mixin.mixin_transaction_view_tree" />
+    <field name="mode">primary</field>
+    <field name="arch" type="xml">
+        <xpath expr="//field[@name='company_id']" position="after">
+            <field name="date" />
+            <field
+                    name="employee_id"
+                    string="Employee"
+                    widget="many2one_avatar_employee"
+                />
+            <field name="department_id" optional="hide" />
+            <field
+                    name="manager_id"
+                    widget="many2one_avatar_employee"
+                    optional="hide"
+                />
+            <field name="job_id" optional="hide" />
+            <field name="date" />
+            <field name="date_due" />
+            <field name="type_id" />
+            <field name="operation_id" />
+            <field name="warehouse_id" />
+            <field name="need_assignment" optional="hide" />
+            <field name="need_return" optional="hide" />
+        </xpath>
+    </field>
+</record>
+
+<record id="equipment_request_view_search" model="ir.ui.view">
+    <field name="name">equipment_request - Search</field>
+    <field name="model">equipment_request</field>
+    <field
+            name="inherit_id"
+            ref="ssi_transaction_mixin.mixin_transaction_view_search"
+        />
+    <field name="arch" type="xml">
+        <data />
+    </field>
+</record>
+
+<record id="equipment_request_view_form" model="ir.ui.view">
+    <field name="name">equipment_request - Form</field>
+    <field name="model">equipment_request</field>
+    <field name="inherit_id" ref="ssi_transaction_mixin.mixin_transaction_view_form" />
+    <field name="mode">primary</field>
+    <field name="arch" type="xml">
+        <xpath expr="//field[@name='user_id']" position="after">
+            <field name="type_id" />
+            <field name="allowed_product_ids" widget="many2many_tags" invisible="1" />
+            <field
+                    name="allowed_product_category_ids"
+                    widget="many2many_tags"
+                    invisible="1"
+                />
+            <field name="employee_id" widget="many2one_avatar_employee" />
+            <field name="department_id" readonly="1" force_save="1" />
+            <field
+                    name="manager_id"
+                    widget="many2one_avatar_employee"
+                    readonly="1"
+                    force_save="1"
+                />
+            <field name="job_id" readonly="1" force_save="1" />
+        </xpath>
+        <xpath expr="//group[@name='header_right']" position="inside">
+            <field name="operation_id" />
+            <field name="date" />
+            <field name="duration_id" />
+            <field name="date_due" />
+        </xpath>
+        <xpath expr="//page[1]" position="before">
+            <page name="detail" string="Details">
+                <field name="line_ids">
+                    <tree>
+                        <field name="sequence" widget="handle" />
+                        <field name="product_id" />
+                        <field name="uom_quantity" />
+                        <field name="uom_id" />
+                        <field name="need_assignment" optional="hide" />
+                        <field
+                                name="percent_assignment"
+                                string="Assignment"
+                                optional="show"
+                                widget="percentage"
+                            />
+                        <field name="assign_complete" invisible="1" />
+                        <field name="need_return" optional="hide" />
+                        <field
+                                name="percent_return"
+                                string="Return"
+                                optional="show"
+                                widget="percentage"
+                            />
+                        <field name="return_complete" invisible="1" />
+                    </tree>
+                    <form>
+                        <group name="form_detail" colspan="4" col="2">
+                            <group name="form_detail1" colspan="1" col="2">
+                                <field name="sequence" />
+                                <field
+                                        name="product_id"
+                                        domain="['|',('id','in',parent.allowed_product_ids),('categ_id','child_of',parent.allowed_product_category_ids)]"
+                                    />
+                                <field name="name" />
+                            </group>
+                            <group name="form_detail2" colspan="1" col="2">
+                                <field
+                                        name="allowed_uom_ids"
+                                        widget="many2many_tags"
+                                        invisible="1"
+                                    />
+                                <label for="uom_quantity" string="Quantity" />
+                                <div>
+                                    <field name="uom_quantity" class="oe_inline" />
+                                    <field
+                                            name="uom_id"
+                                            domain="[('id','in',allowed_uom_ids)]"
+                                            class="oe_inline"
+                                        />
+                                </div>
+                                <field name="quantity" invisible="1" />
+                                <field name="price_unit" />
+                            </group>
+                        </group>
+                        <notebook>
+                            <page name="move" string="Stock Move">
+                                <field name="stock_move_ids" readonly="1" />
+                            </page>
+                            <page name="quantity" string="Quantities">
+                                <group name="quantity" colspan="4" col="3">
+                                    <group name="quantity1" colspan="1" col="2">
+                                        <field name="need_assignment" />
+                                        <field name="qty_to_assign" />
+                                        <field name="qty_assigning" />
+                                        <field name="qty_assigned" />
+                                        <field
+                                                name="percent_assignment"
+                                                widget="percentage"
+                                            />
+                                        <field name="assign_complete" />
+                                    </group>
+                                    <group name="quantity2" colspan="1" col="2">
+                                        <field name="need_return" />
+                                        <field name="qty_to_return" />
+                                        <field name="qty_returning" />
+                                        <field name="qty_returned" />
+                                        <field
+                                                name="percent_return"
+                                                widget="percentage"
+                                            />
+                                        <field name="return_complete" />
+                                    </group>
+                                </group>
+                            </page>
+                        </notebook>
+                    </form>
+                </field>
+            </page>
+            <page name="procurement" string="Procurement">
+                <group name="procurement_1" colspan="4" col="2">
+                    <group name="procurement_1_1" colspan="1" col="2">
+                        <field name="warehouse_id" force_save="1" readonly="1" />
+                    </group>
+                    <group name="procurement_1_2" colspan="1" col="2">
+                        <field name="route_id" force_save="1" readonly="1" />
+                    </group>
+                </group>
+                <button
+                        name="action_create_assignment"
+                        type="object"
+                        string="Create Assignment"
+                        class="oe_highlight"
+                        icon="fa-sign-in"
+                        style="margin-right:4px"
+                        attrs="{'invisible': [('assign_ok','=',False)]}"
+                    />
+                <button
+                        name="action_create_return"
+                        type="object"
+                        string="Create Return"
+                        class="oe_highlight"
+                        icon="fa-sign-in"
+                        style="margin-right:4px"
+                        attrs="{'invisible': [('return_ok','=',False)]}"
+                    />
+                <group name="procurement_2" colspan="4" col="2">
+                    <field name="procurement_group_id" />
+                    <field name="resolve_ok" />
+                </group>
+                <group name="procurement_3" colspan="4" col="2">
+                    <group name="quantity1_1" colspan="1" col="2">
+                        <field name="need_assignment" />
+                        <field name="qty_to_assign" />
+                        <field name="qty_assigning" />
+                        <field name="qty_assigned" />
+                        <field name="assign_complete" />
+                        <field name="assign_ok" />
+                    </group>
+                    <group name="quantity1_2" colspan="1" col="2">
+                        <field name="need_return" />
+                        <field name="qty_to_return" />
+                        <field name="qty_returning" />
+                        <field name="qty_returned" />
+                        <field name="return_complete" />
+                        <field name="return_ok" />
+                    </group>
+                </group>
+            </page>
+        </xpath>
+    </field>
+</record>
+
+<record id="equipment_request_action" model="ir.actions.act_window">
+    <field name="name">Equipment Requests</field>
+    <field name="res_model">equipment_request</field>
+    <field name="view_mode">tree,form</field>
+</record>
+
+<menuitem
+        id="equipment_request_menu"
+        name="Equipment Requests"
+        parent="ssi_hr.hr_inventory_menu"
+        action="equipment_request_action"
+        groups="equipment_request_viewer_group"
+        sequence="10"
+    />
+</odoo>
