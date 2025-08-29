@@ -1,0 +1,10 @@
+LEGACY_X_DRIVE_PATH = 'C:\\1'
+LEGACY_Y_DRIVE_PATH = 'C:\\1\\Y'
+
+W_FOLDER_PATH = 'C:\\1\\W'
+S_FOLDER_PATH = 'C:\\1\\S'
+X_FOLDER_PATH = 'C:\\1\\X'
+Y_FOLDER_PATH = 'C:\\1\\Y'
+
+
+
