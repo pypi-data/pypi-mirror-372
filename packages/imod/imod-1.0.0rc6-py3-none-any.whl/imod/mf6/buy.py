@@ -1,0 +1,174 @@
+from typing import Optional, Sequence
+
+import numpy as np
+import xarray as xr
+
+from imod.logging import init_log_decorator
+from imod.mf6.package import Package
+from imod.schemata import DTypeSchema
+
+
+def assign_index(arg):
+    if isinstance(arg, xr.DataArray):
+        arg = arg.values
+    elif not isinstance(arg, (np.ndarray, list, tuple)):
+        raise TypeError("should be a tuple, list, or numpy array")
+
+    arr = np.array(arg)
+    if arr.ndim != 1:
+        raise ValueError("should be 1D")
+
+    return xr.DataArray(arr, dims=("index",))
+
+
+class Buoyancy(Package):
+    """
+    Buoyancy package. This package must be included when performing variable
+    density simulation.
+
+    Note that ``reference_density`` is a single value, but
+    ``density_concentration_slope``, ``reference_concentration`` and
+    ``modelname`` require an entry for every active species. Please refer to the
+    examples.
+
+    Parameters
+    ----------
+    reference_density: float,
+        fluid reference density used in the equation of state.
+    density_concentration_slope: sequence of floats
+        Slope of the (linear) density concentration line used in the density
+        equation of state. A value of 0.7143 is often used for TDS g/l. A value
+        of 1.316 is common for CL g/l.
+    reference_concentration: sequence of floats
+        Reference concentration used in the density equation of state.
+    modelname: sequence of strings,
+        Name of the GroundwaterTransport (GWT) model used for the
+        concentrations.
+    species: sequence of str,
+        Name of the species used to calculate a density value.
+    hhformulation_rhs: bool, optional.
+        use the variable-density hydraulic head formulation and add off-diagonal
+        terms to the right-hand. This option will prevent the BUY Package from
+        adding asymmetric terms to the flow matrix. Default value is ``False``.
+    densityfile:
+        name of the binary output file to write density information. The density
+        file has the same format as the head file. Density values will be
+        written to the density file whenever heads are written to the binary
+        head file. The settings for controlling head output are contained in the
+        Output Control option.
+    validate: {True, False}
+        Flag to indicate whether the package should be validated upon
+        initialization. This raises a ValidationError if package input is
+        provided in the wrong manner. Defaults to True.
+
+    Examples
+    --------
+
+    The buoyancy input for a single species called "salinity", which is
+    simulated by a GWT model called "gwt-1" are specified as follows:
+
+    >>> buy = imod.mf6.Buoyance(
+    ...     reference_density=1000.0,
+    ...     density_concentration_slope=[0.025],
+    ...     reference_concentration=[0.0],
+    ...     modelname=["gwt-1"],
+    ...     species=["salinity"],
+    ... )
+
+    Multiple species can be specified by presenting multiple values with an
+    associated species coordinate. Two species, called "c1" and "c2", simulated
+    by the GWT models "gwt-1" and "gwt-2" are specified as:
+
+    >>> coords = {"species": ["c1", "c2"]}
+    >>> buy = imod.mf6.Buoyance(
+    ...     reference_density=1000.0,
+    ...     density_concentration_slope=[0.025, 0.01],
+    ...     reference_concentration=[0.0, 0.0],
+    ...     modelname=["gwt-1", "gwt-2"],
+    ...     species=["c1", "c2"],
+    ... )
+    """
+
+    _pkg_id = "buy"
+    _template = Package._initialize_template(_pkg_id)
+
+    _init_schemata = {
+        "reference_density": [DTypeSchema(np.floating)],
+        "density_concentration_slope": [DTypeSchema(np.floating)],
+        "reference_concentration": [DTypeSchema(np.floating)],
+    }
+
+    _write_schemata = {}
+
+    @init_log_decorator()
+    def __init__(
+        self,
+        reference_density: float,
+        density_concentration_slope: Sequence[float],
+        reference_concentration: Sequence[float],
+        modelname: Sequence[str],
+        species: Sequence[str],
+        hhformulation_rhs: bool = False,
+        densityfile: Optional[str] = None,
+        validate: bool = True,
+    ):
+        dict_dataset = {
+            "reference_density": reference_density,
+            # Assign a shared index: this also forces equal lenghts
+            "density_concentration_slope": assign_index(density_concentration_slope),
+            "reference_concentration": assign_index(reference_concentration),
+            "modelname": assign_index(modelname),
+            "species": assign_index(species),
+            "hhformulation_rhs": hhformulation_rhs,
+            "densityfile": densityfile,
+        }
+        super().__init__(dict_dataset)
+        self._validate_init_schemata(validate)
+
+    def _render(self, directory, pkgname, globaltimes, binary):
+        ds = self.dataset
+        packagedata = []
+
+        for i, (a, b, c, d) in enumerate(
+            zip(
+                ds["density_concentration_slope"].values,
+                ds["reference_concentration"].values,
+                ds["modelname"].values,
+                ds["species"].values,
+            )
+        ):
+            packagedata.append((i + 1, a, b, c, d))
+
+        d = {
+            "nrhospecies": self.dataset["species"].size,
+            "packagedata": packagedata,
+        }
+
+        for varname in ["hhformulation_rhs", "reference_density", "densityfile"]:
+            value = self.dataset[varname].values[()]
+            if self._valid(value):
+                d[varname] = value
+
+        return self._template.render(d)
+
+    def _update_transport_models(self, new_modelnames: Sequence[str]):
+        """
+        The names of the transport models can change in some cases, for example
+        when partitioning. Use this function to update the names of the
+        transport models.
+        """
+        transport_model_names = self._get_transport_model_names()
+        if not len(transport_model_names) == len(new_modelnames):
+            raise ValueError("the number of transport models cannot be changed.")
+        for modelname, new_modelname in zip(transport_model_names, new_modelnames):
+            if modelname not in new_modelname:
+                raise ValueError(
+                    "new transport model names do not match the old ones. The new names should be equal to the old ones, with a suffix."
+                )
+        self.dataset["modelname"] = assign_index(new_modelnames)
+
+    def _get_transport_model_names(self) -> list[str]:
+        """
+        Returns the names of the transport  models used by this buoyancy package.
+        """
+        return list(self.dataset["modelname"].values)

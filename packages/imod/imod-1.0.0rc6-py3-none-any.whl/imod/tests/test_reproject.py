@@ -1,0 +1,309 @@
+import affine
+import numpy as np
+import pytest
+import rasterio
+import rasterio.warp
+import rioxarray
+import xarray as xr
+
+import imod
+
+
+@pytest.fixture(scope="module")
+def write_tif():
+    def _write_tif(path, epsg, dtype=np.float64, rotation_angle=None):
+        nrow = 5
+        ncol = 8
+        values = (10 * np.random.rand(nrow, ncol)).astype(dtype)
+
+        profile = {}
+        profile["crs"] = rasterio.crs.CRS.from_epsg(epsg)
+        profile["transform"] = affine.Affine(1.0, 0.0, 155_000.0, 0.0, -1.0, 463_000.0)
+        if rotation_angle:
+            profile["transform"] *= affine.Affine.rotation(rotation_angle)
+        profile["driver"] = "GTiff"
+        profile["height"] = nrow
+        profile["width"] = ncol
+        profile["count"] = 1
+        profile["dtype"] = dtype
+
+        with rasterio.Env():
+            with rasterio.open(path, "w", **profile) as ds:
+                ds.write(values, 1)
+
+    return _write_tif
+
+
+def test_basic_resample__nearest(write_tif, tmp_path):
+    """Test nearest neighbour upsampling to halved cellsize"""
+    write_tif(tmp_path / "basic.tif", epsg=28992)
+
+    with rioxarray.open_rasterio(tmp_path / "basic.tif").squeeze("band") as da:
+        dx, xmin, xmax, dy, ymin, ymax = imod.util.spatial.spatial_reference(da)
+        data = np.empty((10, 16))
+        coords = {
+            "y": np.linspace(ymax + 0.25 * dy, ymin - 0.25 * dy, 10),
+            "x": np.linspace(xmin + 0.25 * dx, xmax - 0.25 * dx, 16),
+        }
+        dims = ("y", "x")
+        like = xr.DataArray(data, coords, dims)
+        newda = imod.prepare.reproject(da, like, method="nearest")
+
+    newarr = np.empty((10, 16))
+    with rasterio.open(tmp_path / "basic.tif") as src:
+        arr = src.read()
+        aff = src.transform
+        crs = src.crs
+        newaff = affine.Affine(aff.a / 2.0, aff.b, aff.c, aff.d, aff.e / 2.0, aff.f)
+
+    rasterio.warp.reproject(
+        arr,
+        newarr,
+        src_transform=aff,
+        dst_transform=newaff,
+        src_crs=crs,
+        dst_crs=crs,
+        resampling=rasterio.enums.Resampling.nearest,
+        src_nodata=np.nan,
+    )
+
+    # Double values in both axes
+    repeated = np.repeat(da.values, 2, axis=0)
+    repeated = np.repeat(repeated, 2, axis=1)
+    assert np.allclose(newda.values, repeated)
+    assert np.allclose(newda.values, newarr)
+
+
+def test_basic_resample__bilinear(write_tif, tmp_path):
+    """Test bilinear upsampling to halved cellsize"""
+    write_tif(tmp_path / "basic.tif", epsg=28992)
+
+    with rioxarray.open_rasterio(tmp_path / "basic.tif").squeeze("band") as da:
+        dx, xmin, xmax, dy, ymin, ymax = imod.util.spatial.spatial_reference(da)
+        data = np.empty((10, 16))
+        coords = {
+            "y": np.linspace(ymax + 0.25 * dy, ymin - 0.25 * dy, 10),
+            "x": np.linspace(xmin + 0.25 * dx, xmax - 0.25 * dx, 16),
+        }
+        dims = ("y", "x")
+        like = xr.DataArray(data, coords, dims)
+        newda = imod.prepare.reproject(da, like, method="bilinear")
+
+    newarr = np.empty((10, 16))
+    with rasterio.open(tmp_path / "basic.tif") as src:
+        arr = src.read()
+        aff = src.transform
+        crs = src.crs
+        newaff = affine.Affine(aff.a / 2.0, aff.b, aff.c, aff.d, aff.e / 2.0, aff.f)
+
+    rasterio.warp.reproject(
+        arr,
+        newarr,
+        src_transform=aff,
+        dst_transform=newaff,
+        src_crs=crs,
+        dst_crs=crs,
+        resampling=rasterio.enums.Resampling.bilinear,
+        src_nodata=np.nan,
+    )
+
+    assert np.allclose(newda.values, newarr)
+
+
+def test_basic_reproject(write_tif, tmp_path):
+    """Basic reprojection from EPSG:28992 to EPSG:32631"""
+    write_tif(tmp_path / "basic.tif", epsg=28992)
+    dst_crs = {"init": "EPSG:32631"}
+    with rioxarray.open_rasterio(tmp_path / "basic.tif").squeeze("band") as da:
+        newda = imod.prepare.reproject(da, src_crs="EPSG:28992", dst_crs=dst_crs)
+
+    with rasterio.open(tmp_path / "basic.tif") as src:
+        arr = src.read()
+        src_transform = src.transform
+        src_crs = src.crs
+        src_height = src.height
+        src_width = src.width
+
+    src_crs = rasterio.crs.CRS(src_crs)
+    bounds = rasterio.transform.array_bounds(src_height, src_width, src_transform)
+    dst_transform, dst_width, dst_height = rasterio.warp.calculate_default_transform(
+        src_crs, dst_crs, src_width, src_height, *bounds
+    )
+
+    newarr = np.empty((dst_height, dst_width))
+
+    rasterio.warp.reproject(
+        arr,
+        newarr,
+        src_transform=src_transform,
+        dst_transform=dst_transform,
+        src_crs=src_crs,
+        dst_crs=dst_crs,
+        resampling=rasterio.enums.Resampling.nearest,
+        src_nodata=np.nan,
+    )
+
+    assert np.allclose(newda.values, newarr)
+
+
+def test_reproject__use_src_attrs(write_tif, tmp_path):
+    """Reprojection from EPSG:28992 to EPSG:32631, using on attrs generated by xarray."""
+    write_tif(tmp_path / "basic.tif", epsg=28992)
+    dst_crs = "EPSG:32631"
+    with rioxarray.open_rasterio(tmp_path / "basic.tif").squeeze("band") as da:
+        newda = imod.prepare.reproject(da, dst_crs=dst_crs, use_src_attrs=True)
+
+    with rasterio.open(tmp_path / "basic.tif") as src:
+        arr = src.read()
+        src_transform = src.transform
+        src_crs = src.crs
+        src_height = src.height
+        src_width = src.width
+
+    src_crs = rasterio.crs.CRS(src_crs)
+    bounds = rasterio.transform.array_bounds(src_height, src_width, src_transform)
+    dst_transform, dst_width, dst_height = rasterio.warp.calculate_default_transform(
+        src_crs, dst_crs, src_width, src_height, *bounds
+    )
+
+    newarr = np.empty((dst_height, dst_width))
+
+    rasterio.warp.reproject(
+        arr,
+        newarr,
+        src_transform=src_transform,
+        dst_transform=dst_transform,
+        src_crs=src_crs,
+        dst_crs=dst_crs,
+        resampling=rasterio.enums.Resampling.nearest,
+        src_nodata=np.nan,
+    )
+
+    assert np.allclose(newda.values, newarr)
+
+
+def test_reproject_resample(write_tif, tmp_path):
+    """
+    Reprojection from EPSG:28992 to EPSG:32631, using on attrs generated by xarray,
+    then resample to a like DataArray
+    """
+    write_tif(tmp_path / "basic.tif", epsg=28992)
+    # ESPG:32631 coords
+    xmin = 663_304.0
+    xmax = 663_312.0
+    ymin = 5_780_979.5
+    ymax = 5_780_984.5
+    dx = 0.5
+    dy = -0.5
+    with rioxarray.open_rasterio(tmp_path / "basic.tif").squeeze("band") as da:
+        dst_crs = "EPSG:32631"
+        data = np.empty((10, 16))
+        coords = {
+            "y": np.linspace(ymax + 0.5 * dy, ymin - 0.5 * dy, 10),
+            "x": np.linspace(xmin + 0.5 * dx, xmax - 0.5 * dx, 16),
+        }
+        dims = ("y", "x")
+        like = xr.DataArray(data, coords, dims)
+        newda = imod.prepare.reproject(da, like, dst_crs=dst_crs, use_src_attrs=True)
+
+    with rasterio.open(tmp_path / "basic.tif") as src:
+        arr = src.read()
+        src_transform = src.transform
+        src_crs = src.crs
+
+    dst_transform = affine.Affine(dx, 0.0, xmin, 0.0, dy, ymax)
+    newarr = np.empty((10, 16))
+    rasterio.warp.reproject(
+        arr,
+        newarr,
+        src_transform=src_transform,
+        dst_transform=dst_transform,
+        src_crs=src_crs,
+        dst_crs=dst_crs,
+        resampling=rasterio.enums.Resampling.nearest,
+        src_nodata=np.nan,
+    )
+
+    assert ~np.isnan(newda.values).all()
+    assert np.allclose(newda.values, newarr)
+
+
+def test_reproject_rotation__via_kwargs(write_tif, tmp_path):
+    """Reprojection from EPSG:28992 to EPSG:32631, by specifying kwarg"""
+    # Arrange
+    write_tif(tmp_path / "rotated.tif", epsg=28992, rotation_angle=45.0)
+    dst_crs = "EPSG:32631"
+    da = rioxarray.open_rasterio(tmp_path / "rotated.tif").squeeze("band")
+    src_transform = (
+        affine.Affine.translation(155000.0, 463000.0)
+        * affine.Affine.scale(1.0, -1.0)
+        * affine.Affine.rotation(45.0)
+    )
+    newda = imod.prepare.reproject(
+        da, src_crs="EPSG:28992", dst_crs=dst_crs, src_transform=src_transform
+    )
+
+    with rasterio.open(tmp_path / "rotated.tif") as src:
+        arr = src.read()
+        src_transform = src.transform
+        src_crs = src.crs
+        src_height = src.height
+        src_width = src.width
+
+    src_crs = rasterio.crs.CRS(src_crs)
+    bounds = rasterio.transform.array_bounds(src_height, src_width, src_transform)
+    dst_transform, dst_width, dst_height = rasterio.warp.calculate_default_transform(
+        src_crs, dst_crs, src_width, src_height, *bounds
+    )
+
+    # Act
+    newarr = np.empty((dst_height, dst_width))
+
+    rasterio.warp.reproject(
+        arr,
+        newarr,
+        src_transform=src_transform,
+        dst_transform=dst_transform,
+        src_crs=src_crs,
+        dst_crs=dst_crs,
+        resampling=rasterio.enums.Resampling.nearest,
+        src_nodata=np.nan,
+    )
+
+    # Assert
+    np.testing.assert_allclose(newda.values, newarr, equal_nan=True)
+
+
+def test_reproject_rotation__use_src_attrs(write_tif, tmp_path):
+    """Reprojection from EPSG:28992 to EPSG:32631, using attrs generated by xarray."""
+    write_tif(tmp_path / "rotated.tif", epsg=28992, rotation_angle=45.0)
+    dst_crs = "EPSG:32631"
+    da = rioxarray.open_rasterio(tmp_path / "rotated.tif").squeeze("band")
+    newda = imod.prepare.reproject(da, dst_crs=dst_crs, use_src_attrs=True)
+
+    with rasterio.open(tmp_path / "rotated.tif") as src:
+        arr = src.read()
+        src_transform = src.transform
+        src_crs = src.crs
+        src_height = src.height
+        src_width = src.width
+
+    src_crs = rasterio.crs.CRS(src_crs)
+    bounds = rasterio.transform.array_bounds(src_height, src_width, src_transform)
+    dst_transform, dst_width, dst_height = rasterio.warp.calculate_default_transform(
+        src_crs, dst_crs, src_width, src_height, *bounds
+    )
+
+    newarr = np.empty((dst_height, dst_width))
+
+    rasterio.warp.reproject(
+        arr,
+        newarr,
+        src_transform=src_transform,
+        dst_transform=dst_transform,
+        src_crs=src_crs,
+        dst_crs=dst_crs,
+        resampling=rasterio.enums.Resampling.nearest,
+        src_nodata=np.nan,
+    )
+    assert np.allclose(newda.values, newarr, equal_nan=True)
