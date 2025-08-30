@@ -1,0 +1,91 @@
+on:
+  workflow_dispatch:
+  push:
+    branches: ["*"]
+    tags: ["*"]
+
+name: Test & Publish Pipeline
+
+jobs:
+  tox-test:
+    name: Version Tests with Tox
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: "Set up Python 3.8"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+      - name: "Set up Python 3.9"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - name: "Set up Python 3.10"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: "Set up Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: "Set up Python 3.12"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: "Set up Python 3.13"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the project
+        run: uv sync --dev
+      - name: Run Tox Tests
+        run: |
+          uv run tox run-parallel
+          uv run coverage report --data-file=".coverage/.coverage" --show-missing  --precision=3
+
+  pypi-publish:
+    name: Publish On PyPI
+    runs-on: ubuntu-latest
+    needs: [tox-test]
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    environment: pypi
+    permissions:
+      # IMPORTANT: this permission is mandatory for Trusted Publishing
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: "Set up Python 3.10"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: uv sync --no-dev
+      - run: uv build
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  quarto-publish-pages:
+    runs-on: ubuntu-latest
+    needs: [tox-test]
+    if: github.ref == 'refs/heads/master' || contains(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Publish
+        uses: quarto-dev/quarto-actions/publish@v2
+        with:
+          target: gh-pages
+          path: docs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
