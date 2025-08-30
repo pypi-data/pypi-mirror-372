@@ -1,0 +1,41 @@
+
+stages:
+  - version
+  - build
+  - test
+  - code_quality
+  - deploy
+
+#-------------------------------------------------------------------------------
+test:
+  stage: test
+  image: python:3.10.9
+  script:
+    - pip install pytest pep8 pyright
+    - pip install .
+    - python3 -m pytest
+
+
+package:
+  stage: build
+  image: python:latest
+  script:
+    - pip install build
+    - python3 -m build
+  artifacts:
+    when: on_success
+    paths:
+      - dist/
+    expire_in: 30 mins
+
+python_pypi:
+  stage: deploy
+  image: python:latest
+  needs:
+    - job: package
+  script:
+    - pip install twine
+    - TWINE_PASSWORD=${PYPI_TOKEN} TWINE_USERNAME=__token__
+          python3 -m twine upload  --verbose dist/*
+  only:
+    - tags
