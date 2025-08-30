@@ -1,0 +1,46 @@
+# File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+from typing_extensions import Literal, TypeAlias
+
+__all__ = ["ToolName"]
+
+ToolName: TypeAlias = Literal[
+    "data_analysis",
+    "semantic_search",
+    "agent_memory",
+    "schema_info",
+    "table_info",
+    "create_dataset",
+    "calendar",
+    "email",
+    "schedule_recurring_message_tool",
+    "procore",
+    "egnyte",
+    "notion",
+    "google_sheets",
+    "slack",
+    "microsoft_teams",
+    "sharepoint",
+    "drive",
+    "fieldwire",
+    "webbrowser",
+    "pdf_manipulation",
+    "pdf_generator",
+    "acc",
+    "docusign",
+    "webflow",
+    "hubspot",
+    "nec",
+    "github",
+    "data_classification",
+    "data_extraction",
+    "image_detection",
+    "attachment_extraction",
+    "pdf_extraction",
+    "connect_data",
+    "download_data",
+    "web_search",
+    "fetch_url",
+    "company_prospect_researcher",
+    "people_prospect_researcher",
+]
