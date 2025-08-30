@@ -1,0 +1,172 @@
+Metadata-Version: 2.1
+Name: podigeeconnector
+Version: 0.4.0
+Summary: Podigee Connector for Podcast Data
+Author: Open Podcast
+License: MIT
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests
+Requires-Dist: loguru
+Requires-Dist: PyYAML
+Requires-Dist: tenacity
+Requires-Dist: beautifulsoup4
+
+# Podigee Connector
+
+[![Docs](https://readthedocs.org/projects/podigee-connector/badge?version=latest)](https://podigee-connector.readthedocs.io)
+
+[![OpenPodcast Banner](https://raw.githubusercontent.com/openpodcast/banner/main/openpodcast-banner.png)](https://openpodcast.app/)
+
+This is a simple library for connecting to the Podigee API.  
+It can be used to export data from your dashboard at
+https://app.podigee.com/analytics
+
+## Supported Endpoints
+
+- `/podcasts/{podcast_id}/analytics`
+- `/podcasts/{podcast_id}/overview` (with optional scope parameter for totals)
+- `/podcasts/{podcast_id}/analytics/episodes`
+- `/episodes/{episode_id}/analytics`
+
+See `__main__.py` for all endpoints.
+
+## Credentials
+
+This API supports three authentication methods:
+
+1. Using the official API token. This option is preferred, but only available if you have a professional account.
+2. Using Podigee username and password. Use this only if you don't have access to the API through your account.
+3. Using a session cookie that you need to extract manually from your browser.
+
+If possible, use option 1, the official API token, as it is the most secure and
+officially supported authentication method.
+Find more information on the different authentication methods below.
+
+### Using the official API token
+
+```python
+from podigeeconnector import PodigeeConnector
+
+connector = PodigeeConnector(
+   base_url=BASE_URL,
+   podigee_access_token=PODIGEE_ACCESS_TOKEN,
+)
+```
+
+### Using the session token 
+
+Alternatively, you can use a session token to log in:
+
+```python
+from podigeeconnector import PodigeeConnector
+
+connector = PodigeeConnector(
+   base_url=BASE_URL,
+   podigee_session_v5=PODIGEE_SESSION_V5,
+)
+```
+
+### Using username and password
+
+Finally, you can also call the login endpoint with your username and password to log in:
+
+```python
+from podigeeconnector import PodigeeConnector
+
+connector = PodigeeConnector.from_credentials(
+   base_url=BASE_URL,
+   podcast_id=PODCAST_ID,
+   username=USERNAME,
+   password=PASSWORD,
+)
+```
+
+## Installation
+
+```
+pip install podigeeconnector
+```
+
+## Usage as a library
+
+```python
+from podigeeconnector import PodigeeConnector
+
+connector = PodigeeConnector(
+   base_url=BASE_URL,
+   podigee_access_token=PODIGEE_ACCESS_TOKEN,
+)
+
+end = datetime.now()
+start = end - timedelta(days=30)
+
+podcast_analytics = connector.podcast_analytics(podcast_id, start, end)
+logger.info("Podcast Analytics = {}", json.dumps(podcast_analytics, indent=4))
+
+# Get totals with listeners and subscribers count
+podcast_totals = connector.podcast_totals(podcast_id, start, end)
+logger.info("Total Downloads: {}", podcast_totals.get("total_downloads"))
+logger.info("Unique Listeners: {}", podcast_totals.get("unique_listeners_number"))
+
+# Get total downloads for a specific episode
+episode_total = connector.episode_total_downloads(episode_id, start, end)
+logger.info("Episode Total Downloads: {}", episode_total)
+```
+
+See `__main__.py` for all endpoints.
+
+## Development
+
+We use [Pipenv] for virtualenv and dev dependency management. With Pipenv
+installed:
+
+1. Install your locally checked out code in [development mode], including its
+   dependencies, and all dev dependencies into a virtual environment:
+
+```sh
+pipenv sync --dev
+```
+
+2. Create an environment file and fill in the required values:
+
+```sh
+cp .env.sample .env
+```
+
+3. Run the script in the virtual environment, which will [automatically load
+   your `.env`][env]:
+
+```sh
+pipenv run podigeeconnector
+```
+
+To add a new dependency for use during the development of this library:
+
+```sh
+pipenv install --dev $package
+```
+
+To add a new dependency necessary for the correct operation of this library, add
+the package to the `install_requires` section of `./setup.py`, then:
+
+```sh
+pipenv install
+```
+
+To publish the package:
+
+```sh
+python setup.py sdist bdist_wheel
+twine upload dist/*
+```
+
+or
+
+```sh
+make publish
+```
+
+[pipenv]: https://pipenv.pypa.io/en/latest/index.html#install-pipenv-today
+[development mode]: https://setuptools.pypa.io/en/latest/userguide/development_mode.html
+[env]: https://pipenv.pypa.io/en/latest/advanced/#automatic-loading-of-env
