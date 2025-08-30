@@ -1,0 +1,121 @@
+Metadata-Version: 2.3
+Name: google-docs-mcp
+Version: 0.1.0
+Summary: MCP server for Google Docs
+Author: Jag_k
+Author-email: Jag_k <30597878+jag-k@users.noreply.github.com>
+Requires-Dist: pydantic-settings>=2.10.1
+Requires-Dist: pydantic>=2.11.7
+Requires-Dist: google-auth>=2.40.3
+Requires-Dist: google-auth-oauthlib>=1.2.2
+Requires-Dist: google-api-python-client>=2.179.0
+Requires-Dist: tenacity>=9.1.2
+Requires-Dist: markdownify>=1.2.0
+Requires-Dist: mcp>=1.13.1
+Requires-Dist: platformdirs>=4.4.0
+Requires-Dist: fastmcp>=2.11.3
+Requires-Dist: xdg-base-dirs>=6.0.2
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+
+# Google Docs MCP
+
+MCP server for Google Docs.
+
+## Features
+
+- Tools:
+  - `docs.read` — Read a Doc as Markdown or HTML
+  - `comments.list` — List comments and replies
+  - `comments.reply` — Reply to a comment (write gated)
+  - `comments.resolve` — Resolve a comment (write gated)
+  - `docs.insert_text` — Insert or append text (write gated)
+  - `docs.from_url` — Normalize a Docs/Drive URL to IDs
+  - `drive.export_file` — Export as PDF/DOCX/HTML
+- Resources:
+  - `mcp://token-info` — Safe token diagnostics (no secrets)
+  - `gdoc-md://{document_id}` — Google Doc (Markdown)
+  - `gdoc-html://{document_id}` — Google Doc (HTML)
+- Prompts:
+  - `comment_reply`, `summarize_doc`
+
+## Quick Start
+
+- Using CLI (recommended):
+  - Authorize: `uvx google-docs-mcp auth authorize [-f|--force]`
+  - Start server (default stdio): `uvx google-docs-mcp server [--transport stdio|http|sse|streamable-http]`
+- Using local instance:
+  - Authorize: `uv run google_docs_mcp auth authorize`
+  - Start server: `uv run google_docs_mcp server`
+
+## MCP Config (example)
+
+Add to your MCP client configuration (installed CLI):
+
+```toml
+[mcp_servers.google_docs_mcp]
+command = "uvx"
+args = ["google-docs-mcp", "server"]
+env = {
+  WRITE_MODE = "disabled",
+  GOOGLE__CLIENT_ID = "<id>",
+  GOOGLE__CLIENT_SECRET = "<secret>",
+}
+```
+
+## OAuth Setup
+
+1) Create OAuth Desktop client in Google Cloud Console.
+2) Provide `GOOGLE__CLIENT_ID` and `GOOGLE__CLIENT_SECRET` as env vars, or put a client file in the config dir and set `GOOGLE__OAUTH_CLIENT_FILE`.
+3) Run `google-docs-mcp auth authorize` (or `uv run -m google_docs_mcp.cli auth authorize`) and approve scopes.
+
+## Write Safety
+
+- Controlled via `WRITE_MODE` env var. Default is `enabled`. Set `disabled` to block any write tools.
+
+## Configuration
+
+- This repo provides an auto-generated `Configuration.md` and a starter `.env.example`. They are the source of truth for all env vars and defaults.
+- Common variables:
+  - `WRITE_MODE`: `enabled` (default) or `disabled`
+  - `LOG_LEVEL`: `DEBUG` | `INFO` (default) | `WARNING` | `ERROR` | `CRITICAL`
+  - `GOOGLE__CLIENT_ID`, `GOOGLE__CLIENT_SECRET`, `GOOGLE__OAUTH_CLIENT_FILE`, `GOOGLE__SCOPES`
+s
+See `Configuration.md` for all environment variables and examples. A starter `.env.example` is provided.
+
+## Notes
+
+- Python 3.13, pydantic v2, ruff format, strict mypy.
+- No tests by design; keep code small and documented.
+
+## MCP Inspector
+
+The MCP Inspector is a handy UI to explore and call tools.
+
+Interactive setup (recommended):
+
+- Start Inspector: `npx -y @modelcontextprotocol/inspector`
+- In the connection dialog, set:
+  - Transport: `stdio`
+  - Command: `google-docs-mcp` (or `uv` for the alternative config above)
+  - Args: `server`
+  - Env (optional): add `WRITE_MODE=disabled` and your OAuth vars if not already stored
+- Connect, then list tools and try `docs.from_url` and `docs.read`.
+
+Tip: enable verbose logs with `LOG_LEVEL=DEBUG` in Env to diagnose issues.
+
+Note on Drive permissions
+
+- Some tools (comments and exports) call the Drive API. If you see a Drive 404 like "File not found" on an accessible Doc, re-authorize with Drive read-only scope:
+  - Ensure `GOOGLE__SCOPES` includes `https://www.googleapis.com/auth/drive.readonly`.
+  - Run `google-docs-mcp auth authorize` again to grant the new scope.
+
+## Diagnostics
+
+- Show token info (safe): `google-docs-mcp auth token-info`
+- Revoke local token: `google-docs-mcp auth revoke`
+
+## Security
+
+- Required scopes: `https://www.googleapis.com/auth/documents` and `https://www.googleapis.com/auth/drive.readonly`.
+- Secrets are never logged. The `mcp://token-info` resource exposes only safe metadata.
