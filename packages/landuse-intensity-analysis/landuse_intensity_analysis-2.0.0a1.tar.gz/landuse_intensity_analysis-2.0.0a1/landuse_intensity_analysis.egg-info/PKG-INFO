@@ -1,0 +1,1467 @@
+Metadata-Version: 2.4
+Name: landuse-intensity-analysis
+Version: 2.0.0a1
+Summary: Modernized Python library for scientifically rigorous land use change analysis with intelligent auto-detection, comprehensive customization, and streamlined processing pipeline. Features automatic year detection from filenames and complete configuration framework.
+Author-email: LandUse Intensity Analysis Contributors <contact@landuse-intensity.org>
+Maintainer-email: LandUse Intensity Analysis Contributors <contact@landuse-intensity.org>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/ils15/LandUse-Intensity-Analysis
+Project-URL: Documentation, https://landuse-intensity-analysis.readthedocs.io
+Project-URL: Repository, https://github.com/ils15/LandUse-Intensity-Analysis
+Project-URL: Bug Tracker, https://github.com/ils15/LandUse-Intensity-Analysis/issues
+Project-URL: Changelog, https://github.com/ils15/LandUse-Intensity-Analysis/blob/main/CHANGELOG.md
+Keywords: land-use,intensity-analysis,pontius,aldwaik,remote-sensing,gis,land-change,spatial-analysis,environmental-science
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: GIS
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Classifier: Topic :: Scientific/Engineering :: Visualization
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: matplotlib>=3.4.0
+Requires-Dist: scipy>=1.7.0
+Requires-Dist: rasterio>=1.2.0
+Requires-Dist: plotly>=5.0.0
+Provides-Extra: spatial
+Requires-Dist: geopandas>=0.10.0; extra == "spatial"
+Requires-Dist: shapely>=1.8.0; extra == "spatial"
+Requires-Dist: contextily>=1.2.0; extra == "spatial"
+Requires-Dist: folium>=0.12.0; extra == "spatial"
+Requires-Dist: mapclassify>=2.4.0; extra == "spatial"
+Requires-Dist: xarray>=0.16.0; extra == "spatial"
+Requires-Dist: rioxarray>=0.8.0; extra == "spatial"
+Provides-Extra: visualization
+Requires-Dist: seaborn>=0.11.0; extra == "visualization"
+Requires-Dist: holoviews>=1.14.0; extra == "visualization"
+Provides-Extra: earthengine
+Requires-Dist: earthengine-api>=0.1.0; extra == "earthengine"
+Requires-Dist: geemap>=0.20.0; extra == "earthengine"
+Provides-Extra: utils
+Requires-Dist: pydantic>=2.0.0; extra == "utils"
+Requires-Dist: pyyaml>=6.0; extra == "utils"
+Requires-Dist: psutil>=5.8.0; extra == "utils"
+Requires-Dist: tqdm>=4.62.0; extra == "utils"
+Provides-Extra: parallel
+Requires-Dist: dask[complete]>=2022.0.0; extra == "parallel"
+Requires-Dist: ray[default]>=2.0.0; extra == "parallel"
+Requires-Dist: numba>=0.56.0; extra == "parallel"
+Provides-Extra: compression
+Requires-Dist: lz4>=4.0.0; extra == "compression"
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.12; extra == "dev"
+Requires-Dist: black>=21.0; extra == "dev"
+Requires-Dist: flake8>=3.9; extra == "dev"
+Requires-Dist: mypy>=0.910; extra == "dev"
+Requires-Dist: pre-commit>=2.15; extra == "dev"
+Provides-Extra: test
+Requires-Dist: pytest>=6.0; extra == "test"
+Requires-Dist: pytest-cov>=2.12; extra == "test"
+Requires-Dist: pytest-mock>=3.6; extra == "test"
+Provides-Extra: docs
+Requires-Dist: sphinx>=4.0; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=1.0; extra == "docs"
+Requires-Dist: myst-parser>=0.15; extra == "docs"
+Dynamic: license-file
+
+# 🌍 Land Use Intensity Analysis
+
+[![PyPI version](https://badge.fury.io/py/landuse-intensity-analysis.svg)](https://pypi.org/project/landuse-intensity-analysis/)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> **Biblioteca Python completa para análise científica de mudanças no uso da terra usando a metodologia de análise de intensidade Pontius-Aldwaik**
+
+---
+
+## 📋 Sumário
+
+- [🚀 Instalação Rápida](#-instalação-rápida)
+- [🎯 Guia para Iniciantes](#-guia-para-iniciantes)
+- [📊 Como Gerar Gráficos](#-como-gerar-gráficos)
+- [🔬 Análise Avançada](#-análise-avançada)
+- [📚 Referências](#-referências)
+
+---
+
+## 🚀 Instalação Rápida
+
+```bash
+pip install landuse-intensity-analysis
+```
+
+**Verificar instalação:**
+
+```python
+import landuse_intensity as lui
+print("✅ Instalação bem-sucedida!")
+```
+
+---
+
+## 🎯 Guia para Iniciantes
+
+### Primeiro Passo: Analisar Mudanças no Uso da Terra
+
+Vamos começar com um exemplo simples usando dados de demonstração:
+
+```python
+import landuse_intensity as lui
+import numpy as np
+
+# 1. Carregar dados de exemplo
+print("📊 Carregando dados de exemplo...")
+raster_t1, raster_t2 = lui.demo_landscape()
+
+print(f"Raster 1 (Tempo 1): {raster_t1.shape}")
+print(f"Raster 2 (Tempo 2): {raster_t2.shape}")
+
+# 2. Criar tabela de contingência
+print("\n🔄 Criando tabela de contingência...")
+ct = lui.ContingencyTable.from_rasters(
+    raster_t1, raster_t2,
+    labels1=['Floresta', 'Agricultura', 'Urbano', 'Água'],
+    labels2=['Floresta', 'Agricultura', 'Urbano', 'Água']
+)
+
+print("Tabela de contingência criada:")
+print(ct.table)
+
+# 3. Análise básica
+print(f"\n📈 Estatísticas básicas:")
+print(f"Área total: {ct.total_area} pixels")
+print(f"Área que mudou: {ct.total_change} pixels ({ct.total_change/ct.total_area*100:.1f}%)")
+print(f"Área que permaneceu igual: {ct.persistence} pixels ({ct.persistence/ct.total_area*100:.1f}%)")
+```
+
+**Saída esperada:**
+
+```text
+📊 Carregando dados de exemplo...
+Raster 1 (Tempo 1): (100, 100)
+Raster 2 (Tempo 2): (100, 100)
+
+🔄 Criando tabela de contingência...
+Tabela de contingência criada:
+            Floresta  Agricultura  Urbano  Água
+Floresta          450           30      10     5
+Agricultura        25          380      15     0
+Urbano              5           20     360     0
+Água                0            0       0   100
+
+📈 Estatísticas básicas:
+Área total: 10000 pixels
+Área que mudou: 110 pixels (1.1%)
+Área que permaneceu igual: 9890 pixels (98.9%)
+```
+
+---
+
+## 📊 Como Gerar Gráficos
+
+### 🎨 Módulos de Visualização Disponíveis
+
+A biblioteca possui **5 módulos especializados** para diferentes tipos de gráficos:
+
+| Módulo | Tipo de Gráfico | Uso Principal |
+|--------|----------------|---------------|
+| `sankey_visualization` | Diagramas Sankey | Transições entre classes |
+| `matrix_visualization` | Matrizes e mapas de calor | Matrizes de transição |
+| `bar_chart_visualization` | Gráficos de barras | Análise de áreas e mudanças |
+| `statistical_visualization` | Gráficos estatísticos | Análise de desempenho |
+| `visualization_utils` | Utilitários | Funções auxiliares |
+
+### 📈 1. Diagrama Sankey (Transições)
+
+**Para visualizar como as classes de uso da terra se transformam:**
+
+```python
+from landuse_intensity.sankey_visualization import plot_single_step_sankey
+
+# Criar diagrama Sankey interativo
+files = plot_single_step_sankey(
+    contingency_data=ct.table,           # Dados da tabela de contingência
+    output_dir="outputs",                # Pasta para salvar
+    filename="transicoes_sankey",        # Nome do arquivo
+    title="Transições no Uso da Terra",  # Título do gráfico
+    width=1000,                          # Largura em pixels
+    height=600,                          # Altura em pixels
+    min_flow=5,                          # Fluxo mínimo para mostrar
+    export_formats=['html', 'png']       # Formatos de exportação
+)
+
+print("✅ Arquivos gerados:")
+for fmt, path in files.items():
+    print(f"  {fmt.upper()}: {path}")
+```
+
+**Resultado:** Arquivo `outputs/transicoes_sankey.html` com diagrama interativo
+
+### 🔥 2. Mapa de Calor da Matriz de Transição
+
+**Para visualizar a intensidade das transições:**
+
+```python
+from landuse_intensity.matrix_visualization import plot_transition_matrix_heatmap
+
+# Criar mapa de calor
+fig = plot_transition_matrix_heatmap(
+    tabulation_matrix=ct.table,          # Matriz de transição
+    filename="matriz_transicao",         # Nome do arquivo
+    output_dir="outputs",                # Pasta de saída
+    title="Matriz de Transição de Uso da Terra",
+    figsize=(10, 8),                     # Tamanho da figura
+    cmap="YlOrRd",                       # Paleta de cores
+    annot=True,                          # Mostrar valores
+    fmt=".1f",                           # Formato dos números
+    show_percentages=False               # Mostrar em unidades absolutas
+)
+
+print("✅ Mapa de calor salvo em: outputs/matriz_transicao.png")
+```
+
+### 📊 3. Gráfico de Barras (Áreas por Classe)
+
+**Para comparar áreas de cada classe de uso da terra:**
+
+```python
+import pandas as pd
+from landuse_intensity.bar_chart_visualization import plot_barplot_lulc
+
+# Preparar dados para o gráfico
+area_data = []
+for class_name in ct.table.index:
+    area = ct.table.loc[class_name].sum()
+    area_data.append({
+        'class': class_name,
+        'area': area,
+        'time_period': 'Tempo 1'
+    })
+
+for class_name in ct.table.columns:
+    area = ct.table[class_name].sum()
+    area_data.append({
+        'class': class_name,
+        'area': area,
+        'time_period': 'Tempo 2'
+    })
+
+df_areas = pd.DataFrame(area_data)
+
+# Criar gráfico de barras
+fig = plot_barplot_lulc(
+    data=df_areas,
+    filename="areas_classes",
+    output_dir="outputs",
+    title="Áreas por Classe de Uso da Terra",
+    x_col="class",
+    y_col="area",
+    time_col="time_period",              # Para comparar períodos
+    figsize=(12, 6),
+    color_palette="Set2",
+    scientific_style=True,
+    show_values=True
+)
+
+print("✅ Gráfico de barras salvo em: outputs/areas_classes.png")
+```
+
+### 📈 4. Análise de Ganhos e Perdas
+
+**Para visualizar quais classes ganharam ou perderam área:**
+
+```python
+from landuse_intensity.bar_chart_visualization import plot_gain_loss_analysis
+
+# Preparar dados de ganho/perda
+gain_loss_data = []
+classes = list(set(ct.table.index) | set(ct.table.columns))
+
+for class_name in classes:
+    # Calcular ganhos (entradas)
+    if class_name in ct.table.columns:
+        gain = ct.table[class_name].sum() - ct.table.loc[class_name, class_name] if class_name in ct.table.index else ct.table[class_name].sum()
+    else:
+        gain = 0
+
+    # Calcular perdas (saídas)
+    if class_name in ct.table.index:
+        loss = ct.table.loc[class_name].sum() - ct.table.loc[class_name, class_name] if class_name in ct.table.columns else ct.table.loc[class_name].sum()
+    else:
+        loss = 0
+
+    net_change = gain - loss
+
+    gain_loss_data.append({
+        'class': class_name,
+        'gain': gain,
+        'loss': loss,
+        'net_change': net_change
+    })
+
+df_gain_loss = pd.DataFrame(gain_loss_data)
+
+# Criar gráfico de ganho/perda
+fig = plot_gain_loss_analysis(
+    gain_loss_data=df_gain_loss,
+    filename="ganho_perda",
+    output_dir="outputs",
+    title="Análise de Ganho e Perda por Classe",
+    figsize=(12, 8),
+    scientific_style=True
+)
+
+print("✅ Análise de ganho/perda salva em: outputs/ganho_perda.png")
+```
+
+### 🎯 5. Matriz de Confusão (para Validação)
+
+**Para avaliar a precisão de classificação:**
+
+```python
+from landuse_intensity.matrix_visualization import plot_confusion_matrix
+
+# Criar dados de exemplo para matriz de confusão
+# (Em um caso real, isso viria de dados observados vs. previstos)
+true_labels = ['Floresta', 'Floresta', 'Agricultura', 'Urbano', 'Floresta']
+predicted_labels = ['Floresta', 'Agricultura', 'Agricultura', 'Urbano', 'Floresta']
+
+# Criar DataFrame de confusão
+confusion_data = pd.crosstab(
+    pd.Series(true_labels, name='Observado'),
+    pd.Series(predicted_labels, name='Previsto')
+)
+
+# Criar matriz de confusão
+fig = plot_confusion_matrix(
+    confusion_matrix=confusion_data,
+    filename="matriz_confusao",
+    output_dir="outputs",
+    title="Matriz de Confusão - Validação da Classificação",
+    figsize=(8, 6),
+    normalize='true',                    # Normalizar por linha (observado)
+    scientific_style=True
+)
+
+print("✅ Matriz de confusão salva em: outputs/matriz_confusao.png")
+```
+
+---
+
+## 🔬 Análise Avançada
+
+### Análise de Intensidade Pontius-Aldwaik
+
+```python
+from landuse_intensity import IntensityAnalyzer
+
+# Criar analisador de intensidade
+analyzer = lui.IntensityAnalyzer(ct)
+
+# Análise completa
+results = analyzer.full_analysis()
+
+print("📊 Análise de Intensidade - Nível de Intervalo:")
+print(f"Taxa de mudança anual: {results.interval.annual_change_rate:.2f}%")
+print(f"Intensidade de mudança: {results.interval.change_intensity:.2f}")
+
+print("\n📊 Análise de Intensidade - Nível de Categoria:")
+for category_result in results.category:
+    print(f"{category_result.category_name}:")
+    print(f"  Ganho relativo: {category_result.relative_gain:.2f}")
+    print(f"  Perda relativa: {category_result.relative_loss:.2f}")
+```
+
+### Análise Multi-Temporal
+
+```python
+from landuse_intensity import MultiStepAnalyzer
+
+# Análise com múltiplos períodos
+rasters = [raster_t1, raster_t2]  # Adicione mais rasters conforme necessário
+time_labels = ['2000', '2020']
+
+multi_analyzer = lui.MultiStepAnalyzer(rasters, time_labels)
+multi_results = multi_analyzer.analyze_all_steps()
+
+print("📈 Análise Multi-Temporal:")
+for step_name, step_result in multi_results.items():
+    print(f"{step_name}: {step_result.interval.annual_change_rate:.2f}% mudança anual")
+```
+
+### Trabalhando com Arquivos Raster Reais
+
+```python
+# Carregar arquivos GeoTIFF
+raster_2000, metadata_2000 = lui.read_raster("caminho/para/landuse_2000.tif")
+raster_2020, metadata_2020 = lui.read_raster("caminho/para/landuse_2020.tif")
+
+# Verificar se os rasters são compatíveis
+print(f"Projeção compatível: {metadata_2000['crs'] == metadata_2020['crs']}")
+print(f"Resolução: {metadata_2000['transform'][0]}m x {metadata_2000['transform'][4]}m")
+
+# Criar tabela de contingência
+ct_real = lui.ContingencyTable.from_rasters(
+    raster_2000, raster_2020,
+    labels1=['Floresta', 'Agricultura', 'Urbano', 'Água', 'Pastagem'],
+    labels2=['Floresta', 'Agricultura', 'Urbano', 'Água', 'Pastagem']
+)
+
+# Análise completa
+analyzer_real = lui.IntensityAnalyzer(ct_real)
+results_real = analyzer_real.full_analysis()
+
+# Salvar resultados
+ct_real.table.to_csv("resultados/contingencia_real.csv")
+results_real.to_json("resultados/analise_intensidade.json")
+```
+
+---
+
+## 🎨 Galeria de Visualizações
+
+### Tipos de Gráficos Disponíveis
+
+| Tipo | Módulo | Descrição | Melhor Uso |
+|------|--------|-----------|------------|
+| **Sankey** | `sankey_visualization` | Fluxos interativos entre classes | Mostrar transições detalhadas |
+| **Mapa de Calor** | `matrix_visualization` | Intensidade de transições | Comparar magnitudes |
+| **Barras** | `bar_chart_visualization` | Comparação de áreas | Análise temporal |
+| **Ganho/Perda** | `bar_chart_visualization` | Mudanças positivas/negativas | Identificar tendências |
+| **ROC Curve** | `statistical_visualization` | Performance de classificação | Avaliação de modelos |
+| **Precisão-Revocação** | `statistical_visualization` | Métricas de classificação | Análise de trade-offs |
+
+### Parâmetros Comuns
+
+Todos os gráficos suportam:
+
+```python
+# Parâmetros universais
+filename="meu_grafico"        # Nome do arquivo (sem extensão)
+output_dir="outputs"          # Pasta de saída
+title="Título do Gráfico"     # Título
+figsize=(10, 6)              # Tamanho da figura
+scientific_style=True        # Estilo científico (fonte serifada, grid)
+```
+
+### Exportação Multi-Formato
+
+```python
+# Para Sankey (suporta múltiplos formatos)
+files = plot_single_step_sankey(
+    contingency_data=ct.table,
+    export_formats=['html', 'png', 'svg', 'pdf']  # Escolha os formatos
+)
+
+# Para outros gráficos (PNG e PDF automático)
+plot_transition_matrix_heatmap(
+    tabulation_matrix=ct.table,
+    filename="matriz"  # Gera .png e .pdf automaticamente
+)
+```
+
+---
+
+## 📚 Exemplos Práticos Completos
+
+### 🌟 Exemplo 1: Análise Completa de Pequena Área
+
+```python
+import landuse_intensity as lui
+import pandas as pd
+from pathlib import Path
+
+# Criar diretório de saída
+output_dir = Path("analise_completa")
+output_dir.mkdir(exist_ok=True)
+
+# 1. Carregar dados
+raster_t1, raster_t2 = lui.demo_landscape()
+
+# 2. Análise básica
+ct = lui.ContingencyTable.from_rasters(raster_t1, raster_t2)
+analyzer = lui.IntensityAnalyzer(ct)
+results = analyzer.full_analysis()
+
+# 3. Gerar todos os gráficos
+from landuse_intensity.sankey_visualization import plot_single_step_sankey
+from landuse_intensity.matrix_visualization import plot_transition_matrix_heatmap
+from landuse_intensity.bar_chart_visualization import plot_barplot_lulc
+
+# Sankey
+plot_single_step_sankey(
+    ct.table,
+    output_dir=str(output_dir),
+    filename="sankey_completo",
+    title="Análise Completa de Transições"
+)
+
+# Matriz de calor
+plot_transition_matrix_heatmap(
+    ct.table,
+    filename="matriz_completo",
+    output_dir=str(output_dir),
+    title="Matriz de Transição Completa"
+)
+
+# Gráfico de áreas
+area_data = []
+for class_name in ct.table.index:
+    area_data.append({'class': class_name, 'area': ct.table.loc[class_name].sum(), 'period': 'Tempo 1'})
+for class_name in ct.table.columns:
+    area_data.append({'class': class_name, 'area': ct.table[class_name].sum(), 'period': 'Tempo 2'})
+
+df_areas = pd.DataFrame(area_data)
+plot_barplot_lulc(
+    df_areas,
+    filename="areas_completo",
+    output_dir=str(output_dir),
+    title="Comparação de Áreas por Período"
+)
+
+print(f"✅ Análise completa salva em: {output_dir}")
+print(f"📊 {len(list(output_dir.glob('*.png')))} gráficos PNG gerados")
+print(f"🌐 {len(list(output_dir.glob('*.html')))} gráficos HTML gerados")
+```
+
+### 🌍 Exemplo 2: Estudo de Caso Real - Cerrado
+
+```python
+import landuse_intensity as lui
+import numpy as np
+
+# Simular dados do Cerrado brasileiro
+print("🌍 Análise do Bioma Cerrado")
+
+# Dados simulados (substitua por dados reais)
+classes_cerrado = ['Cerrado', 'Cerradão', 'Campo', 'Agricultura', 'Pastagem', 'Silvicultura']
+
+# Criar rasters simulados
+np.random.seed(42)
+raster_2000 = np.random.choice([0,1,2,3,4,5], size=(500, 500), p=[0.4, 0.2, 0.2, 0.1, 0.05, 0.05])
+raster_2020 = np.random.choice([0,1,2,3,4,5], size=(500, 500), p=[0.3, 0.15, 0.15, 0.2, 0.15, 0.05])
+
+# Análise
+ct_cerrado = lui.ContingencyTable.from_rasters(
+    raster_2000, raster_2020,
+    labels1=classes_cerrado,
+    labels2=classes_cerrado
+)
+
+analyzer_cerrado = lui.IntensityAnalyzer(ct_cerrado)
+results_cerrado = analyzer_cerrado.full_analysis()
+
+# Relatório
+print("
+📊 RELATÓRIO - MUDANÇAS NO CERRADO (2000-2020)"      print("=" * 50)
+print(f"Área total analisada: {ct_cerrado.total_area:,} hectares")
+print(f"Área que mudou: {ct_cerrado.total_change:,} hectares ({ct_cerrado.total_change/ct_cerrado.total_area*100:.1f}%)")
+print(f"Taxa de mudança anual: {results_cerrado.interval.annual_change_rate:.2f}%")
+
+print("
+🔄 Principais Transições:"      transitions = ct_cerrado.table.stack()
+top_transitions = transitions[transitions > 0].sort_values(ascending=False).head(5)
+
+for (from_class, to_class), area in top_transitions.items():
+    if from_class != to_class:
+        print(f"  {from_class} → {to_class}: {area:,} hectares")
+
+# Gerar visualizações
+from landuse_intensity.sankey_visualization import plot_single_step_sankey
+
+plot_single_step_sankey(
+    ct_cerrado.table,
+    output_dir="cerrado_results",
+    filename="cerrado_transitions",
+    title="Transições no Bioma Cerrado (2000-2020)",
+    export_formats=['html', 'png', 'pdf']
+)
+
+print("
+✅ Relatório e visualizações salvos em: cerrado_results/"  print("🌐 Arquivo interativo: cerrado_results/cerrado_transitions.html")
+```
+
+---
+
+## 🔧 Solução de Problemas
+
+### Erro: "Módulo não encontrado"
+
+```python
+# Verificar instalação
+import landuse_intensity as lui
+print("Versão:", lui.__version__)
+
+# Se não funcionar, reinstalar
+pip uninstall landuse-intensity-analysis
+pip install landuse-intensity-analysis
+```
+
+### Erro: "Dados inválidos"
+
+```python
+# Validar dados antes da análise
+from landuse_intensity.utils import validate_raster_data
+
+is_valid, message = validate_raster_data(raster_t1, raster_t2)
+if not is_valid:
+    print(f"Erro nos dados: {message}")
+```
+
+### Performance com Grandes Rasters
+
+```python
+# Para rasters muito grandes, processe em blocos
+from landuse_intensity.utils import process_raster_in_chunks
+
+results = process_raster_in_chunks(
+    raster_t1, raster_t2,
+    chunk_size=(1000, 1000),
+    overlap=50
+)
+```
+
+---
+
+## 📚 Referências
+
+### Metodologia
+
+- **Aldwaik, S. Z., & Pontius Jr, R. G. (2012).** Intensity analysis to unify measurements of size and stationarity of land changes by interval, category, and transition. *Landscape and Urban Planning*, 106(1), 103-114.
+
+- **Pontius Jr, R. G., & Millones, M. (2011).** Death to Kappa: birth of quantity disagreement and allocation disagreement for accuracy assessment. *International Journal of Remote Sensing*, 32(15), 4407-4429.
+
+### Implementação
+
+- **Documentação Oficial**: [Read the Docs](https://landuse-intensity-analysis.readthedocs.io/)
+- **Repositório GitHub**: [Código Fonte](https://github.com/ils15/LandUse-Intensity-Analysis)
+- **Exemplos**: Pasta `examples/` no repositório
+
+---
+
+## 🤝 Contribuição
+
+Contribuições são bem-vindas!
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Commit suas mudanças (`git commit -am 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/nova-feature`)
+5. Abra um Pull Request
+
+---
+
+## 📄 Licença
+
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+---
+
+## 🆘 Suporte
+
+**Precisa de ajuda?**
+
+1. 📖 **Documentação**: Leia os exemplos na pasta `examples/`
+2. 🐛 **Issues**: [GitHub Issues](https://github.com/ils15/LandUse-Intensity-Analysis/issues)
+3. 💬 **Discussões**: [GitHub Discussions](https://github.com/ils15/LandUse-Intensity-Analysis/discussions)
+4. 📧 **Email**: Para questões específicas
+
+---
+
+> Desenvolvido com ❤️ para a comunidade de ciências ambientais e geotecnologia
+
+**Versão Atual**: 2.0.3 | **Python**: 3.8+ | **Mantenedor**: [ils15](https://github.com/ils15)
+
+## 🌟 What does it do?
+
+Transform your land cover raster data into meaningful insights about environmental change:
+
+1. **Quantify Changes**: Calculate transition matrices and area statistics from multi-temporal raster data
+2. **Intensity Analysis**: Apply the proven Pontius-Aldwaik methodology for interval, category, and transition-level analysis
+3. **Rich Visualizations**: Create publication-ready Sankey diagrams, heatmaps, spatial maps, and statistical plots
+4. **Spatial Analysis**: Process GeoTIFF files with built-in raster handling and spatial change detection
+
+## ✨ Key Features
+
+- 🔬 **Scientific Rigor**: Implements the established Pontius-Aldwaik intensity analysis methodology
+- 📊 **Rich Visualizations**: Sankey diagrams, transition matrices, spatial maps, and statistical plots using matplotlib and plotly
+- 🗺️ **Spatial Support**: Direct processing of GeoTIFF files and numpy arrays
+- 🎯 **Object-Oriented Design**: Clean API with `ContingencyTable`, `IntensityAnalyzer`, and `MultiStepAnalyzer` classes
+- 📈 **Multi-temporal Analysis**: Support for analyzing changes across multiple time periods
+- 🔧 **Comprehensive Toolkit**: Complete suite of utility functions for data processing and validation
+
+## 🚀 Installation
+
+```bash
+pip install landuse-intensity-analysis
+```
+
+## 📖 Quick Start
+
+### Basic Analysis Example
+
+```python
+import numpy as np
+import landuse_intensity as lui
+
+# Step 1: Create contingency table from rasters
+# Example with 2 time periods and 3 land use classes
+raster_t1 = np.array([[1, 1, 2], [1, 2, 3], [2, 3, 3]])  # Time 1
+raster_t2 = np.array([[1, 2, 2], [2, 2, 3], [3, 3, 3]])  # Time 2
+
+# Create contingency table
+ct = lui.ContingencyTable.from_rasters(
+    raster_t1, raster_t2, 
+    labels1=['Forest', 'Agriculture', 'Urban', 'Water'],
+    labels2=['Forest', 'Agriculture', 'Urban', 'Water']
+)
+
+# Step 2: Run intensity analysis
+analyzer = lui.IntensityAnalyzer(ct)
+results = analyzer.full_analysis()
+
+# Step 3: Display results
+print("Contingency Table:")
+print(ct.table)
+print(f"\nTotal Change: {ct.total_change} pixels")
+print(f"Persistence: {ct.persistence} pixels")
+
+# Step 4: Create visualizations
+from landuse_intensity import visualization as viz
+
+# Sankey diagram
+viz.plot_single_step_sankey(
+    ct.table, 
+    title="Land Use Transitions",
+    save_path="sankey_diagram.html"
+)
+
+# Transition matrix heatmap
+viz.plot_transition_matrix_heatmap(
+    ct.table,
+    title="Land Use Transition Matrix",
+    save_path="transition_matrix.png"
+)
+```
+
+### Working with Real Raster Files
+
+```python
+import landuse_intensity as lui
+
+# Load raster data
+raster1, metadata1 = lui.read_raster("land_cover_2000.tif")
+raster2, metadata2 = lui.read_raster("land_cover_2020.tif")
+
+# Create contingency table
+contingency_df = lui.raster_to_contingency_table(
+    raster1, raster2,
+    class_names=['Forest', 'Agriculture', 'Urban', 'Water']
+)
+
+# Initialize analysis
+ct = lui.ContingencyTable(contingency_df)
+analyzer = lui.IntensityAnalyzer(ct)
+
+# Perform complete analysis
+results = analyzer.analyze()
+print("Interval Level Analysis:", results['interval'])
+print("Category Level Analysis:", results['category'])
+```
+
+### Multi-Temporal Analysis
+
+```python
+import landuse_intensity as lui
+
+# Load multiple time periods
+rasters = [
+    lui.read_raster("land_cover_1990.tif")[0],
+    lui.read_raster("land_cover_2000.tif")[0], 
+    lui.read_raster("land_cover_2010.tif")[0],
+    lui.read_raster("land_cover_2020.tif")[0]
+]
+
+time_labels = ['1990', '2000', '2010', '2020']
+
+# Multi-step analysis
+multi_analyzer = lui.MultiStepAnalyzer(rasters, time_labels)
+multi_results = multi_analyzer.analyze_all_steps()
+
+print("Multi-step Analysis Results:")
+for step, result in multi_results.items():
+    print(f"{step}: {result['interval']['annual_change_rate']:.2f}% annual change")
+```
+
+## � Complete API Reference
+
+### Core Classes
+
+#### ContingencyTable
+
+Main class for handling transition matrices:
+
+```python
+# Create from rasters
+ct = lui.ContingencyTable.from_rasters(raster1, raster2, labels1, labels2)
+
+# Create from existing data  
+ct = lui.ContingencyTable(dataframe_or_array)
+
+# Properties
+ct.table              # Access transition matrix
+ct.total_area        # Total number of pixels/area
+ct.persistence       # Unchanged pixels
+ct.total_change      # Changed pixels
+ct.validate()        # Validate table structure
+```
+
+#### IntensityAnalyzer
+Implements Pontius-Aldwaik intensity analysis:
+
+```python
+analyzer = lui.IntensityAnalyzer(contingency_table)
+
+# Analysis methods
+analyzer.analyze_interval_level()    # Overall change intensity
+analyzer.analyze_category_level()    # Class-specific gains/losses  
+analyzer.analyze_transition_level(from_class, to_class)  # Transition intensity
+analyzer.analyze()                   # Complete analysis
+analyzer.full_analysis()            # Returns AnalysisResults object
+```
+
+#### MultiStepAnalyzer
+For multi-temporal analysis:
+
+```python
+analyzer = lui.MultiStepAnalyzer(raster_list, time_labels)
+
+analyzer.analyze_all_steps()         # Step-by-step analysis
+analyzer.analyze_overall_change()    # Overall change summary
+analyzer.compare_step_vs_overall()   # Compare step vs overall rates
+```
+
+#### ChangeAnalyzer
+For spatial change detection:
+
+```python
+change_analyzer = lui.ChangeAnalyzer(raster1, raster2)
+
+change_analyzer.analyze()            # Basic change detection
+change_analyzer.detect_hotspots()    # Change hotspot detection
+change_analyzer.create_change_map()  # Spatial change mapping
+```
+
+### Visualization Functions
+
+#### Graph Visualizations
+From `landuse_intensity.graph_visualization`:
+
+```python
+from landuse_intensity import graph_visualization as gv
+
+# Sankey diagrams
+gv.plot_single_step_sankey(
+    contingency_table, 
+    title="Land Use Transitions",
+    save_path="sankey.html"
+)
+
+# Transition matrix heatmaps
+gv.plot_transition_matrix_heatmap(
+    contingency_table,
+    title="Transition Matrix",
+    save_path="heatmap.png"
+)
+
+# Bar plots for LULC analysis
+gv.plot_barplot_lulc(
+    lulc_data,
+    title="Land Use Areas",
+    save_path="barplot.png"
+)
+
+# Gain/Loss analysis
+gv.plot_gain_loss_analysis(
+    contingency_table,
+    title="Gain/Loss Analysis"
+)
+
+# Accuracy assessment
+gv.plot_accuracy_assessment(
+    observed, predicted,
+    save_path="accuracy.png"
+)
+
+# Confusion matrix
+gv.plot_confusion_matrix(
+    true_labels, predicted_labels
+)
+```
+
+#### Spatial Visualizations  
+From `landuse_intensity.map_visualization`:
+
+```python
+from landuse_intensity import map_visualization as mv
+
+# Spatial change maps
+mv.plot_spatial_change_map(
+    raster_t1, raster_t2,
+    title="Land Use Change Map",
+    save_path="change_map.png"
+)
+
+# Multi-temporal maps
+mv.plot_multi_temporal_maps(
+    raster_list, time_labels,
+    title="Land Use Over Time"
+)
+
+# Change detection
+mv.plot_change_detection_map(
+    raster_t1, raster_t2,
+    title="Change Detection"
+)
+
+# Interactive maps
+mv.plot_interactive_map(
+    raster_data, coordinates,
+    save_path="interactive_map.html"
+)
+
+# Elevation models
+mv.plot_elevation_model(
+    elevation_raster,
+    title="Digital Elevation Model"
+)
+```
+
+#### Advanced Visualizations
+From `landuse_intensity.visualization`:
+
+```python
+from landuse_intensity import visualization as viz
+
+# Intensity analysis plots
+viz.plot_intensity_analysis(
+    intensity_results,
+    title="Pontius Intensity Analysis"
+)
+
+# Multi-step Sankey
+viz.plot_multi_step_sankey(
+    transitions_list,
+    time_labels=time_labels
+)
+
+# Spatial change with persistence
+viz.plot_persistence_map(
+    raster_t1, raster_t2,
+    title="Persistence Analysis"
+)
+
+# Temporal land change
+viz.plot_temporal_land_change(
+    raster_list, time_labels,
+    save_path="temporal_change.png"
+)
+
+# Change frequency mapping
+viz.plot_change_frequency_map(
+    raster_list,
+    title="Change Frequency Analysis"
+)
+```
+
+### Utility Functions
+
+#### Data Processing
+```python
+import landuse_intensity as lui
+
+# Demo data generation
+raster_t1, raster_t2 = lui.demo_landscape()
+
+# Data validation
+is_valid = lui.validate_data(raster_data)
+
+# Area calculations
+area_matrix = lui.calculate_area_matrix(contingency_table, pixel_area=900)
+
+# Change summary
+summary = lui.get_change_summary(contingency_table)
+
+# Area formatting
+label = lui.format_area_label(1500.5, units="hectares")
+
+# Transition naming
+names = lui.create_transition_names(
+    from_classes=['Forest', 'Agriculture'], 
+    to_classes=['Urban', 'Water']
+)
+```
+
+#### Image Processing
+```python
+import landuse_intensity as lui
+
+# Create contingency table from rasters
+ct = lui.create_contingency_table(raster1, raster2, labels=['Forest', 'Urban'])
+
+# Calculate change map
+change_map = lui.calculate_change_map(raster_t1, raster_t2)
+
+# Apply majority filter  
+filtered = lui.apply_majority_filter(raster, window_size=3)
+
+# Calculate patch metrics
+metrics = lui.calculate_patch_metrics(raster, class_value=1)
+
+# Resample raster
+resampled = lui.resample_raster(raster, target_shape=(100, 100))
+
+# Align rasters
+aligned1, aligned2 = lui.align_rasters(raster1, raster2)
+
+# Validate raster
+is_valid = lui.validate_raster(raster)
+
+# Mask raster
+masked = lui.mask_raster(raster, mask, nodata_value=-9999)
+```
+
+#### Raster Handling
+```python
+import landuse_intensity as lui
+
+# Read raster file
+raster_data, metadata = lui.read_raster("landcover.tif")
+
+# Write raster file
+lui.write_raster(
+    raster_data, "output.tif", 
+    metadata=metadata,
+    nodata_value=-9999
+)
+
+# Convert rasters to contingency table
+contingency_df = lui.raster_to_contingency_table(
+    raster1, raster2,
+    class_names=['Forest', 'Agriculture', 'Urban']
+)
+
+# Load demo data
+demo_raster1, demo_raster2 = lui.load_demo_data()
+
+# Raster summary statistics
+summary = lui.raster_summary(raster)
+
+# Reclassify raster
+reclassified = lui.reclassify_raster(
+    raster, 
+    reclass_dict={1: 10, 2: 20, 3: 30}
+)
+```
+
+## 📊 Analysis Functions
+
+### Main Analysis Function
+```python
+# One-step comprehensive analysis
+results = lui.analyze_land_use_change(
+    raster1=raster_t1,
+    raster2=raster_t2, 
+    area_calculation=True,
+    intensity_analysis=True,
+    save_tables=True,
+    output_dir="./results/"
+)
+```
+
+## 🎯 Complete Example: Real Dataset Analysis
+
+```python
+import landuse_intensity as lui
+import numpy as np
+
+# 1. Load real raster data
+raster_2000, meta_2000 = lui.read_raster("cerrado_2000.tif")
+raster_2010, meta_2010 = lui.read_raster("cerrado_2010.tif") 
+raster_2020, meta_2020 = lui.read_raster("cerrado_2020.tif")
+
+# 2. Create contingency tables
+ct_2000_2010 = lui.ContingencyTable.from_rasters(
+    raster_2000, raster_2010,
+    labels1=['Forest', 'Savanna', 'Agriculture', 'Pasture', 'Urban'],
+    labels2=['Forest', 'Savanna', 'Agriculture', 'Pasture', 'Urban']
+)
+
+ct_2010_2020 = lui.ContingencyTable.from_rasters(
+    raster_2010, raster_2020,
+    labels1=['Forest', 'Savanna', 'Agriculture', 'Pasture', 'Urban'],
+    labels2=['Forest', 'Savanna', 'Agriculture', 'Pasture', 'Urban']
+)
+
+# 3. Intensity analysis
+analyzer_2000_2010 = lui.IntensityAnalyzer(ct_2000_2010)
+analyzer_2010_2020 = lui.IntensityAnalyzer(ct_2010_2020)
+
+results_2000_2010 = analyzer_2000_2010.analyze()
+results_2010_2020 = analyzer_2010_2020.analyze()
+
+# 4. Multi-temporal analysis
+multi_analyzer = lui.MultiStepAnalyzer(
+    [raster_2000, raster_2010, raster_2020],
+    ['2000', '2010', '2020']
+)
+multi_results = multi_analyzer.analyze_all_steps()
+
+# 5. Create visualizations
+from landuse_intensity import graph_visualization as gv
+from landuse_intensity import map_visualization as mv
+
+# Sankey diagrams for each period
+gv.plot_single_step_sankey(
+    ct_2000_2010.table,
+    title="Cerrado Land Use Transitions 2000-2010",
+    save_path="sankey_2000_2010.html"
+)
+
+gv.plot_single_step_sankey(
+    ct_2010_2020.table, 
+    title="Cerrado Land Use Transitions 2010-2020",
+    save_path="sankey_2010_2020.html"
+)
+
+# Spatial change maps
+mv.plot_spatial_change_map(
+    raster_2000, raster_2020,
+    title="Cerrado Land Use Change 2000-2020",
+    save_path="cerrado_change_map.png"
+)
+
+# Multi-temporal maps
+mv.plot_multi_temporal_maps(
+    [raster_2000, raster_2010, raster_2020],
+    ['2000', '2010', '2020'],
+    title="Cerrado Land Use Evolution"
+)
+
+# 6. Export results
+print("=== ANALYSIS RESULTS ===")
+print(f"Period 2000-2010:")
+print(f"  Annual change rate: {results_2000_2010['interval']['annual_change_rate']:.2f}%")
+print(f"  Total change: {ct_2000_2010.total_change} pixels")
+
+print(f"Period 2010-2020:")  
+print(f"  Annual change rate: {results_2010_2020['interval']['annual_change_rate']:.2f}%")
+print(f"  Total change: {ct_2010_2020.total_change} pixels")
+
+# Export contingency tables
+ct_2000_2010.table.to_csv("contingency_2000_2010.csv")
+ct_2010_2020.table.to_csv("contingency_2010_2020.csv")
+```
+
+## 📚 References
+
+This library implements the Pontius-Aldwaik intensity analysis methodology:
+
+- Aldwaik, S. Z., & Pontius Jr, R. G. (2012). Intensity analysis to unify measurements of size and stationarity of land changes by interval, category, and transition. *Landscape and Urban Planning*, 106(1), 103-114.
+
+- Pontius Jr, R. G., & Millones, M. (2011). Death to Kappa: birth of quantity disagreement and allocation disagreement for accuracy assessment. *International Journal of Remote Sensing*, 32(15), 4407-4429.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+## 📮 Support
+
+If you encounter any issues or have questions:
+
+1. Check the examples in the `examples/` directory
+2. Read the documentation
+3. Open an issue on GitHub
+
+## 🎯 Version Information
+
+- **Current Version**: 2.0.3
+- **Python Requirements**: Python 3.8+
+- **Key Dependencies**: numpy, pandas, matplotlib, plotly, rasterio
+
+---
+
+> Made with ❤️ for the geospatial and environmental science community
+
+- **Smart Detection**: No need to manually specify analysis type
+- **Methodology Compatible**: Follows established methodology
+- **Flexible**: Override auto-detection when needed
+- **Unified Interface**: Single function for all analysis types
+
+### Raster Stacking and Year Detection
+
+#### Raster Stacking Options
+
+**1. Automatic Directory Loading:**
+
+```python
+from landuse_intensity.raster import load_rasters
+
+# Load all .tif files from directory
+rasters = load_rasters("data/landuse/")
+# Automatically finds and stacks: landuse_1990.tif, landuse_2000.tif, landuse_2010.tif
+```
+
+**2. Manual File Selection:**
+
+```python
+# Load specific files in custom order
+files = ["landuse_1990.tif", "landuse_2005.tif", "landuse_2010.tif"]
+rasters = load_rasters(files)
+```
+
+## Scientific Background
+
+This library implements the Pontius-Aldwaik intensity analysis methodology, which provides a comprehensive framework for understanding land use change patterns. The methodology distinguishes between:
+
+- **Quantity of change**: How much land changed category
+- **Exchange**: Land that would have changed even if proportions remained constant
+- **Shift**: Land that changed due to systematic transitions
+
+## API Reference
+
+### Main Classes
+
+#### `ContingencyTable`
+
+Main class for creating and managing transition matrices.
+
+**Methods:**
+
+- `from_rasters()`: Create contingency table from raster data
+- `validate()`: Validate table data integrity
+- `get_summary_stats()`: Get statistical summary
+- `get_transition_matrix()`: Get transition matrix representation
+
+#### `IntensityAnalyzer`
+
+Class for performing Pontius-Aldwaik intensity analysis.
+
+**Methods:**
+
+- `analyze()`: Perform intensity analysis on contingency table
+- `full_analysis()`: Complete analysis with all metrics
+- `get_category_analysis()`: Category-level intensity analysis
+- `get_transition_analysis()`: Transition-level intensity analysis
+
+### Data Format
+
+The library expects land use data in numpy arrays or pandas DataFrames:
+
+```python
+# Raster data (numpy arrays)
+raster_1990 = np.array([[1, 1, 2], [1, 2, 3], [2, 3, 3]])
+raster_2000 = np.array([[1, 2, 2], [2, 2, 3], [3, 3, 3]])
+
+# Or pandas DataFrame
+contingency_df = pd.DataFrame({
+    'Forest->Forest': [100, 0, 0],
+    'Forest->Agriculture': [20, 0, 0],
+    'Agriculture->Agriculture': [0, 80, 0]
+})
+```
+
+## Visualization Gallery
+
+The library provides several types of visualizations:
+
+- **Intensity Maps**: Spatial distribution of land use intensity
+- **Transition Matrices**: Category transition probabilities
+- **Time Series Plots**: Temporal evolution of land use patterns
+- **Chord Diagrams**: Flow visualization between categories
+- **Sankey Diagrams**: Flow-based transition visualization
+
+## Advanced Usage
+
+### Working with Large Datasets
+
+```python
+# For large raster datasets, consider memory usage
+import numpy as np
+from landuse_intensity import ContingencyTable
+
+# Process in chunks for very large rasters
+def process_large_raster(raster1, raster2, chunk_size=1000):
+    height, width = raster1.shape
+    results = []
+    
+    for i in range(0, height, chunk_size):
+        for j in range(0, width, chunk_size):
+            chunk1 = raster1[i:i+chunk_size, j:j+chunk_size]
+            chunk2 = raster2[i:i+chunk_size, j:j+chunk_size]
+            
+            ct = ContingencyTable.from_rasters(chunk1, chunk2)
+            results.append(ct)
+    
+    return results
+```
+
+### Custom Analysis Parameters
+
+```python
+# Customize analysis with specific parameters
+from landuse_intensity import IntensityAnalyzer
+
+# Create analyzer with custom settings
+analyzer = IntensityAnalyzer()
+
+# Perform analysis with specific options
+results = analyzer.analyze(
+    contingency_table=ct,
+    include_interval=True,
+    include_category=True,
+    include_transition=True
+)
+```
+
+### Spatial Analysis
+
+```python
+# Load geospatial data
+import rasterio
+import xarray as xr
+
+with rasterio.open('land_use_1990.tif') as src:
+    data_1990 = src.read(1)
+
+with rasterio.open('land_use_2000.tif') as src:
+    data_2000 = src.read(1)
+
+# Perform spatial intensity analysis
+spatial_results = analyzer.spatial_intensity_analysis(
+    data_1990, data_2000,
+    transform=src.transform
+)
+```
+
+## 📚 Complete Documentation
+
+## Usage
+
+### 🔧 Key Features
+
+- **Raster Loading**: Multiple methods (automatic, manual, dataset)
+- **Year Detection**: Automatic year extraction from filenames
+- **Contingency Tables**: Transition matrix generation
+- **Intensity Analysis**: Pontius-Aldwaik methodology
+- **Visualizations**: Modern interactive plots
+- **Change Maps**: Spatial analysis and mapping
+- **Export Options**: CSV, JSON, HTML formats
+
+### 📋 Complete Analysis Workflow
+
+```python
+# 1. Load raster data
+from landuse_intensity import read_raster
+raster1, meta1 = read_raster("landuse_1990.tif")
+raster2, meta2 = read_raster("landuse_2000.tif")
+
+# 2. Generate contingency table
+from landuse_intensity import ContingencyTable
+ct = ContingencyTable.from_rasters(raster1, raster2)
+
+# 3. Perform intensity analysis
+from landuse_intensity import IntensityAnalyzer
+analyzer = IntensityAnalyzer(ct)
+results = analyzer.full_analysis()
+
+# 4. Create visualizations
+from landuse_intensity import visualization as viz
+viz.plot_single_step_sankey(ct.table, title="Land Use Transitions")
+viz.plot_transition_matrix_heatmap(ct.table, title="Transition Matrix")
+
+# 5. Generate change maps
+from landuse_intensity import image_processing
+change_map = image_processing.calculate_change_map(raster1, raster2)
+
+# 6. Export results
+ct.table.to_csv("contingency_table.csv")
+```
+
+## Examples
+
+The library includes comprehensive examples demonstrating various land use analysis capabilities:
+
+```python
+# Basic intensity analysis example
+import numpy as np
+import landuse_intensity as lui
+
+# Generate demo data
+raster_t1, raster_t2 = lui.demo_landscape()
+
+# Create contingency table
+ct = lui.ContingencyTable.from_rasters(raster_t1, raster_t2)
+
+# Perform intensity analysis
+analyzer = lui.IntensityAnalyzer(ct)
+results = analyzer.full_analysis()
+
+# Create visualizations
+import landuse_intensity.visualization as viz
+viz.plot_single_step_sankey(ct.table, title="Land Use Transitions")
+viz.plot_transition_matrix_heatmap(ct.table, title="Transition Matrix")
+
+print(f"Analysis completed! Total change: {ct.total_change} pixels")
+```
+
+## Contributing
+
+We welcome contributions! Please see our GitHub repository for details on contributing to the project.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Citation
+
+If you use this library in your research, please cite:
+
+```bibtex
+@software{landuse_intensity_analysis,
+  title = {Land Use Intensity Analysis},
+  author = {LandUse Intensity Analysis Contributors},
+  url = {https://github.com/your-repo/landuse-intensity-analysis},
+  version = {1.0.3a1},
+  date = {2024}
+}
+```
+
+## Support
+
+- **Documentation**: [Read the Docs](https://landuse-intensity-analysis.readthedocs.io/)
+- **Issues**: [GitHub Issues](https://github.com/your-repo/landuse-intensity-analysis/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-repo/landuse-intensity-analysis/discussions)
+
+## Related Projects
+
+- [Pontius Research Group](https://www.clarku.edu/departments/geography/pontius/): Original methodology developers
+- [GDAL](https://gdal.org/): Geospatial data processing
+- [Rasterio](https://rasterio.readthedocs.io/): Python geospatial raster processing
+- [Xarray](https://xarray.pydata.org/): N-dimensional arrays for Python
+
+<!-- Test commit for workflow validation -->
