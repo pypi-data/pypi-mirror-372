@@ -1,0 +1,74 @@
+## What is Heaptree?
+
+Heaptree lets you launch secure cloud instances with one line of code. Perfect for AI workloads, asynchronous tasks, or any application that needs on-demand compute.
+
+## Getting Started
+
+### 1. Install the SDK
+
+```bash
+pip install heaptree-test-sdk
+```
+
+### 2. Get your API key
+
+Sign up at [heaptree.com](https://heaptree.com) and copy your API key from the dashboard.
+
+### 3. Set your API key
+
+Set your API key as an environment variable.
+
+```bash
+HEAPTREE_API_KEY=your_api_key_here
+```
+
+### 4. Create your first node
+
+```python
+import os
+from heaptree import Heaptree
+
+# Initialize the client
+client = Heaptree(api_key=os.getenv("HEAPTREE_API_KEY"))
+
+# Create a new node
+result = client.create_node(
+    os="linux",
+    num_nodes=1,
+    node_type="ubuntu",
+    node_size="small"
+)
+
+print(f"Node created: {result.node_id}")
+```
+
+### 5. Use your node
+
+```python
+# Run a command on the node
+response = client.run_command(
+    node_id=result.node_id,
+    command="echo 'Hello from Heaptree!'"
+)
+
+# Clean up when done
+client.terminate_node(result.node_id)
+```
+
+## Features
+
+- **Node Management**: Create, terminate, and manage cloud instances
+- **File Operations**: Upload and download files to/from nodes
+- **Command Execution**: Run commands remotely on your nodes
+- **Multiple Node Support**: Create and manage multiple nodes simultaneously
+
+## API Reference
+
+For complete SDK documentation, including all available methods, parameters, and examples, visit the official documentation:
+
+**[📖 Heaptree Documentation](https://heaptree.com/docs)**
+
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
