@@ -1,0 +1,72 @@
+{# Template principal del plugin #}
+{% extends "djangocms_zb_polls/base.html" %}
+{% load i18n cms_tags polls_tags %}
+{% block content %}
+    {% spaceless %}
+        <div class="mb-4" style="margin-bottom: 2rem">
+            <h1 style="text-align: center">{{ instance.poll.title }}</h1>
+            <p style="text-align: center">{{ instance.poll.description }}</p>
+        </div>
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+        {% if messages %}
+            {% for message in messages %}
+                {% if message.tags == "success" %}
+                    <div class="alert alert-success">
+                        {{ message }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger">
+                        {{ message }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        {% if not instance.poll.published %}
+            <div class="alert alert-danger">
+                {% blocktrans %}The poll is not enabled.{% endblocktrans %}
+            </div>
+        {% endif %}
+        <div class="row d-flex justify-content-center align-items-center">
+            <div class="col-12 col-md-7">
+                <p style="font-size: 0.85rem;" class="mb-4">{% trans "Fields marked with * are required." %}</p>
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div class="mb-4">
+                            {% if field.field.widget.input_type == 'radio' or field.field.widget.input_type == 'checkbox' %}
+                                <span class="form-label fw-bold">
+                                    {% if field.field.required %}
+                                        *
+                                    {% endif %}
+                                    {{ field.label }}
+                                </span>
+                                <span class="text-danger" style="font-size: 0.85rem">{{ field.errors }}</span>
+                                {{ field|widgetaddclass:"zb-radio-checkbox" }}
+                            {% else %}
+                                <label for="id_{{ field.name }}" class="form-label fw-bold">
+                                    {% if field.field.required %}
+                                        *
+                                    {% endif %}
+                                    {{ field.label }}
+                                </label>
+                                <span class="text-danger" style="font-size: 0.85rem">{{ field.errors }}</span>
+                                {{ field|widgetaddclass:"form-control" }}
+                            {% endif %}
+                            <span class="form-text">{{ field.help_text }}</span>
+                        </div>
+                    {% endfor %}
+                    <div class="text-center mt-5">
+                        <button type="submit" class="btn btn-primary"
+                                {% if not instance.poll.published %}disabled{% endif %}>
+                            {% trans "Send" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endspaceless %}
+{% endblock %}
