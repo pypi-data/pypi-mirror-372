@@ -1,0 +1,33 @@
+        ; Wait for the move to complete
+        timer = 20 MilliSeconds ; Small delay to start moving
+        while (timer > 0)
+        endw
+        timer = {{ plc.timeout}} MilliSeconds ; Now start checking the conditions
+{% if template.args.wait_for_one_motor %}
+        while ({{ group.in_pos(operator='|') }}=0) ; Wait until at least one motor is In Position
+{% else %}
+        while ({{ group.in_pos() }}=0) ; At least one motor should not be In Position
+{% endif -%}
+{% if not template.args.no_following_err %}
+        and ({{ group.following_err() }} = 0) ; Following error check
+{% endif -%}
+{% if template.args.with_limits %}
+        and ({{ group.limits() }} = 0) ; Limit check
+{% endif %}
+        and (timer > 0) ; Check for timeout
+        and (HomingStatus = StatusHoming or HomingStatus = StatusDebugHoming) ; Check that we didn't abort
+        endw
+        ; Check why we left the while loop
+{% if not template.args.no_following_err %}
+        if ({{ group.following_err() }} != 0) ; Following error check failed
+            HomingStatus = StatusFFErr
+        endif
+{% endif %}
+{% if template.args.with_limits %}
+        if ({{ group.limits() }} != 0) ; Limit check failed
+            HomingStatus = StatusLimit
+        endif
+{% endif %}
+        if (timer<0 or timer=0) ; If we timed out
+            HomingStatus = StatusTimeout
+        endif

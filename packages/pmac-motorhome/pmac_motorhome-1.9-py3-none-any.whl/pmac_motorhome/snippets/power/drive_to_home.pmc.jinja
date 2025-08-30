@@ -1,0 +1,16 @@
+    {% include "debug_pause.pmc.jinja" %}
+
+    //---- {{template.args.state}} State ----
+    if (PLC{{plc.plc_num}}_HomingStatus == PLC{{plc.plc_num}}_StatusHoming || PLC{{plc.plc_num}}_HomingStatus == PLC{{plc.plc_num}}_StatusDebugHoming){
+        PLC{{plc.plc_num}}_HomingState=PLC{{plc.plc_num}}_State{{template.args.state}}
+        // Execute the move commands
+        {{- group.pre if template.args.state == "PreHomeMove" }}
+        {% if template.args.restore_homed_flags %}
+        {{ group.restore_home_flags() }} {{ group.set_large_jog_distance(homing_direction=template.args.homing_direction) }}
+        {% else %}
+        {{ group.set_large_jog_distance(homing_direction=template.args.homing_direction) }}
+        {% endif %}
+        {{ group.jog_to_home_jdist() }}
+        {% include "wait_for_done.pmc.jinja" %}
+    }
+

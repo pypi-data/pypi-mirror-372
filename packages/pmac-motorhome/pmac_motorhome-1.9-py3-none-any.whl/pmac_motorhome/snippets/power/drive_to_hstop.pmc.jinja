@@ -1,0 +1,15 @@
+    {% include "debug_pause.pmc.jinja" %}
+
+    //---- {{template.args.state}} State ----
+    if (PLC{{plc.plc_num}}_HomingStatus == PLC{{plc.plc_num}}_StatusHoming || PLC{{plc.plc_num}}_HomingStatus == PLC{{plc.plc_num}}_StatusDebugHoming){
+        PLC{{plc.plc_num}}_HomingState=PLC{{plc.plc_num}}_State{{template.args.state}}
+        // Execute the move commands
+        {{ group.set_inpos_trigger(3) }}// in-position trigger on following error
+        {{- group.pre if template.args.state == "PreHomeMove" }}
+        {{ group.set_large_jog_distance(homing_direction=template.args.homing_direction) }}
+        {{ group.jog_to_home_jdist() }}
+        {% include "wait_for_done.pmc.jinja" %}
+        {{ group.set_inpos_trigger(0) }}// in-position trigger on hardware capture
+
+    }
+

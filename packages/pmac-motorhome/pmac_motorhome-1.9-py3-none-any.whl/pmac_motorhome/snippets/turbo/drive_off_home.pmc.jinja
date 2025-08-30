@@ -1,0 +1,16 @@
+    {% include "debug_pause.pmc.jinja" %}
+
+    {# Invert the homing flags and the jog until the inverse of the home flag
+       triggers.
+
+       e.g. for an axis that is home on release of limit this would drive
+       onto the limit  #}
+    ;---- {{template.args.state}} State ----
+    if (HomingStatus = StatusHoming or HomingStatus = StatusDebugHoming)
+        HomingState=State{{template.args.state}}
+        ; Execute the move commands
+        {{ group.negate_home_flags() }} {{ group.set_large_jog_distance(homing_direction=template.args.homing_direction) }}
+        cmd "{{ group.jog_to_home_jdist() }}"
+        {% include "wait_for_done.pmc.jinja" %}
+    endif
+

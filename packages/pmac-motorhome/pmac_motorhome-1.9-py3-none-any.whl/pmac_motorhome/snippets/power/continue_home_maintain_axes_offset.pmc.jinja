@@ -1,0 +1,28 @@
+    //--- Homing State 2 ----
+    if (PLC{{plc.plc_num}}_HomingStatus == PLC{{plc.plc_num}}_StatusHoming || PLC{{plc.plc_num}}_HomingStatus == PLC{{plc.plc_num}}_StatusDebugHoming){
+        PLC{{plc.plc_num}}_HomingState=PLC{{plc.plc_num}}_StateHoming
+        // This block to be used after a home block with wait_for_one_motor=True.
+        // It allows motors to continue to home but restarts those that have already
+        // reached home. For use with axes that are sensitve to tilt but do not have
+        // aligned home marks
+
+        // make sure all jogs will be a long distance
+        {{ group.set_large_jog_distance(homing_direction=template.args.homing_direction) }}
+
+        // continue processing until all motors are homed or something goes wrong
+        Sys.CdTimer[{{plc.plc_num}}]={{ plc.timeout}}
+        while ({{group.homed(value=0)}}) && ({{group.following_err(relOperator="==", value=0)}}) && ({{group.in_pos(operator="&& ", relOperator="==", value=0)}}) && (Sys.CdTimer[{{plc.plc_num}}] > 0){ 
+            // jog any motors that have stopped on home
+            {% filter indent(width=12) %}
+            {{ group.jog_stopped() }}
+            {% endfilter %}
+        }
+        // Check why we left the while loop
+        if ({{ group.following_err(relOperator="!=", value=0) }}){ // Following error check failed
+            PLC{{plc.plc_num}}_HomingStatus = PLC{{plc.plc_num}}_StatusFFErr
+        }
+        if (Sys.CdTimer[{{plc.plc_num}}]<=0){ // If we timed out
+            PLC{{plc.plc_num}}_HomingStatus = PLC{{plc.plc_num}}_StatusTimeout
+        }
+    }
+
