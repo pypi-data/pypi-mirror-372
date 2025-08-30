@@ -1,0 +1,73 @@
+{# Template principal del plugin #}
+{% extends "djangocms_zb_polls/base.html" %}
+{% load i18n cms_tags polls_tags %}
+{% block content %}
+    {% spaceless %}
+        <div style="margin-bottom: 2rem">
+            <h1 style="text-align: center">{{ instance.poll.title }}</h1>
+            <p style="text-align: center">{{ instance.poll.description }}</p>
+        </div>
+        {% if form.non_field_errors %}
+            <div style="width: 100%; color: #721c24; background-color: #f8d7da; position: relative; padding: .75rem 1.25rem; margin-bottom: 1rem; border: 1px solid #f5c6cb; border-radius: .25rem;">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+        {% if messages %}
+            {% for message in messages %}
+                {% if message.tags == "success" %}
+                    <div style="width: 100%; color: #155724; background-color: #d4edda; position: relative; padding: .75rem 1.25rem; margin-bottom: 1rem; border: 1px solid #c3e6cb; border-radius: .25rem;">
+                        {{ message }}
+                    </div>
+                {% else %}
+                    <div style="width: 100%; color: #721c24; background-color: #f8d7da; position: relative; padding: .75rem 1.25rem; margin-bottom: 1rem; border: 1px solid #f5c6cb; border-radius: .25rem;">
+                        {{ message }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        {% if not instance.poll.published %}
+            <div style="width: 100%; color: #721c24; background-color: #f8d7da; position: relative; padding: .75rem 1.25rem; margin-bottom: 1rem; border: 1px solid #f5c6cb; border-radius: .25rem;">
+                {% blocktrans %}The poll is not enabled.{% endblocktrans %}
+            </div>
+        {% endif %}
+        <div style="display: flex; justify-content: center; align-items: center;">
+            <div style="width: 75%">
+                <p style="font-size: 0.85rem; margin-bottom: 2rem">{% trans "Fields marked with * are required." %}</p>
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div style="margin-bottom: 1.5rem">
+                            {% if field.field.widget.input_type == 'radio' or field.field.widget.input_type == 'checkbox' %}
+                                <p style="font-weight: bold; width: 100%">
+                                    {% if field.field.required %}
+                                        *
+                                    {% endif %}
+                                    {{ field.label }}
+                                </p>
+                                <span style="color: red; font-size: 0.85rem">{{ field.errors }}</span>
+                                {{ field|widgetaddclass:"zb-radio-checkbox" }}
+                            {% else %}
+                                <label for="id_{{ field.name }}" style="font-weight: bold; width: 100%">
+                                    {% if field.field.required %}
+                                        *
+                                    {% endif %}
+                                    {{ field.label }}
+                                </label>
+                                <span style="color: red; font-size: 0.85rem">{{ field.errors }}</span>
+                                {{ field|widgetaddstyle:"width: 100%;" }}
+                            {% endif %}
+                            <span style="font-size: 0.85rem; color: #6c757d">{{ field.help_text }}</span>
+                        </div>
+                    {% endfor %}
+                    <div style="text-align: center">
+                        <button type="submit"
+                                style="font-weight: 400; text-align: center; vertical-align: middle; padding: .375rem .75rem; font-size: 1rem; line-height: 1.5; border-radius: .25rem;"
+                                {% if not instance.poll.published %}disabled{% endif %}>
+                            {% trans "Send" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endspaceless %}
+{% endblock %}
