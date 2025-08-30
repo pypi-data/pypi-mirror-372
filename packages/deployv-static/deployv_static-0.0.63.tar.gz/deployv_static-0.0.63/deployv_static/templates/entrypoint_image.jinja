@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+from __future__ import print_function
+
+import subprocess
+import time
+import tempfile
+import os
+
+
+def start_odoo():
+    """
+    This method executes odoo with supervisorctl if it is not running
+    """
+    find_odoo = "ps ax|grep {{ odoo_binaries }}|grep -v grep"
+    outfd = tempfile.TemporaryFile()
+    errfd = tempfile.TemporaryFile()
+    subprocess.call(find_odoo, shell=True, stdout=outfd, stderr=errfd)
+    outfd.seek(0)
+    errfd.seek(0)
+    output = outfd.read()
+    if not output:
+        subprocess.call("supervisorctl start odoo", shell=True)
+    else:
+        print("...odoo service started.")
+
+def docker_entrypoint():
+    # Checking running supervisord, if it is not execute /entry_point start
+    ps_supervisord = subprocess.Popen(
+            ["pgrep", "supervisord"], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    ps_supervisord.wait()
+    ps_out = ps_supervisord.stdout.read()
+    if not ps_out:
+        if os.is_file("/entry_point"):
+            subprocess.call("/entry_point start >> /dev/null 2<&1&", shell=True)
+        else:
+            subprocess.call("/entry_point.py >> /dev/null 2<&1&", shell=True)
+        time.sleep(5)
+    # Start postgresql service with supervisorctl
+    cmd = "supervisorctl start postgresql"
+    subprocess.call(cmd, shell=True)
+    print("Waiting to start psql service...")
+    count = 0
+    max_count = 20
+    # try start postgres with supervisorctl, use while for testing if start
+    # postgresql
+    while True:
+        psql_subprocess = subprocess.Popen(
+            ["supervisorctl", 'status', 'postgresql'], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        psql_subprocess.wait()
+        psql_out = psql_subprocess.stdout.read()
+        if 'STOPPED' in psql_out:
+            psql_error = False
+            subprocess.call(cmd, shell=True)
+        elif 'no such file' in psql_out or "refused connection" in psql_out:
+            psql_error = True
+        else:
+            psql_error = False
+        if 'STARTING' in psql_out or not psql_error or count > max_count:
+            break
+        time.sleep(3)
+        count += 1
+    if not psql_error:
+        print("...psql service started.")
+    else:
+        raise RuntimeError("PSQL not started.")
+    start_odoo()
+    return True
+
+
+if __name__ == '__main__':
+    docker_entrypoint()
+

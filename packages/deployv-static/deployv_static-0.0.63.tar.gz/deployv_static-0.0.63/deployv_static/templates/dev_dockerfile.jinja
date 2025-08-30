@@ -1,0 +1,50 @@
+FROM {{ base_image_name }}
+MAINTAINER Tulio Ruiz <truiz@vauxoo.com>
+
+RUN apt-get update \
+    && apt-get install -y software-properties-common openssh-server \
+        ghostscript graphviz \
+    && pip install gitpython \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+COPY files/dev_services.conf /etc/supervisor/conf.d/dev_services.conf
+COPY files/supervisord_service.conf /etc/supervisor/supervisord.conf
+
+RUN sed -i 's/autostart\=false/autostart\=true/' /etc/supervisor/conf.d/postgres_service.conf \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config \
+    && sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config \
+    && echo "UsePrivilegeSeparation no" >> /etc/ssh/sshd_config
+RUN echo "ClientAliveInterval 60" >> /etc/ssh/sshd_config
+RUN echo "ClientAliveCountMax 360" >> /etc/ssh/sshd_config
+
+RUN mkdir -p /root/.ssh \
+    && touch /root/.ssh/authorized_keys \
+    && mkdir -p /var/run/sshd
+
+RUN echo 'set modelines=0' >> /root//.vimrc \
+    && echo 'set nomodeline' >> /root//.vimrc
+
+USER odoo
+
+RUN echo 127.0.0.1:*:*:{{ db_user|default('odoo')  }}:{{ db_password|default('odoo')  }} | tee -a /home/odoo/.pgpass \
+    && echo localhost:*:*:{{ db_user|default('odoo')  }}:{{ db_password|default('odoo')  }} | tee -a /home/odoo/.pgpass \
+    && chmod 600 /home/odoo/.pgpass
+
+RUN if [ ! -f /home/odoo/.profile ]; then touch /home/odoo/.profile; fi;
+
+RUN echo 'export PGPORT=5432' | tee -a /home/odoo/.profile \
+    && echo 'export PGDATABASE={{ db_name|default('template1') }}' | tee -a /home/odoo/.profile \
+    && echo 'export PGUSER={{ db_user|default('odoo') }}' | tee -a /home/odoo/.profile \
+    && echo 'export PGPASSWORD={{ db_password|default('odoo') }}' | tee -a /home/odoo/.profile \
+    && echo 'Installing spf13-vim and configuring .vimrc' \
+    && curl http://j.mp/spf13-vim3 -s -L -o - | sh >/dev/null \
+    && echo 'let &colorcolumn=join(range(80,999),",")' >> /home/odoo//.vimrc \
+    && echo 'set modelines=0' >> /home/odoo//.vimrc \
+    && echo 'set nomodeline' >> /home/odoo//.vimrc \
+    && sed -i 's/ set mouse\=a/\"set mouse\=a/g' /home/odoo//.vimrc
+
+USER root
+
+RUN chmod 0777 /home/odoo/.vimrc
+
+EXPOSE 22 5432
