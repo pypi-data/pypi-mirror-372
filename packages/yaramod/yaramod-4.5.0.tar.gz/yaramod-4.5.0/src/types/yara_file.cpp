@@ -1,0 +1,496 @@
+/**
+ * @file src/types/yara_file.cpp
+ * @brief Implementation of class YaraFile.
+ * @copyright (c) 2017 Avast Software, licensed under the MIT license
+ */
+
+#include <iterator>
+
+#include "yaramod/types/yara_file.h"
+#include "yaramod/utils/utils.h"
+
+namespace yaramod {
+
+/**
+ * Constructor.
+ */
+YaraFile::YaraFile(Features features)
+	: YaraFile(std::make_shared<TokenStream>(), features)
+{
+	if (_Features & Features::VirusTotalOnly)
+		initializeVTSymbols();
+}
+
+YaraFile::YaraFile(const std::shared_ptr<TokenStream>& tokenStream, Features features)
+	: _tokenStream(tokenStream)
+	, _imports()
+	, _rules()
+	, _importTable()
+	, _ruleTable()
+	, _ruleTrie()
+	, _Features(features)
+	, _vtSymbols()
+	, _deferredIncludes()
+{
+	if (_Features & Features::VirusTotalOnly)
+		initializeVTSymbols();
+}
+
+YaraFile::YaraFile(YaraFile&& o) noexcept
+	: _tokenStream(std::move(o._tokenStream))
+	, _imports(std::move(o._imports))
+	, _rules(std::move(o._rules))
+	, _importTable(std::move(o._importTable))
+	, _ruleTable(std::move(o._ruleTable))
+	, _ruleTrie(std::move(o._ruleTrie))
+	, _Features(std::move(o._Features))
+	, _vtSymbols(std::move(o._vtSymbols))
+	, _deferredIncludes(std::move(o._deferredIncludes))
+{
+}
+
+YaraFile& YaraFile::operator=(YaraFile&& o) noexcept
+{
+	using std::swap;
+	swap(_tokenStream, o._tokenStream);
+	swap(_imports, o._imports);
+	swap(_rules, o._rules);
+	swap(_importTable, o._importTable);
+	swap(_ruleTable, o._ruleTable);
+	swap(_ruleTrie, o._ruleTrie);
+	swap(_Features, o._Features);
+	swap(_vtSymbols, o._vtSymbols);
+	return *this;
+}
+
+/**
+ * VirusTotal symbols
+ */
+void YaraFile::initializeVTSymbols()
+{
+	_vtSymbols = {
+		// VirusTotal specific global variables
+		std::make_shared<ValueSymbol>("new_file", Expression::Type::Bool),
+		std::make_shared<ValueSymbol>("positives", Expression::Type::Int),
+		std::make_shared<ValueSymbol>("signatures", Expression::Type::String),
+		std::make_shared<ValueSymbol>("tags", Expression::Type::String),
+		std::make_shared<ValueSymbol>("md5", Expression::Type::String),
+		std::make_shared<ValueSymbol>("sha256", Expression::Type::String),
+		std::make_shared<ValueSymbol>("imphash", Expression::Type::String),
+		std::make_shared<ValueSymbol>("file_type", Expression::Type::String),
+		std::make_shared<ValueSymbol>("file_name", Expression::Type::String),
+		// VirusTotal specific global variables of antiviruses
+		std::make_shared<ValueSymbol>("acronis", Expression::Type::String),
+		std::make_shared<ValueSymbol>("ad_aware", Expression::Type::String),
+		std::make_shared<ValueSymbol>("aegislab", Expression::Type::String),
+		std::make_shared<ValueSymbol>("ahnlab", Expression::Type::String),
+		std::make_shared<ValueSymbol>("ahnlab_v3", Expression::Type::String),
+		std::make_shared<ValueSymbol>("alibaba", Expression::Type::String),
+		std::make_shared<ValueSymbol>("alyac", Expression::Type::String),
+		std::make_shared<ValueSymbol>("antivir", Expression::Type::String),
+		std::make_shared<ValueSymbol>("antivir7", Expression::Type::String),
+		std::make_shared<ValueSymbol>("antiy_avl", Expression::Type::String),
+		std::make_shared<ValueSymbol>("apex", Expression::Type::String),
+		std::make_shared<ValueSymbol>("arcabit", Expression::Type::String),
+		std::make_shared<ValueSymbol>("avast", Expression::Type::String),
+		std::make_shared<ValueSymbol>("avast_mobile", Expression::Type::String),
+		std::make_shared<ValueSymbol>("avg", Expression::Type::String),
+		std::make_shared<ValueSymbol>("avira", Expression::Type::String),
+		std::make_shared<ValueSymbol>("avware", Expression::Type::String),
+		std::make_shared<ValueSymbol>("babable", Expression::Type::String),
+		std::make_shared<ValueSymbol>("baidu", Expression::Type::String),
+		std::make_shared<ValueSymbol>("bitdefender", Expression::Type::String),
+		std::make_shared<ValueSymbol>("bitdefenderfalx", Expression::Type::String),
+		std::make_shared<ValueSymbol>("bitdefendertheta", Expression::Type::String),
+		std::make_shared<ValueSymbol>("bkav", Expression::Type::String),
+		std::make_shared<ValueSymbol>("cat_quickheal", Expression::Type::String),
+		std::make_shared<ValueSymbol>("clamav", Expression::Type::String),
+		std::make_shared<ValueSymbol>("cmc", Expression::Type::String),
+		std::make_shared<ValueSymbol>("commtouch", Expression::Type::String),
+		std::make_shared<ValueSymbol>("comodo", Expression::Type::String),
+		std::make_shared<ValueSymbol>("crowdstrike", Expression::Type::String),
+		std::make_shared<ValueSymbol>("cybereason", Expression::Type::String),
+		std::make_shared<ValueSymbol>("cylance", Expression::Type::String),
+		std::make_shared<ValueSymbol>("cynet", Expression::Type::String),
+		std::make_shared<ValueSymbol>("cyren", Expression::Type::String),
+		std::make_shared<ValueSymbol>("drweb", Expression::Type::String),
+		std::make_shared<ValueSymbol>("egambit", Expression::Type::String),
+		std::make_shared<ValueSymbol>("elastic", Expression::Type::String),
+		std::make_shared<ValueSymbol>("emsisoft", Expression::Type::String),
+		std::make_shared<ValueSymbol>("endgame", Expression::Type::String),
+		std::make_shared<ValueSymbol>("escan", Expression::Type::String),
+		std::make_shared<ValueSymbol>("eset_nod32", Expression::Type::String),
+		std::make_shared<ValueSymbol>("f_prot", Expression::Type::String),
+		std::make_shared<ValueSymbol>("f_secure", Expression::Type::String),
+		std::make_shared<ValueSymbol>("fireeye", Expression::Type::String),
+		std::make_shared<ValueSymbol>("fortinet", Expression::Type::String),
+		std::make_shared<ValueSymbol>("gdata", Expression::Type::String),
+		std::make_shared<ValueSymbol>("google", Expression::Type::String),
+		std::make_shared<ValueSymbol>("gridinsoft", Expression::Type::String),
+		std::make_shared<ValueSymbol>("ikarus", Expression::Type::String),
+		std::make_shared<ValueSymbol>("invincea", Expression::Type::String),
+		std::make_shared<ValueSymbol>("jiangmin", Expression::Type::String),
+		std::make_shared<ValueSymbol>("k7antivirus", Expression::Type::String),
+		std::make_shared<ValueSymbol>("k7gw", Expression::Type::String),
+		std::make_shared<ValueSymbol>("kaspersky", Expression::Type::String),
+		std::make_shared<ValueSymbol>("kingsoft", Expression::Type::String),
+		std::make_shared<ValueSymbol>("lionic", Expression::Type::String),
+		std::make_shared<ValueSymbol>("malwarebytes", Expression::Type::String),
+		std::make_shared<ValueSymbol>("max", Expression::Type::String),
+		std::make_shared<ValueSymbol>("maxsecure", Expression::Type::String),
+		std::make_shared<ValueSymbol>("mcafee", Expression::Type::String),
+		std::make_shared<ValueSymbol>("mcafee_gw_edition", Expression::Type::String),
+		std::make_shared<ValueSymbol>("microsoft", Expression::Type::String),
+		std::make_shared<ValueSymbol>("microworld_escan", Expression::Type::String),
+		std::make_shared<ValueSymbol>("nano_antivirus", Expression::Type::String),
+		std::make_shared<ValueSymbol>("nod32", Expression::Type::String),
+		std::make_shared<ValueSymbol>("nprotect", Expression::Type::String),
+		std::make_shared<ValueSymbol>("paloalto", Expression::Type::String),
+		std::make_shared<ValueSymbol>("panda", Expression::Type::String),
+		std::make_shared<ValueSymbol>("prevx1", Expression::Type::String),
+		std::make_shared<ValueSymbol>("qihoo_360", Expression::Type::String),
+		std::make_shared<ValueSymbol>("rising", Expression::Type::String),
+		std::make_shared<ValueSymbol>("sangfor", Expression::Type::String),
+		std::make_shared<ValueSymbol>("sentinelone", Expression::Type::String),
+		std::make_shared<ValueSymbol>("sophos", Expression::Type::String),
+		std::make_shared<ValueSymbol>("sunbelt", Expression::Type::String),
+		std::make_shared<ValueSymbol>("superantispyware", Expression::Type::String),
+		std::make_shared<ValueSymbol>("symantec", Expression::Type::String),
+		std::make_shared<ValueSymbol>("symantecmobileinsight", Expression::Type::String),
+		std::make_shared<ValueSymbol>("tachyon", Expression::Type::String),
+		std::make_shared<ValueSymbol>("tencent", Expression::Type::String),
+		std::make_shared<ValueSymbol>("thehacker", Expression::Type::String),
+		std::make_shared<ValueSymbol>("totaldefense", Expression::Type::String),
+		std::make_shared<ValueSymbol>("trapmine", Expression::Type::String),
+		std::make_shared<ValueSymbol>("trendmicro", Expression::Type::String),
+		std::make_shared<ValueSymbol>("trendmicro_housecall", Expression::Type::String),
+		std::make_shared<ValueSymbol>("trustlook", Expression::Type::String),
+		std::make_shared<ValueSymbol>("vba32", Expression::Type::String),
+		std::make_shared<ValueSymbol>("vipre", Expression::Type::String),
+		std::make_shared<ValueSymbol>("virobot", Expression::Type::String),
+		std::make_shared<ValueSymbol>("webroot", Expression::Type::String),
+		std::make_shared<ValueSymbol>("whitearmor", Expression::Type::String),
+		std::make_shared<ValueSymbol>("yandex", Expression::Type::String),
+		std::make_shared<ValueSymbol>("zillya", Expression::Type::String),
+		std::make_shared<ValueSymbol>("zonealarm", Expression::Type::String),
+		std::make_shared<ValueSymbol>("zoner", Expression::Type::String)
+	};
+}
+
+/**
+ * Returns the string representation of the whole YARA file.
+ *
+ * @return String representation.
+ */
+std::string YaraFile::getText() const
+{
+	if (!hasImports() && !hasRules())
+		return std::string();
+
+	std::ostringstream ss;
+	for (const auto& module : getImports())
+		ss << "import \"" << module->getName() << "\"\n";
+
+	if (!hasRules())
+		return ss.str();
+
+	// If there are some imports, separate them with one new line from rules.
+	if (hasImports())
+		ss << '\n';
+
+	for (const auto& rule : getRules())
+		ss << rule->getText() << "\n\n";
+
+	// Remove last "\n\n" from the text.
+	return trim(ss.str());
+}
+
+std::string YaraFile::getTextFormatted(bool withIncludes) const
+{
+	return getTokenStream()->getText(withIncludes);
+}
+
+/**
+ * Adds the import of the module to the YARA file. Module needs
+ * to exist and be defined in @c types/modules folder.
+ *
+ * @param import Imported module name.
+ * @param modules A pool where to add module.
+ *
+ * @return @c true if module was found, @c false otherwise.
+ */
+bool YaraFile::addImport(TokenIt import, ModulePool& modules)
+{
+	auto module = modules.load(import->getPureText());
+	if (!module)
+		return false;
+
+	// We don't want duplicates.
+	if (_importTable.find(import->getPureText()) != _importTable.end())
+		return true;
+
+	_imports.push_back(std::move(module));
+	_importTable.emplace(_imports.back()->getName(), std::make_pair(import, _imports.back().get()));
+	return true;
+}
+
+/**
+ * Adds the imports of the modules to the YARA file. Modules need
+ * to exist and be defined in @c types/modules folder.
+ *
+ * @param imports Imported modules names.
+ * @param modules A pool where to add the modules.
+ *
+ * @return @c true if modules were found, @c false otherwise.
+ */
+bool YaraFile::addImports(const std::vector<TokenIt>& imports, ModulePool& modules)
+{
+	for (const TokenIt& module : imports)
+	{
+		if (!addImport(module, modules))
+			return false;
+	}
+
+	return true;
+}
+
+/**
+ * Adds the rule to the YARA file.
+ *
+ * @param rule Rule to add.
+ * @param extractTokens set if the tokens should be extracted into the _tokenStream.
+ */
+void YaraFile::addRule(Rule&& rule, bool extractTokens)
+{
+	addRule(std::make_unique<Rule>(std::move(rule)), extractTokens);
+}
+
+/**
+ * Adds the rule to the YARA file.
+ *
+ * @param rule Rule to add.
+ * @param extractTokens set if the tokens should be extracted into the _tokenStream.
+ */
+void YaraFile::addRule(std::unique_ptr<Rule>&& rule, bool extractTokens)
+{
+	if (extractTokens && (rule->getTokenStream() != _tokenStream.get()))
+		_tokenStream->moveAppend(rule->getTokenStream());
+	_rules.emplace_back(std::move(rule));
+	_ruleTable.emplace(_rules.back()->getName(), _rules.back().get());
+	_ruleTrie.insert(_rules.back()->getName(), _rules.back().get());
+}
+
+/**
+ * Adds the rule to the YARA file.
+ *
+ * @param rule Rule to add.
+ * @param extractTokens set if the tokens should be extracted into the _tokenStream.
+ */
+void YaraFile::addRule(const std::shared_ptr<Rule>& rule, bool extractTokens)
+{
+	if (extractTokens && (rule->getTokenStream() != _tokenStream.get()))
+		_tokenStream->moveAppend(rule->getTokenStream());
+	_rules.emplace_back(rule);
+	_ruleTable.emplace(_rules.back()->getName(), _rules.back().get());
+	_ruleTrie.insert(_rules.back()->getName(), _rules.back().get());
+}
+
+/**
+ * Adds the rules to the YARA file.
+ *
+ * @param rules Rules to add.
+ * @param extractTokens set if the tokens should be extracted into the _tokenStream.
+ */
+void YaraFile::addRules(const std::vector<std::shared_ptr<Rule>>& rules, bool extractTokens)
+{
+	for (const auto& rule : rules)
+		addRule(rule, extractTokens);
+}
+
+/**
+ * Insert single rule at the specified position to the YARA file.
+ *
+ * @param position Position to insert rule at.
+ * @param rule Rule to insert.
+ */
+void YaraFile::insertRule(std::size_t position, std::unique_ptr<Rule>&& rule)
+{
+	position = std::min(position, _rules.size());
+	TokenIt before;
+	if (position == _rules.size())
+	{
+		before = _tokenStream->end();
+	}
+	else
+	{
+		before = _rules[position]->getFirstTokenIt();
+	}
+	_tokenStream->moveAppend(before, rule->getTokenStream());
+
+	_rules.insert(_rules.begin() + position, std::move(rule));
+	_ruleTable.emplace(_rules[position]->getName(), _rules[position].get());
+	_ruleTrie.insert(_rules[position]->getName(), _rules[position].get());
+}
+
+/**
+ * Insert single rule at the specified position to the YARA file.
+ *
+ * @param position Position to insert rule at.
+ * @param rule Rule to insert.
+ */
+void YaraFile::insertRule(std::size_t position, const std::shared_ptr<Rule>& rule)
+{
+	position = std::min(position, _rules.size());
+	TokenIt before;
+	if (position == _rules.size())
+	{
+		before = _tokenStream->end();
+	}
+	else
+	{
+		before = _rules[position]->getFirstTokenIt();
+	}
+	_tokenStream->moveAppend(before, rule->getTokenStream());
+
+	_rules.insert(_rules.begin() + position, rule);
+	_ruleTable.emplace(_rules[position]->getName(), _rules[position].get());
+	_ruleTrie.insert(_rules[position]->getName(), _rules[position].get());
+}
+
+/**
+ * Returns all imported modules from the YARA file in order they were added.
+ *
+ * @return All imported modules.
+ */
+const std::vector<std::shared_ptr<Module>>& YaraFile::getImports() const
+{
+	return _imports;
+}
+
+/**
+ * Returns the whole tokenStream of this file.
+ *
+ * @return _tokenStream.
+ */
+TokenStream* YaraFile::getTokenStream() const
+{
+	return _tokenStream.get();
+}
+
+/**
+ * Returns all rules from the YARA file in order they were added.
+ *
+ * @return All rules.
+ */
+const std::vector<std::shared_ptr<Rule>>& YaraFile::getRules() const
+{
+	return _rules;
+}
+
+/**
+ * Finds the symbol in the YARA file. Symbol is either rule name or module identifier.
+ *
+ * @param name Name of the symbol to search for.
+ *
+ * @return Returns valid symbol if it was found, @c nullptr otherwise.
+ */
+std::shared_ptr<Symbol> YaraFile::findSymbol(const std::string& name) const
+{
+	// @todo Should rules have priority over imported modules?
+	if (auto itr = _ruleTable.find(name); itr != _ruleTable.end())
+		return itr->second->getSymbol();
+
+	if (auto itr = _importTable.find(name); itr != _importTable.end())
+		return itr->second.second->getStructure();
+
+	for (const auto& vtSymbol : _vtSymbols)
+	{
+		if (vtSymbol->getName() == name)
+			return vtSymbol;
+	}
+
+	return nullptr;
+}
+
+/**
+ * Returns whether the YARA file contains any imported modules.
+ *
+ * @return @c true if it contains, otherwise @c false.
+ */
+bool YaraFile::hasImports() const
+{
+	return !_imports.empty();
+}
+
+/**
+ * Returns whether the YARA file contains any rules.
+ *
+ * @return @c true if it contains, otherwise @c false.
+ */
+bool YaraFile::hasRules() const
+{
+	return !_rules.empty();
+}
+
+/**
+ * Returns whether the YARA file contains specified rule.
+ *
+ * @return @c true if it contains, otherwise @c false.
+ */
+bool YaraFile::hasRule(const std::string& name) const
+{
+	return _ruleTable.find(name) != _ruleTable.end();
+}
+
+/**
+ * Returns whether the YARA file contains specified rule prefix.
+ *
+ * @return @c true if it contains, otherwise @c false.
+ */
+bool YaraFile::hasRuleWithPrefix(const std::string& prefix) const
+{
+	return _ruleTrie.isPrefix(prefix);
+}
+
+/**
+ * Expands specified rule prefix to a list of rule names that match this prefix
+ * and also preced the origin rule. No wildcard can match succeeding rules from the
+ * origin so all of those will be ignored.
+ *
+ * @param prefix Prefix of the rule.
+ * @param origin Origin rule from which to consider prefixes.
+ * @return List of rule names that match the prefix from the specified origin.
+ */
+std::vector<std::string> YaraFile::expandRulePrefixFromOrigin(const std::string& prefix, yaramod::Rule* origin) const
+{
+	std::vector<std::string> result;
+
+	// Create hash table from values that match our prefix for faster lookup
+	std::unordered_set<std::string> expandedRules;
+	for (const auto& rule : _ruleTrie.getValuesWithPrefix(prefix))
+		expandedRules.insert(rule->getName());
+
+	for (const auto& rule : _rules)
+	{
+		// Found the origin, stop here because the wildcard can't expand to any rule after the origin one
+		if (rule->getName() == origin->getName())
+			break;
+
+		if (auto itr = expandedRules.find(rule->getName()); itr != expandedRules.end())
+			result.push_back(rule->getName());
+	}
+
+	return result;
+}
+
+const std::vector<std::string>& YaraFile::getDeferredIncludes() const
+{
+	return _deferredIncludes;
+}
+
+void YaraFile::addDeferredInclude(std::string&& filePath)
+{
+	_deferredIncludes.push_back(std::move(filePath));
+}
+
+}
