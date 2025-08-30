@@ -1,0 +1,216 @@
+Metadata-Version: 2.4
+Name: coupa-async-client
+Version: 0.1.0
+Summary: Minimal async Coupa client with offset pagination, concurrency, and retries.
+Project-URL: Repository, https://github.com/RodrigoMufatto/coupa_async_client
+Author-email: Rodrigo Mufatto <rodrigom3317@gmail.com>
+License: MIT
+Keywords: api,async,client,coupa,httpx,pagination
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Typing :: Typed
+Requires-Python: >=3.10
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: tenacity>=8.3.0
+Description-Content-Type: text/markdown
+
+# coupa-async-client
+
+Minimal async Coupa API client (OAuth2 client-credentials, offset pagination with concurrency & retries).
+**No persistence.** You pass `resource`, `params`, `fields`, offsets; it yields JSON.
+
+## Install
+```bash
+pip install coupa-async-client
+```
+## Environment
+
+Set via shell or .env:
+
+```ini
+CLIENT_ID=your_client_id
+CLIENT_SECRET=your_client_secret
+SCOPES=scope1,scope2           # optional; comma or space separated
+BASE_URL=https://yourcompany.coupahost.com/api
+TOKEN_URL=https://yourcompany.coupahost.com/oauth2/token
+```
+## Quickstart (Async)
+
+```python
+import os, asyncio
+from coupa_async_client import CoupaAsyncClient
+
+BASE_URL  = os.getenv("BASE_URL",  "https://yourcompany.coupahost.com/api")
+TOKEN_URL = os.getenv("TOKEN_URL", "https://yourcompany.coupahost.com/oauth2/token")
+
+async def main():
+    async with CoupaAsyncClient(
+        base_url=BASE_URL,
+        token_url=TOKEN_URL,
+        client_id=os.environ["CLIENT_ID"],
+        client_secret=os.environ["CLIENT_SECRET"],
+        scopes=[s for s in os.getenv("SCOPES", "").replace(",", " ").split() if s],
+        default_page_size=50,
+        default_concurrent=20,
+    ) as client:
+        params = {
+            "updated-at[gt_or_eq]": "2025-08-14T00:00:00-04:00",
+            "updated-at[lt]"     : "2025-08-15T00:00:00-04:00",
+        }
+        fields = '["id","created-at","status"]'
+        async for item in client.iter_items("approvals", params=params, fields=fields):
+            print(item["id"], item.get("status"))
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## Quickstart (Sync)
+```python
+import os
+from coupa_async_client import CoupaClient
+
+with CoupaClient(
+    base_url=os.environ["BASE_URL"],
+    token_url=os.environ["TOKEN_URL"],
+    client_id=os.environ["CLIENT_ID"],
+    client_secret=os.environ["CLIENT_SECRET"],
+    scopes=[s for s in os.getenv("SCOPES", "").replace(",", " ").split() if s],
+    default_page_size=50,
+) as client:
+    params = {"status[eq]": "approved"}
+    fields = '["id","status","created-at"]'
+    for item in client.items("approvals", params=params, fields=fields):
+        print(item["id"], item["status"])
+```
+
+## Concepts
+
+Resource: collection path (e.g., approvals, requisitions, invoices).
+
+Params (filters): dict added to query string. Use field[operator]=value. Nested: parent[child][op].
+
+Fields: JSON string defining projection/expansion (forwarded as-is).
+
+Offset pagination: client iterates offsets in batches, concurrent (async) or sequential (sync); stops when a whole batch is empty (unless until_empty=False).
+
+## Fields (projection/expansion)
+
+```python
+# simple
+fields = '["id","status","created-at"]'
+
+# relationship expansion
+fields = (
+    '["id","status",'
+    '{"approver":["id","name","login"]},'
+    '{"approved_by":["id","fullname"]}]'
+)
+```
+
+## Coupa filter operators
+
+Build them as entries in params:
+
+| Operator      | Meaning                   | URL fragment example                               | `params` example                              |
+| ------------- | ------------------------- | -------------------------------------------------- | --------------------------------------------- |
+| *(default)*   | equals                    | `/purchase_orders?id=100`                          | `{"id": "100"}`                               |
+| `contains`    | substring (not datetime)  | `/suppliers?name[contains]=.com`                   | `{"name[contains]": ".com"}`                  |
+| `starts_with` | prefix (not datetime)     | `/budget_lines?notes[starts_with]=San%20Francisco` | `{"notes[starts_with]": "San Francisco"}`     |
+| `ends_with`   | suffix (not datetime)     | `/items?name[ends_with]=Gray`                      | `{"name[ends_with]": "Gray"}`                 |
+| `gt`          | greater than              | `/purchase_orders?version[gt]=1`                   | `{"version[gt]": "1"}`                        |
+| `lt`          | less than                 | `/suppliers?updated-at[lt]=2010-01-15`             | `{"updated-at[lt]": "2010-01-15"}`            |
+| `gt_or_eq`    | greater or equal          | `/purchase_orders?version[gt_or_eq]=3`             | `{"version[gt_or_eq]": "3"}`                  |
+| `lt_or_eq`    | less or equal             | `/purchase_orders?version[lt_or_eq]=1`             | `{"version[lt_or_eq]": "1"}`                  |
+| `not_eq`      | not equal                 | `/purchase_orders?status[not_eq]=active`           | `{"status[not_eq]": "active"}`                |
+| `in`          | any of (CSV list)         | `/invoices?account-type[name][in]=SAP100,SAP200`   | `{"account-type[name][in]": "SAP100,SAP200"}` |
+| `not_in`      | exclude any of (CSV list) | `/invoices?status[not_in]=ap_hold,booking_hold`    | `{"status[not_in]": "ap_hold,booking_hold"}`  |
+| `blank`       | blank value (true/false)  | `/suppliers?po-email[blank]=true`                  | `{"po-email[blank]": "true"}`                 |
+
+Use ISO-8601 with timezone for datetime filters (e.g., 2025-08-15T00:00:00-04:00).
+
+## Offset pagination
+
+```python
+# scan a fixed offset window
+async for page in client.iter_pages(
+    "requisitions",
+    params={"status[eq]": "approved"},
+    fields='["id","created-at"]',
+    offset_start=0,
+    offset_end=10_000,   # exclusive
+    page_size=50,
+    concurrent=20,
+    until_empty=False,
+):
+    ...
+
+# stop automatically when a full batch is empty (default)
+async for item in client.iter_items(
+    "suppliers",
+    params={"name[contains]": ".com"},
+    fields='["id","name","updated-at"]',
+):
+    ...
+```
+
+## Error handling & retries
+
+OAuth2 token errors raise a custom CoupaAuthError with status + short response snippet.
+
+Requests retry on 429 (honoring Retry-After) and transient 5xx with exponential jitter backoff.
+
+Async batches skip failed offsets for that batch; the “stop-on-empty” condition triggers only if no errors and all pages are empty.
+
+## Performance tuning
+
+Start with default_concurrent=10–30 (async); adjust to your Coupa limits.
+
+Keep page_size aligned with the server-side page size/limit if available.
+
+Use until_empty=False to sweep a fixed offset range regardless of empties.
+
+Reduce concurrency if you frequently hit 429.
+
+## CSV example (outside the library)
+
+```python
+import csv, os, asyncio
+from coupa_async_client import CoupaAsyncClient
+
+async def main():
+    async with CoupaAsyncClient(
+        base_url=os.environ["BASE_URL"],
+        token_url=os.environ["TOKEN_URL"],
+        client_id=os.environ["CLIENT_ID"],
+        client_secret=os.environ["CLIENT_SECRET"],
+        scopes=[s for s in os.getenv("SCOPES", "").replace(",", " ").split() if s],
+        default_concurrent=30,
+    ) as client:
+        params = {"status[eq]": "approved"}
+        fields = '["id","status","created-at"]'
+        with open("requisitions.csv", "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=["id","status","created-at"])
+            w.writeheader()
+            async for row in client.iter_items("requisitions", params=params, fields=fields):
+                w.writerow({k: row.get(k) for k in w.fieldnames})
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## Contributing
+
+Keep it generic: no persistence, no endpoint-specific mappers.
+
+Add type hints/docstrings. Run your linter/formatter if configured.
+
+Open issues/PRs with clear reproduction steps.
+
+## License
+
+MIT
