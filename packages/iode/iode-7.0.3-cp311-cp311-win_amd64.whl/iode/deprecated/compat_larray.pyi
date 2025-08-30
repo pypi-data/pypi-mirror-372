@@ -1,0 +1,13 @@
+from _typeshed import Incomplete
+from iode import variables as variables
+from typing import Any
+
+Array: Incomplete
+Axis: Incomplete
+Array = Any
+Axis = Any
+
+def larray_to_ws(la_input: Array, time_axis_name: str = 'time', sep: str = '_'): ...
+def ws_to_larray(vars_pattern: str = '*', vars_axis_name: str = 'vars', time_axis_name: str = 'time', split_axis_names: str = '', regex=None, split_sep: str = '', time_as_floats: bool = False) -> Array: ...
+def ws_load_var_to_larray(filename: str, vars_pattern: str = '*', vars_axis_name: str = 'vars', time_axis_name: str = 'time', split_axis_names: str = '', regex=None, split_sep: str = '') -> Array: ...
+def ws_sample_to_larray_axis(axis_name: str = 'time', from_period: str = '', to_period: str = '', as_floats: bool = False) -> Axis: ...

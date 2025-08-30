@@ -1,0 +1,3 @@
+from iode import equations as equations
+
+def eqs_estimate(eq_list: str | list[str], afrom: str, ato: str): ...
