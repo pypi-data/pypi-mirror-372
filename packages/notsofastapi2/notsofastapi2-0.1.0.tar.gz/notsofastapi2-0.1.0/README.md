@@ -1,0 +1,1 @@
+this is toy implementation of fastapi like backend framework, it does not have async support yet hence the name - NotSoFastAPI!
