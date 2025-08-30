@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+  {% block title %}
+{{ seminar.title }}
+  {% endblock %}
+
+  {% block headers %}
+    {% if seminar.parent %}
+<h3><a href='{{ seminar.parent.url() }}'>{{ seminar.parent.title }}</a></h3>
+    {% endif %}
+<h2>{{ seminar.title }}{% if seminar.to_be_confirmed %}(*){% endif %}</h2>
+<h3>
+{% for speaker in speakers %}
+    {% if not loop.first %},
+    {% endif %}
+    {% if speaker.user or speaker.editable %}
+      <a href="{{ speaker.url() }}">{{ speaker.firstname }} {{ speaker.lastname }}</a>
+    {% else %}
+       {{ speaker.firstname }} {{ speaker.lastname }}
+    {% endif %}
+    {% if speaker.affiliation %}
+        ({{ speaker.affiliation }})
+    {% endif %}
+{% endfor %}
+</h3>
+{% endblock headers %}
+
+{% block info %}
+  {{ seminar.html_timestamps() }} <br />
+  {{ facebook_like(seminar.get_absolute_url()) }}
+{% endblock info %}
+
+{% block content %}
+{{ seminar.html_admin_buttons() }}
+{% if seminar.date_is_valid %}
+<p>{{ seminar.date|date }} 
+  {% if seminar.time %} -- {{ seminar.time|time }}
+  {% if seminar.google_id %}&nbsp;&nbsp;<a class="external" target="_blank" href="?redirect_to_google_calendar">[open in google calendar]</a>{% endif %}
+  {% endif %}</p>
+{% endif %}
+<p>{{ seminar.place }}</p>
+{% if seminar.to_be_confirmed %}
+<p><b>(*) to be confirmed</b></p>
+{% endif %}
+{% if seminar.description %}
+<p>{{ seminar.description|simpletags }}</p>
+{% endif %}
+
+{% if seminar.abstract %}
+<p><b>Abstract.</b>
+{{ seminar.abstract|simpletags }}</p>
+{% endif %}
+
+{% if seminar.links.all() %}
+<ul>
+{% for link in seminar.links.all() %}
+<li> <a href="{{ link.url }}">{{ link.description }}</a> </li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if documents %}
+<p><br><strong>Documents:</strong>
+<ul>
+{% for document in documents %}
+<li><a href='{{ document.file.url }}'>{{ document.description }}</a>
+</li>
+{% endfor %}
+</ul>
+</p>
+{% endif %}
+{% if seminar.editable %}
+<p><a class="admin" href="{{ root_url}}upload/seminar/{{ seminar.pk }}/">[add/manage documents]</a></p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<script type="text/javascript" src="{{ STATIC_URL }}js/edit_form.js"></script>
+{% endblock head %}
+
+{% block headers %}
+{% if object %}
+<h2>Edit {{ name }}</h2>
+{% else %}
+{% if name == "News" %}
+To announce a job/research position 
+use this form: <a class="admin" href="{{ root_url }}add/position/">[add new position]</a>
+{% endif %}
+<form action="" method="POST">
+{% if name == "Event" %}
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+<p>Import new event from crm page:
+<input type="hidden" name="action" value="crm_import">
+<i>http://crm.sns.it/event/<input name="crm_id" size="4" value='{{ crm_id if crm_id }}'>/</i>&nbsp;&nbsp;&nbsp;
+<input type="submit" value="import!">
+</p>
+<p><pre>{{ import_message if import_message }}</pre>
+</p>
+{% endif %}
+{% if name == "Paper" %}
+<p>Import new paper from arXiv:
+  <input type="hidden" name="action" value="arxiv_import">
+  <i>http://arxiv.org/abs/<input name="arxiv_id" size="20"></i>
+  <input type="submit" value="import!">
+</p>
+{% endif %}
+</form>
+<h2>Create New {{ name }}</h2>
+{% endif %}
+<p class="tex2jax_ignore">The site is LaTeX friendly. You can use LaTeX notations for formulas inside $...$ or \[...\].</p>
+<p>In every multi-line input fields you can get italics, boldface and links by enclosing text by simple delimiters: <i>/italics/</i>, <b>*boldface*</b>, [URL], [alternate text|URL]</a>. To force a new paragraph leave a blank line, to break a line without a new paragraph use the vertical bar: |.
+</p>
+{{ super() }}
+{% endblock headers %}
+
+{% block content %}
+
+{% if object %}
+  {% if name == "Paper" or name == "Seminar" or name == "Event" %}
+<p>You may want to <a href="{{ root_url }}upload/{{ name.lower() }}/{{ object.pk }}/">[add/manage]</a> documents.</p>
+  {% endif %}
+{% endif %}
+
+
+<form action="" method="POST" enctype="multipart/form-data">
+<table class="edit_form">
+{{ form.as_table() }}
+<tr><td></td><td>
+{% if object %}
+<input type="submit" value="save changes" />
+{% else %}
+<input type="submit" value="create new {{ name }}" />
+{% endif %}
+<input type="submit" name="cancel" value="cancel" />
+</td></tr>
+</table>
+</form>
+{% endblock %}

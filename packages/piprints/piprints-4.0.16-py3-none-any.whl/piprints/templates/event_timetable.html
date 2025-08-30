@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }}: timetable{% endblock %}
+
+
+{% block headers %}
+{% if event.parent %}<h3> <a href='{{ event.parent.url() }}'>{{ event.parent.title }}</a></h3>{% endif %}
+<h2>{{ event.title }}</h2>
+<h3>Timetable</h3>
+{% endblock %}
+
+{% block content %}
+{% for week in event.timesheet().weeks() %}
+  <table class="timesheet">
+  {% for day,seminars in week.items() %}
+  <tr class="timesheet_day"> <td><b>{{ day.strftime("%A") }}</b></td> <td colspan="2">{{ day|date }} </td>  </tr>
+    {% for seminar in seminars %}
+    <tr>
+      <td class="timesheet_time">{{ seminar.time|time }}</td>
+      {% if seminar.type == 'separator' %}
+      <td></td><td class="timesheet_separator" colspan="1">{{ seminar.title }}</td>
+      {% else %}
+      <td class="timesheet_speaker">{% for speaker in  seminar.speakers.all() %}{{ speaker.short() }}{% endfor %}</td>
+      <td class="timesheet_title"><i><a href='{{ seminar.url() }}'>{{ seminar.title }}</a></i></td>
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+  </table>
+{% endfor %}
+
+{% endblock content %}

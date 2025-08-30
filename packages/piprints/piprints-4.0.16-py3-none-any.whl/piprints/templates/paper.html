@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ paper.title }}{% endblock %}
+
+{% block headers %}
+<h3>{% for author in paper.ordered_authors() %}{% if not loop.first %} - {% endif %}{{ author.html_short() }}{% endfor %}</h3>
+<h2 class="paper">{{ paper.title|span_math }}</h2>
+{{ paper.html_admin_buttons() }}
+{% endblock headers %}
+
+{% block info %}
+{{ paper.html_timestamps() }}<br />
+<a href='?bibtex'>[BibTeX]</a><br />
+{{ facebook_like(paper.get_absolute_url()) }}
+{% endblock info %}
+
+{% block content %}
+
+<p>
+{% if paper.paper_type %}
+<i>{{ paper.paper_type }}</i> <br />
+{% endif %}
+
+<br />
+
+{% if paper.creation_time %}
+<strong>Inserted:</strong> {{ paper.creation_time|date }} <br />
+{% endif %}
+{% if paper.modification_time and not paper.modification_time == paper.creation_time %}
+<strong>Last Updated:</strong> {{ paper.modification_time|date }} <br />
+{% endif %}
+
+<br />
+
+{% if paper.journal %}
+<strong>Journal:</strong> {{ paper.journal }} <br />
+{% endif %}
+
+{% if paper.volume %}
+<strong>Volume:</strong> {{ paper.volume }} <br />
+{% endif %}
+
+{% if paper.number %}
+<strong>Number:</strong> {{ paper.number }} <br />
+{% endif %}
+
+{% if paper.pages %}
+<strong>Pages:</strong> {{ paper.pages }} <br />
+{% endif %}
+
+{% if paper.year %}
+<strong>Year:</strong> {{ paper.year }} <br />
+{% endif %}
+
+{% if paper.doi %}
+<strong>Doi:</strong> <a class="external" href='http://dx.doi.org/{{ paper.doi }}'>{{ paper.doi }}</a> <br />
+{% endif %}
+
+{% if paper.arxiv_id %}
+<form action="arxiv" method="POST">
+<strong>ArXiv:</strong> <a class="external" href='{{ paper.arxiv_url() }}'>{{ paper.arxiv_id }}</a> <a class="external" href="{{ paper.arxiv_pdf_url() }}">PDF</a>
+<!-- {% if paper.editable %}<input type="submit" name="sync" value="sync arXiv -> piprints">{% endif %}-->
+</form>
+{% endif %}
+
+{% if paper.notes %}
+<strong>Notes:</strong> {{ paper.notes|simpletags }} <br />
+{% endif %}
+
+{% if paper.links.all() %}
+<strong>Links:</strong>
+{% for link in paper.links.all() %}
+ <a class="external" href="{{ link.url }}">{{ link.description }}</a>{% if not loop.last %},{% endif %}
+{% endfor %}
+<br />
+{% endif %}
+</p>
+
+{% if paper.abstract %}
+<p>
+<strong>Abstract:</strong><br>
+{{ paper.abstract|simpletags }}
+</p>{% endif %}
+
+<p>
+{% if paper.tags.all() %}
+<strong>Tags:</strong>
+{% for tag in paper.tags.all() %}{{ tag.html() }}  <br />
+{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+
+{% if paper.keywords.all() %}
+<strong>Keywords:</strong>
+{% for keyword in paper.keywords.all() %}{% if not loop.first %}, {% endif %}<a href='{{ keyword.url() }}'>{{ keyword.name }}</a>{% endfor %}
+{% endif %}
+</p>
+
+
+{% if documents %}
+<p><br><strong>Download:</strong>
+<ul>
+{% for document in documents %}
+<li><a href='{{ document.file.url }}'>{{ document.description }}</a>
+</li>
+{% endfor %}
+</ul>
+</p>
+{% endif %}
+{% if paper.editable %}
+<p><a class="admin" href="{{ root_url}}upload/paper/{{ paper.pk }}/">[add/manage documents]</a></p>
+{% endif %}
+{% endblock %}

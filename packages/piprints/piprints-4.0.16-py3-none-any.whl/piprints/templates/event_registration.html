@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block headers %}
+{% if event.parent %}<h2> <a href='{{ event.parent.url() }}'>{{ event.parent.title }}</a></h2>{% endif %}
+<h2>{{ event.title }}</h2>
+<h2>Registration</h2>
+{% endblock %}
+
+{% block content %}
+
+<p>Please fill in the following form to request participation to the event.</p>
+
+{%  if event.grant_application_enabled %}
+<p>Financial support is available, tick the corresponding checkbox to apply for a grant.</p>
+{%  endif %}
+
+{% if user and user.person %}
+<p>Since you are a {{ settings.SITE_NAME }} user (<b>{{ user.username }}</b>), the form has been pre-filled with your personal data, for your convenience.</p>
+{% else %}
+<p>If you have an account on the <a href='{{ settings.SERVER_URL }}/'>{{ settings.SITE_NAME }}{{settings.PREPRINT }} server</a>, you might want to <a href='/login/?next={{ event.url }}/registration'>login</a> to simplify the registration process.</p>
+{% endif %}
+
+<form method="POST" enctype="multipart/form-data">
+<table class="edit_form">
+{{ form.non_field_errors() }}
+{{ form.as_table() }}
+<tr>
+  <td></td>
+  <td><input type="submit" value="submit"></td>
+</table>
+</form>
+
+<script>
+var hidden_row;
+
+function update_document_row() {
+   var grant = $('select#id_grant_state').val();
+   var row = $('input#id_document').parent().parent();
+   if (grant == 'yes') 
+      row.show();
+   else
+      row.hide();
+};
+
+$(function(){
+  update_document_row();  
+  $('select#id_grant_state').change(update_document_row);
+});
+</script>
+
+{% endblock %}

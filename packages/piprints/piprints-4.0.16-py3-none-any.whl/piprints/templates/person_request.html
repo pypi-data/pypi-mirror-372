@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Account Request{% endblock %}
+{% block content %}
+<h2>Account Request</h2>
+{{ person_request.html_timestamps() }}
+<p>
+<b>Firstname:</b> {{ person_request.firstname }} <br>
+<b>Lastname:</b> {{ person_request.lastname }} <br>
+<b>Email:</b> {{ person_request.email }} <br>
+<b>Affiliation:</b> {{ person_request.affiliation }} <br>
+<b>Position:</b> {{ person_request.position }} <br>
+<b>Notes:</b> {{ person_request.notes }} <br>
+<b>Managed:</b> {% if person_request.managed %}yes{% else %}no{% endif %} <br>
+</p>
+
+ {% if person_request.managed %}
+     <form action="" method="POST">
+     <input type="hidden" name="reopen">
+     <input type="submit" name="reopen" value="reopen">
+     </form>
+     {% else %}
+<form action="" method="POST">
+{% if persons %}
+<h2>Choose person to link</h2>
+<p>
+{% for person in persons %}
+<input type="radio" name="person" value="{{ person.id }}">{{ person.html() }}
+  {% if person.email %}
+  <br />
+  Person has email: {{ person.email }}.
+     {% if person.email != person_request.email %}
+     Email differs from request email.
+     Maybe person has changed email?
+     {% endif %}
+  {% endif %}
+  {% if person.user %}
+  <br />
+  Person already has username {{ person.user.username }} and associated password. 
+  Maybe password was forgot?
+  If you choose this option password will be changed and sent to the requested email address.
+  {% endif %}
+{% if person.papers.all() %}
+<br />
+Papers associated to this person:
+<ul>
+{% for paper in person.papers.all() %}
+<li> {{ paper.html() }} </li>
+{% endfor %}
+</ul>
+{% endif %}
+<br>
+{% endfor %}
+<input type="radio" name="person" value="">new person</li>
+</p>
+{% endif %}
+<p>To <b>accept</b> the request, confirm <input type="checkbox" name="confirm"> then
+<input type="submit" value="send password">
+</p>
+</form>
+<form action="" method="POST">
+<p>To <b>ignore</b> the request, confirm <input type="checkbox" name="ignore"> then
+<input type="submit" value="forget this request">
+<p>To send an email message to the requester (and mark the request as managed), modify the message below
+<br />
+    <b>From: </b> {{ user.person.email }}
+    <br />
+    <b>To: </b> {{ person_request.email }}
+    <br />
+    <b>Subject: </b> <input name="subject" value="{{ site.title }} account request" size="80">
+    <br />
+    <b>Body: </b>
+    <textarea name="body" cols="80" rows="20">
+Dear {{ person_request.firstname }},
+
+we are not able to check your identity if you don't use an institutional email address.
+Please submit a new request.
+
+{{ user.person.firstname }} {{ user.person.lastname }}
+
+{{ settings.SERVER_URL }}
+    </textarea>
+    <br />
+    confirm <input type="checkbox" name="email"> and then <input type="submit" value="send email">
+</p>
+
+</form>
+{% endif %}
+
+{% endblock %}

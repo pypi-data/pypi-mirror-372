@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% macro facebook_like(url) %}
+  {% if site.facebook_app_id %}
+  <div class="fb-like" data-href="{{ settings.SERVER_URL }}{{ url }}" data-width="10" data-layout="button_count" data-action="like" data-size="small" data-show-faces="true" data-share="true"></div>
+  {% endif %}
+  {% endmacro %}
+{% block head %}
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+<title>{{ settings.SITE_NAME }}: {% block title %}{{ site.title }}{% endblock title %}</title>
+<link rel='stylesheet' type='text/css' href='/static/style/fm.css'>
+<link rel='stylesheet' type='text/css' href='/static/style/gecogedi.css'>
+{% if settings.DEBUG %}<link rel='stylesheet' type='text/css' href='/static/style/debug.css'>{% endif %}
+<!-- jquery -->
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+      <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+      <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+{% if settings.GOOGLE_ANALYTICS_ACCOUNT %}
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', '{{ settings.GOOGLE_ANALYTICS_ACCOUNT }}']);
+  _gaq.push(['_trackPageview']);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+{% endif %}
+<script type="text/javascript">
+$(function () {
+  $.datepicker.setDefaults({ dateFormat: 'yy-mm-dd' });
+  $(".date_picker").datepicker();
+});
+</script>
+<script type="text/javascript" async
+  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+});
+</script>
+{% endblock head %}
+</head>
+<body>
+  {% if site.facebook_app_id %}
+  <div id="fb-root"></div>
+  <script>(function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.9&appId={{ site.facebook_app_id }}";
+    fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+  </script>
+  {% endif %}
+  <div class="header">
+<a href="{{ root_url }}">
+<img class="noborder" src="/static/style/gecogedi.png" alt="Geometria Complessa e Geometria Differenziale">
+</a></div>
+<div class="headermobile">
+<a href="{{ root_url }}">
+Geometria Complessa e Geometria Differenziale
+</a></div>
+<div class='top'>
+
+{% block top_menu %}
+<a href='{{ root_url }}'>home</a> | 
+<a href='{{ root_url }}mail/'>mail</a> | 
+{% if settings.PAPERS_ENABLED %}
+<a href='{{ root_url }}papers/'>papers</a> |
+<a href='{{ root_url }}persons/'>authors</a> |
+{% else %}
+<a href='{{ root_url }}persons/'>people</a> |
+{% endif %}
+<a href='{{ root_url }}newss/'>news</a> | 
+<a href='{{ root_url }}seminars/'>seminars</a> | 
+<a href='{{ root_url }}events/'>events</a> |
+<a href='{{ root_url }}positions/'>open&nbsp;positions</a> |
+{% if user and user.is_authenticated %}
+  <b>
+    {% if person_requests %}
+      <a class="alert" href='{{ root_url }}person_requests/'>requests ({{ person_requests }})</a> |
+    {% endif %}
+    {% if user.is_staff or user.is_superuser %}
+      <a href='{{ root_url }}logs/'>log</a> |
+      <a href='{{ root_url }}users/'>users</a> |
+    {% endif %}
+    {% if user.person %}
+      <a href='{{ user.person.url() }}'>{{ user.username }}</a> |
+    {% endif %}
+    <a href='{{ root_url }}logout/'>logout</a> 
+  </b>
+{% else %}
+  <a href='{{ root_url}}login/{% if request %}?next={{ request.path }}'{% endif %}>login</a>
+{% endif %}
+{% endblock top_menu %}
+</div>
+
+{% block messages %}
+{% if messages %}
+<ul class="messages">
+{% for message in messages %}
+<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock messages %}
+
+{% block headers %}
+{% endblock headers %}
+
+{% block years %}
+{% if years %}
+<p>
+{% for y in years %}
+{% if y == year %}
+<b>{{ y }}</b>
+{% else %}
+<a href='?year={{ y }}'>{{ y }}</a>
+{% endif %}
+{% endfor %}
+</p>
+{% endif %}
+{% endblock years %}
+
+{% block info %}
+{% if info %}
+<p>
+{% for item in info %}
+<b>{{ item.field }}:</b> {{ item.value }} <br>
+{% endfor %}
+</p>
+{% endif %}
+{% endblock info %}
+
+{% block content %}
+Work in progress...
+{% endblock content %}
+
+<div class='top'>
+{% block bottom_menu %}
+  <a href="{{ root_url }}credits/">Credits</a> | <a href="{{ root_url }}cookies/">Cookie policy</a> |
+  <!-- Quality control:-->
+  <a href="https://validator.w3.org/check?uri=referer">HTML 5</a>
+   | 
+  <a href="https://jigsaw.w3.org/css-validator/check/referer">CSS 2.1</a>
+{% endblock bottom_menu %}
+</div>
+
+{% if settings.COOKIES_ALERT_ENABLED %}
+<!-- Cookie information -->
+<script src="/static/js/cookiechoices.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function(event) {
+    cookieChoices.showCookieConsentBar('This website uses cookies to offer you the best experience. By using our website, you agree to our use of cookies in accordance to our cookie policy.',
+      'OK, I agree', 'Learn more', '{{ root_url }}cookies/');
+  });
+</script>
+{% endif %}
+
+{% if settings.PIWIK_URL %}
+<!-- Piwik -->
+<script type="text/javascript">
+  var _paq = _paq || [];
+  if (!cookieChoices.cookiesEnabled()) {
+    _paq.push(['disableCookies']);
+  }
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u=(("https:" == document.location.protocol) ? "https" : "http") + "://{{ settings.PIWIK_URL }}";
+    _paq.push(['setTrackerUrl', u+'piwik.php']);
+    _paq.push(['setSiteId', {{ settings.PIWIK_SITE_ID }}]);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0]; g.type='text/javascript';
+    g.defer=true; g.async=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<noscript><p><img src="https://gecogedi.dimai.unifi.it/piwik/piwik.php?idsite={{ settings.PIWIK_SITE_ID }}" style="border:0;" alt="" /></p></noscript>
+<!-- End Piwik Code -->
+{% endif %}
+
+</body>
+</html>

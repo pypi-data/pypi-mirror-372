@@ -1,0 +1,76 @@
+{% extends "email_base.html" %}
+{% block title %}Weekly bulletin{% endblock %}
+
+{% block headers %}
+<h2>{{ settings.SITE_NAME }} weekly bulletin</h2>
+{% endblock %}
+
+{% block content %}
+<p><i>Weekly bulletin for <a href="{{ settings.SERVER_URL }}">{{ settings.SERVER_URL }}</a></i></p>
+<h2>Summary</h2>
+{% if seminars %}
+<p><b>Seminars by:</b> {% for seminar in seminars %}{% if not loop.first %}, {% endif %}<a href='{{ seminar.url() }}'>{% for speaker in seminar.speakers.all() %}{% if not loop.first %} {% endif %}{{ speaker.lastname }}{% endfor %}</a>{% endfor %}</p>
+{% endif %}
+{% if new_papers %}
+<p><b>New papers by:</b> {% for author in new_papers_authors %}{% if not loop.first %}, {% endif %}<a {% if author.user %}href='{{ author.url() }}'{% endif %} >{{ author.lastname }}</a>{% endfor %}</p>
+{% endif %}
+{% if modified_papers %}
+<p><b>Modified papers by:</b> {% for author in modified_papers_authors %}{% if not loop.first %}, {% endif %}<a {% if author.user %}href='{{ author.url() }}'{% endif %}>{{ author.lastname }}</a>{% endfor %}</p>
+{% endif %}
+{% if news %}
+<h2>News</h2> 
+{% for item in news %}
+<h3><a href='{{ item.url() }}'>{{ item.title }}</a></h3>
+<div style="font-size: smaller;">{{ item.description|simpletags }}</div>
+{% endfor %}
+{% endif %}
+{% if events %}
+<h2>Events next week</h2>
+<ul>
+{% for event in events %}
+<li><p>
+<b><a href='{{ event.url() }}'>{{ event.title }}</a></b><br />
+{{ event.date_from|date("D j F Y") }} - {{ event.date_to|date("D j F Y") }}<br />
+{% if event.place %}
+{{ event.place }}<br />{% endif %}
+</p></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if seminars %}
+<h2>Seminars next week</h2>
+{% for group in seminars|groupby('date') %}
+<h3>{{ group.grouper|date("D j F Y") }}</h3><ul>
+    {% for seminar in group.list %}
+    <li><p>
+    {% if seminar.description %}{{ seminar.description }}<br />{% endif %}
+    {% for speaker in seminar.speakers.all() %}{% if not loop.first %}, {% endif %}{{ speaker.firstname }} {{ speaker.lastname }}{% if speaker.affiliation %} ({{ speaker.affiliation }}){% endif %}{% endfor %}{% if seminar.speakers.all() %}: {% endif %}<b><a href='{{ seminar.url() }}'>{{ seminar.title }}</a></b><br />
+    {{ seminar.place }}{% if seminar.time %}, {{ seminar.time|time("H:i") }}<br />{% endif %}
+    {% if seminar.abstract %}
+    </p>
+    <div style="font-size: smaller;">{{ seminar.abstract.strip()|simpletags }}</div>{% endif %}
+    </li>
+    {% endfor %}</ul>
+{% endfor %}
+{% endif %}
+
+{% if new_papers %}
+<h2>New Papers</h2>
+
+{% for paper in new_papers %}
+<p><b> {% for author in paper.ordered_authors() %}{% if not loop.first %}, {% endif %}{{ author.lastname }}{% endfor %}:</b> <a href='{{ paper.url() }}'>{{ paper.title }}</a></p>
+{% endfor %}
+{% endif %}
+{% if modified_papers %}
+<h2>Modified Papers</h2>
+{% for paper in modified_papers %}
+<p><b> {% for author in paper.ordered_authors() %}{% if not loop.first %}, {% endif %}{{ author.lastname }}{% endfor %}:</b> <a href='{{ paper.url() }}'>{{ paper.title }}</a></p>
+{% endfor %}
+{% endif %}
+{% if positions %}
+<h2>Open Positions</h2>
+{% for item in positions %}
+<p>{% if item.creation_time.date() >= last_week_start %}<b>(new)</b> {% endif %}<a href="{{ item.url() }}">{{ item.title }}</a> (deadline: {{ item.deadline|date("D j F Y") }})</p>
+{% endfor %}
+{% endif %}
+{% endblock %}
