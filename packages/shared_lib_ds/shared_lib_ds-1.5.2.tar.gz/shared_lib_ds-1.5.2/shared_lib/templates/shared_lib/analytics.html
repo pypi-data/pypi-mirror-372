@@ -1,0 +1,51 @@
+{% if analytics.naver_id %}
+<!-- Template for NaverAnalytics -->
+<!-- https://analytics.naver.com/ 에서 사이트 등록후 아이디를 이용한다. -->
+<script type="text/javascript" src="//wcs.naver.net/wcslog.js"></script>
+<script type="text/javascript">
+  if(!wcs_add) var wcs_add = {};
+  wcs_add["wa"] = "{{ analytics.naver_id }}";
+  if(window.wcs) {
+  wcs_do();
+  }
+</script>
+{% endif %}
+
+{% if analytics.google_id %}
+<!-- https://analytics.google.com/ 에서 계정 및 속성을 생성후 측정 아이디를 이용한다. -->
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ analytics.google_id }}"></script>
+  {% if analytics.ads_id %}
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ analytics.ads_id }}"></script>
+  {% endif %}
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', '{{ analytics.google_id }}');
+    {% if analytics.ads_id %}
+    gtag('config', '{{ analytics.ads_id }}');
+    {% endif %}
+  </script>
+
+  {% for key, value in analytics.conversion_click.items %}
+  <!-- Event snippet for {{ key }} conversion page
+  In your html page, add the snippet and call gtag_report_conversion when someone clicks on the chosen link or button. -->
+  <script>
+    function {{ key }}_gtag_report_conversion(url) {
+      /*
+      var callback = function () {
+        if (typeof(url) != 'undefined') {
+          window.location = url;
+        }
+      }; */
+      gtag('event', 'conversion', {
+          'send_to': '{{ analytics.ads_id }}/{{ value }}',
+          // 'event_callback': callback
+      });
+      return false;
+    }
+  </script>
+  {% endfor %}
+{% endif %}
