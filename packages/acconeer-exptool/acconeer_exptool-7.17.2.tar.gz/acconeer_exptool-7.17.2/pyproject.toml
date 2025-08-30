@@ -1,0 +1,397 @@
+[build-system]
+requires = [
+    "hatchling",
+    "hatch-vcs",
+    # Below is a temporary fix until 'hatch-vcs' fixes its dependencies
+    # see https://github.com/ofek/hatch-vcs/blob/master/pyproject.toml
+    "setuptools-scm<9.0.0",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "acconeer-exptool"
+description = "Acconeer Exploration Tool"
+dynamic = ["version"]
+readme = "README.md"
+license = "BSD-3-Clause-Clear"
+requires-python = ">=3.9"
+authors = [
+    { name = "Acconeer AB", email = "tools@acconeer.com" },
+]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "attrs>=22.1.0",
+    "cbor2",
+    "h5py>=3.8,<4",
+    "numpy>=1.20",
+    "pandas>=1.3.5",
+    "packaging",
+    "platformdirs",
+    "pyserial>=3.5",
+    "pyusb>=1.2.1",
+    "pyyaml",
+    "requests>=2.0,<3",
+    "typing-extensions>=4,<5",
+    "textual==0.1.18",
+    "XlsxWriter>=3.1.9",
+    "exceptiongroup==1.1.1",
+    "attributes-doc==0.4.0",
+]
+
+[project.urls]
+Documentation = "https://docs.acconeer.com"
+Homepage = "https://github.com/acconeer/acconeer-python-exploration"
+Source = "https://github.com/acconeer/acconeer-python-exploration"
+Tracker = "https://github.com/acconeer/acconeer-python-exploration/issues"
+
+[project.optional-dependencies]
+algo = [
+    "scipy",
+]
+app = [
+    "acconeer-exptool[algo]",
+    "bs4",
+    "docutils>=0.17,!=0.18",
+    "matplotlib>3.5.1",
+    "psutil",
+    "pyperclip",
+    "pyside6==6.8.3",
+    "pyqtdarktheme",
+    "pyqtgraph==0.13.7",
+    "qtawesome",
+    "qtpy>=2.3.0",
+]
+docs = [
+    "acconeer-exptool[algo]",
+    "docutils>=0.17,!=0.18",
+    "myst-parser>=2.0.0",
+    "sphinx>=7.2.6",
+    "sphinx-design",
+    "sphinxext-rediraffe",
+    "sphinx-notfound-page>=1.0.0",
+    "sphinx-book-theme==1.1.2",
+    "sphinx-tabs",
+    "sphinxcontrib-youtube",
+    "sphinxcontrib-spelling",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/acconeer",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/acconeer",
+]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/acconeer/exptool/_version.py"
+
+
+[tool.hatch.envs.hatch-uv]
+dependencies = ["uv==0.4.16"]
+
+[tool.hatch.envs.app]
+features = ["app"]
+
+[tool.hatch.envs.app.scripts]
+launcher = "python -m acconeer.exptool.app {args}"
+new = "python -m acconeer.exptool.app.new {args}"
+old = "python -m acconeer.exptool.app.old {args}"
+
+[tool.hatch.envs.mypy]
+features = ["app"]
+dependencies = [
+    "mypy==1.14.1",
+    "pytest==7.2",
+    "pandas==1.3.5",
+    "pandas-stubs",
+    "PySide6==6.8.3",
+    "types-beautifulsoup4",
+    "hypothesis==6.128.2",
+]
+
+[[tool.hatch.envs.mypy.matrix]]
+python = ["3.9"]
+
+[tool.hatch.envs.mypy.scripts]
+check = "python -m mypy {args}"
+
+
+[tool.hatch.envs.hatch-test]
+# This is the environment for "hatch test"
+features = ["app"]
+extra-args = ["--doctest-modules"]
+extra-dependencies = [
+    "pandas>=1.3.5",
+    "dirty-equals==0.5.0",
+    "pytest-timeout",
+    "hypothesis",
+]
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+[tool.hatch.envs.hatch-test.scripts]
+run = "pytest{env:HATCH_TEST_ARGS:} {args}"  # default
+run-cov = "coverage run -m pytest{env:HATCH_TEST_ARGS:} {args}"  # default
+cov-combine = "coverage combine"  # default
+cov-report = "coverage report"  # default
+
+[tool.hatch.envs.test]
+# This is a copy of the built-in hatch-test environment above
+# That enables raw use of e.g. pytest with 'hatch run test:pytest -h'
+template = "hatch-test"
+
+[tool.hatch.envs.docs]
+features = ["docs"]
+dependencies = ["sphinx_autobuild"]
+
+[tool.hatch.envs.docs.scripts]
+clean = "rm -rf docs/_build"
+autobuild = [
+    "clean",
+    "python -m sphinx_autobuild -t internal -b html docs docs/_build --watch src",
+]
+html = "python -m sphinx -W -b html docs docs/_build"
+linkcheck = "python -m sphinx -W -b linkcheck docs docs/_build"
+spelling = "python -m sphinx -W -b spelling docs docs/_build"
+latexpdf = "python -m sphinx -M latexpdf docs docs/_build"
+rediraffe-write = "python -m sphinx -b rediraffewritediff docs docs/_build"
+rediraffe-check = "python -m sphinx -b rediraffecheckdiff docs docs/_build"
+build = ["clean", "html", "latexpdf", "spelling", "rediraffe-check"]
+fullbuild = ["clean", "html", "latexpdf", "linkcheck", "spelling", "rediraffe-check"]
+
+[tool.hatch.envs.hatch-static-analysis]
+# This is the environment for "hatch fmt"
+config-path = "none"
+dependencies = [
+    "ruff==0.4.8",
+    "packaging",
+    'tomli; python_version < "3.11"',
+]
+
+[tool.hatch.envs.hatch-static-analysis.scripts]
+format-check = [
+    "python -m ruff format --diff .",
+]
+format-fix = [
+    "python -m ruff format .",
+]
+lint-check = [
+    "python internal_tools/check_permissions.py",
+    "python internal_tools/check_whitespace.py",
+    "python internal_tools/check_line_length.py",
+    "python internal_tools/check_sdk_mentions.py",
+    "python internal_tools/check_changelog.py",
+    "python internal_tools/check_copyright.py",
+    "python docs/generate_example_script_pages.py check",
+    "python -m ruff check .",
+]
+lint-fix = [
+    "python internal_tools/check_copyright.py --update-year",
+    "python docs/generate_example_script_pages.py fix",
+    "python -m ruff check --fix .",
+    "lint-check"
+]
+
+[tool.hatch.envs.test-multiple-qt-bindings]
+# Single purpose environment.
+# Used to test that user warnings are printed
+# if multiple Qt bindings are installed in the environment.
+features = ["app"]
+dependencies = ["PyQt6", "PyQt5", "PySide2"]
+
+[tool.ruff]
+include = ["pyproject.toml", "**/*.py"]
+
+line-length = 99
+target-version = "py39"
+
+show-fixes = true
+output-format = "concise"
+
+src = ["src", "tests"]
+namespace-packages = ["src/acconeer"]
+
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
+# "extend" here adds to the ruff defaults, rather than replacing.
+# See the full list on https://docs.astral.sh/ruff/rules
+#
+# Q = flake8-quotes
+# TID = flake8-tidy-imports
+# I = isort
+# FA = flake8-future-annotations
+# NPY = Numpy specific rules
+# EM = flake8-errmsg
+# S11[02] = flake8-bandit, Log exception instead of try-except-(pass|continue)
+# LOG = flake8-logging
+# SIM = flake8-simplify
+extend-select = ["Q", "TID", "I", "FA", "NPY", "EM", "S110", "S112", "LOG", "SIM"]
+# E741 = Ambiguous variable names, e.g. I vs l
+# SIM108 = Has a tendancy to create ternary one-liners.
+# SIM105 = try-except-pass is handled with S110
+extend-ignore = ["E741", "SIM108", "SIM105"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "E402"]
+"src/acconeer/exptool/_winusbcdc/*" = ["F40", "E501"]
+"examples/*" = ["S11", "SIM"]
+"src/acconeer/exptool/app/old/*" = ["S11", "SIM"]
+"src/acconeer/exptool/a111/*" = ["S11", "SIM"]
+"examples/a121/algo/cargo/example_app.py" = ["F401"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+
+known-third-party = [
+    "numpy",
+    "scipy",
+    "serial",
+    "matplotlib",
+    "h5py",
+    "flask",
+    "yaml",
+    "attr",
+    "docutils",
+    "keras",
+    "sklearn",
+    "tensorflow",
+    "pytest",
+    "requests",
+    "packaging",
+    "attrs",
+    "typing_extensions",
+    "qdarktheme",
+    "qtawesome",
+    "pyperclip",
+    "psutil",
+]
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "PySide6",
+    "pyqtgraph",
+    "acconeer",
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.lint.isort.sections]
+"PySide6" = ["PySide6"]
+"pyqtgraph" = ["pyqtgraph"]
+"acconeer" = ["acconeer"]
+
+[tool.mypy]
+packages = [
+    "acconeer.exptool",
+    "user_tools",
+]
+exclude = [
+    ".*/a111/.*",
+    ".*/old/.*",
+    "src/acconeer/exptool/_structs/.*",
+    "src/acconeer/exptool/flash/_xc120/.*",
+    "src/acconeer/exptool/flash/_stm32uart/.*",
+    "src/acconeer/exptool/flash/_device_flasher_base.py",
+    "src/acconeer/exptool/_tests/.*",
+    "src/acconeer/exptool/_winusbcdc/.*",
+    "src/acconeer/exptool/_pyusb/.*",
+    "src/acconeer/exptool/utils.py",
+    "src/acconeer/exptool/mpl_process.py",
+    "src/acconeer/exptool/libft4222.py",
+    "src/acconeer/exptool/pg_process.py",
+    "src/acconeer/exptool/_bs_thread.py",
+]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+
+warn_return_any = true
+warn_unused_ignores = true
+
+mypy_path = "src/"
+explicit_package_bases = true
+incremental = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "attributes_doc.*",
+    "cbor2.*",
+    "dirty_equals.*",
+    "h5py.*",
+    "platformdirs.*",
+    "psutil.*",
+    "pyperclip.*",
+    "pyqtgraph.*",
+    "pytest.*",
+    "qdarktheme.*",
+    "qtawesome.*",
+    "requests.*",
+    "scipy.*",
+    "serial.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "--ignore=src/acconeer/exptool/_winusbcdc --ignore=src/acconeer/exptool/a111 --ignore=tests/gui"
+doctest_optionflags = [
+    "ELLIPSIS",
+    "NORMALIZE_WHITESPACE",
+]
+markers = [
+    "devsite: Tests related to devsite"
+]
+
+[tool.coverage.report]
+# Non-existing files that PySide6 says exists
+omit = [
+    "shibokensupport/*",
+    "signature_bootstrap.py",
+]
+
+[tool.check_line_length]
+line_length = 80
+include = [
+    "LICENSE.md",
+    "CHANGELOG.md",
+    "UNRELEASED_CHANGELOG.md",
+]
+
+[tool.check_sdk_mentions]
+ignore_lines = []
+include = [
+    "README.md",
+    "docs/**/*.rst",
+    "Jenkinsfile",
+    "src/acconeer/exptool/app/new/ui/resource_tab/*.py",
+]
+
+[tool.check_copyright]
+ignore_files = [
+    "src/acconeer/exptool/_winusbcdc/*",
+]
+docs_conf_file = "docs/conf.py"
