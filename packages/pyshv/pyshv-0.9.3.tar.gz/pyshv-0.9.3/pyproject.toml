@@ -1,0 +1,125 @@
+[project]
+name = "pyshv"
+version = "0.9.3"
+description = "Pure Python SHV implementation"
+readme = "README.rst"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  { name="Elektroline a.s." },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Framework :: AsyncIO",
+  "Intended Audience :: Developers",
+  "Topic :: Home Automation",
+  "Topic :: System :: Networking",
+  "Typing :: Typed",
+]
+requires-python = ">=3.11"
+dependencies = [
+  "pyserial",
+  "websockets >= 13.0",
+  "asyncinotify; sys_platform == \"linux\"",
+]
+
+[project.urls]
+"Homepage" = "https://gitlab.com/silicon-heaven/pyshv"
+"Bug Tracker" = "https://gitlab.com/silicon-heaven/pyshv/-/issues"
+"Github" = "https://github.com/silicon-heaven/libshv-py"
+
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+]
+docs = [
+  "sphinx",
+  "sphinx-book-theme",
+  "sphinx-mdinclude",
+  "sphinx-multiversion",
+]
+
+[project.scripts]
+pycpconv = "shv.cpconv.__main__:main"
+pyshvbroker = "shv.broker.__main__:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+exclude = ["docs", "tests*"]
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+omit = ["tests/*"]
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if typing.TYPE_CHECKING:",
+    "@typing.overload",
+]
+
+[tool.ruff]
+target-version = "py311"
+[tool.ruff.lint]
+select = [
+  "F", "E", "W", "I", "N", "D", "UP", "YTT", "ANN", "ASYNC", "ASYNC1", "S", "BLE",
+  "B", "A", "COM", "PL", "RUF"
+]
+ignore = [
+  # Magic methods have defined behavior so what is there to document. __init__
+  # should be documented in class docstring.
+  "D105", "D107",
+  # These have conflicting rules.
+  "D203", "D213",
+  # Ignore too long lines (format tackles that)
+  "E501",
+  # It is nice that assert should not be used for input checking but it can be
+  # also used for internal consistency checking.
+  "S101", "B011",
+  # subprocess can be insecurely used but not is insecure by design
+  "S404", "S603", "S607",
+  # Catching Exception is valid and safe in some cases and thus should be allowed
+  "BLE001",
+  # Relative imports can't be mixed up
+  "A005",
+  # Conflict with formatter
+  "COM812",
+  # Remove too-many limit for more complex code.
+  "PLR0904", "PLR0911", "PLR0912", "PLR0913", "PLR0917", "PLR2004", "PLR1702",
+  "PLR0915", "PLR0916",
+  # This seems like a wrong rule
+  "PLW1641",
+]
+preview = true
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+  "D100", "D101", "D102", "D103", "D104", "S101", "S106", "ANN001", "ANN002",
+  "ANN003", "ANN201", "ANN202", "ANN204", "ANN205", "PLR6301",
+]
+"docs/conf.py" = ["D100", "D103", "A001", "ANN201", "ANN001"]
+[tool.ruff.format]
+docstring-code-format = true
+preview = true
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+disallow_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+[[tool.mypy.overrides]]
+module = "tests.*"
+allow_untyped_defs = true
