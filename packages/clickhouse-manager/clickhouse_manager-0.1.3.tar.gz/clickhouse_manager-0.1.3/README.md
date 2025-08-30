@@ -1,0 +1,118 @@
+# ClickHouse Connector Package
+
+Простой и безопасный интерфейс для работы с ClickHouse.
+
+## Описание
+
+Пакет предоставляет удобный интерфейс для работы с ClickHouse через различные драйверы. Основной класс `ClickhouseManager` инкапсулирует всю логику работы с базой данных, включая валидацию, создание таблиц и выполнение запросов.
+
+## Установка
+
+### Стандартная установка
+```bash
+pip install clickhouse-manager
+```
+
+### Установка с дополнительными зависимостями для разработки
+```bash
+pip install clickhouse-manager[dev]
+```
+
+### Решение проблем с установкой
+
+Если у вас возникают проблемы с установкой `clickhouse-driver`, это может быть связано с:
+
+1. **Отсутствием компилятора C/C++**:
+   - **Windows**: Установите Visual Studio Build Tools
+   - **macOS**: Установите Xcode Command Line Tools: `xcode-select --install`
+   - **Linux**: Установите build-essential: `sudo apt-get install build-essential`
+
+2. **Несовместимостью архитектуры**:
+   - Убедитесь, что используете совместимую версию Python
+   - Попробуйте установить pre-compiled wheel: `pip install --only-binary=all clickhouse-driver`
+
+3. **Проблемы с зависимостями**:
+   ```bash
+   # Обновите pip и setuptools
+   pip install --upgrade pip setuptools wheel
+   
+   # Попробуйте установить зависимости по отдельности
+   pip install pandas clickhouse-connect
+   pip install clickhouse-driver
+   pip install clickhouse-manager
+   ```
+
+4. **Альтернативная установка**:
+   ```bash
+   # Установка из исходников
+   pip install --no-binary=clickhouse-driver clickhouse-driver
+   
+   # Или установка через conda (если доступно)
+   conda install -c conda-forge clickhouse-driver
+   ```
+
+## Основные классы
+
+### ClickhouseManager
+
+Основной класс для работы с ClickHouse. Управляет подключением, валидацией и выполнением операций.
+
+#### Методы
+
+- **`__init__(host, port, username, password, database, secure, verify, connector_type)`** - инициализация с параметрами подключения
+- **`query_to_df(query)`** - выполнение SELECT запроса с возвратом DataFrame
+- **`execute_command(command)`** - выполнение DDL/DML команд
+- **`check_table_if_exists(schema, name)`** - проверка существования таблицы
+- **`get_table_column(schema, name)`** - получение информации о колонках таблицы
+- **`get_table_info(schema, name)`** - получение полной информации о таблице
+- **`create_table(schema, name, columns, order_by, ...)`** - создание таблицы
+- **`create_table_as_select(query, schema, name, order_by, ...)`** - создание таблицы на основе SELECT
+- **`drop_table(schema, name, cluster, if_exists)`** - удаление таблицы
+
+### IdentifierValidator
+
+Класс для валидации идентификаторов ClickHouse (имена таблиц, схем, колонок).
+
+#### Методы
+
+- **`validate_identifier(identifier)`** - проверка валидности идентификатора
+- **`validate_table_name(name)`** - валидация имени таблицы
+- **`validate_schema_name(name)`** - валидация имени схемы
+- **`validate_column_name(name)`** - валидация имени колонки
+- **`validate_table_params(schema, name)`** - валидация параметров таблицы
+- **`validate_columns(columns)`** - валидация словаря колонок
+
+### ConnectorFactory
+
+Фабрика для создания коннекторов различных типов.
+
+#### Методы
+
+- **`create(connector_type, host, port, username, password, database, secure, verify)`** - создание коннектора
+- **`get_available_types()`** - получение списка доступных типов
+
+### IClickhouseConnector
+
+Базовый интерфейс для всех коннекторов.
+
+#### Методы
+
+- **`execute_query(query)`** - выполнение SELECT запроса
+- **`execute_command(command)`** - выполнение команд
+- **`insert_dataframe(df, schema, table)`** - вставка DataFrame
+- **`get_query_metadata(query)`** - получение метаданных запроса
+
+## Поддерживаемые драйверы
+
+- **clickhouse-connect** - HTTP/HTTPS подключение
+- **clickhouse-driver** - Native TCP подключение
+
+## Тестирование
+
+```bash
+python3 test_clickhouse.py
+```
+
+## Поддержка
+
+Если у вас возникают проблемы с установкой или использованием пакета, создайте issue в репозитории проекта или обратитесь к автору: tiyanich.bogdan@gmail.com
