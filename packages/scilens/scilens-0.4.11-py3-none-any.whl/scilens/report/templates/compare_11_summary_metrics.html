@@ -1,0 +1,31 @@
+{% if meta.processor_info.datasets_metrics %}
+  <h3>Metrics <action data-command="toogle" data-args="section_summary_metrics"></action></h3>
+  <div id="section_summary_metrics">
+    
+    {% for file in data.files %}
+      {% if file.test.metrics %}
+        {% if meta.processor_info.has_multiple_datasets and meta.processor_info.datasets_metrics > 1 %}
+          <h4>{{ file.name }}</h4>
+        {% endif %}
+        <div style="display: flex; flex-wrap: wrap;">
+        {% for metric_k, metric_test in file.test.metrics.items() %}
+          {% set metric_status = file.comparison.metrics[metric_k].status if file.comparison.metrics else None %}
+          {% set metric_err_index = file.comparison.metrics[metric_k].err_index if metric_status else None %}
+          {% set metric_err = file.comparison_errors[metric_status][metric_err_index].err if metric_err_index else None %}
+          {{ macros.kpi_card(
+            metric_k, 
+            metric_test, 
+            file.ref.metrics[metric_k], 
+            metric_status, 
+            metric_err
+          ) }}
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endfor %}
+    
+  </div>
+{% endif %}
+
+
+
