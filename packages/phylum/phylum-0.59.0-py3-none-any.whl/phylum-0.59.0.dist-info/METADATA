@@ -1,0 +1,299 @@
+Metadata-Version: 2.3
+Name: phylum
+Version: 0.59.0
+Summary: Utilities for integrating Phylum into CI pipelines
+License: GPL-3.0-or-later
+Keywords: dependency,security,CI,integration
+Author: Veracode Inc.
+Author-email: dl-phylum-engineering@veracode.com
+Requires-Python: >=3.10,<3.14
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Natural Language :: English
+Classifier: Environment :: Console
+Classifier: Topic :: Security
+Classifier: Topic :: Software Development
+Classifier: Topic :: Software Development :: Quality Assurance
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Dist: cryptography
+Requires-Dist: packaging
+Requires-Dist: pathspec
+Requires-Dist: requests
+Requires-Dist: rich
+Requires-Dist: ruamel.yaml
+Project-URL: CI, https://github.com/phylum-dev/phylum-ci/actions
+Project-URL: Documentation, https://docs.phylum.io/
+Project-URL: Homepage, https://veracode.com/
+Project-URL: changelog, https://github.com/phylum-dev/phylum-ci/blob/main/CHANGELOG.md
+Project-URL: issues, https://github.com/phylum-dev/phylum-ci/issues
+Project-URL: releasenotes, https://github.com/phylum-dev/phylum-ci/releases
+Project-URL: source, https://github.com/phylum-dev/phylum-ci
+Description-Content-Type: text/markdown
+
+# phylum-ci
+
+[![PyPI](https://img.shields.io/pypi/v/phylum)](https://pypi.org/project/phylum/)
+![PyPI - Status](https://img.shields.io/pypi/status/phylum)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/phylum)](https://pypi.org/project/phylum/)
+[![GitHub](https://img.shields.io/github/license/phylum-dev/phylum-ci)][license]
+[![GitHub issues](https://img.shields.io/github/issues/phylum-dev/phylum-ci)][issues]
+![GitHub last commit](https://img.shields.io/github/last-commit/phylum-dev/phylum-ci)
+[![GitHub Workflow Status (branch)][workflow_shield]][workflow_test]
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)][CoC]
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)][pre-commit]
+[![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)][poetry]
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)][black]
+[![Downloads](https://static.pepy.tech/badge/phylum/month)][downloads]
+
+Utilities for integrating Phylum into CI pipelines
+
+[license]: https://github.com/phylum-dev/phylum-ci/blob/main/LICENSE
+[issues]: https://github.com/phylum-dev/phylum-ci/issues
+[workflow_shield]: https://img.shields.io/github/actions/workflow/status/phylum-dev/phylum-ci/test.yml?branch=main&label=tests&logo=GitHub
+[workflow_test]: https://github.com/phylum-dev/phylum-ci/actions/workflows/test.yml
+[CoC]: https://github.com/phylum-dev/phylum-ci/blob/main/CODE_OF_CONDUCT.md
+[pre-commit]: https://github.com/pre-commit/pre-commit
+[poetry]: https://python-poetry.org/
+[black]: https://github.com/psf/black
+[downloads]: https://pepy.tech/project/phylum
+
+## Installation and usage
+
+### Installation
+
+The `phylum` Python package is pip installable for the environment of your choice:
+
+```sh
+pip install phylum
+```
+
+It can also be installed in an isolated environment with the excellent [`pipx` tool][pipx]:
+
+```sh
+# Globally install the app(s) on your system in an isolated virtual environment for the package
+pipx install phylum
+
+# Use the apps from the package in an ephemeral environment
+pipx run --spec phylum phylum-init <options>
+pipx run --spec phylum phylum-ci <options>
+```
+
+These installation methods require Python 3.10+ to run.
+For a self contained environment, consider using the Docker image as described below.
+
+Windows binaries are offered as [release artifacts][latest_rels] for a "standalone" solution that does not require
+Python or Docker to run. There are two options for this installation method:
+
+* `phylum-ci.zip`
+  * [Download the latest archive version][latest_zip] and extract it
+  * Add the extracted directory to `PATH` or reference the contained `phylum-ci.exe` binary directly
+* `phylum-ci.exe`
+  * [Download the latest executable version][latest_exe] and place this binary on `PATH` or reference it directly
+  * This is a self-extracting executable that adds a version-specific directory in the local user cache
+
+An advantage to the self-extracting archive is that it is a single file.
+A disadvantage is that the file may trigger AV since it uses a packer and is not digitally signed.
+
+Either Windows "installation" method allows access to the same [`phylum-ci` script entry point features][anchor_script].
+
+[pipx]: https://pypa.github.io/pipx/
+[latest_rels]: https://github.com/phylum-dev/phylum-ci/releases/latest
+[latest_zip]: https://github.com/phylum-dev/phylum-ci/releases/latest/download/phylum-ci.zip
+[latest_exe]: https://github.com/phylum-dev/phylum-ci/releases/latest/download/phylum-ci.exe
+[anchor_script]: #phylum-ci-script-entry-point
+
+### Usage
+
+The `phylum` Python package exposes its functionality with a command line interface (CLI).
+To view the options available from the CLI, print the help message from one of the scripts provided as entry points:
+
+```sh
+phylum-init -h
+phylum-ci -h
+```
+
+The functionality can also be accessed by calling the module:
+
+```sh
+python -m phylum.init -h
+python -m phylum.ci -h
+```
+
+The functionality is also exposed in the form of a Docker image:
+
+```sh
+# Get the `latest` tagged image
+docker pull phylumio/phylum-ci
+
+# View the help
+docker run --rm phylumio/phylum-ci phylum-ci --help
+
+# Export a Phylum token (e.g., from `phylum auth token`)
+export PHYLUM_API_KEY=$(phylum auth token)
+
+# Run it from a git repo directory containing at least one supported lockfile or manifest
+docker run -it --rm -e PHYLUM_API_KEY --mount type=bind,src=$(pwd),dst=/phylum -w /phylum phylumio/phylum-ci
+```
+
+The default Docker image contains `git` and the installed `phylum` Python package.
+It also contains an installed version of the Phylum CLI and all required tools needed for [lockfile generation].
+An advantage of using the default Docker image is that the complete environment is packaged and made available with
+components that are known to work together.
+
+One disadvantage to the default image is it's size. It can take a while to download and may provide more tools than
+required for your specific use case. Special `slim` tags of the `phylum-ci` image are provided as an alternative.
+These tags differ from the default image in that they do not contain the required tools needed for [lockfile generation]
+(with the exception of the `pip` tool). The `slim` tags are significantly smaller and will allow integrations relying
+on them to complete faster. They are useful for those instances where *no* manifest files are present and/or *only*
+lockfiles are used.
+
+```sh
+# Get the "latest" `slim` tagged image
+docker pull phylumio/phylum-ci:slim
+```
+
+When using the `latest` tagged image, the version of the Phylum CLI is the `latest` available.
+There are additional image tag options available to specify a specific release of the `phylum-ci` project and a specific
+version of the Phylum CLI, in the form of `<phylum-ci version>-CLIv<Phylum CLI version>`.
+Each of these also has a `-slim` variant that does not support [lockfile generation]. Here are image tag examples:
+
+```sh
+# Get the most current release of *both* `phylum-ci` and the Phylum CLI
+docker pull phylumio/phylum-ci:latest
+
+# Get the image with `phylum-ci` version 0.44.1 and Phylum CLI version 6.6.0
+docker pull phylumio/phylum-ci:0.44.1-CLIv6.6.0
+
+# Get the `slim` image with `phylum-ci` version 0.47.0 and Phylum CLI version 6.6.4
+docker pull phylumio/phylum-ci:0.47.0-CLIv6.6.4-slim
+```
+
+[lockfile generation]: https://docs.phylum.io/cli/lockfile_generation
+
+#### `phylum-init` Script Entry Point
+
+The `phylum-init` script can be used to fetch and install the Phylum CLI.
+It will attempt to install the latest released version of the CLI but can be specified to fetch a specific version.
+It will attempt to automatically determine the correct CLI release, based on the platform where the script is run, but
+a specific release target can be specified.
+It will accept a Phylum token from an environment variable or specified as an option, but will also function in the case
+that no token is provided. This can be because there is already a token set that should continue to be used or because
+no token exists and one will need to be manually created or set, after the CLI is installed.
+
+The options for `phylum-init`, automatically updated to be current for the latest release:
+
+> **HINT:** Click on the image to bring up the SVG file, which should allow for search and copy/paste functionality.
+
+![phylum-init options](https://raw.githubusercontent.com/phylum-dev/phylum-ci/main/docs/img/phylum-init_options.svg)
+
+#### `phylum-ci` Script Entry Point
+
+The `phylum-ci` script is for analyzing dependency file (lockfiles and manifests) changes.
+The script can be used locally or from within a Continuous Integration (CI) environment.
+It will attempt to detect the CI platform based on the environment from which it is run and act accordingly.
+The current CI platforms/environments supported are:
+
+|Platform/Environment|Information Link|
+|--------------------|---------------------|
+|GitHub Actions|[Documentation][github_docs]|
+|GitLab CI|[Documentation][gitlab_docs]|
+|Azure Pipelines|[Documentation][azure_docs]|
+|Bitbucket Pipelines|[Documentation][bb_pipelines_docs]|
+|Jenkins Pipelines|[Documentation][jenkins_docs]|
+|Git `pre-commit` Hooks|[Documentation][precommit_docs]|
+
+There is also support for local use. This is the "fall-through" case used when no other environment is detected.
+This can be useful to analyze dependency files locally, prior to or after submitting a pull/merge request (PR/MR) to a
+CI system. It can also help in establishing a successful submission prior to submitting a PR/MR to a CI system.
+Additionally, local use can aid troubleshooting after submitting a PR/MR to a CI system and getting unexpected results.
+
+The options for `phylum-ci`, automatically updated to be current for the latest release:
+
+> **HINT:** Click on the image to bring up the SVG file, which should allow for search and copy/paste functionality.
+
+![phylum-ci options](https://raw.githubusercontent.com/phylum-dev/phylum-ci/main/docs/img/phylum-ci_options.svg)
+
+[github_docs]: https://docs.phylum.io/phylum-ci/github_actions
+[gitlab_docs]: https://docs.phylum.io/phylum-ci/gitlab_ci
+[azure_docs]: https://docs.phylum.io/phylum-ci/azure_pipelines
+[bb_pipelines_docs]: https://docs.phylum.io/phylum-ci/bitbucket_pipelines
+[jenkins_docs]: https://docs.phylum.io/phylum-ci/jenkins
+[precommit_docs]: https://docs.phylum.io/phylum-ci/git_precommit
+
+### Exit Codes
+
+The `phylum-init` script entry point will return a zero (0) exit code when it completes successfully and a one (1)
+otherwise.
+
+The `phylum-ci` script entry point will return a zero (0) exit code when it completes successfully or one of the
+following non-zero codes otherwise:
+
+|Exit Code|Meaning|
+|---------|-------|
+|1|Default failure code. An unrecoverable error was encountered.|
+|2|Phylum analysis is complete and contains a policy violation.|
+|5|Phylum analysis is incomplete. Only used when enabled [by option][script_options].|
+|6|Phylum analysis is incomplete and contains a policy violation.|
+|10|Dependency file(s) failed filtering and excluded from analysis. See [this FAQ][FAQ] for more.|
+|11|No dependency files were provided or detected.|
+|12|No dependencies found in any current dependency file.|
+|20|A manifest is attempted to be parsed but lockfile generation has been disabled.|
+
+Exit codes of 10 or higher represent situations not directly linked to Phylum analysis. These errors are important
+because they indicate a complete Phylum analysis was not possible, which necessitates further investigation. An
+[option is available][script_options] to explicitly prevent these errors from setting an exit code.
+
+[script_options]: #phylum-ci-script-entry-point
+[FAQ]: https://github.com/marketplace/actions/phylum-analyze-pr#why-does-phylum-report-a-failing-status-check-if-it-shows-successful-analysis
+
+## License
+
+Copyright (C) 2022  Phylum, Inc.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation, either version 3 of the License or any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program.
+If not, see <https://www.gnu.org/licenses/gpl.html> or write to `phylum@veracode.com` or
+`dl-phylum-engineering@veracode.com`
+
+## Contributing
+
+Suggestions and help are welcome. Feel free to open an issue or otherwise contribute.
+More information is available on the [contributing documentation][contributing] page.
+
+[contributing]: https://github.com/phylum-dev/phylum-ci/blob/main/CONTRIBUTING.md
+
+## Code of Conduct
+
+Everyone participating in the `phylum-ci` project, and in particular in the issue tracker and pull requests, is
+expected to treat other people with respect and more generally to follow the guidelines articulated in the
+[Code of Conduct][CoC].
+
+## Security Disclosures
+
+Found a security issue in this repository? See the [security policy][security]
+for details on coordinated disclosure.
+
+[security]: https://github.com/phylum-dev/phylum-ci/blob/main/docs/security.md
+
+## Change log
+
+All notable changes to this project are documented in the [CHANGELOG][changelog].
+
+The format of the change log is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The entries in the changelog are primarily automatically generated through the use of
+[conventional commits](https://www.conventionalcommits.org) and the
+[Python Semantic Release](https://python-semantic-release.readthedocs.io/en/latest/index.html) tool.
+However, some entries may be manually edited, where it helps for clarity and understanding.
+
+[changelog]: https://github.com/phylum-dev/phylum-ci/blob/main/CHANGELOG.md
+
