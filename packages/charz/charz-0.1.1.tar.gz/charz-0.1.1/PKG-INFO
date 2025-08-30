@@ -1,0 +1,236 @@
+Metadata-Version: 2.3
+Name: charz
+Version: 0.1.1
+Summary: An object oriented terminal game engine
+Author-email: Havsalt <77575424+Havsalt@users.noreply.github.com>
+License: MIT License
+        
+        Copyright (c) 2025 Havsalt
+        
+        Permission is hereby granted, free of charge, to any person obtaining
+        a copy of this software and associated documentation files (the
+        "Software"), to deal in the Software without restriction, including
+        without limitation the rights to use, copy, modify, merge, publish,
+        distribute, sublicense, and/or sell copies of the Software, and to
+        permit persons to whom the Software is furnished to do so, subject to
+        the following conditions:
+        
+        The above copyright notice and this permission notice shall be
+        included in all copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Classifier: Topic :: Games/Entertainment
+Classifier: Topic :: Software Development
+Classifier: Topic :: Utilities
+Classifier: Typing :: Typed
+Requires-Python: >=3.10
+Requires-Dist: charz-core~=0.1.0
+Requires-Dist: colex~=0.3.0
+Provides-Extra: all
+Requires-Dist: keyboard>=0.13.5; extra == 'all'
+Provides-Extra: keyboard
+Requires-Dist: keyboard>=0.13.5; extra == 'keyboard'
+Description-Content-Type: text/markdown
+
+# Charz
+
+An object oriented terminal game engine
+
+## Installation
+
+Install using either `pip` or `rye`:
+
+```bash
+pip install charz[all]
+```
+
+```bash
+rye add charz --features all
+```
+
+If you don't need the `keyboard` package, simply use:
+
+```bash
+pip install charz
+```
+
+```bash
+rye add charz
+```
+
+## Getting started
+
+Add to project with `keyboard` feature:
+
+```bash
+pip install charz[keyboard]
+```
+
+or
+
+```bash
+rye add charz --features keyboard
+```
+
+Copy this code into the entry point (`main.py` or `__init__.py`)
+
+```python
+import colex              # Color constants and styling
+import keyboard           # For taking key inputs
+from charz import *       # Module can be imported as namespace: "import charz"
+
+
+class Player(Sprite):
+    SPEED: int = 4     # Defining constant
+    color = colex.RED  # In reality just a string, like "\x1b[31m" for red
+    centered = True    # Apply sprite centereing - Handled by `charz`
+    texture = [        # A texture may be defined as a class variable, of type `list[str]`
+        "  O",
+        "/ | \\",
+        " / \\",
+    ]
+
+    def update(self) -> None:  # This method is called every frame
+        if keyboard.is_pressed("a"):
+            self.position.x -= self.SPEED * Time.delta
+        if keyboard.is_pressed("d"):
+            self.position.x += self.SPEED * Time.delta
+        if keyboard.is_pressed("s"):
+            self.position.y += self.SPEED * Time.delta
+        if keyboard.is_pressed("w"):
+            self.position.y -= self.SPEED * Time.delta
+
+
+class Game(Engine):
+    clock = Clock(fps=12)
+    screen = Screen(
+        auto_resize=True,
+        initial_clear=True,
+    )
+
+    def __init__(self) -> None:
+        Camera.current.mode = Camera.MODE_CENTERED
+        self.player = Player(position=Vec2(10, 5))
+    
+    def update(self) -> None:
+        if keyboard.is_pressed("q"):
+            self.is_running = False
+        if keyboard.is_pressed("e"):
+            self.player.queue_free()  # `Engine` will drop reference to player
+            # NOTE: Player reference is still kept alive by `Game`, but it won't be updated
+
+
+if __name__ == "__main__":
+    game = Game()
+    game.run()
+```
+
+`Note`: If using `rye`, replace:
+
+```python
+if __name__ == "__main__":
+```
+
+with
+
+```python
+def main() -> None:
+```
+
+## Rational
+
+This project is heavily inspired by the `Godot Game Engine`.
+
+## Includes
+
+- Annotations
+  - `ColorValue`  (from package `colex`)
+  - `Self`        (from standard `typing` or from package `typing-extensions`)
+- Math (from package `linflex`)
+  - `lerp`
+  - `sign`
+  - `clamp`
+  - `move_toward`
+  - `Vec2`
+  - `Vec2i`
+  - `Vec3`
+- Submodules
+  - `text`
+    - `fill`
+    - `flip_h`
+    - `flip_v`
+    - `fill_lines`
+    - `flip_lines_h`
+    - `flip_lines_v`
+    - `rotate`
+- Framework
+  - `Engine`
+  - `Clock`
+  - `Screen`
+  - `Scene`
+- Datastructures
+  - `AnimationSet`
+  - `Hitbox`
+- Functions
+  - `load_texture`
+- Decorators
+  - `group`
+- Enums
+  - `Group`
+- Singletons
+  - `Time`
+  - `AssetLoader`
+- Components
+  - `TransformComponent`
+  - `TextureComponent`
+  - `ColorComponent`
+  - `AnimatedComponent`
+  - `ColliderComponent`
+- Nodes
+  - `Node`
+  - `Node2D`
+  - `Camera`
+  - `Sprite`
+  - `Label`
+  - `AnimatedSprite`
+- Feature dependent\*
+  - `SimpleMovementComponent`
+
+\*: Feature dependent imports requires explicit import statements as they are lazy loaded:
+
+```python
+# Example when using star import, with feature dependent import
+from charz import *
+from charz import SimpleMovementComponent
+```
+
+## Regarding testing
+
+Tests for `charz` are currently manual and only somewhat implemented. The plan is to use `pytest`, however, it's hard to make work since `charz` is meant for long-running tasks, including IO.
+
+## Versioning
+
+`charz` follows [SemVer](https://semver.org), like specified in [The Cargo Book](https://doc.rust-lang.org/cargo/reference/semver.html).
+
+## License
+
+MIT
