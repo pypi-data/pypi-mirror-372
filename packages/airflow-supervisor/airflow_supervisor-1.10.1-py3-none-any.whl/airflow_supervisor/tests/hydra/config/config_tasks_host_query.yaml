@@ -1,0 +1,28 @@
+# @package _global_
+_target_: airflow_config.Configuration
+
+defaults:
+  - balancer@extensions.balancer
+
+dags:
+  example_dag:
+    schedule: "0 3 * * *"
+    start_date: 2023-01-01
+    tasks:
+      run:
+        _target_: airflow_supervisor.SupervisorSSHTask
+        cfg:
+          _target_: airflow_supervisor.SupervisorSSHAirflowConfiguration
+          working_dir: /data
+          program:
+            echo:
+              _target_: airflow_supervisor.ProgramConfiguration
+              command: echo "hello"
+        host:
+          _target_: airflow_pydantic.HostQuery
+          balancer: ${extensions.balancer}
+          name: server2
+        port:
+          _target_: airflow_pydantic.PortQuery
+          balancer: ${extensions.balancer}
+          name: my-app

@@ -1,0 +1,45 @@
+# @package _global_
+_target_: airflow_config.Configuration
+
+defaults:
+  - balancer@extensions.balancer
+
+dags:
+  example_dag:
+    schedule: "0 3 * * *"
+    start_date: 2023-01-01
+    tasks:
+      pre:
+        _target_: airflow_pydantic.BashTask
+        bash_command: echo "pre task"
+      run:
+        _target_: airflow_supervisor.SupervisorSSHTask
+        dependencies: [pre]
+        cfg:
+          _target_: airflow_supervisor.SupervisorSSHAirflowConfiguration
+          # Airflow
+          check_interval: 10
+          check_timeout: 60
+          endtime: 23:00:00
+          maxretrigger: 5
+          runtime: 360
+          ssh_operator_args:
+            cmd_timeout: 63
+          # Supervisor
+          cleanup: false
+          restart_on_retrigger: false
+          restart_on_initial: true
+          stop_on_exit: false
+          # Generic
+          working_dir: /data
+          program:
+            echo:
+              _target_: airflow_supervisor.ProgramConfiguration
+              command: echo "hello"
+            sleep:
+              _target_: airflow_supervisor.ProgramConfiguration
+              command: sleep 1000
+      post:
+        _target_: airflow_pydantic.BashTask
+        bash_command: echo "post task"
+        dependencies: [run]
