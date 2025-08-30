@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, synchronize]
+  push:
+    branches:
+      - main
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - uses: pre-commit/action@v3.0.1
+
+  test:
+    needs: pre-commit
+    strategy:
+      matrix:
+        feature_flags: ["no-default-features", "all-features"]
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v4
+
+    - name: build
+      run: cargo build --all --verbose
+
+    - name: test
+      run: cargo test --verbose
+
+    - name: build benchmarks
+      run: cargo test --benches --no-run --verbose
+
+    - name: clippy
+      run: cargo clippy --all
+
+    - name: docs
+      run: cargo doc --document-private-items --no-deps
