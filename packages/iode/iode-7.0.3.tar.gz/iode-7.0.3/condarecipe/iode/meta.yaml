@@ -1,0 +1,84 @@
+{% set name = "iode" %}
+{% set version = "7.0.3" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  # --- build from PyPI ---
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/iode-{{ version }}.tar.gz
+  sha256: ?
+
+  # --- build from git repository ---
+  # git_url: https://github.com/plan-be/iode.git
+  # git_rev: 7.0.3    # (Defaults to "HEAD")
+
+build:
+  entry_points:
+    - iodecmd = iode.cli:main
+  script:
+    - cmake --preset windows-release                                                  # [win]      
+    - cmake --preset linux-release                                                    # [linux]      
+    # if source is git_url -> current dir is root project dir -> need to move to pyiode 
+    - if exist pyiode cd pyiode
+    - echo "Building the iode package for python {{ PY_VER }}"
+    - python --version 
+    - {{ PYTHON }} -m pip install . -vv --no-deps
+  # If this is a new build for the same version, increment the build number
+  number: 0
+  # Make sure that the iode package is only available for the Windows OS
+  skip: True                                                                          # [not win]
+
+requirements:
+  host:
+    - python ={{ PY_VER }}
+    - scikit-build-core >=0.10
+    - numpy >=2.0
+    - pandas >=2.0
+    - cython ==3.0.11
+    - mypy >=1.10
+    - pip
+
+  build:
+    - git
+    - cmake 
+    - ninja
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+
+  run:
+    - python ={{ PY_VER }}
+    - numpy >=2.0
+    - pandas >=2.0
+    - matplotlib-base
+
+test:
+  imports:
+    - iode
+  
+  commands:
+    - pip check
+    - iodecmd --help
+    - pytest --disable-warnings --doctest-modules --pyargs iode
+  
+  requires:
+    - pip
+    - pytest
+    - larray
+
+about:
+  home: https://github.com/plan-be/iode
+  summary: |
+    IODE is a package dedicated to econometric models and to the 
+    management of statistical series
+  license: GPL-3.0-only
+  license_family: GPL
+  license_file: LICENSE.md
+  doc_url: http://iode.readthedocs.io/
+  dev_url: https://github.com/plan-be/iode
+
+extra:
+  recipe-maintainers:
+    - alixdamman
+    - yvdabb
