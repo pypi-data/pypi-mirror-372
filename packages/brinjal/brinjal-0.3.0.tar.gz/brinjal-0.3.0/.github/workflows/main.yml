@@ -1,0 +1,83 @@
+name: Test Python Code
+
+on:
+  # Allow manual runs
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '**/*.py'
+  push:
+    branches:
+      - main
+
+
+jobs:
+
+
+
+  code-formatting-syntax-and-docstrings:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+
+      - name: Check code formatting using ruff
+        uses: chartboost/ruff-action@v1
+        with:
+          version: 0.9.6
+          args: format --check
+
+      - name: Check import order
+        uses: chartboost/ruff-action@v1
+        with:
+          version: 0.9.6
+          args: check --select I
+
+      - name: Check docstrings using interrogate
+        run: |
+          pip install interrogate 
+          echo "Running interrogate with configuration from pyproject.toml..."
+          echo "Current directory: $(pwd)"
+          echo "Configuration file contents:"
+          cat pyproject.toml | grep -A 10 "\[tool.interrogate\]"
+          echo ""
+          echo "Running interrogate check..."
+          interrogate -c pyproject.toml -v . -f 100 || {
+            echo "Docstring check failed. Running with verbose output to see details:"
+            interrogate -vv . -f 100
+            exit 1
+          }
+          echo "Docstring check passed!"
+
+
+
+
+  test:
+    name: Test using python/uv
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.13"
+
+    steps:
+      - uses: actions/checkout@v4
+
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the project
+        run: uv sync --all-extras --dev
+
+      - name: Run tests
+        run: uv run --frozen pytest 
+
+
+  
+
