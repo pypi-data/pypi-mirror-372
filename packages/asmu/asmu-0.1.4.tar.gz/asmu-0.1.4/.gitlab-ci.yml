@@ -1,0 +1,67 @@
+image: python:latest
+
+stages:
+  - codecheck
+  - test
+  - deploy
+
+before_script:
+  - apt update && apt install -y portaudio19-dev
+  - python3 -m pip install --upgrade pip
+
+typeecheck:
+  stage: codecheck
+  script: 
+    - python3 -m pip install .[check]
+    - mypy --install-types --non-interactive .    
+  rules:
+    - when: always
+
+stylecheck:
+  stage: codecheck
+  script:
+    - python3 -m pip install .[check]
+    - flake8 --show-source --statistics
+  rules:
+    - when: always
+
+importcheck:
+  stage: codecheck
+  script:
+    - python3 -m pip install .[check]
+    - isort . --check-only --diff
+  rules:
+    - when: always
+
+test:
+  stage: test
+  script:
+    - python3 -m pip install -e .[test]
+    - pytest --buffer --calmode --cov=asmu --cov-fail-under=50
+  rules:
+    - when: always
+
+pages:
+  stage: deploy
+  script:
+    - python3 -m pip install .[docs]
+    - apt install -y graphviz
+    - mkdocs build --strict --verbose --site-dir public
+  artifacts:
+    paths:
+      - docs/imgs/
+      - public
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+
+pypi: 
+    stage: deploy
+    cache: {}
+    script:
+        - python3 -m pip install build twine
+        - python3 -m build
+        - python3 -m twine upload --verbose --skip-existing dist/*
+    only:
+        - tags
+
+
