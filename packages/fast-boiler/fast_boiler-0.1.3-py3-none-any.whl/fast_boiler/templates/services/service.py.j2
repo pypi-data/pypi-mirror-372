@@ -1,0 +1,48 @@
+from app.repositories.{{ name }}_repo import {{ name }}_repo as repo
+from app.schemas.{{ name }}_schema import {{ ClassName }}Create, {{ ClassName }}Update
+
+{% if is_async %}
+# --- ASYNC VERSION ---
+from sqlalchemy.ext.asyncio import AsyncSession
+
+class {{ ClassName }}Service:
+    async def create(self, db: AsyncSession, *, payload: {{ ClassName }}Create):
+        return await repo.create(db, obj_in=payload)
+
+    async def get_by_id(self, db: AsyncSession, *, id: int):
+        return await repo.get_by_id(db, id=id)
+        
+    # 👇 THIS METHOD IS NOW CORRECTED
+    async def get_all(self, db: AsyncSession, *, query: dict):
+        return await repo.get_all(db, query=query)
+
+    async def update(self, db: AsyncSession, *, id: int, payload: {{ ClassName }}Update):
+        return await repo.update(db, id=id, obj_in=payload)
+
+    async def delete(self, db: AsyncSession, *, id: int):
+        return await repo.delete(db, id=id)
+
+{% else %}
+# --- SYNC VERSION ---
+from sqlalchemy.orm import Session
+
+class {{ ClassName }}Service:
+    def create(self, db: Session, *, payload: {{ ClassName }}Create):
+        return repo.create(db, obj_in=payload)
+
+    def get_by_id(self, db: Session, *, id: int):
+        return repo.get_by_id(db, id=id)
+        
+    # 👇 THIS METHOD IS NOW CORRECTED
+    def get_all(self, db: Session, *, query: dict):
+        return repo.get_all(db, query=query)
+
+    def update(self, db: Session, *, id: int, payload: {{ ClassName }}Update):
+        return repo.update(db, id=id, obj_in=payload)
+
+    def delete(self, db: Session, *, id: int):
+        return repo.delete(db, id=id)
+
+{% endif %}
+# This line is outside the conditional blocks
+{{ name }}_service = {{ ClassName }}Service()
