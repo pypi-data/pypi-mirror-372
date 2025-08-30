@@ -1,0 +1,56 @@
+# Default MCP Agent Policy
+version: "1.0"
+
+metadata:
+  name: "default-agent-policy"
+  description: "Safe defaults for AI agent API access"
+  created: "2024-01-20"
+
+defaults:
+  # Methods allowed by default
+  allow_methods: ["GET", "HEAD", "OPTIONS"]
+  # Deny operations that reference external URLs
+  deny_external_refs: true
+  # Require authentication for all operations
+  require_auth: false
+  # Audit logging level
+  audit_level: "basic"
+
+rules:
+  # Allow all read operations
+  - name: "allow-read-operations"
+    description: "Allow safe read-only operations"
+    pattern: "*"
+    allow:
+      methods: ["GET", "HEAD", "OPTIONS"]
+      operations: ["list*", "get*", "search*", "find*", "describe*"]
+    audit:
+      level: "basic"
+      include_response: false
+
+  # Deny admin endpoints
+  - name: "deny-admin-endpoints"
+    description: "Block access to admin endpoints"
+    pattern: "*/admin/*"
+    deny:
+      reason: "Admin endpoints are restricted for security"
+
+  # Deny delete operations
+  - name: "deny-delete-operations"
+    description: "Block all delete operations"
+    pattern: "*"
+    deny:
+      methods: ["DELETE"]
+      operations: ["delete*", "remove*", "destroy*"]
+      reason: "Delete operations are not allowed for agents"
+
+  # Example: Allow specific write operation
+  # - name: "allow-create-comments"
+  #   description: "Allow creating comments"
+  #   pattern: "*/comments"
+  #   allow:
+  #     methods: ["POST"]
+  #   audit:
+  #     level: "detailed"
+  #     include_body: true
+  #     include_response: true

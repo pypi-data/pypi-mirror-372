@@ -1,0 +1,154 @@
+# Security validation rules based on OWASP API Security Top 10
+# These rules help prevent common security vulnerabilities in API specifications
+
+rules:
+  # Server Security Rules
+  servers-use-https:
+    description: Server URLs must use HTTPS for security
+    message: "{{path}} - Server URL must use HTTPS, found: {{value}}"
+    severity: error
+    given: $.servers[*].url
+    then:
+      function: pattern
+      functionOptions:
+        match: "^https://"
+        
+  no-localhost-servers:
+    description: Production servers should not use localhost
+    message: "{{path}} - Server URL contains localhost/private IP: {{value}}"
+    severity: warning
+    given: $.servers[*].url
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "(localhost|127\\.0\\.0\\.1|192\\.168\\.|10\\.0\\.|172\\.16\\.)"
+        
+  no-metadata-endpoints:
+    description: Server URLs should not expose metadata endpoints
+    message: "{{path}} - Server URL exposes metadata endpoint: {{value}}"
+    severity: error
+    given: $.servers[*].url
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "(169\\.254\\.169\\.254|metadata)"
+
+  # Authentication Rules
+  security-defined:
+    description: API must define security schemes
+    message: "API must define at least one security scheme in components.securitySchemes"
+    severity: warning
+    given: $.components
+    then:
+      field: securitySchemes
+      function: truthy
+      
+  operations-have-security:
+    description: Operations should specify security requirements
+    message: "{{path}} - Operation should specify security requirements"
+    severity: warning
+    given: $.paths[*][*]
+    then:
+      - field: security
+        function: truthy
+      
+  # Parameter Security
+  no-api-key-in-query:
+    description: API keys should not be passed in query parameters
+    message: "{{path}} - API key should not be passed in query parameter (use header instead)"
+    severity: error
+    given: $.paths[*][*].parameters[?(@.in == 'query' && @.name =~ /^(api[-_]?key|apikey|key|token)$/i)]
+    then:
+      function: falsy
+      
+  # Response Headers
+  security-headers-required:
+    description: Security-related headers should be defined in responses
+    message: "{{path}} - Response should include security headers"
+    severity: info
+    given: $.paths[*][*].responses[*].headers
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          anyOf:
+            - required: ["X-Content-Type-Options"]
+            - required: ["X-Frame-Options"]
+            - required: ["X-XSS-Protection"]
+            
+  # Request Body Security
+  file-upload-content-type:
+    description: File upload operations must specify allowed content types
+    message: "{{path}} - File upload must specify allowed content types"
+    severity: error
+    given: $.paths[*][*].requestBody.content[multipart/form-data]
+    then:
+      function: truthy
+      
+  # CORS Configuration
+  cors-headers-defined:
+    description: CORS headers should be properly configured
+    message: "{{path}} - CORS headers should be defined for cross-origin requests"
+    severity: info
+    given: $.paths[*].options
+    then:
+      field: responses.200.headers.Access-Control-Allow-Origin
+      function: truthy
+
+  # Rate Limiting
+  rate-limit-headers:
+    description: Rate limiting headers should be defined
+    message: "{{path}} - Consider adding rate limit headers (X-RateLimit-*)"
+    severity: info
+    given: $.paths[*][*].responses[*].headers
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          anyOf:
+            - required: ["X-RateLimit-Limit"]
+            - required: ["X-Rate-Limit-Limit"]
+            
+  # Input Validation
+  string-max-length:
+    description: String parameters should define maximum length
+    message: "{{path}} - String parameter should define maxLength"
+    severity: warning
+    given: $..parameters[?(@.schema.type == 'string')]
+    then:
+      field: schema.maxLength
+      function: truthy
+      
+  number-bounds:
+    description: Numeric parameters should define bounds
+    message: "{{path}} - Numeric parameter should define minimum/maximum"
+    severity: info
+    given: $..parameters[?(@.schema.type == 'number' || @.schema.type == 'integer')]
+    then:
+      field: schema
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: ["minimum"]
+            - required: ["maximum"]
+            
+  # Error Handling
+  error-responses-defined:
+    description: Error responses should be properly defined
+    message: "{{path}} - Operation should define error responses (4xx, 5xx)"
+    severity: warning
+    given: $.paths[*][*].responses
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          anyOf:
+            - required: ["400"]
+            - required: ["401"]
+            - required: ["403"]
+            - required: ["404"]
+            - required: ["500"]

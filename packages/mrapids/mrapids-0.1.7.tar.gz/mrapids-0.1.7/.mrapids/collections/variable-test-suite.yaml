@@ -1,0 +1,67 @@
+name: variable-test-suite
+description: Comprehensive test of variable features
+variables:
+  # Default values (lowest precedence)
+  source: collection
+  value1: default1
+  value2: default2
+  value3: default3
+  operation: get
+  nested:
+    key: collection_nested
+
+requests:
+  # Test 1: Basic variable resolution
+  - name: test_basic_resolution
+    operation: "{{operation}}"
+    params:
+      source: "{{source}}"
+      v1: "{{value1}}"
+      v2: "{{value2}}"
+      v3: "{{value3}}"
+    expect:
+      status: 200
+      
+  # Test 2: Nested variable access
+  - name: test_nested_vars
+    operation: get
+    params:
+      nested: "{{nested.key}}"
+    expect:
+      status: 200
+      
+  # Test 3: Variable in request body
+  - name: test_body_vars
+    operation: post
+    body:
+      source: "{{source}}"
+      values:
+        v1: "{{value1}}"
+        v2: "{{value2}}"
+      message: "Source is {{source}} with value {{value1}}"
+    expect:
+      status: 200
+      
+  # Test 4: Save and use response
+  - name: save_response
+    operation: get
+    params:
+      test: "save_test"
+    save_as: saved_data
+    
+  - name: use_saved_response
+    operation: post
+    body:
+      saved_args: "{{saved_data.args}}"
+      saved_test: "{{saved_data.args.test}}"
+    expect:
+      status: 200
+      
+  # Test 5: Complex interpolation
+  - name: test_complex_template
+    operation: get
+    params:
+      template: "{{source}}_{{value1}}_{{value2}}"
+      expression: "The {{source}} has values {{value1}} and {{value2}}"
+    expect:
+      status: 200

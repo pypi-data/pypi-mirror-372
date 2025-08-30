@@ -1,0 +1,226 @@
+name: Security Checks
+
+on:
+  push:
+    branches: [main, production]
+  pull_request:
+    branches: [main, production]
+  schedule:
+    # Run security checks every Monday at 9am UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Secret scanning using multiple tools
+  secret-scan:
+    name: Secret Scanning
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better scanning
+
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Rust security audit
+  cargo-audit:
+    name: Cargo Audit
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run cargo audit
+        run: cargo audit --deny warnings
+
+      - name: Run cargo audit (json output)
+        run: cargo audit --json > audit-report.json
+        continue-on-error: true
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cargo-audit-report
+          path: audit-report.json
+
+  # Dependency license check
+  license-check:
+    name: License Check
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-license
+        run: cargo install cargo-license
+
+      - name: Check licenses
+        run: |
+          cargo license --json > licenses.json
+          echo "## Dependency Licenses" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          cargo license >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: licenses.json
+
+  # Security policy compliance check
+  security-policy:
+    name: Security Policy Check
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for security policy
+        run: |
+          if [ ! -f "SECURITY.md" ]; then
+            echo "::error::SECURITY.md file is missing"
+            exit 1
+          fi
+          echo "✅ SECURITY.md exists" >> $GITHUB_STEP_SUMMARY
+
+      - name: Validate security policy
+        run: |
+          # Check that SECURITY.md contains required sections
+          required_sections=("Supported Versions" "Reporting a Vulnerability" "Security Update Process")
+          
+          for section in "${required_sections[@]}"; do
+            if ! grep -q "$section" SECURITY.md; then
+              echo "::warning::SECURITY.md is missing section: $section"
+            else
+              echo "✅ Found section: $section" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+  # SARIF/CodeQL analysis (if the repo is public or has GitHub Advanced Security)
+  # codeql:
+  #   name: CodeQL Analysis
+  #   runs-on: self-hosted
+  #   permissions:
+  #     actions: read
+  #     contents: read
+  #     security-events: write
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Initialize CodeQL
+  #       uses: github/codeql-action/init@v3
+  #       with:
+  #         languages: 'rust'
+  #
+  #     - name: Build
+  #       run: cargo build --release
+  #
+  #     - name: Perform CodeQL Analysis
+  #       uses: github/codeql-action/analyze@v3
+
+  # Supply chain security
+  supply-chain:
+    name: Supply Chain Security
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Generate SBOM (Software Bill of Materials)
+        run: |
+          cargo install cargo-sbom
+          cargo sbom > sbom.spdx
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx
+
+      - name: Check for outdated dependencies
+        run: |
+          cargo install cargo-outdated
+          echo "## Outdated Dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          cargo outdated >> $GITHUB_STEP_SUMMARY || true
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # Security test suite
+  security-tests:
+    name: Security Tests
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run security-focused tests
+        run: |
+          # Run tests with security prefix
+          cargo test --lib security
+          cargo test --lib ssrf
+          cargo test --lib injection
+          cargo test --lib auth
+          cargo test --lib policy
+
+      - name: Check for hardcoded secrets in tests
+        run: |
+          # Simple check for common patterns
+          if grep -r "api[_-]key.*=.*['\"].*['\"]" --include="*.rs" .; then
+            echo "::warning::Potential hardcoded API key found"
+          fi
+          if grep -r "password.*=.*['\"].*['\"]" --include="*.rs" .; then
+            echo "::warning::Potential hardcoded password found"
+          fi
+
+  # Create security report
+  security-report:
+    name: Security Report
+    needs: [secret-scan, cargo-audit, license-check, security-policy, supply-chain, security-tests]
+    runs-on: self-hosted
+    if: always()
+    steps:
+      - name: Create summary
+        run: |
+          echo "# Security Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scanning | ${{ needs.secret-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cargo Audit | ${{ needs.cargo-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Check | ${{ needs.license-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Policy | ${{ needs.security-policy.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Supply Chain | ${{ needs.supply-chain.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Tests | ${{ needs.security-tests.result }} |" >> $GITHUB_STEP_SUMMARY

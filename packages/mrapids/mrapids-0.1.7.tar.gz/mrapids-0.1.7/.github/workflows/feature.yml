@@ -1,0 +1,36 @@
+name: Feature Branch CI
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'feat/**'
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  quick-check:
+    name: Quick Check
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: ./api-runtime
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      
+      - name: Format check
+        run: cargo fmt -- --check
+      
+      - name: Clippy
+        run: cargo clippy -- -W clippy::all
+      
+      - name: Quick test
+        run: cargo test --lib --verbose

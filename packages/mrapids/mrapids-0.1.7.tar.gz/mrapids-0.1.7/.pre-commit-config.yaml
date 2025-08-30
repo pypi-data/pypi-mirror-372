@@ -1,0 +1,136 @@
+# Pre-commit hooks configuration
+# Install: pip install pre-commit
+# Setup: pre-commit install
+
+repos:
+  # Commit message linting
+  # Commitizen for commit message validation (config in .github/)
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+        args: ['--config', '.github/commitlint.config.js']
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^.*\.(md|markdown)$
+      - id: end-of-file-fixer
+        exclude: ^.*\.(jpg|png|gif|ico)$
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.38.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix']
+        exclude: ^CHANGELOG\.md$
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.33.0
+    hooks:
+      - id: yamllint
+        args: ['-d', 'relaxed']
+
+  # Security scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+
+  # Gitleaks secret scanning
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+
+  # Local Rust checks
+  - repo: local
+    hooks:
+      # Rust formatting
+      - id: rust-formatting
+        name: Rust formatting
+        entry: cargo fmt --
+        language: system
+        files: \.rs$
+        pass_filenames: false
+
+      # Rust linting
+      - id: rust-linting
+        name: Rust linting
+        entry: cargo clippy -- -D warnings
+        language: system
+        files: \.rs$
+        pass_filenames: false
+
+      # Rust tests
+      - id: rust-test
+        name: Rust tests
+        entry: cargo test
+        language: system
+        files: \.rs$
+        pass_filenames: false
+        stages: [push]
+
+      # Security audit
+      - id: cargo-audit
+        name: Cargo audit
+        entry: cargo audit
+        language: system
+        pass_filenames: false
+        stages: [push]
+
+      # Dependency check
+      - id: cargo-deny
+        name: Cargo deny check
+        entry: cargo deny check
+        language: system
+        pass_filenames: false
+        stages: [push]
+
+      # Documentation check
+      - id: cargo-doc
+        name: Documentation check
+        entry: cargo doc --no-deps
+        language: system
+        files: \.rs$
+        pass_filenames: false
+        stages: [push]
+
+      # Version check
+      - id: version-check
+        name: Version consistency
+        entry: bash -c 'grep -q "^version = \"$(grep version Cargo.toml | head -1 | cut -d"\"" -f2)\"" Cargo.toml'
+        language: system
+        files: Cargo\.toml$
+
+      # CHANGELOG update check
+      - id: changelog-updated
+        name: CHANGELOG updated
+        entry: bash -c 'git diff --cached --name-only | grep -q "CHANGELOG.md" || (echo "CHANGELOG.md not updated" && exit 1)'
+        language: system
+        stages: [commit]
+        always_run: false
+        pass_filenames: false
+        exclude: ^(?!.*feat|fix|perf).*$
+
+# Configuration
+default_stages: [commit]
+fail_fast: false
+verbose: true

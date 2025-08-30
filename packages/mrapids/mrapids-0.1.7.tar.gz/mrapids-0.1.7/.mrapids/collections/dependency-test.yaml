@@ -1,0 +1,50 @@
+name: dependency-test
+description: Test collection with dependencies and conditions
+variables:
+  base_url: https://httpbin.org
+
+requests:
+  # Independent requests can run in parallel
+  - name: get_data_1
+    operation: get
+    save_as: data1
+    
+  - name: get_data_2
+    operation: get
+    save_as: data2
+    
+  # This depends on both previous requests
+  - name: process_data
+    operation: post
+    depends_on:
+      - get_data_1
+      - get_data_2
+    body:
+      data1_status: "{{data1.args}}"
+      data2_status: "{{data2.args}}"
+    save_as: processed
+    
+  # Conditional execution based on previous result
+  - name: success_handler
+    operation: get
+    depends_on:
+      - process_data
+    if: "process_data.success == true"
+    params:
+      message: "Processing succeeded"
+      
+  # Skip if success
+  - name: error_handler
+    operation: get
+    depends_on:
+      - process_data
+    skip: "process_data.success == true"
+    params:
+      message: "Processing failed"
+      
+  # Always run cleanup
+  - name: cleanup
+    operation: get
+    run_always: true
+    params:
+      action: "cleanup"

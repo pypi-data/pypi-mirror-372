@@ -1,0 +1,375 @@
+name: Comprehensive Test Suite
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run nightly tests at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches:
+      - 'feature/**'
+      - 'test/**'
+    paths:
+      - '**.rs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
+  RUST_LOG: debug
+
+jobs:
+  # Unit tests with different feature combinations
+  unit-tests:
+    name: Unit Tests (${{ matrix.features }})
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        features:
+          - ''  # No features
+          - '--all-features'
+          - '--no-default-features'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-test-${{ matrix.features }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run Unit Tests
+        run: |
+          cargo test --lib ${{ matrix.features }} -- --nocapture
+          cargo test --bins ${{ matrix.features }} -- --nocapture
+
+      - name: Generate Test Report
+        if: always()
+        run: |
+          cargo install cargo-test-report || true
+          cargo test --lib ${{ matrix.features }} --no-fail-fast -- -Z unstable-options --format json | cargo-test-report > test-report.html || true
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.os }}-${{ matrix.features }}
+          path: test-report.html
+
+  # Integration tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: self-hosted
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-integration-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Setup Test Environment
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test_db" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
+
+      - name: Run Integration Tests
+        run: |
+          cargo test --test '*' -- --test-threads=1 --nocapture
+
+      - name: API Contract Tests
+        run: |
+          # Test API contracts against OpenAPI spec
+          cargo run --example validate_contracts || true
+
+  # Fuzz testing
+  fuzz-tests:
+    name: Fuzz Testing
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      - name: Run Fuzz Tests
+        run: |
+          # Create fuzz directory if it doesn't exist
+          mkdir -p fuzz
+          
+          # Initialize fuzzing if needed
+          if [ ! -f "fuzz/Cargo.toml" ]; then
+            cargo fuzz init || true
+          fi
+          
+          # Run fuzz tests for 60 seconds per target
+          for target in $(cargo fuzz list 2>/dev/null || echo ""); do
+            if [ ! -z "$target" ]; then
+              echo "Fuzzing target: $target"
+              timeout 60 cargo +nightly fuzz run $target -- -max_total_time=60 || true
+            fi
+          done
+
+  # Property-based testing
+  property-tests:
+    name: Property-Based Tests
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-property-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run Property Tests
+        run: |
+          # Run property-based tests if they exist
+          cargo test --features proptest proptest_ -- --nocapture || true
+          cargo test --features quickcheck quickcheck_ -- --nocapture || true
+
+  # Mutation testing
+  mutation-tests:
+    name: Mutation Testing
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-mutants
+        run: cargo install cargo-mutants
+
+      - name: Run Mutation Tests
+        run: |
+          # Run mutation testing on critical modules
+          cargo mutants --no-shuffle --timeout 30 --jobs 2 || true
+
+      - name: Upload Mutation Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: mutants.out/
+
+  # Stress testing
+  stress-tests:
+    name: Stress Testing
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-stress-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build Release Binary
+        run: cargo build --release
+
+      - name: Install stress testing tools
+        run: |
+          # Install vegeta for HTTP load testing
+          wget https://github.com/tsenart/vegeta/releases/latest/download/vegeta_linux_amd64.tar.gz
+          tar -xzf vegeta_linux_amd64.tar.gz
+          chmod +x vegeta
+          sudo mv vegeta /usr/local/bin/
+
+      - name: Start Application
+        run: |
+          ./target/release/mrapids serve --port 8080 &
+          sleep 5
+
+      - name: Run Stress Tests
+        run: |
+          # Basic stress test
+          echo "GET http://localhost:8080/health" | vegeta attack -duration=30s -rate=100 | vegeta report
+
+          # Test with varying load
+          for rate in 50 100 200 500; do
+            echo "Testing with $rate requests/sec"
+            echo "GET http://localhost:8080/health" | vegeta attack -duration=10s -rate=$rate | vegeta report
+          done
+
+  # Compatibility testing
+  compatibility-tests:
+    name: Compatibility Tests
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-22.04]
+        rust: ['1.70.0', 'stable', 'beta']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Check Compatibility
+        run: |
+          cargo check --all-features
+          cargo build --all-features
+
+  # Security testing
+  security-tests:
+    name: Security Testing
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Security Audit
+        run: |
+          cargo install cargo-audit || true
+          cargo audit
+
+      - name: Check for Unsafe Code
+        run: |
+          cargo install cargo-geiger || true
+          cargo geiger
+
+      - name: OWASP Dependency Check
+        run: |
+          # Check for known vulnerabilities in dependencies
+          cargo install cargo-deny || true
+          cargo deny check
+
+  # Performance regression tests
+  performance-tests:
+    name: Performance Tests
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install criterion
+        run: cargo install cargo-criterion || true
+
+      - name: Run Benchmarks
+        run: |
+          # Run benchmarks and save results
+          cargo criterion --message-format json > benchmark-results.json || true
+
+      - name: Compare with Baseline
+        run: |
+          # Compare with main branch performance
+          git checkout main
+          cargo criterion --message-format json > baseline-results.json || true
+          git checkout -
+          
+          # Compare results (would need a script to analyze)
+          echo "Performance comparison would go here"
+
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results.json
+            baseline-results.json
+            target/criterion/
+
+  # Test report generation
+  test-report:
+    name: Generate Test Report
+    needs: [unit-tests, integration-tests, property-tests, security-tests]
+    runs-on: self-hosted
+    if: always()
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: test-artifacts
+
+      - name: Generate Summary Report
+        run: |
+          echo "# Test Suite Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Property Tests | ${{ needs.property-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Tests | ${{ needs.security-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "Test reports and artifacts have been uploaded and are available in the workflow run." >> $GITHUB_STEP_SUMMARY

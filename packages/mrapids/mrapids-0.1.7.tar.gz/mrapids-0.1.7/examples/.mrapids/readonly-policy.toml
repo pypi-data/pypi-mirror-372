@@ -1,0 +1,59 @@
+# Readonly Policy - TOML Format
+# A simple policy that only allows read operations
+
+version = "1.0"
+
+[metadata]
+name = "readonly-policy"
+description = "Strict read-only policy for untrusted agents"
+author = "Security Team"
+
+[defaults]
+allow_methods = ["GET", "HEAD", "OPTIONS"]
+deny_external_refs = true
+require_auth = true
+audit_level = "detailed"
+
+# Rule: Allow only GET operations
+[[rules]]
+name = "global-readonly"
+description = "Allow read operations globally"
+pattern = "*"
+
+[rules.allow]
+methods = ["GET", "HEAD", "OPTIONS"]
+operations = ["get*", "list*", "search*", "find*", "describe*"]
+
+[rules.deny]
+methods = ["POST", "PUT", "PATCH", "DELETE"]
+
+[rules.audit]
+level = "detailed"
+include_body = false
+include_response = false
+
+# Rule: Extra restrictions for sensitive paths
+[[rules]]
+name = "block-sensitive"
+description = "Block access to sensitive endpoints"
+pattern = "*"
+
+[rules.deny]
+operations = [
+  "*secret*",
+  "*password*",
+  "*token*",
+  "*key*",
+  "*credential*",
+  "*auth*",
+  "*private*"
+]
+
+# Custom explanation for security-related denials
+[[rules]]
+name = "explain-security"
+pattern = "*/admin/*"
+explain = "Access to admin endpoints is strictly prohibited for agents"
+
+[rules.deny]
+all = true

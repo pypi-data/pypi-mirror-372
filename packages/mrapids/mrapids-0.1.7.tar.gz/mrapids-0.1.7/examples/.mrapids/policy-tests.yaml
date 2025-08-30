@@ -1,0 +1,162 @@
+# Policy Test Scenarios
+# Test various policy rules and edge cases
+
+# Test 1: Allow public GET request
+- name: "Allow public GET with auth"
+  description: "Should allow GET request to public API with authentication"
+  request:
+    operation_id: "getUser"
+    auth_profile: "default"
+  url: "api.public.com/users/123"
+  context:
+    method: "GET"
+  expected:
+    decision: "allow"
+    rule: "public-readonly"
+
+# Test 2: Deny public POST request
+- name: "Deny public POST"
+  description: "Should deny POST request to public API"
+  request:
+    operation_id: "createUser"
+    auth_profile: "default"
+  url: "api.public.com/users"
+  context:
+    method: "POST"
+  expected:
+    decision: "deny"
+    reason_contains: "Method POST not allowed"
+
+# Test 3: Deny request without auth
+- name: "Deny no auth"
+  description: "Should deny request without authentication"
+  request:
+    operation_id: "getUser"
+  url: "api.public.com/users/123"
+  context:
+    method: "GET"
+  expected:
+    decision: "deny"
+    reason_contains: "Authentication required"
+
+# Test 4: Allow GitHub read with proper auth
+- name: "Allow GitHub read"
+  description: "Should allow GitHub API read with correct auth profile"
+  request:
+    operation_id: "listRepos"
+    auth_profile: "github-readonly"
+  url: "api.github.com/users/octocat/repos"
+  context:
+    method: "GET"
+  expected:
+    decision: "allow"
+    rule: "github-readonly"
+
+# Test 5: Deny GitHub secret operations
+- name: "Deny GitHub secrets"
+  description: "Should deny access to secret-related operations"
+  request:
+    operation_id: "getRepoSecrets"
+    auth_profile: "github-readonly"
+  url: "api.github.com/repos/owner/repo/secrets"
+  context:
+    method: "GET"
+  expected:
+    decision: "deny"
+    rule: "github-readonly"
+
+# Test 6: Block payment operations
+- name: "Block payment API"
+  description: "Should block all payment operations"
+  request:
+    operation_id: "processPayment"
+    auth_profile: "default"
+  url: "api.example.com/payment/process"
+  context:
+    method: "POST"
+  expected:
+    decision: "deny"
+    rule: "block-payments"
+    reason_contains: "Payment operations require human approval"
+
+# Test 7: Allow internal API with conditions
+- name: "Allow internal API staging"
+  description: "Should allow internal API access in staging with proper auth"
+  request:
+    operation_id: "createResource"
+    auth_profile: "internal-agent"
+    env: "staging"
+  url: "api.internal.company.com/resources"
+  context:
+    method: "POST"
+    tags: ["safe", "agent-allowed"]
+  expected:
+    decision: "allow"
+    rule: "internal-apis"
+
+# Test 8: Deny internal API delete
+- name: "Deny internal delete"
+  description: "Should deny delete operations on internal API"
+  request:
+    operation_id: "deleteResource"
+    auth_profile: "internal-agent"
+    env: "staging"
+  url: "api.internal.company.com/resources/123"
+  context:
+    method: "DELETE"
+  expected:
+    decision: "deny"
+    rule: "internal-apis"
+
+# Test 9: Allow dev environment operations
+- name: "Allow dev environment"
+  description: "Should allow all operations in dev environment"
+  request:
+    operation_id: "deleteEverything"
+    auth_profile: "dev"
+    env: "development"
+  url: "api.dev.local/dangerous/operation"
+  context:
+    method: "DELETE"
+  expected:
+    decision: "allow"
+    rule: "dev-environment"
+
+# Test 10: Deny admin operations
+- name: "Deny admin operations"
+  description: "Should deny admin operations everywhere"
+  request:
+    operation_id: "updateAdminSettings"
+    auth_profile: "default"
+  url: "api.example.com/settings"
+  context:
+    method: "PUT"
+  expected:
+    decision: "deny"
+    rule: "deny-admin"
+    reason_contains: "Administrative operations are not permitted"
+
+# Test 11: Allow health checks without auth
+- name: "Allow health check"
+  description: "Should allow health check endpoints without authentication"
+  request:
+    operation_id: "health"
+  url: "api.example.com/health"
+  context:
+    method: "GET"
+  expected:
+    decision: "allow"
+    rule: "health-checks"
+
+# Test 12: Test pattern matching
+- name: "Pattern matching test"
+  description: "Should match wildcard patterns correctly"
+  request:
+    operation_id: "getUserProfile"
+    auth_profile: "default"
+  url: "api.public.com/v2/users/profiles/123"
+  context:
+    method: "GET"
+  expected:
+    decision: "allow"
+    rule: "public-readonly"

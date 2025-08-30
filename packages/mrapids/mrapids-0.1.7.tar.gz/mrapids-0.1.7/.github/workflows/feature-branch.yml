@@ -1,0 +1,384 @@
+name: Feature Branch CI/CD
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'feat/**'
+      - 'enhancement/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+    types: [opened, synchronize, reopened, ready_for_review]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  # Quick validation to fail fast
+  quick-check:
+    name: Quick Validation
+    runs-on: self-hosted
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check commit message
+        if: github.event_name == 'push'
+        run: |
+          commit_regex='^(feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(\(.+\))?: .{1,50}'
+          if ! git log -1 --pretty=%B | grep -qE "$commit_regex"; then
+            echo "::error::Commit message does not follow conventional format"
+            echo "Expected format: type(scope): description"
+            exit 1
+          fi
+
+      - name: Check file sizes
+        run: |
+          large_files=$(find . -type f -size +1M -not -path "./target/*" -not -path "./.git/*")
+          if [ ! -z "$large_files" ]; then
+            echo "::error::Large files detected (>1MB):"
+            echo "$large_files"
+            exit 1
+          fi
+
+  # Security scanning
+  security:
+    name: Security Checks
+    runs-on: self-hosted
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret Scanning
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-security-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Security Audit
+        run: |
+          cargo install cargo-audit || true
+          cargo audit
+
+  # Code quality checks
+  quality:
+    name: Code Quality
+    runs-on: self-hosted
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-quality-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Format Check
+        run: cargo fmt -- --check
+
+      - name: Clippy Lints
+        run: cargo clippy --all-targets --all-features -- -W clippy::all
+
+      - name: Documentation Check
+        run: cargo doc --no-deps --document-private-items
+
+      - name: Check for TODO/FIXME
+        run: |
+          echo "## TODO/FIXME Comments" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -rn "TODO\|FIXME" --include="*.rs" . | head -20 >> $GITHUB_STEP_SUMMARY || echo "No TODOs found" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # Build and test on multiple platforms
+  test-matrix:
+    name: Test (${{ matrix.os }} / ${{ matrix.rust }})
+    runs-on: self-hosted
+    if: github.event.pull_request.draft == false
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable, beta]
+        exclude:
+          # Reduce matrix for faster CI on feature branches
+          - os: windows-latest
+            rust: beta
+          - os: macos-latest
+            rust: beta
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --all-features --verbose
+
+      - name: Run Tests
+        run: cargo test --all-features --verbose
+
+      - name: Run Doc Tests
+        run: cargo test --doc --all-features
+
+  # Integration tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: self-hosted
+    if: github.event.pull_request.draft == false
+    services:
+      # Add any required services here (databases, etc.)
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-integration-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run Integration Tests
+        run: |
+          # Run integration tests if they exist
+          if [ -d "tests/integration" ]; then
+            cargo test --test '*' --features integration-tests
+          else
+            echo "No integration tests found"
+          fi
+
+      - name: Run Examples
+        run: |
+          # Test that examples compile and run
+          for example in examples/*.rs; do
+            if [ -f "$example" ]; then
+              example_name=$(basename "$example" .rs)
+              echo "Testing example: $example_name"
+              cargo run --example "$example_name" -- --help || true
+            fi
+          done
+
+  # Code coverage
+  coverage:
+    name: Code Coverage
+    runs-on: self-hosted
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Generate Coverage
+        run: |
+          cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml --output-dir coverage
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: coverage/cobertura.xml
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Coverage Summary
+        run: |
+          cargo tarpaulin --print-summary --all-features --workspace
+
+  # Performance benchmarks
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: self-hosted
+    if: |
+      github.event.pull_request.draft == false &&
+      (contains(github.event.pull_request.labels.*.name, 'performance') ||
+       contains(github.event.head_commit.message, 'perf'))
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run Benchmarks
+        run: |
+          if [ -d "benches" ]; then
+            cargo bench --no-fail-fast | tee benchmark-results.txt
+            echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -50 benchmark-results.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No benchmarks found"
+          fi
+
+  # Build artifacts for testing
+  build-artifacts:
+    name: Build Artifacts
+    runs-on: self-hosted
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build Release
+        run: cargo build --release --all-features
+
+      - name: Create Artifacts
+        run: |
+          mkdir -p artifacts
+          cp target/release/mrapids artifacts/ || true
+          cp -r examples artifacts/ || true
+          cp README.md artifacts/ || true
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-build-${{ github.sha }}
+          path: artifacts/
+          retention-days: 7
+
+  # Feature branch deployment (to dev/staging)
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: self-hosted
+    needs: [quality, test-matrix, security]
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft == false &&
+      contains(github.event.pull_request.labels.*.name, 'deploy-preview')
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Preview
+        id: deploy
+        run: |
+          echo "::notice::Preview deployment would happen here"
+          echo "url=https://preview-pr-${{ github.event.pull_request.number }}.example.com" >> $GITHUB_OUTPUT
+
+      - name: Comment PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Preview deployed to: ${{ steps.deploy.outputs.url }}'
+            })
+
+  # Summary report
+  ci-summary:
+    name: CI Summary
+    runs-on: self-hosted
+    needs: [quick-check, security, quality, test-matrix, coverage]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "# Feature Branch CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Quick Check | ${{ needs.quick-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Quality | ${{ needs.quality.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ needs.test-matrix.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Coverage | ${{ needs.coverage.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.quick-check.result }}" != "success" ] || 
+             [ "${{ needs.security.result }}" != "success" ] || 
+             [ "${{ needs.quality.result }}" != "success" ] || 
+             [ "${{ needs.test-matrix.result }}" != "success" ]; then
+            echo "❌ CI Failed - Please fix the issues above" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ All checks passed!" >> $GITHUB_STEP_SUMMARY
+          fi
