@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import glob
+import json
+from hestia_earth.utils.tools import flatten
+from hestia_earth.validation import validate
+import numpy as np
+
+
+# fix error "Object of type int64 is not JSON serializable"
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
+
+
+# disable GEE_API
+os.environ['VALIDATE_SPATIAL'] = 'false'
+# enable validation on all nodes
+os.environ['VALIDATE_EXISTING_NODES'] = 'true'
+EXTENSIONS = [
+  'jsonld',
+  'json',
+  'hestia'
+]
+
+
+def list_files(folder: str):
+    return flatten([
+        list(glob.iglob(f"{folder}/**/*.{ext}", recursive=True)) for ext in EXTENSIONS
+    ])
+
+
+def filter_by_level(values: list, level: str):
+    return list(filter(lambda v: isinstance(v, dict) and v.get('level', 'error') == level, values))
+
+
+def error_to_string(errors: list, warnings: list):
+    return json.dumps({'errors': errors, 'warnings': warnings}, indent=2, cls=NpEncoder)
+
+
+def validate_file(filepath: str):
+    with open(filepath) as f:
+        data = json.load(f)
+
+    print('Validating file', filepath)
+    nodes = data if isinstance(data, list) else data.get('nodes', [data])
+    results = validate(nodes)
+    errors = list(map(lambda v: filter_by_level(v, 'error'), results))
+    warnings = list(map(lambda v: filter_by_level(v, 'warning'), results))
+    has_errors = next((True for x in errors if len(x) > 0), False)
+    return has_errors, errors, warnings
+
+
+def main(args: list):
+    folder, = args
+    files = list_files(folder)
+    exit_code = ''
+
+    for file in files:
+        has_errors, errors, warnings = validate_file(file)
+        if has_errors:
+            error = error_to_string(errors, warnings)
+            exit_code += f"Validation of {file} failed:\n{error}\n"
+
+    return 0 if exit_code == '' else exit_code
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
