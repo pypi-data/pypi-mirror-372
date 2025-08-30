@@ -1,0 +1,1 @@
+tellraw @e[type=armor_stand,tag=mdl_server,limit=1] [{"text":"Player needs to improve!"}]
