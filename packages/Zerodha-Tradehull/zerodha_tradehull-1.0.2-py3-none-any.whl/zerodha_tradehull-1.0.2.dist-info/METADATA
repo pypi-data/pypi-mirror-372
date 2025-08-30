@@ -1,0 +1,608 @@
+Metadata-Version: 2.1
+Name: Zerodha_Tradehull
+Version: 1.0.2
+Summary: A Zerodha Codebase from TradeHull
+Home-page: https://github.com/TradeHull/Zerodha_Tradehull
+Author: TradeHull
+Author-email: contact.tradehull@gmail.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: mibian>=0.1.3
+Requires-Dist: numpy>=1.24.4
+Requires-Dist: pandas>=2.0.3
+Requires-Dist: pytz>=2025.1
+Requires-Dist: requests>=2.32.3
+Requires-Dist: python-socketio>=5.12.1
+Requires-Dist: websocket-client>=1.8.0
+Requires-Dist: websockets>=13.1
+Requires-Dist: chromedriver-autoinstaller>=0.6.4
+Requires-Dist: selenium>=4.27.1
+Requires-Dist: kiteconnect>=5.0.1
+
+# Zerodha TradeHull Codebase Project
+
+This project is built to interact with the **Zerodha API** using the `Tradehull` library. It provides a comprehensive suite of tools for trading, fetching market data, placing orders, and analyzing options.
+
+---
+
+## Features
+- **Fetch Market Data**: Get Live Trading Price (LTP), historical data.
+- **Order Placement**: Place, modify, or cancel orders with various parameters.
+- **Option Greeks**: Retrieve Greeks like Delta, Theta, Gamma, and Vega for options.
+- **Option Strike Selection**: Automate ATM, ITM, and OTM strike price identification.
+- **Portfolio Management**: Fetch holdings, positions, and balances.
+
+---
+
+## Installation
+
+To install the Tradehull package:
+```python
+pip install Zerodha-Tradehull
+```
+Install required dependencies:
+```python
+pip install -r requirements.txt
+```
+
+## Upgrade Tradehull Package
+
+To update the Tradehull package:
+```python
+pip install --upgrade Zerodha-Tradehull
+```
+
+### Usage
+
+#### Zerodha API Authentication
+
+Update the `api_key` and `api_secret` with your Zerodha API credentials:
+
+```python
+from Zerodha_Tradehull import Tradehull
+
+api_key = "your_api_key"
+api_secret = "your_api_secret"
+tsl = Tradehull(api_key, api_secret, "yes")
+
+# get kite object
+kite = tsl.kite
+```
+
+---
+
+## Key Functionalities
+
+### 1. Fetch Live Market Data
+
+#### Get LTP (Last Traded Price)
+
+**Function:**
+```python
+tsl.get_ltp(name: str, exchange: str)
+```
+
+**Arguments:**
+- `exchange` (str): The exchange where the instrument is traded (e.g., 'NSE', 'NFO','BSE','BFO').
+- `name` (str): The name of the instrument (e.g., 'ACC','NIFTY 50', ).
+
+**Sample Code:**
+```python
+ltp = tsl.get_ltp("NIFTY 50", "NSE")
+print(ltp)
+```
+**Sample Output:**
+```json
+24537.35
+```
+
+#### Get OHLC (Open, High, Low, Close)
+
+**Sample Code:**
+```python
+ohlc_data = tsl.get_ohlc("NIFTY 50", "NSE")
+print(ohlc_data)
+```
+**Sample Output:**
+```json
+{'open': 24466.7, 'high': 24564.35, 'low': 24464.15, 'close': 24500.9}
+```
+
+#### Get Quote Data
+
+**Sample Code:**
+```python
+quote = tsl.get_quote("NIFTY 50", "NSE")
+print(quote)
+```
+**Sample Output:**
+```json
+{'instrument_token': 256265, 'tradingsymbol': 'NIFTY 50', 'timestamp': datetime.datetime(2025, 8, 29, 11, 20, 33), 'last_price': 24546.9, 'net_change': 46, 'ohlc': {'open': 24466.7, 'high': 24564.35, 'low': 24464.15, 'close': 24500.9}}
+```
+
+
+---
+
+### 2. Fetch Historical Data
+
+#### Get Short-Term Historical Data
+
+**Function:**
+```python
+tsl.get_short_term_hist_data(name: str, exchange: str, interval: str, oi: bool = False)
+```
+
+
+- **Arguments:**
+  - `name` (str): The trading symbol of the instrument (e.g., "ACC").
+  - `exchange` (str): The exchange where the instrument is traded (e.g., "NSE").
+  - `interval` (str): The timeframe for the data. Possible values are:
+    - "minute": 30 days
+    - "hour": 365 days
+    - "day": 2000 days
+    - "3minute": 90 days
+    - "5minute": 90 days
+    - "10minute": 90 days
+    - "15minute": 180 days
+    - "30minute": 180 days
+    - "60minute": 365 days
+  - `oi` (bool, optional): Whether to include Open Interest data. Default is `False`.
+
+
+**Sample Code:**
+```python
+data = tsl.get_short_term_hist_data(name="NIFTY25OCTFUT", exchange="NFO", interval="minute", oi = True) 
+print(data)
+```
+**Sample Output:**
+```json
+                         date     open     high      low    close  volume      oi
+0   2025-08-14 09:15:00+05:30  24957.6  24972.0  24950.0  24961.3    3525  265650
+1   2025-08-14 09:20:00+05:30  24957.0  24957.0  24933.0  24953.3    2025  266250
+2   2025-08-14 09:25:00+05:30  24953.5  24960.0  24950.0  24960.0     975  266550
+3   2025-08-14 09:30:00+05:30  24960.0  24960.0  24935.1  24935.1    1575  266700
+4   2025-08-14 09:35:00+05:30  24935.1  24957.1  24935.1  24957.1    2025  266550
+..                        ...      ...      ...      ...      ...     ...     ...
+699 2025-08-29 11:15:00+05:30  24814.7  24824.6  24811.7  24820.9    1350  908250
+700 2025-08-29 11:20:00+05:30  24820.9  24820.9  24800.0  24800.3    1425  908325
+701 2025-08-29 11:25:00+05:30  24800.3  24817.0  24800.3  24815.5     825  908250
+702 2025-08-29 11:30:00+05:30  24815.5  24824.9  24815.2  24824.1    1725  908475
+703 2025-08-29 11:35:00+05:30  24824.1  24824.1  24812.0  24812.0     900  909000
+```
+
+#### Get Long-Term Historical Data
+
+**Function:**
+```python
+tsl.get_long_term_hist_data(name: str, exchange: str, interval: str, length: int, oi: bool = False)
+```
+
+- **Arguments:**
+  - `name` (str): The trading symbol of the instrument (e.g., "ACC").
+  - `exchange` (str): The exchange where the instrument is traded (e.g., "NSE").
+  - `interval` (str): The timeframe for the data. Possible values are:
+    - "minute": 60 days
+    - "3minute": 100 days
+    - "5minute": 100 days
+    - "10minute": 100 days
+    - "15minute": 200 days
+    - "30minute": 200 days
+    - "60minute": 400 days
+    - "day": 2000 days
+  - `from_date` (str): The start date for historical data retrieval (format: "YYYY-MM-DD").
+  - `to_date` (str): The end date for historical data retrieval (format: "YYYY-MM-DD").
+  - `oi` (bool, optional): Whether to include Open Interest data. Default is `False`.
+
+
+**Sample Code:**
+```python
+data = tsl.get_long_term_hist_data(name="ACC", exchange="NSE", interval="5minute", length=1000, oi=True)
+print(data)
+```
+**Sample Output:**
+
+```json
+                           date     open     high      low    close  volume
+0     2022-12-05 09:15:00+05:30  2610.20  2626.00  2610.20  2621.80   28701
+1     2022-12-05 09:20:00+05:30  2621.80  2628.20  2612.85  2627.45   26052
+2     2022-12-05 09:25:00+05:30  2627.45  2627.65  2613.00  2624.00   15001
+3     2022-12-05 09:30:00+05:30  2624.00  2628.75  2615.65  2618.35   10159
+4     2022-12-05 09:35:00+05:30  2617.00  2619.15  2612.90  2617.00    9718
+...                         ...      ...      ...      ...      ...     ...
+50725 2025-08-29 12:05:00+05:30  1812.10  1813.30  1810.60  1810.60     828
+50726 2025-08-29 12:10:00+05:30  1810.60  1812.80  1809.10  1812.00     790
+50727 2025-08-29 12:15:00+05:30  1812.00  1812.60  1810.80  1811.20     584
+50728 2025-08-29 12:20:00+05:30  1811.20  1811.20  1809.30  1810.00    1021
+50729 2025-08-29 12:25:00+05:30  1810.00  1811.00  1809.80  1810.00     299
+```
+
+---
+
+### 3. Option Strike Selection
+
+#### Get ATM (At The Money) Strike
+
+**Function:**
+```python
+tsl.get_atm(underlying: str,exchange: str, expiry: int, script_type: str)
+```
+
+- **Arguments:**
+  - `underlying` (str): The index name (e.g., "NIFTY", "BANKNIFTY").
+  - `exchange` (str): The exchange where the instrument is traded (e.g., "NSE", "BSE").
+  - `expiry` (int): The expiry to select.
+    - `0` - Current expiry
+    - `1` - Next expiry
+    - `2` - Third expiry from now
+  - `script_type` (str): Option type (`"CE"` for Call, `"PE"` for Put).
+
+
+**Sample Code:**
+```python
+atm = tsl.get_atm(underlying="NIFTY 50", exchange = "NSE", expiry=0, script_type="CE")
+print(atm)
+```
+
+**Sample Output:**
+
+```json
+'NIFTY2590224500CE'
+```
+
+#### Get ITM (In The Money) Strike
+
+**Function:**
+```python
+tsl.get_itm(underlying: str, exchange : str, expiry: int, script_type: str, multiplier: int)
+```
+
+- **Arguments:**
+  - `underlying` (str): The index name (e.g., "NIFTY", "BANKNIFTY").
+  - `exchange` (str): The exchange where the instrument is traded (e.g., "NSE", "BSE").
+  - `expiry` (int): The expiry to select.
+    - `0` - Current expiry
+    - `1` - Next expiry
+    - `2` - Third expiry from now
+  - `script_type` (str): Option type (`"CE"` for Call, `"PE"` for Put).
+  - `multiplier` (int): Number of strikes away from ATM for ITM selection.
+
+**Sample Code:**
+```python
+itm = tsl.get_itm(underlying="NIFTY 50", exchange="NSE", expiry=0, multiplier=2, script_type="CE")
+print(itm)
+```
+**Sample Output:**
+
+```json
+'NIFTY2590224400CE'
+```
+
+#### Get OTM (Out of The Money) Strike
+
+**Function:**
+```python
+tsl.get_otm(underlying: str, exchange : str, expiry: int, script_type: str, multiplier: int)
+```
+
+- **Arguments:**
+  - `underlying` (str): The index name (e.g., "NIFTY", "BANKNIFTY").
+  - `exchange` (str): The exchange where the instrument is traded (e.g., "NSE", "BSE").
+  - `expiry` (int): The expiry to select.
+    - `0` - Current expiry
+    - `1` - Next expiry
+    - `2` - Third expiry from now
+  - `script_type` (str): Option type (`"CE"` for Call, `"PE"` for Put).
+  - `multiplier` (int): Number of strikes away from ATM for OTM selection.
+
+**Sample Code:**
+```python
+otm = tsl.get_otm(underlying="NIFTY 50", exchange="NSE", expiry=0, multiplier=2, script_type="CE")
+print(otm)
+```
+**Sample Output:**
+
+```json
+'NIFTY2590224600CE'
+```
+---
+
+### 4. Option Greeks
+
+#### Get Option Greeks
+
+**Function:**
+```python
+tsl.get_option_greek(strike: int, expiry_date: str, asset: str, interest_rate: float, flag: str, scrip_type: str)
+```
+**Arguments:**
+- `strike` (int): Option strike price.
+- `expiry_date` (str): Expiry date (`"YYYY-MM-DD"`).
+- `asset` (str): Underlying asset name.
+- `interest_rate` (float): Risk-free interest rate.
+- `flag` (str): Greek value to fetch (`"delta"`, `"theta"`, `"theta"`,etc.).
+  - `price` - Option price.
+  - `delta` - Delta value.
+  - `delta2` - Second-order delta.
+  - `theta` - Theta value.
+  - `rho` - Rho value.
+  - `vega` - Vega value.
+  - `gamma` - Gamma value.
+  - `all_val` - All Greeks values in a dictionary.
+- `scrip_type` (str): Option type (`"CE"` or `"PE"`).
+
+**Sample Code:**
+```python
+expiry_dates = tsl.get_expiries("NIFTY 50", "NFO", "all") # to get available expiry dates
+ce_delta = tsl.get_option_greek(strike=24500, expiry_date="2025-09-16", asset="NIFTY 50", interest_rate=10, flag="delta", scrip_type="CE")
+print(ce_delta)
+```
+
+**Sample Output:**
+```json
+0.610751845393361
+```
+
+---
+
+### 5. Order Placement and Management
+
+#### Place Order
+
+**Function:**
+```python
+tsl.place_order(variety: str, exchange: str, tradingsymbol: str, transaction_type: str, quantity: int, product: str, order_type: str, price: float = None, validity: str = None, disclosed_quantity: int = None, trigger_price: float = None, validity_ttl: int = None, iceberg_legs: int = None, iceberg_quantity: int = None, auction_number : str = None	, tag: str = None)
+```
+**Arguments:**
+- `variety` (str): Order variety (`"regular"`, `"amo"`, `"co"`, `"iceberg"`, `"auction"`).
+- `exchange` (str): Exchange (`"NSE"`, `"BSE"`, `"NFO"`, `"BFO"`, `"CDS"`, `"BCD"`, `"MCX"`).
+- `tradingsymbol` (str): Tradingsymbol of the instrument.
+- `transaction_type` (str): `"BUY"` or `"SELL"`.
+- `quantity` (int): Number of shares or lots to trade.
+- `product` (str): Product type (`"CNC"`, `"NRML"`, `"MIS"`, `"MTF"`).
+- `order_type` (str): Order type (`"MARKET"`, `"LIMIT"`, `"SL"`, `"SL-M"`).
+- `price` (float, optional): Price for limit orders.
+- `trigger_price` (float, optional): Stop-loss trigger price.
+- `validity` (str, optional): Order validity (`"DAY"`, `"IOC"`, `"TTL"`).
+- `disclosed_quantity` (int, optional): Disclosed order quantity.
+- `validity_ttl` (int, optional): TTL order life span in minutes.
+- `iceberg_legs` (int, optional): Total legs for iceberg order.
+- `iceberg_quantity` (int, optional): Quantity per iceberg leg.
+
+**Sample Code:**
+```python
+order_id = tsl.place_order(variety="regular", exchange='NSE', tradingsymbol='TRIDENT', transaction_type='BUY', quantity=5, product="MIS", order_type="MARKET")
+print(order_id)
+```
+
+**Sample Output:**
+```json
+'250829800439871'
+```
+
+#### Modify Order
+
+**Function:**
+```python
+tsl.modify_order(variety: str, order_id: str, quantity: int = None, price: float = None, order_type: str = None, trigger_price: float = None, disclosed_quantity: int = None, validity: str = None)
+```
+**Arguments:**
+- `variety` (str): Order variety (`"regular"`, `"co"`).
+- `order_id` (str): Unique order ID.
+- `quantity` (int, optional): Modified order quantity.
+- `price` (float, optional): Modified price for limit orders.
+- `order_type` (str, optional): Modified order type (`"LIMIT"`, `"SL"`, etc.).
+- `trigger_price` (float, optional): New stop-loss trigger price.
+- `disclosed_quantity` (int, optional): New disclosed quantity.
+- `validity` (str, optional): New order validity.
+
+**Sample Code:**
+```python
+modified_order_id = tsl.modify_order(variety=kite.VARIETY_REGULAR, order_id='250829800439871', quantity=5, trigger_price=54)
+print(modified_order_id)
+```
+
+#### Cancel Order
+
+**Function:**
+```python
+tsl.market_over_close_all_order()
+```
+
+**Sample Code:**
+```python
+tsl.market_over_close_all_order()
+```
+
+---
+
+### Get Executed Price
+Retrieve the average executed price of any order.
+
+**Function:**
+```python
+tsl.get_executed_price(order_id: int)
+```
+**Arguments:**
+- `order_id` (int): The unique order ID for which the executed price is needed.
+
+**Returns:**
+- `float`: The average executed price of the order.
+
+**Sample Code:**
+```python
+price = tsl.get_executed_price(order_id = 220722001332188)
+print(price)
+```
+**Sample Output:**
+```json
+44.58
+```
+---
+
+### Get Executed Time
+Retrieve the execution time of any order.
+
+**Function:**
+```python
+tsl.get_executed_time(order_id: int)
+```
+**Arguments:**
+- `order_id` (int): The unique order ID for which the execution time is needed.
+
+**Returns:**
+- `str`: The execution time of the order in string format.
+
+**Sample Code:**
+```python
+time = tsl.get_executed_time(order_id = 220722001332188)
+print(time)
+```
+
+### 6. Portfolio Management
+
+#### Get Live PNL
+Retrieve real-time Profit and Loss (PNL) calculation for all open positions.
+
+**Function:**
+```python
+tsl.get_live_pnl()
+```
+
+**Returns:**
+- `float`: Total PNL across all positions
+  - Positive value indicates profit
+  - Negative value indicates loss
+- `0`: If no open positions exist
+- `None`: If there was an error
+
+**Sample Code:**
+```python
+# Get live PNL
+pnl = tsl.get_live_pnl()
+print(pnl)
+```
+
+---
+
+#### Get Order Status
+
+**Sample Code:**
+```python
+status = tsl.get_order_status('220722001346805')
+print(status)
+```
+
+---
+
+### 7. Get Lot Size
+Retrieve the lot size for a given instrument.
+
+**Function:**
+```python
+tsl.get_lot_size(script_name: str)
+```
+**Arguments:**
+- `script_name` (str): Trading symbol/Description (e.g., 'NIFTY25MAR22000PE', 'RELIANCE')
+
+
+**Sample Code:**
+```python
+# Get lot size for NIFTY options
+lot_size = tsl.get_lot_size("NIFTY25SEP25000PE")
+```
+**Sample Output:**
+```json
+75
+```
+
+---
+
+
+### 8. Check Valid Instrument
+Verify if a given instrument name exists in the exchange.
+
+**Function:**
+```python
+tsl.check_valid_instrument(name: str)
+```
+**Arguments:**
+- `name` (str): Trading symbol/Description (e.g., 'NIFTY25MAR22300PE', 'ACC')
+
+**Returns:**
+- `str`: Message indicating if the instrument is valid or invalid
+  - `"instrument {name} is valid"` if found
+  - `"instrument {name} is invalid"` if not found
+- `None`: If there was an error
+
+**Sample Code:**
+```python
+# Check if NIFTY option exists
+result = tsl.check_valid_instrument("NIFTY25SEP24750PE")
+```
+
+**Sample Output:**
+```json
+'instrument NIFTY25MAR22750PE is invalid'
+'instrument NIFTY25SEP24750PE is valid'
+```
+
+---
+
+### 9. Telegram Alerts
+Send real-time alerts and notifications via Telegram bot.
+
+**Function:**
+```python
+tsl.send_telegram_alert(message: str, receiver_chat_id: str, bot_token: str)
+```
+**Arguments:**
+- `message` (str): The text message to send
+  - Can include trade details, alerts, or any notification text
+  - Supports basic text formatting
+- `receiver_chat_id` (str): Telegram chat ID for message delivery
+  - For individual users: Personal chat ID
+  - For groups: Group chat ID (bot must be added to group)
+- `bot_token` (str): Telegram bot authorization token
+  - Obtained from BotFather when creating a bot
+  - Format: "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+**Returns:**
+- `None`
+- Prints success/failure message to console
+- Logs exceptions if any error occurs
+
+**Setup Steps:**
+1. Create a Telegram bot via BotFather
+2. Get the bot token
+3. Add bot to the desired chat/group
+4. Get chat ID for the target recipient
+
+**Sample Code:**
+```python
+# Send trade execution alert
+tsl.send_telegram_alert(
+    message="Order executed: BUY 50 shares of RELIANCE @ 2400",
+    receiver_chat_id="123456789",
+    bot_token="123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+)
+
+# Send market alert
+tsl.send_telegram_alert(
+    message="NIFTY crossed 19000!",
+    receiver_chat_id="987654321",
+    bot_token="123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+)
+```
+
+---
+
+## License
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+---
+
+## Contact
+For queries or issues, kindly reach out: `https://www.linkedin.com/posts/imrantradehull_doing-a-ask-me-anything-on-algo-trading-activity-7349461470381756416-VA-y`
