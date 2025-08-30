@@ -1,0 +1,36 @@
+/* grammar for the session manager */
+
+import virtmat
+import types
+import arrays
+
+
+Session:
+  Magic | Program | Expression
+;
+
+Magic:
+  '%'
+  (
+    ( com = Command ) |
+    ( com = 'uuid' ( arg = /[a-f\d]{32}\b/ )? ) |
+    ( com = 'sleep' ( !/\-/ arg = INT )? ) |
+    ( com = 'rerun' args += ID[','] ) |
+    ( com = 'cancel' args += ID[','] ) |
+    ( com = 'find' arg = AltTable load_one ?= 'load one' )
+  )
+;
+
+Command:
+  'exit' | 'bye' | 'close' | 'quit' | 'start' | 'stop' | 'new' | 'vary' |
+  'history' | 'hist' | 'tag' | 'help'
+;
+
+Program[noskipws]:
+  &/\s*(\b(print|vary|view|use|tag)\b)|[^\d\W]\w*\b\s*(:?=[^=]|\bto\b)/
+  prog = /(?ms).+/
+;
+
+Expression:
+  expr = /.+/
+;

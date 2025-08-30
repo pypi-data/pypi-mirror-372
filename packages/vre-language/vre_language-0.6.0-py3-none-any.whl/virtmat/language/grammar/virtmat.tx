@@ -1,0 +1,569 @@
+/* grammar for virtmat modeling language */
+/* grammar version 35 */
+
+import imports
+import identifiers
+import types
+import resources
+import arrays
+import semversion
+
+
+Program[noskipws]:
+  statements *= Statement[/\s*(^|;)/]
+;
+
+Statement[skipws]:
+  ObjectImports | FunctionDefinition | ObjectTo | Variable | Print |
+  View | Vary | Tag | VariableUpdate
+;
+
+Tag:
+  'tag' tagtab = AltTable
+;
+
+Vary:
+  'vary' varytab = Table
+;
+
+Tuple:
+  '(' params += Parameter[','] ','? ')'
+;
+
+/* data-structure builtins */
+
+Series:
+  ( 'Series' 'from' ( 'url' url = STRING | 'file' filename = STRING ) ) |
+  ( '(' name = SeriesID ':' elements += Numerical[','] ')' ( '[' inp_units = Units ']' )? ) |
+  ( '(' name = SeriesID ':' elements += SeriesElement[','] ')' )
+;
+
+SeriesElement:
+  Null | Parameter
+;
+
+Table:
+  ( 'Table' 'from' ( 'url' url = STRING | 'file' filename = STRING ) )
+  | ( 'Table' columns_tuple = Tuple ) | ( '(' columns += Series[','] ')' )
+;
+
+Dict:
+  '{' ( keys = SeriesID ':' values = DictParameter )+[','] '}'
+;
+
+DictParameter:
+  Null | Parameter
+;
+
+AltTable:
+  ( '{' ( keys = SeriesID ':' values = AltDictParameter )+[','] '}' ) | tab = Table
+;
+
+AltDictParameter:
+  Null | PlainType | Tuple | Array | AltTable
+;
+
+IterableObject:
+  Table | Series | Tuple | Dict
+;
+
+ObjectAccessor:
+  ('.' id = SeriesID) | ('[' index = INT ']')
+;
+
+GeneralReference:
+  !Keyword
+  ref = [OBJECT:TrueID|^args, statements, ~statements.names, ~statements.variables, ~statements.~varytab.columns]
+  accessors *= ObjectAccessor
+;
+
+GeneralReferenceTerm:
+  GeneralReference &/^|;|\)|\,|\=|\<|\>|\[|if|else|on|in|for|$/
+;
+
+IterableProperty:
+  &/\w+[\.\[\:]/
+  obj = GeneralReference
+  (
+    (
+      ('[' (start = INT)? (slice ?= ':' (stop = INT)? (':' (step = INT)? )?)? ']')?
+      (array ?= ':array')?
+    )
+    | (columns ?= ':columns') | (name_ ?= ':name')
+  )?
+;
+
+IterableQuery:
+  &/[^\d\W]\w*(\.\w+)?\b\s+(select|where)/
+  obj = GeneralReference
+  (
+    ( 'select' columns += SeriesID[','] )?
+    ( where ?= 'where' (
+      ( where_all ?= 'all' '(' conditions += Condition[','] ')' ) |
+      ( where_any ?= 'any' '(' conditions += Condition[','] ')' ) |
+      ( condition = ConditionOr )
+      )
+    )?
+  )#
+;
+
+Property:
+  IterableQuery | IterableProperty
+;
+
+PropertyTerm:
+  Property &/^|;|,|\)|\[|if|else|on|in|for|$/
+;
+
+Condition:
+  ConditionIn | ConditionComparison
+;
+
+ConditionIn:
+    column = SeriesID
+    'in' (
+      ( &/(.*?)\,/ '(' params += ScalarParameter[','] ')' ) |
+      parameter = IterableParameter
+    )
+;
+
+ConditionComparison:
+  (
+    'column' ':' column_left = SeriesID
+    operator = ComparisonOperator
+    'column' ':' column_right = SeriesID
+  ) |
+  (
+    'column' ':' column_left = SeriesID
+    operator = ComparisonOperator
+    operand_right = ComparisonOperand
+  ) |
+  (
+    operand_left = ComparisonOperand
+    operator = ComparisonOperator
+    'column' ':' column_right = SeriesID
+  )
+;
+
+ConditionOr:
+  operands = ConditionAnd ('or' operands = ConditionAnd)*
+;
+
+ConditionAnd:
+  operands = ConditionNot ('and' operands = ConditionNot)*
+;
+
+ConditionNot:
+  not_ ?= 'not'
+  operand = ConditionOperand
+;
+
+ConditionOperand:
+  ( '(' ConditionOr ')' ) | Condition
+;
+
+ComparisonOperator:
+  '<=' | '>=' | '>' | '<' | '!=' | '=='
+;
+
+Filter:
+  &/\s*filter\s*\(/
+  'filter' '('
+      ( lambda_ = Lambda | function = [Function:TrueID] ) ','
+      parameter = IterableParameter
+  ')'
+  ('in' nchunks = INT 'chunks')?
+;
+
+Map:
+  &/\s*map\s*\(/
+  'map' '('
+    ( lambda_ = Lambda | function = [Function:TrueID] ) ','
+    params += IterableParameter[',']
+  ')'
+  ('in' nchunks = INT 'chunks')?
+;
+
+Reduce:
+  &/\s*reduce\s*\(/
+  'reduce' '('
+    ( lambda_ = Lambda | function = [Function:TrueID] ) ','
+    parameter = IterableParameter
+  ')'
+  ('in' nchunks = INT 'chunks')?
+;
+
+Sum:
+  &/\s*sum\s*\(/
+  'sum' '('
+    (
+      ( params = NumericScalarParameter ','
+        params += NumericScalarParameter[','] ) |
+      parameter = IterableParameter | params = NumericScalarParameter
+    )
+  ')'
+;
+
+All:
+  &/\s*all\s*\(/
+  'all' '('
+    (
+      ( params = BooleanScalarParameter ','
+        params += BooleanScalarParameter[','] ) |
+      parameter = IterableParameter | params = BooleanScalarParameter
+    )
+  ')'
+;
+
+Any:
+  &/\s*any\s*\(/
+  'any' '('
+    (
+      ( params = BooleanScalarParameter ','
+        params += BooleanScalarParameter[','] ) |
+      parameter = IterableParameter | params = BooleanScalarParameter
+    )
+  ')'
+;
+
+In:
+  &/(.*?)in\s+/
+  element = InElement 'in'
+  ( parameter = IterableParameter | ( '(' params += ScalarParameter[','] ')' ) )
+;
+
+Range:
+  &/\s*range\s*(\(|from)/
+  'range'
+  (
+    ( '('
+      start = NumericScalarParameter ','
+      stop = NumericScalarParameter ','
+      step = NumericScalarParameter ')'
+    ) |
+    ( 'from' start = NumericScalarParameter
+      'to' stop = NumericScalarParameter
+      'step' step = NumericScalarParameter
+    )
+  )
+;
+
+InElement:
+  PlainType | FunctionCall | GeneralReference | Expression | BooleanExpression
+;
+
+ScalarParameter:
+  PlainType | FunctionCall | Expression | BooleanExpression
+;
+
+NumericScalarParameter:
+  Quantity | Reduce | Sum | Real | Imag | IfFunction | FunctionCall |
+  Expression | GeneralReference
+;
+
+BooleanScalarParameter:
+  Bool | Reduce | Any | All | In | FunctionCall | BooleanExpression | Null
+;
+
+IterableParameter:
+  Table | Series | Property | Filter | Map | Range | GeneralReference
+;
+
+Lambda:
+  '(' args += Dummy[','] ':' expr = Parameter ')'
+;
+
+IterableFunction:
+  Filter | Map | Reduce | Sum | Any | All | In | Range
+;
+
+IterableFunctionTerm:
+  IterableFunction &/^|;|,|\)|if|else|on|in|for|$/
+;
+
+Variable:
+  name = TrueID '=' parameter = Parameter (resources = Resources)?
+;
+
+VariableUpdate:
+  ref = [Variable:TrueID] ':=' parameter = Parameter (resources = Resources)?
+;
+
+
+/* arithmetic expressions */
+
+Expression:
+  !/(false|true|not|and|or)\W/
+  operands = Term
+  (
+    operators = PlusOrMinus
+    operands = Term
+  )*
+;
+
+PlusOrMinus:
+  '+' | '-'
+;
+
+Term:
+  operands = Factor
+  (
+    operators = MulOrDiv
+    operands = Factor
+  )*
+;
+
+MulOrDiv:
+  '*' | '/'
+;
+
+Factor:
+  operands = Power ( '**' operands = Power )*
+;
+
+Power:
+  (sign = PlusOrMinus)?
+  operand = Operand
+;
+
+OperandParameter:
+  Quantity | Reduce | Sum | Real | Imag | IfFunction | FunctionCall |
+  GeneralReference
+;
+
+Operand:
+  operand = OperandParameter | ('(' operand = Expression ')')
+;
+
+Real:
+  'real' '(' parameter = NumericScalarParameter ')'
+;
+
+Imag:
+  'imag' '(' parameter = NumericScalarParameter ')'
+;
+
+/* boolean expressions */
+
+Or:
+//  !/[\+\-\*\/]/
+  operands = And ('or' operands = And)*
+;
+
+And:
+  operands = Not ('and' operands = Not)*
+;
+
+Not:
+  not_ ?= 'not'
+  operand = BooleanOperand
+;
+
+BooleanExpression:
+  Comparison | Or
+;
+
+BooleanOperandParameter:
+  Bool | Reduce | Any | All | FunctionCall | GeneralReference
+;
+
+BooleanOperand:
+  operand = BooleanOperandParameter | ( '(' operand = BooleanExpression ')' ) |
+  ( '(' operand = In ')' )
+;
+
+// print function
+
+Print:
+  'print' '(' params += PrintParameterOrType[','] ')'
+;
+
+PrintParameterOrType:
+  PrintParameter | Type
+;
+
+PrintParameter:
+  param = Parameter ( '[' inp_units = Units ']' )?
+;
+
+// info function ('type' keyword is deprecated)
+
+Type:
+  'info' '(' param = Parameter ')'
+;
+
+// view function
+
+View:
+  'view' mode = ViewMode '(' params += PrintParameter[','] ','? ')'
+;
+
+ViewMode:
+  'lineplot' | 'scatterplot' | 'structure' | 'trajectory' | 'vibration' | 'neb' |
+  'bs' | 'eos' | 'waterfall'
+;
+
+Parameter:
+  AMMLObject | ChemObject | PlainTypeTerm | IterableFunctionTerm | IfFunctionTerm |
+  IfExpression | FunctionCallTerm | Comparison | PropertyTerm | GeneralReferenceTerm |
+  Expression | BooleanExpression | IterableObject | Array | Real | Imag
+;
+
+/* if-expression and if-function */
+
+IfExpressionParameter:
+  PlainTypeTerm | IterableFunction | Real | Imag | IfFunction | FunctionCall |
+  Comparison | GeneralReference | Property | Expression | BooleanExpression |
+  IterableObject
+;
+
+IfFunction:
+  'if' '(' expr = BooleanExpression ',' true_ = Parameter ',' false_ = Parameter ')'
+;
+
+IfFunctionTerm:
+  IfFunction &/^|;|,|\)|if|else|on|in|for|$/
+;
+
+IfExpression:
+  ( ( '(' true_ = Parameter ')' ) | true_ = IfExpressionParameter )
+  'if' expr = BooleanExpression
+  'else' ( ( '(' false_ = Parameter ')' ) | false_ = Parameter )
+;
+
+/* comparison expressions */
+
+ComparisonOperand:
+  Real | Imag | IfFunction | FunctionCall | GeneralReference |
+  String | PlainTypeTerm | Expression | Or
+;
+
+Comparison:
+  left = ComparisonOperand
+  operator = ComparisonOperator
+  right = ComparisonOperand
+;
+
+/* functions */
+
+Function:
+  FunctionDefinition | ObjectImport
+;
+
+FunctionDefinition:
+  name = TrueID '(' args *= Dummy[','] ')' '=' expr = Parameter
+;
+
+FunctionCall:
+  __expr = '' function = [Function:TrueID] '(' (params += Parameter[','])? ')'
+  // requires model processor to obtain a copy of expr from FunctionDefinition
+;
+
+FunctionCallTerm:
+  FunctionCall &/^|;|,|\)|if|else|on|in|for|$/
+;
+
+/* built-in i/o operations */
+
+ObjectTo:
+  ref = [Variable:TrueID] 'to' ( 'url' url = STRING | 'file' filename = STRING )
+;
+
+/* single-line and multi-line comments */
+
+Comment[noskipws]:
+  /\s*/ /#.*$/ | /(?ms)\"{3}(.*?)\"{3}/ /\s*/
+;
+
+/* atomic and molecular modeling language */
+
+AMMLObject:
+  AMMLStructure | AMMLAlgorithm | AMMLCalculator | AMMLProperty | AMMLConstraint
+;
+
+AMMLStructure:
+  ( 'Structure' 'from' ( 'url' url = STRING | 'file' filename = STRING ) ) |
+  ( 'Structure' ( name = TrueID )? tab = Table )
+;
+
+AMMLCalculatorName:
+  'vasp' | 'turbomole' | 'lj' | 'emt' | 'free_electrons'
+;
+
+AMMLCalculator:
+  ( 'Calculator' name = AMMLCalculatorName
+    ( pinning = ComparisonOperator version = SemVer)?
+    ( parameters = Table | ( '(' 'default'? ')' ) )
+    ( ',' 'task' ':' task = AMMLTask )?
+  )
+;
+
+AMMLTask:
+  'single point' | 'local minimum' | 'global minimum' | 'transition state' |
+  'normal modes' | 'micro-canonical' | 'canonical' | 'isothermal-isobaric' |
+  'grand-canonical'
+;
+
+AMMLAlgorithmName:
+  'BFGSLineSearch' | 'BFGSClimbFixInternals'  | 'BFGS' | 'LBFGSLineSearch' |
+  'LBFGS' | 'GPMin' | 'MDMin' | 'QuasiNewton' | 'FIRE' | 'VelocityVerlet' |
+  'Langevin' | 'Andersen' | 'NVTBerendsen' | 'NPTBerendsen' | 'NPT' | 'NEB' |
+  'Dimer' | 'BasinHopping' | 'MinimaHopping' | 'GA' | 'PourbaixDiagram' |
+  'PhaseDiagram' | 'RDF' | 'RMSD' | 'EquationOfState' | 'DensityOfStates' |
+  'BandStructure' | 'Vibrations' | 'VelocityDistribution' | 'NeighborList'
+;
+
+AMMLAlgorithm:
+  'Algorithm' name = AMMLAlgorithmName (',' many_to_one ?= 'many_to_one')?
+  ( parameters = Table | ( '(' 'default'? ')' ) )
+;
+
+AMMLPropertyName:
+  'energy_minimum' | 'energy' | 'forces' | 'dipole' | 'stress' | 'charges' |
+  'magmoms' | 'magmom' | 'hessian' | 'vibrational_energies' | 'vibrational_modes' |
+  'rmsd' | 'rdf_distance' | 'rdf' | 'trajectory' | 'transition_state' |
+  'minimum_energy' | 'optimal_volume' | 'bulk_modulus' | 'eos_volume' | 'eos_energy' |
+  'dos_energy' | 'dos' | 'band_structure' | 'activation_energy' | 'reaction_energy' |
+  'maximum_force' | 'velocity' | 'vdf' | 'neighbors' | 'neighbor_offsets' |
+  'connectivity_matrix' | 'connected_components'
+;
+
+AMMLProperty:
+  'Property' names *= AMMLPropertyName[','] '('
+  (
+    ( '(' 'structure' ':' struct = GeneralReference ')' )
+    ( '(' 'calculator' ':' calc = GeneralReference ')' )?
+    ( '(' 'algorithm' ':' algo = GeneralReference ')' )?
+    ( '(' 'constraints' ':' '(' constrs += GeneralReference[','] ','? ')' ')' )?
+  )#[','] ')'
+;
+
+AMMLConstraint:
+  ( name = 'FixedAtoms' 'where' fixed = IterableParameter ) |
+  ( name = 'FixedLine' 'collinear to' direction = IntArray 'where' fixed = IterableParameter ) |
+  ( name = 'FixedPlane' 'normal to' direction = IntArray 'where' fixed = IterableParameter )
+;
+
+/* chemistry extensions */
+
+ChemObject:
+  ChemReaction | ChemSpecies
+;
+
+ChemComposition:
+  String | GeneralReference
+;
+
+ChemSpecies:
+  'Species' name = ID ( ',' 'composition' ':' composition = ChemComposition )?
+  ( props = Table )?
+;
+
+ChemTerm:
+  (coefficient = NUMBER)? species = GeneralReference
+;
+
+ChemReaction:
+  'Reaction' educts += ChemTerm['+'] ( '=' | '->' ) products += ChemTerm['+']
+  (':' props = Table)?
+;
