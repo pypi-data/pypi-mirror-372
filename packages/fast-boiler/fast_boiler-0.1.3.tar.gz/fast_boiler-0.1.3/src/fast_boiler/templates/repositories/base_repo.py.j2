@@ -1,0 +1,147 @@
+from typing import Generic, Type, TypeVar
+from pydantic import BaseModel
+from sqlalchemy import select, update, delete
+from fastapi_pagination.ext.sqlalchemy import paginate
+from app.database import Base
+
+ModelType = TypeVar("ModelType", bound=Base)
+CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
+
+{% if is_async %}
+# --- ASYNC VERSION ---
+from sqlalchemy.ext.asyncio import AsyncSession
+
+class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+    def __init__(self, model: Type[ModelType]):
+        self.model = model
+
+    async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
+        db_obj = self.model(**obj_in.model_dump())
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def get_by_id(self, db: AsyncSession, *, id: int) -> ModelType | None:
+        statement = select(self.model).where(self.model.id == id)
+        result = await db.execute(statement)
+        return result.scalar_one_or_none()
+
+    async def get_all(self, db: AsyncSession, *, query: dict):
+        statement = select(self.model)
+
+        # Filtering logic
+        for f in query.get("filters", []):
+            try:
+                field, operator, value = f.split(":", 2)
+                column = getattr(self.model, field, None)
+                if column:
+                    if operator == "eq":
+                        statement = statement.where(column == value)
+                    elif operator == "neq":
+                        statement = statement.where(column != value)
+                    # Add other operators like gt, lt, gte, lte, like, in
+            except ValueError:
+                continue # Ignore malformed filters
+
+        # Sorting logic
+        if query.get("sort_by"):
+            sort_column = getattr(self.model, query["sort_by"], None)
+            if sort_column:
+                if query.get("sort_order", "asc") == "desc":
+                    statement = statement.order_by(sort_column.desc())
+                else:
+                    statement = statement.order_by(sort_column.asc())
+
+        return await paginate(db, statement)
+
+    async def update(self, db: AsyncSession, *, id: int, obj_in: UpdateSchemaType) -> ModelType | None:
+        statement = (
+            update(self.model)
+            .where(self.model.id == id)
+            .values(**obj_in.model_dump(exclude_unset=True))
+            .returning(self.model)
+        )
+        result = await db.execute(statement)
+        await db.commit()
+        return result.scalar_one_or_none()
+
+    async def delete(self, db: AsyncSession, *, id: int) -> ModelType | None:
+        statement = (
+            delete(self.model)
+            .where(self.model.id == id)
+            .returning(self.model)
+        )
+        result = await db.execute(statement)
+        await db.commit()
+        return result.scalar_one_or_none()
+
+{% else %}
+# --- SYNC VERSION ---
+from sqlalchemy.orm import Session
+
+class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+    def __init__(self, model: Type[ModelType]):
+        self.model = model
+
+    def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
+        db_obj = self.model(**obj_in.model_dump())
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def get_by_id(self, db: Session, *, id: int) -> ModelType | None:
+        statement = select(self.model).where(self.model.id == id)
+        return db.execute(statement).scalar_one_or_none()
+
+    def get_all(self, db: Session, *, query: dict):
+        statement = select(self.model)
+
+        # Filtering logic
+        for f in query.get("filters", []):
+            try:
+                field, operator, value = f.split(":", 2)
+                column = getattr(self.model, field, None)
+                if column:
+                    if operator == "eq":
+                        statement = statement.where(column == value)
+                    elif operator == "neq":
+                        statement = statement.where(column != value)
+                    # Add other operators like gt, lt, gte, lte, like, in
+            except ValueError:
+                continue # Ignore malformed filters
+
+        # Sorting logic
+        if query.get("sort_by"):
+            sort_column = getattr(self.model, query["sort_by"], None)
+            if sort_column:
+                if query.get("sort_order", "asc") == "desc":
+                    statement = statement.order_by(sort_column.desc())
+                else:
+                    statement = statement.order_by(sort_column.asc())
+        
+        return paginate(db, statement)
+
+    def update(self, db: Session, *, id: int, obj_in: UpdateSchemaType) -> ModelType | None:
+        statement = (
+            update(self.model)
+            .where(self.model.id == id)
+            .values(**obj_in.model_dump(exclude_unset=True))
+            .returning(self.model)
+        )
+        result = db.execute(statement)
+        db.commit()
+        return result.scalar_one_or_none()
+
+    def delete(self, db: Session, *, id: int) -> ModelType | None:
+        statement = (
+            delete(self.model)
+            .where(self.model.id == id)
+            .returning(self.model)
+        )
+        result = db.execute(statement)
+        db.commit()
+        return result.scalar_one_or_none()
+{% endif %}
