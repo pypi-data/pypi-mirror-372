@@ -1,0 +1,159 @@
+[build-system]
+requires = ["flit_core >=3.4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "rainfallqc"
+dynamic = ["version"]
+description = "Quality control for rainfall data"
+readme = "README.rst"
+requires-python = ">=3.10.0"
+authors = [{ name = "Tom Keel", email = "tomkee@ceh.ac.uk" }]
+maintainers = [{ name = "Tom Keel", email = "tomkee@ceh.ac.uk" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Natural Language :: English",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Hydrology",
+]
+license = { file = "LICENSE" }
+dependencies = [
+  "scipy",
+  "numpy",
+  "polars>=1.30",
+  "pandas",
+  "xarray",
+  "netCDF4",
+  "bottleneck",
+  "geopy"
+]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-cov"]
+docs = ["sphinx", "sphinx-copybutton", "sphinx-rtd-theme"]
+lint = ["mypy", "ruff"]
+dev = [
+  "pip",
+  "numpy",
+  "bump-my-version",
+  "ruff",
+  "black",
+  "pre_commit",
+  "pylint",
+  "pytest",
+  "pytest-cov",
+  "matplotlib",
+  "sphinx",
+]
+
+[project.urls]
+bugs = "https://github.com/thomasjkeel/RainfallQC/issues"
+changelog = "https://github.com/thomasjkeel/RainfallQC/blob/master/changelog.md"
+homepage = "https://github.com/thomasjkeel/RainfallQC"
+
+[tool]
+
+[tool.black]
+target-version = ["py310", "py311", "py312", "py313"]
+
+[tool.bumpversion]
+current_version = "0.2.0"
+commit = true
+message = "Bump version: {current_version} → {new_version}"
+commit_args = ""
+allow_dirty = false
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(\\-(?P<release>[a-z]+))?"
+serialize = ["{major}.{minor}.{patch}-{release}", "{major}.{minor}.{patch}"]
+search = "{current_version}"
+replace = "{new_version}"
+regex = false
+ignore_missing_version = false
+tag = false
+sign_tags = false
+tag_name = "v{new_version}"
+tag_message = "Bump version: {current_version} → {new_version}"
+
+
+[[tool.bumpversion.files]]
+filename = "src/rainfallqc/__init__.py"
+search = "__version__ = \"{current_version}\""
+replace = "__version__ = \"{new_version}\""
+
+[tool.bumpversion.parts.release]
+optional_value = "gamma"
+values = ["alpha", "beta", "gamma"]
+
+[tool.pytest.ini_options]
+addopts = "--cov=rainfallqc"
+markers = ["slow: Marks slow tests"]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.setuptools]
+package-dir = { "src" = "src" }
+
+[tool.setuptools.package-data]
+"rainfallqc" = ["data/ETCCDI/*.nc"]
+
+[tool.coverage.run]
+omit = ["tests/*.py", "*__init__.py"]
+relative_files = true
+
+[tool.ruff]
+src = ["src", "tests"]
+include = ["src/**.py"]
+line-length = 120
+
+[tool.ruff.lint]
+ignore = [
+  "D203", # incorrect-blank-line-before-class
+  "D212", # multi-line-summary-first-line
+]
+preview = true
+select = [
+  "A",
+  "B",      # bugbear
+  "D",      # docstrings
+  "E",      # pycodestyle errors
+  "F",      # pyflakes
+  "I",      # imports
+  "W",      # pycodestyle warnings
+  "PLC",
+  "PLE",
+  "PLW",
+  "N816",
+  "ANN001",
+  "ANN201",
+  "ANN202",
+  "ANN205",
+  "ANN206", # TODO
+]
+exclude = ["docs/conf.py", "docs/notebooks/*.ipynb"]
+
+[tool.ruff.lint.flake8-type-checking]
+strict = true
+
+[tool.ruff.lint.isort]
+case-sensitive = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = [
+  "ANN001", "ANN201", "ANN202", # Missing type annotation
+  "D103" # Missing docstring in public function
+]
+
+[tool.mypy]
+files = "."
+
+# Use strict defaults
+strict = true
+warn_unreachable = true
+warn_no_return = true
