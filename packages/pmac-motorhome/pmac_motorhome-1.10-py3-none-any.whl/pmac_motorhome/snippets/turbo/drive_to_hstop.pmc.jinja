@@ -1,0 +1,17 @@
+    {% include "debug_pause.pmc.jinja" %}
+
+    ;---- {{template.args.state}} State ----
+    if (HomingStatus = StatusHoming or HomingStatus = StatusDebugHoming)
+        HomingState=State{{template.args.state}}
+        ; Execute the move commands
+        {% if group.pre and template.args.state == "PreHomeMove" %}
+        {{ group.pre }}
+        {% endif %}
+        {{ group.set_inpos_trigger(3) }}; in-position trigger on following error
+        {{ group.set_large_jog_distance(homing_direction=template.args.homing_direction) }}
+        cmd "{{ group.jog_to_home_jdist() }}"
+        {% include "wait_for_done.pmc.jinja" %}
+        {{ group.set_inpos_trigger(0) }}; in-position trigger on hardware capture
+
+    endif
+

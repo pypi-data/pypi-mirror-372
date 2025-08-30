@@ -1,0 +1,29 @@
+    //---- Check if HSW_HLIM missed home mark and hit a limit ----
+    if (PLC{{plc.plc_num}}_HomingStatus == PLC{{plc.plc_num}}_StatusHoming || PLC{{plc.plc_num}}_HomingStatus == PLC{{plc.plc_num}}_StatusDebugHoming){
+        // Execute the move commands if on a limit
+    {%- for motor in group.motors %}
+        {{- group.set_axis_filter([motor.axis]) }}
+        if ({{ group.limits(relOperator="==", value=1) }}){
+            {{ group.set_large_jog_distance(homing_direction=template.args.homing_direction) }}
+            {{ group.jog_to_home_jdist() }}
+        }
+    {%- endfor %}
+        {{- group.set_axis_filter([]) }}
+        {# a unique variant of wait for done #}
+        // Wait for the move to complete
+        CALL DelayTimer.msec(20)
+        Sys.CdTimer[{{plc.plc_num}}]={{ plc.timeout}} // Now start checking the conditions
+        while (({{ group.in_pos(operator="&& ", relOperator="==", value=0) }}) && ({{ group.following_err(relOperator="==", value=0) }}) && ({{ group.limits(relOperator="==", value=0) }}) && (Sys.CdTimer[{{plc.plc_num}}] > 0) && (PLC{{plc.plc_num}}_HomingStatus == PLC{{plc.plc_num}}_StatusHoming || PLC{{plc.plc_num}}_HomingStatus == PLC{{plc.plc_num}}_StatusDebugHoming)){
+        }
+        // Check why we left the while loop
+        if ({{ group.following_err(relOperator="!=", value=0) }}){ // Following error check failed
+            PLC{{plc.plc_num}}_HomingStatus = PLC{{plc.plc_num}}_StatusFFErr
+        }
+        if ({{ group.limits(relOperator="==", value=1) }}){ // If a motor hit a limit
+            PLC{{plc.plc_num}}_HomingStatus = PLC{{plc.plc_num}}_StatusLimit
+        }
+        if (Sys.CdTimer[{{plc.plc_num}}]<=0){ // If we timed out
+            PLC{{plc.plc_num}}_HomingStatus = PLC{{plc.plc_num}}_StatusTimeout
+        }
+    }
+
