@@ -1,0 +1,46 @@
+  
+extract_peaks:
+  ms_data_type: MS_Chromatogram
+  ms_level: 2
+  mz_tolerance: 0.3
+  precursor_mz_tolerance: 0.3
+  chromatogram_boundary_factor: 5
+  integration_algorithm: emg_robust
+
+tic_normalize_peaks:  
+  peak_group_col="pid",
+  amount_col="area_chromatogram",
+  tic_col="tic_area",
+  sample_wise=True
+
+normalize_peaks:
+  peak_group_col: pid
+  std_group_col: std_id
+  norm_id_column: normalize_by_std_id
+  amount_col: area
+  sample_wise: true
+
+coeluting_peaks:
+  group_id_column: peptide_standard_sequence
+  reference_column:  coelution_reference_peak
+  dt: 0.1 
+  apply_median: false
+
+ 
+classify_peaks:
+  scoring_model: random_forest_classification
+  scoring_model_params: 
+     classifier_name: srm_peak_classifier
+     ext: .predict
+     path_to_folder: None
+
+processing_steps:
+- extract_peaks
+- classify_peaks
+- coeluting_peaks
+- normalize_peaks
+
+reprocessing_steps:
+- classify_peaks
+- coeluting_peaks
+- normalize_peaks
