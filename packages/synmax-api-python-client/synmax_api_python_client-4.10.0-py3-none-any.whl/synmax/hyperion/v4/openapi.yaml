@@ -1,0 +1,1661 @@
+# The following comment tells yaml-language-server which schema to validate this file against
+# yaml-language-server: $schema=https://raw.githubusercontent.com/OAI/OpenAPI-Specification/refs/heads/main/_archive_/schemas/v3.0/schema.yaml
+openapi: 3.0.3
+info:
+  title: Hyperion API
+  description: Customer API Endpoints
+  version: 4.0.0
+servers:
+  - url: /
+paths:
+  /completions:
+    post:
+      x-method-name: well_completion
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Well completions. Well level frac jobs by date.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum:
+                      - county
+                      - date_completion_start
+                      - date_completion_end
+                      - operator
+                      - region_natgas
+                      - state_code
+                      - sub_region_natgas
+                completion_class: { $ref: '#/components/schemas/completion_class_array' }
+                county: { $ref: '#/components/schemas/county_array' }
+                date_completion_start_min: { $ref: '#/components/schemas/date' }
+                date_completion_start_max: { $ref: '#/components/schemas/date' }
+                date_completion_end_min: { $ref: '#/components/schemas/date' }
+                date_completion_end_max: { $ref: '#/components/schemas/date' }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WellCompletionsResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/WellCompletionsResponse' }
+  /dailyfrackedfeet:
+    post:
+      x-method-name: daily_fracked_feet
+      summary: Fracked feet per day averaged by subregion.
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum:
+                      - date_frac
+                      - region_natgas
+                      - sub_region_natgas
+                date_frac_min: { $ref: '#/components/schemas/date' }
+                date_frac_max: { $ref: '#/components/schemas/date' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DailyFrackedFeetResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/DailyFrackedFeetResponse' }
+  /dailyproduction:
+    post:
+      x-method-name: daily_production
+      summary: Returns the daily gas production model for the lower 48, informed from pipeline scrapes, state data, and our short-term production forecast.
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum: [ date_prod, region_natgas, sub_region_natgas ]
+                date_prod_min: { $ref: '#/components/schemas/date' }
+                date_prod_max: { $ref: '#/components/schemas/date' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DailyProductionResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/DailyProductionResponse' }
+  /drygasfactors:
+    post:
+      x-method-name: dry_gas_factors
+      summary: Monthly dry gas factors by natgas subregion
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                date_factor_min: { $ref: '#/components/schemas/date' }
+                date_factor_max: { $ref: '#/components/schemas/date' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DryGasFactorResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/DryGasFactorResponse' }
+  /ducsbyoperator:
+    post:
+      x-method-name: ducs_by_operator
+      summary: Count of drilled but uncompleted wells by county and operator
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum:
+                      - county
+                      - date_observed
+                      - operator
+                      - region_natgas
+                      - state_code
+                      - sub_region_natgas
+                county: { $ref: '#/components/schemas/county_array' }
+                date_observed_min: { $ref: '#/components/schemas/date' }
+                date_observed_max: { $ref: '#/components/schemas/date' }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DucsByOperatorResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/DucsByOperatorResponse' }
+  /longtermforecast:
+    post:
+      x-method-name: long_term_forecast
+      summary: Long-term production forecasts for gas production of the lower 48 for the next 12 months.
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum:
+                      - date_prod
+                      - region_natgas
+                      - sub_region_natgas
+                date_prod_min: { $ref: '#/components/schemas/date' }
+                date_prod_max: { $ref: '#/components/schemas/date' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LongTermForecastResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/LongTermForecastResponse' }
+  /operatorclassification:
+    get:
+      x-method-name: fetch_operator_classification
+      summary: Whether well operator is public or private company.
+      security: [ApiKeyAuth: [hyperion]]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OperatorClassificationResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/OperatorClassificationResponse' }
+  /oilproduction:
+    post:
+      # x-method-name: oil_production
+      summary: Daily oil production by subregion
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum: [ date_prod, region_natgas, sub_region_natgas ]
+                date_prod_min: { $ref: '#/components/schemas/date' }
+                date_prod_max: { $ref: '#/components/schemas/date' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OilProductionResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/OilProductionResponse' }
+  /productionbywell:
+    post:
+      x-method-name: production_by_well
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Well level monthly oil and gas production.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum: [ date_prod, county, operator, production_month, region_natgas, state_code, sub_region_natgas ]
+                county: { $ref: '#/components/schemas/county_array' }
+                date_prod_min: { $ref: '#/components/schemas/date' }
+                date_prod_max: { $ref: '#/components/schemas/date' }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                production_month: { $ref: '#/components/schemas/integer_array' }
+                production_month_min: { type: integer }
+                production_month_max: { type: integer }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+                well_id: { $ref: '#/components/schemas/well_id_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductionByWellResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/ProductionByWellResponse' }
+  /regions:
+    get:
+      x-method-name: fetch_regions
+      summary: Region lookup data
+      security: [ApiKeyAuth: [hyperion]]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegionDefResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/RegionDefResponse' }
+  /rigs:
+    post:
+      x-method-name: rigs
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Returns location specific to a wellpad and its operating dates.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum: [ date_observed, region_natgas, sub_region_natgas, county, operator, state_code ]
+                date_observed_min: { $ref: '#/components/schemas/date' }
+                date_observed_max: { $ref: '#/components/schemas/date' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+                county: { $ref: '#/components/schemas/county_array' }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                rig_class: { $ref: '#/components/schemas/rig_class_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RigsResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/RigsResponse' }
+  /rigs/latest:
+    post:
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Rigs for most recent dates in their region
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum: [ date_observed, region_natgas, sub_region_natgas, county, operator, state_code ]
+                date_observed_min: { $ref: '#/components/schemas/date' }
+                date_observed_max: { $ref: '#/components/schemas/date' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+                county: { $ref: '#/components/schemas/county_array' }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                rig_class: { $ref: '#/components/schemas/rig_class_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RigsResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/RigsResponse' }
+  /shorttermforecast:
+    post:
+      x-method-name: short_term_forecast
+      summary: Returns short-term, monthly gas production forecasts for well APIs.
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum:
+                      - county
+                      - date_prod
+                      - operator
+                      - region_natgas
+                      - state_code
+                      - sub_region_natgas
+                county: { $ref: '#/components/schemas/county_array' }
+                date_prod_min: { $ref: '#/components/schemas/date' }
+                date_prod_max: { $ref: '#/components/schemas/date' }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+                well_id: { $ref: '#/components/schemas/well_id_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShortTermForecastResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/ShortTermForecastResponse' }
+  /shorttermforecastdeclines:
+    post:
+      x-method-name: short_term_forecast_declines
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Long term well declines at a monthly rate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum:
+                      - county
+                      - date_prod
+                      - first_production_month
+                      - modeled
+                      - operator
+                      - production_month
+                      - region_natgas
+                      - state_code
+                      - state_reported
+                      - sub_region_natgas
+                aggregation_type: { $ref: '#/components/schemas/aggregation_type' }
+                county: { $ref: '#/components/schemas/county_array' }
+                date_prod_min: { $ref: '#/components/schemas/date' }
+                date_prod_max: { $ref: '#/components/schemas/date' }
+                first_production_month_min: { $ref: '#/components/schemas/date' }
+                first_production_month_max: { $ref: '#/components/schemas/date' }
+                modeled:
+                  description: The production numbers are from our forecast
+                  type: boolean
+                operator: { $ref: '#/components/schemas/operator_array' }
+                production_month: { $ref: '#/components/schemas/integer_array' }
+                production_month_min: { type: integer }
+                production_month_max: { type: integer }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                state_reported:
+                  description: Has the state published any production numbers for this well
+                  type: boolean
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+                well_id: { $ref: '#/components/schemas/well_id_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShortTermForecastDeclinesResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/ShortTermForecastDeclinesResponse' }
+  /shorttermforecasthistory:
+    post:
+      x-method-name: short_term_forecast_history
+      summary: Monthly production backcasts by well.
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [date_forecast_run]
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum:
+                      - county
+                      - date_prod
+                      - operator
+                      - region_natgas
+                      - state_code
+                      - sub_region_natgas
+                county: { $ref: '#/components/schemas/county_array' }
+                date_forecast_run: { $ref: '#/components/schemas/date' }
+                date_prod_min: { $ref: '#/components/schemas/date' }
+                date_prod_max: { $ref: '#/components/schemas/date' }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+                well_id: { $ref: '#/components/schemas/well_id_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShortTermForecastHistoryResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/ShortTermForecastHistoryResponse' }
+  /shorttermforecasthistorydates:
+    get:
+      x-method-name: fetch_forecast_run_dates
+      summary: Forecast run dates
+      security: [ApiKeyAuth: [hyperion]]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShortTermForecastHistoryDatesResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/ShortTermForecastHistoryDatesResponse' }
+  /stfaggregatedhistory:
+    post:
+      x-method-name: short_term_forecast_aggregated_history
+      summary: Subregion aggregated histories of all shorttermforecasts.
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                date_forecast_run: { $ref: '#/components/schemas/date' }
+                date_prod_min: { $ref: '#/components/schemas/date' }
+                date_prod_max: { $ref: '#/components/schemas/date' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShortTermForecastAggregatedHistoryResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/ShortTermForecastAggregatedHistoryResponse' }
+  /tils:
+    get:
+      x-method-name: fetch_tils
+      summary: TIL monitoring data.
+      security: [ApiKeyAuth: [hyperion]]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TilsResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/TilsResponse' }
+  /wells:
+    post:
+      x-method-name: wells
+      summary: Well level details. Well level data derived from all sources.
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum:
+                      - county
+                      - date_first_production
+                      - date_spud
+                      - operator
+                      - region_natgas
+                      - state_code
+                      - sub_region_natgas
+                county: { $ref: '#/components/schemas/county_array' }
+                date_spud_min: { $ref: '#/components/schemas/date' }
+                date_spud_max: { $ref: '#/components/schemas/date' }
+                date_first_production_min: { $ref: '#/components/schemas/date' }
+                date_first_production_max: { $ref: '#/components/schemas/date' }
+                depth_min: { type: number }
+                depth_max: { type: number }
+                horizontal_length_min: { type: number }
+                horizontal_length_max: { type: number }
+                lat_surface_min: { type: number }
+                lat_surface_max: { type: number }
+                lon_surface_min: { type: number }
+                lon_surface_max: { type: number }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+                well_id: { $ref: '#/components/schemas/well_id_array' }
+                wellpad_id: { $ref: '#/components/schemas/wellpad_id_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WellsResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/WellsResponse' }
+  /fraccrews:
+    post:
+      x-method-name: frac_crews
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Frac crew location by wellpad and date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum:
+                      - county
+                      - date_frac
+                      - operator
+                      - region_natgas
+                      - service_company
+                      - state_code
+                      - sub_region_natgas
+                county: { $ref: '#/components/schemas/county_array' }
+                date_frac_min: { $ref: '#/components/schemas/date' }
+                date_frac_max: { $ref: '#/components/schemas/date' }
+                frac_class: { $ref: '#/components/schemas/frac_class_array' }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                service_company: { $ref: '#/components/schemas/string_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FracCrewsResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/FracCrewsResponse' }
+  /fraccrews/latest:
+    post:
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Frac crew locations with the most recent recorded date per region
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  description: Fields to aggregate over
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum:
+                      - county
+                      - date_frac
+                      - operator
+                      - region_natgas
+                      - service_company
+                      - state_code
+                      - sub_region_natgas
+                date_frac_min: { $ref: '#/components/schemas/date' }
+                date_frac_max: { $ref: '#/components/schemas/date' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+                county: { $ref: '#/components/schemas/county_array' }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                frac_class: { $ref: '#/components/schemas/frac_class_array' }
+                service_company: { $ref: '#/components/schemas/string_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FracCrewsResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/FracCrewsResponse' }
+  /geowell/{well_id}:
+    get:
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Well details for given api. Well level data derived from all sources.
+      parameters:
+        - name: well_id
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/well_id' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeoWellsByApiResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/GeoWellsByApiResponse' }
+  /geowells:
+    post:
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Well lat/long coordinates
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                county: { $ref: '#/components/schemas/county_array' }
+                date_spud_min: { $ref: '#/components/schemas/date' }
+                date_spud_max: { $ref: '#/components/schemas/date' }
+                depth_tvd_min: { type: number }
+                depth_tvd_max: { type: number }
+                horizontal_length_min: { type: number }
+                horizontal_length_max: { type: number }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+                well_status: { $ref: '#/components/schemas/string_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeoWellsResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/GeoWellsResponse' }
+  /lower_48_total_stf:
+    post:
+      security: [ApiKeyAuth: [hyperion]]
+      x-method-name: lower_48_total_stf
+      summary: Aggregated STF for lower 48, including plug regions
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties: {}
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Lower48TotalSTFResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/Lower48TotalSTFResponse' }
+  /wellpadstatus:
+    post:
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Interpolated wellpad status by date
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                aggregate_by:
+                  type: array
+                  items:
+                    type: string
+                    example: region_natgas
+                    enum: [ date_status, region_natgas, sub_region_natgas ]
+                county: { $ref: '#/components/schemas/county_array' }
+                date_status_min: { $ref: '#/components/schemas/date' }
+                date_status_max: { $ref: '#/components/schemas/date' }
+                operator: { $ref: '#/components/schemas/operator_array' }
+                region_natgas: { $ref: '#/components/schemas/region_natgas_array' }
+                state_code: { $ref: '#/components/schemas/state_code_array' }
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+                wellpad_id:  { type: string }
+                wellpad_status: { $ref: '#/components/schemas/wellpad_status' }
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WellpadStatusResponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/WellpadStatusResponse' }
+  /beta/complete_report_date:
+    post:
+      x-method-name: beta_complete_report_date
+      security: [ApiKeyAuth: [hyperion]]
+      summary: Get most recent date for which reported data in this subregion is considered complete.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas_array' }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompleteReportDateReponse' }
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/CompleteReportDateReponse' }
+  /beta/dark_oil/transactions:
+    post:
+      x-method-name: dark_oil_transactions
+      summary: Fetch enriched transaction data with vessel information from dark oil terminals
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                date_min:
+                  $ref: '#/components/schemas/date'
+                date_max:
+                  $ref: '#/components/schemas/date'
+                terminal_ids:
+                  $ref: '#/components/schemas/string_array'
+                terminals:
+                  $ref: '#/components/schemas/string_array'
+                countries:
+                  $ref: '#/components/schemas/string_array'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionsResponse'
+            application/x-ndjson:
+              schema:
+                $ref: '#/components/schemas/TransactionsResponse'
+  /beta/dark_oil/volumes:
+    post:
+      x-method-name: dark_oil_volumes
+      summary: Fetch aggregated transaction volume data from dark oil terminals
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                date_min:
+                  $ref: '#/components/schemas/date'
+                date_max:
+                  $ref: '#/components/schemas/date'
+                terminal_ids:
+                  $ref: '#/components/schemas/string_array'
+                terminals:
+                  $ref: '#/components/schemas/string_array'
+                countries:
+                  $ref: '#/components/schemas/string_array'
+                aggregate_by:
+                  type: array
+                  items:
+                    type: string
+                    enum: ["date", "terminal", "country", "month", "year"]
+                  description: Dimensions to aggregate by. If not specified, all dimensions are included.
+                  example: ["date", "country"]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumesResponse'
+            application/x-ndjson:
+              schema:
+                $ref: '#/components/schemas/VolumesResponse'
+  /beta/dark_oil/imagery:
+    post:
+      x-method-name: dark_oil_imagery
+      summary: Fetch enriched imagery data from dark oil terminals
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                date_min:
+                  $ref: '#/components/schemas/date'
+                date_max:
+                  $ref: '#/components/schemas/date'
+                terminal_ids:
+                  $ref: '#/components/schemas/string_array'
+                terminals:
+                  $ref: '#/components/schemas/string_array'
+                countries:
+                  $ref: '#/components/schemas/string_array'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageryResponse'
+            application/x-ndjson:
+              schema:
+                $ref: '#/components/schemas/ImageryResponse'
+  /beta/dark_oil/terminals:
+    post:
+      x-method-name: dark_oil_terminals
+      summary: Fetch terminal information from dark oil terminals
+      security: [ApiKeyAuth: [hyperion]]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              nullable: true
+              properties:
+                terminal:
+                  $ref: '#/components/schemas/string_array'
+                port:
+                  $ref: '#/components/schemas/string_array'
+                country:
+                  $ref: '#/components/schemas/string_array'
+                oil_type:
+                  $ref: '#/components/schemas/string_array'
+                oil_grade:
+                  $ref: '#/components/schemas/string_array'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminalsResponse'
+            application/x-ndjson:
+              schema:
+                $ref: '#/components/schemas/TerminalsResponse'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      name: Access-Key
+      in: header
+  schemas:
+    DailyFrackedFeetResponse:
+      type: object
+      properties:
+        date_frac: { $ref: '#/components/schemas/date' }
+        fracked_feet: { type: number }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+    DailyProductionResponse:
+      type: object
+      properties:
+        date_prod: { $ref: '#/components/schemas/date' }
+        prod_dry_gas_bcf_day: { type: number }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+    DryGasFactorResponse:
+      type: object
+      properties:
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        date_factor:
+          type: string
+          format: date
+          example: 2024-11-01
+          description: The month during which this dry gas factor applies
+        dry_gas_factor:
+          type: number
+          description: The dry gas factor
+          example: 0.866
+    DucsByOperatorResponse:
+      type: object
+      properties:
+        county: { $ref: '#/components/schemas/county' }
+        date_observed: { $ref: '#/components/schemas/date' }
+        ducs_count: { type: integer }
+        operator: { $ref: '#/components/schemas/operator' }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+    FracCrewsResponse:
+      type: object
+      properties:
+        county: { $ref: '#/components/schemas/county' }
+        date_frac: { $ref: '#/components/schemas/date' }
+        frac_class: { $ref: '#/components/schemas/frac_class' }
+        lat:
+          type: number
+          description: Latitude of the wellpad
+        long:
+          type: number
+          description: Longitude of the wellpad
+        count: { type: integer }
+        operator: { $ref: '#/components/schemas/operator' }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        service_company: { type: string }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        wellpad_id: { type: string }
+    GeoWellsByApiResponse:
+      type: object
+      properties:
+        basin_play: { type: string }
+        county: { $ref: '#/components/schemas/county' }
+        date_first_production: { $ref: '#/components/schemas/date' }
+        date_last_recompletion: { $ref: '#/components/schemas/date' }
+        date_permit: { $ref: '#/components/schemas/date' }
+        date_spud: { $ref: '#/components/schemas/date' }
+        date_status: { $ref: '#/components/schemas/date' }
+        depth_measured: { type: number }
+        elevation_ground: { type: number }
+        field_name: { type: string }
+        formation: { type: string }
+        horizontal_length: { type: number }
+        lat_bottomhole:
+          type: number
+          description: Latitude of the end of the well
+        lon_bottomhole:
+          type: number
+          description: Longitude of the end of the well
+        lat_surface:
+          type: number
+          description: Latitude of the wellbore
+        lon_surface:
+          type: number
+          description: Longitude of the wellbore
+        lower_perf: { type: number }
+        operator: { $ref: '#/components/schemas/operator' }
+        product_type: { type: string }
+        range: { type: string }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        section: { type: string }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        state_name: { type: string }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        township: { type: string }
+        upper_perf: { type: number }
+        well_id: { $ref: '#/components/schemas/well_id' }
+        well_name: { type: string }
+        well_no: { type: string }
+        well_status: { type: string }
+        wellbore_type: { type: string }
+    GeoWellsResponse:
+      type: object
+      properties:
+        lat_surface:
+          type: number
+          description: Latitude of the wellbore
+        lon_surface:
+          type: number
+          description: Longitude of the wellbore
+        well_id: { $ref: '#/components/schemas/well_id' }
+    LongTermForecastResponse:
+      type: object
+      properties:
+        date_prod: { $ref: '#/components/schemas/date' }
+        prod_dry_gas_bcf_day: { type: number }
+        prod_oil_bbl_day: { type: number }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+    OilProductionResponse:
+      type: object
+      properties:
+        date_prod: { $ref: '#/components/schemas/date' }
+        prod_oil_bbl_day: { type: number }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+    OperatorClassificationResponse:
+      type: object
+      properties:
+        operator: { $ref: '#/components/schemas/operator' }
+        public_or_private: { type: string }
+        ticker: { type: string }
+    ProductionByWellResponse:
+      type: object
+      properties:
+        county: { $ref: '#/components/schemas/county' }
+        date_prod: { $ref: '#/components/schemas/date' }
+        field_name: { type: string }
+        formation: { type: string }
+        operator: { $ref: '#/components/schemas/operator' }
+        prod_oil_bbl_day: { type: number }
+        prod_oil_bbl_month: { type: number }
+        prod_water_bbl_day: { type: number }
+        prod_water_bbl_month: { type: number }
+        prod_wet_gas_mcf_day: { type: number }
+        prod_wet_gas_mcf_month: { type: number }
+        production_month: { $ref: '#/components/schemas/production_month' }
+        range: { type: string }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        section: { type: string }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        township: { type: string }
+        well_id: { $ref: '#/components/schemas/well_id' }
+        well_name: { type: string }
+        well_no: { type: string }
+    RegionDefResponse:
+      type: object
+      properties:
+        county: { $ref: '#/components/schemas/county' }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+    RigsResponse:
+      type: object
+      properties:
+        count: { type: integer }
+        county: { $ref: '#/components/schemas/county' }
+        date_observed: { $ref: '#/components/schemas/date' }
+        lat:
+          type: number
+          description: Latitude of the wellpad
+        long:
+          type: number
+          description: Longitude of the wellpad
+        operator: { $ref: '#/components/schemas/operator' }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        rig_class: { $ref: '#/components/schemas/rig_class' }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        wellpad_id: { type: string }
+    ShortTermForecastAggregatedHistoryResponse:
+      type: object
+      properties:
+        date_forecast_run: { $ref: '#/components/schemas/date' }
+        date_prod: { $ref: '#/components/schemas/date' }
+        prod_dry_gas_bcf_day: { type: number }
+        prod_oil_mbbl_day: { type: number }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+    ShortTermForecastDeclinesResponse:
+      type: object
+      properties:
+        count: { type: integer }
+        county: { $ref: '#/components/schemas/county' }
+        date_forecast_run: { $ref: '#/components/schemas/date' }
+        date_prod: { $ref: '#/components/schemas/date' }
+        first_production_month: { $ref: '#/components/schemas/date' }
+        modeled:
+          description: The production numbers are from our forecast
+          type: boolean
+        operator: { $ref: '#/components/schemas/operator' }
+        prod_oil_bbl_day: { type: number }
+        prod_oil_bbl_month: { type: number }
+        prod_wet_gas_mcf_day: { type: number }
+        prod_wet_gas_mcf_month: { type: number }
+        production_month: { $ref: '#/components/schemas/production_month' }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        state_reported:
+          description: Has the state published any production numbers for this well
+          type: boolean
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        well_id: { $ref: '#/components/schemas/well_id' }
+    ShortTermForecastResponse:
+      type: object
+      properties:
+        county: { $ref: '#/components/schemas/county' }
+        date_forecast_run: { $ref: '#/components/schemas/date' }
+        date_prod: { $ref: '#/components/schemas/date' }
+        operator: { $ref: '#/components/schemas/operator' }
+        prod_oil_bbl_day: { type: number }
+        prod_oil_bbl_month: { type: number }
+        prod_dry_gas_mcf_day: { type: number }
+        prod_dry_gas_mcf_month: { type: number }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        well_id: { $ref: '#/components/schemas/well_id' }
+    ShortTermForecastHistoryDatesResponse:
+      type: object
+      properties:
+        date_forecast_run: { $ref: '#/components/schemas/date' }
+    ShortTermForecastHistoryResponse:
+      type: object
+      properties:
+        county: { $ref: '#/components/schemas/county' }
+        date_forecast_run: { $ref: '#/components/schemas/date' }
+        date_prod: { $ref: '#/components/schemas/date' }
+        operator: { $ref: '#/components/schemas/operator' }
+        prod_oil_bbl_day: { type: number }
+        prod_oil_bbl_month: { type: number }
+        prod_wet_gas_mcf_day: { type: number }
+        prod_wet_gas_mcf_month: { type: number }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        well_id: { $ref: '#/components/schemas/well_id' }
+    TilsResponse:
+      type: object
+      properties:
+        date_frac_end: { $ref: '#/components/schemas/date' }
+        date_til: { $ref: '#/components/schemas/date' }
+        operator: { $ref: '#/components/schemas/operator' }
+        prod_wet_gas_bcf_day: { type: number }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        wellpad_id: { type: string }
+        wells: { type: integer }
+    TransactionsResponse:
+      type: object
+      properties:
+        date:
+          $ref: '#/components/schemas/date'
+        terminal:
+          type: string
+          description: Terminal name
+          example: "Port of Houston"
+        terminal_id:
+          type: string
+          description: Unique identifier for the terminal
+          example: "TERMINAL_001"
+        country:
+          type: string
+          description: Country where the terminal is located
+          example: "United States"
+        vessel_id:
+          type: string
+          description: Unique identifier for the vessel
+          example: "1234567"
+        vessel_length:
+          type: number
+          description: Length of the vessel in meters
+          example: 250.5
+        vessel_type:
+          type: string
+          description: Type/category of the vessel
+          example: "Oil Tanker"
+        volume:
+          type: number
+          description: Volume capacity of the vessel
+          example: 125000
+        volume_unit:
+          type: string
+          description: The unit of volume measurement
+          example: "barrels"
+    VolumesResponse:
+      type: object
+      properties:
+        volume:
+          type: integer
+          description: The total volume of transactions in barrels
+          example: 125000
+        count:
+          type: integer
+          description: The count of transactions
+          example: 42
+        volume_unit:
+          type: string
+          description: The unit of volume measurement
+          example: "barrels"
+        images:
+          type: integer
+          description: The count of satellite imagery captured
+          example: 15
+        imputed_volume:
+          type: integer
+          description: The volume imputed for days without imagery (0 when imagery exists)
+          example: 25000
+        imputed_count:
+          type: integer
+          description: The count imputed for days without imagery (0 when imagery exists)
+          example: 13
+        total_volume:
+          type: integer
+          description: The total volume including both observed and imputed values
+          example: 150000
+        total_count:
+          type: integer
+          description: The total count including both observed and imputed values
+          example: 55
+        date:
+          $ref: '#/components/schemas/date'
+          description: The date of the volume measurement (included when aggregating by date)
+        terminal_id:
+          type: string
+          description: The unique identifier for the terminal (included when aggregating by terminal)
+          example: "TERMINAL_001"
+        terminal:
+          type: string
+          description: Terminal name (included when aggregating by terminal)
+          example: "Port of Houston"
+        country:
+          type: string
+          description: Country where the terminal is located (included when aggregating by country)
+          example: "United States"
+      required:
+        - volume
+        - count
+        - volume_unit
+        - images
+        - imputed_volume
+        - imputed_count
+        - total_volume
+        - total_count
+    ImageryResponse:
+      type: object
+      properties:
+        date:
+          $ref: '#/components/schemas/date'
+          description: The date of the imagery
+        terminal_id:
+          type: string
+          description: The unique identifier for the terminal
+          example: "TERMINAL_001"
+        terminal:
+          type: string
+          description: Terminal name
+          example: "Port of Houston"
+        country:
+          type: string
+          description: Country where the terminal is located
+          example: "United States"
+        image_captured:
+          type: boolean
+          description: Whether a satellite image of the terminal was captured
+          example: true
+      required:
+        - date
+        - terminal_id
+        - terminal
+        - country
+        - image_captured
+    TerminalsResponse:
+      type: object
+      properties:
+        terminal_id:
+          type: string
+          description: The unique identifier for the terminal
+          example: "TERMINAL_001"
+        terminal:
+          type: string
+          description: Terminal name
+          example: "Port of Houston"
+        port:
+          type: string
+          description: The port the terminal is located at
+          example: "Houston Ship Channel"
+        latitude:
+          type: number
+          description: The latitude of the terminal
+          example: 29.7604
+        longitude:
+          type: number
+          description: The longitude of the terminal
+          example: -95.3698
+        country:
+          type: string
+          description: The country of the terminal
+          example: "United States"
+        oil_type:
+          type: string
+          nullable: true
+          description: The type of oil the terminal handles
+          example: "Crude"
+        oil_grade:
+          type: string
+          nullable: true
+          description: The grade of oil the terminal handles
+          example: "Light Sweet"
+      required:
+        - terminal_id
+        - terminal
+        - port
+        - latitude
+        - longitude
+        - country
+    WellsResponse:
+      type: object
+      properties:
+        county: { $ref: '#/components/schemas/county' }
+        date_completion: { $ref: '#/components/schemas/date' }
+        date_first_production: { $ref: '#/components/schemas/date' }
+        date_permit: { $ref: '#/components/schemas/date' }
+        date_spud: { $ref: '#/components/schemas/date' }
+        depth_measured: { type: number }
+        depth_tvd: { type: number }
+        horizontal_length: { type: number }
+        lat_bottomhole:
+          type: number
+          description: Latitude of the end of the well
+        lon_bottomhole:
+          type: number
+          description: Longitude of the end of the well
+        lat_surface:
+          type: number
+          description: Latitude of the wellbore
+        lon_surface:
+          type: number
+          description: Longitude of the wellbore
+        operator: { $ref: '#/components/schemas/operator' }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        well_id: { $ref: '#/components/schemas/well_id' }
+        wellbore_type: { type: string }
+        wellpad_id: { $ref: '#/components/schemas/wellpad_id' }
+    WellCompletionsResponse:
+      type: object
+      properties:
+        completion_class: { $ref: '#/components/schemas/completion_class' }
+        count: { type: integer }
+        county: { $ref: '#/components/schemas/county' }
+        date_completion_start: { $ref: '#/components/schemas/date' }
+        date_completion_end: { $ref: '#/components/schemas/date' }
+        operator: { $ref: '#/components/schemas/operator' }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        wellpad_id: { type: string }
+        well_id: { $ref: '#/components/schemas/well_id' }
+    Lower48TotalSTFResponse:
+      type: object
+      properties:
+        date_prod: { $ref: '#/components/schemas/date' }
+        prod_dry_gas_bcf_day: { type: number }
+    aggregation_type:
+      type: string
+      example: sum
+      description: The type of aggregation applied to data
+      enum: [ average, count, sum ]
+    completion_class:
+      description: Oil/Gas classification based on EIA-defined gas/oil production ratios
+      type: string
+      example: oil
+      enum:
+        - oil
+        - gas
+        - TBD
+    completion_class_array:
+      description: Oil/Gas classification based on EIA-defined gas/oil production ratios
+      anyOf:
+        - type: array
+          items: { $ref: '#/components/schemas/completion_class' }
+        - $ref: '#/components/schemas/completion_class'
+    county:
+      description: A county
+      type: string
+      example: CAMPBELL
+    county_array:
+      description: A county
+      anyOf:
+        - type: array
+          items:  { $ref: '#/components/schemas/county' }
+        - $ref: '#/components/schemas/county'
+    date:
+      description: A date in YYYY-MM-DD format
+      type: string
+      format: date
+      example: '2021-11-24'
+    frac_class:
+      description: Oil/Gas classification based on EIA-defined gas/oil production ratios
+      type: string
+      example: oil
+      enum:
+        - oil
+        - gas
+        - TBD
+    frac_class_array:
+      description: Oil/Gas classification based on EIA-defined gas/oil production ratios
+      anyOf:
+        - type: array
+          items: { $ref: '#/components/schemas/frac_class' }
+        - $ref: '#/components/schemas/frac_class'
+    integer_array:
+      anyOf:
+        - type: array
+          items: { type: integer }
+        - type: integer
+    operator:
+      description: A well operator
+      example: BILL BARRETT CORPORATION
+      type: string
+    operator_array:
+      description: A well operator
+      anyOf:
+        - type: array
+          items:  { $ref: '#/components/schemas/operator' }
+        - $ref: '#/components/schemas/operator'
+    production_month:
+      description: The number of months this well has been producing
+      type: integer
+    region_natgas:
+      description: Region divisions based on natural gas production profiles
+      example: west
+      type: string
+    region_natgas_array:
+      description: Region divisions based on natural gas production profiles
+      anyOf:
+        - type: array
+          items:  { $ref: '#/components/schemas/region_natgas' }
+        - $ref: '#/components/schemas/region_natgas'
+    rig_class:
+      description: Oil/Gas classification based on EIA-defined gas/oil production ratios
+      type: string
+      example: oil
+      enum:
+        - oil
+        - gas
+        - TBD
+    rig_class_array:
+      description: Oil/Gas classification based on EIA-defined gas/oil production ratios
+      anyOf:
+        - type: array
+          items: { $ref: '#/components/schemas/rig_class' }
+        - $ref: '#/components/schemas/rig_class'
+    state_code:
+      description: A state abbreviation
+      type: string
+      example: WY
+    state_code_array:
+      description: Oil/Gas classification based on EIA-defined gas/oil production ratios
+      anyOf:
+        - type: array
+          items: { $ref: '#/components/schemas/state_code' }
+        - $ref: '#/components/schemas/state_code'
+    string_array:
+      type: array
+      items: { type: string }
+    sub_region_natgas:
+      description: Subregion divisions based on natural gas production profiles
+      type: string
+      example: Haynesville - TX
+    sub_region_natgas_array:
+      description: Subregion divisions based on natural gas production profiles
+      anyOf:
+        - type: array
+          items: { $ref: '#/components/schemas/sub_region_natgas' }
+        - $ref: '#/components/schemas/sub_region_natgas'
+    well_id:
+      description: A well identifier
+      type: string
+      example: 4900552885
+    well_id_array:
+      description: Subregion divisions based on natural gas production profiles
+      anyOf:
+        - type: array
+          items: { $ref: '#/components/schemas/well_id' }
+        - $ref: '#/components/schemas/well_id'
+    wellpad_id:
+      type: integer
+      example: 717476
+    wellpad_id_array:
+      anyOf:
+        - type: array
+          items: { $ref: '#/components/schemas/wellpad_id' }
+        - $ref: '#/components/schemas/wellpad_id'
+    wellpad_status:
+      type: string
+      example: Drilling
+      enum:
+        - Drilling
+        - Fracking
+    CompleteReportDateReponse:
+      type: object
+      properties:
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        date_pipe_scrape_report:
+          type: string
+          format: date
+          description: Last good date for pipeline scrapes
+        date_completion_report:
+          type: string
+          format: date
+          description: Cut-off date for completions data
+        date_gas_prod_report:
+          type: string
+          format: date
+          description: Complete production date for gas
+        date_oil_prod_report:
+          type: string
+          format: date
+          description: Complete production date for oil
+    WellpadStatusResponse:
+      type: object
+      properties:
+        count: { type: integer }
+        county: { $ref: '#/components/schemas/county' }
+        date_status: { $ref: '#/components/schemas/date' }
+        operator: { $ref: '#/components/schemas/operator' }
+        region_natgas: { $ref: '#/components/schemas/region_natgas' }
+        state_code: { $ref: '#/components/schemas/state_code' }
+        sub_region_natgas: { $ref: '#/components/schemas/sub_region_natgas' }
+        wellpad_id:  { type: string }
+        wellpad_status: { $ref: '#/components/schemas/wellpad_status' }

@@ -1,0 +1,36 @@
+
+import sys
+import os
+import logging
+from synmax.openapi.client import OpenAPIClient
+from typing import Optional, Dict
+
+
+
+current_dir = os.path.dirname(__file__)
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter(f'%(levelname)s {__name__} - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+class LeviatonApiClient(OpenAPIClient):
+    _spec = os.path.join(current_dir, "openapi.yaml")
+
+    def __init__(self,
+                 access_token: str,
+                 base_uri: str = "https://leviaton.api.synmax.com/v1/",
+                 timeout = 60.0,
+                 retries = 3,
+                 retry_sleep = 30,
+                 ):
+
+        super().__init__(
+            base_uri,
+            headers={
+                "Access-Key": access_token,
+            },
+            logger=logger,
+            timeout=timeout,
+        )

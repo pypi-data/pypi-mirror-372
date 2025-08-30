@@ -1,0 +1,984 @@
+openapi: 3.0.3
+info:
+  title: Vulcan API
+  description: |
+    The Vulcan API provides strategic insights for power markets and infrastructure projects,
+    specifically focusing on datacenter, battery storage, natural gas, and power plant information. This API enables users to:
+
+    * Track construction and operational status of datacenters and future power consumption
+    * Analyze geographical distribution of facilities
+    * Monitor capacity and ownership information
+    * Track construction milestones and timelines
+
+    The API is particularly useful for:
+    * Energy market analysts tracking infrastructure development
+    * Infrastructure investors evaluating market opportunities
+    * Environmental researchers studying energy infrastructure
+    * Grid operators planning for new load centers
+  version: 2.1.0
+servers:
+  - url: /beat-ms/api/v1/
+paths:
+
+  /health:
+    get:
+      operationId: routes.v1.health.get
+      x-method-name: health
+      summary: Health check endpoint
+      description: |
+        Simple health check endpoint that returns the API status.
+        This endpoint does not require authentication and can be used to verify that the API is running.
+
+        Useful for:
+        * Load balancer health checks
+        * Monitoring system verification
+        * Service availability testing
+      responses:
+        '200':
+          description: API is healthy and running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: ["ok"]
+                    description: Status of the API
+                    example: "ok"
+              example:
+                status: "ok"
+  # /datacenters:
+  #   post:
+  #     operationId: routes.v1.datacenters.post
+  #     x-method-name: datacenters
+  #     summary: Get datacenter information
+  #     security: [ApiKeyAuth: [vulcan_datacenters]]
+  #     requestBody:
+  #       required: true
+  #       content:
+  #         application/json:
+  #           schema:
+  #             $ref: '#/components/schemas/DatacenterQuery'
+  #     responses:
+  #       '200':
+  #         description: Filtered and aggregated list of datacenters
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: array
+  #               items:
+  #                 $ref: '#/components/schemas/Datacenter'
+  #           application/x-ndjson:
+  #             schema:
+  #               type: array
+  #               items:
+  #                 $ref: '#/components/schemas/Datacenter'
+  #       '500':
+  #         description: Internal Server Error - Database error
+  #         content:
+  #           application/json:
+  #             schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /underconstruction:
+    get:
+      operationId: routes.v1.under_construction.get
+      x-method-name: underconstruction
+      summary: Get under construction datacenters with filtering and aggregation
+      security: [ApiKeyAuth: [vulcan_underconstruction]]
+      responses:
+        '200':
+          description: Filtered and aggregated list of under construction datacenters
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/UnderConstructionResponse'
+        '500':
+          description: Internal Server Error - Database error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /lng_projects:
+    get:
+      operationId: routes.v1.lng_projects.get
+      x-method-name: lng_projects
+      summary: Get LNG projects with filtering and aggregation
+      security: [ApiKeyAuth: [vulcan_lng_projects]]
+      responses:
+        '200':
+          description: Filtered and aggregated list of LNG projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LNGProjectsResponse'
+        '500':
+          description: Internal Server Error - Database error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /metadata_history:
+    get:
+      operationId: routes.v1.metadata_history.get
+      x-method-name: metadata_history
+      summary: Get metadata history for datacenters
+      security: [ApiKeyAuth: [vulcan_metadata_history]]
+      responses:
+        '200':
+          description: Metadata history for the specified datacenter
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MetadataHistoryResponse'}
+        '500':
+          description: Internal Server Error - Database error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /project_rankings:
+    get:
+      operationId: routes.v1.project_rankings.get
+      x-method-name: project_rankings
+      summary: Get project rankings based on various criteria
+      security: [ApiKeyAuth: [vulcan_project_rankings]]
+      responses:
+        '200':
+          description: Ranked list of projects based on the specified criteria
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/ProjectRankingResponse'
+        '500':
+          description: Internal Server Error - Database error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      name: Access-Key
+      in: header
+      description: API key for authentication. Contact support to obtain an API key.
+  schemas:
+    # Common types
+    Date:
+      type: string
+      format: date
+      description: Date in ISO 8601 format (YYYY-MM-DD)
+      example: "2023-01-15"
+
+    StringArray:
+      type: array
+      items:
+        type: string
+      nullable: true
+      description: Array of string values
+      example: ["CA", "TX", "NY"]
+
+
+    # Entity schemas
+    Datacenter:
+      type: object
+      description: |
+        Represents a datacenter facility with its construction and operational details,
+        geographical information, and ownership data. Each datacenter can have multiple
+        buildings or phases, each with its own status and timeline.
+      properties:
+        plant_name:
+          type: string
+          nullable: true
+          description: IIR plant name
+          example: "1000 Mile Solar"
+        synmax_id:
+          type: string
+          description: A unique key of plant id and unit id
+          example: "68847-PV1"
+        vintage:
+          type: string
+          format: date
+          description: Date of each update to the dataset
+          example: "2025-04-28"
+        plant_status:
+          type: string
+          description: IIR construction status of the data center
+          enum: ["Under Construction", "Planned", "Operational", "Engineered"]
+          example: ["Under Construction"]
+        startup_date:
+          type: string
+          format: date
+          nullable: true
+          description: IIR online date for a given data center
+          example: "2026-07-31"
+        source:
+          type: string
+          nullable: true
+          description: The source of data center data
+          example: "EIA"
+        unit_capacity:
+          type: number
+          format: float
+          nullable: true
+          description: IIR data center unit capacity in megawatts (MW)
+          example: 108
+        vulcan_construction_status:
+          type: string
+          nullable: true
+          description: Indicates if a data center has been observed to be under construction
+          enum: ["none", "Confirmed"]
+          example: "Confirmed"
+        vulcan_status_change_date:
+          type: string
+          format: date
+          nullable: true
+          description: Date of which the data center status was changed to under construction
+          example: "2025-05-29"
+        latest_image:
+          type: string
+          format: date
+          nullable: true
+          description: Date of the latest available satellite image
+          example: "2025-04-27"
+        construction_start:
+          type: string
+          format: date
+          nullable: true
+          description: Start date of construction for a given data center
+          example: "2023-08-20"
+        land_cleared:
+          type: string
+          format: date
+          nullable: true
+          description: Date of first land cleared for a given data center
+          example: "2023-03-19"
+        first_structures:
+          type: string
+          format: date
+          nullable: true
+          description: Date where the first permanent structures are identified for a given data center
+          example: "7/12/2023"
+        vulcan_earliest_online:
+          type: string
+          format: date
+          nullable: true
+          example: "2/7/2024"
+          description: The earliest possible date a data center is projected to be operational
+        vulcan_latest_online:
+          type: string
+          format: date
+          nullable: true
+          example: "7/24/2027"
+          description: The latest possible date a data center is projected to be operational
+        plant_id:
+          type: integer
+          nullable: true
+          description: IIR plant id
+          example: 68847
+        unit_id:
+          type: integer
+          nullable: true
+          description: IIR id given to each unit for a given data center
+          example: 2548109
+        unit_name:
+          type: string
+          nullable: true
+          description: IIR name of each unit for a given data center
+          example: "LC11DC1"
+        owner_name:
+          type: string
+          nullable: true
+          description: IIR owner of data center
+          example: "CloudHQ LLC"
+        unit_status:
+          type: string
+          nullable: true
+          description: IIR construction status of the unit for a given data center
+          enum: ["Engineered", "Planned", "On Hold", "Under Construction"]
+          example: "Engineered"
+        state:
+          type: string
+          enum: ["TX", "IA", "VA", "MN", "ND", "IL", "GA", "PA", "UT", "QRO"]
+          description: IIR data center state
+          example: "TX"
+        iso_rto_region:
+          type: string
+          description: IIR data center unit capacity in megawatts (MW)
+          enum: ["ERCOT", "MISO", "PJM"]
+          example: "ERCOT"
+        latitude:
+          type: number
+          format: float
+          nullable: true
+          description: EIA plant latitude
+          example: 33.0225
+        longitude:
+          type: number
+          format: float
+          nullable: true
+          description: EIA plant longitude
+          example: -102.709
+        utype_desc:
+          type: string
+          nullable: true
+          description: IIR type of data center
+          example: "Hyperscale Data Center"
+        sic_product:
+          type: string
+          nullable: true
+          description: IIR SIC product of data center
+          example: "Hyperscale Data Center"
+        notes:
+          type: string
+          nullable: true
+          description: Observations or relevant data center comments after reviewing satellite images
+          example: "land cleared"
+      required:
+        - synmax_id
+
+    # Query schemas
+    DatacenterQuery:
+      type: object
+      description: |
+        Query parameters for filtering and aggregating datacenter information.
+        Supports complex filtering by multiple criteria and aggregation by various dimensions.
+      additionalProperties: false
+      nullable: true
+      properties:
+        aggregate_by:
+          type: array
+          description: |
+            Fields to aggregate the results by. This enables grouping and summarization of data.
+            For example, aggregating by state will show the count and total capacity of facilities in each state.
+          items:
+            type: string
+            example: state
+            enum:
+              - state
+              - owner_name
+              - plant_status
+              - vulcan_construction_status
+              - unit_status
+              - vintage
+        aggregation_type:
+          type: string
+          enum: ["sum", "avg", "average", "count", "min", "max"]
+          default: "sum"
+          description: |
+            Type of aggregation to perform on numeric fields like unit_capacity.
+            - sum: Total capacity across all facilities in each group
+            - avg/average: Average capacity per facility in each group
+            - count: Number of facilities in each group
+            - min/max: Minimum/maximum capacity in each group
+        state:
+          anyOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+          example: ["Texas", "Virginia"]
+        plant_status:
+          anyOf:
+            - type: string
+              enum: ["Under Construction", "Planned", "Operational", "Engineered"]
+            - type: array
+              items:
+                type: string
+                enum: ["Under Construction", "Planned", "Operational", "Engineered"]
+          example: ["Under Construction"]
+        unit_status:
+          anyOf:
+            - type: string
+              enum: ["Engineered", "Planned", "On Hold", "Under Construction"]
+            - type: array
+              items:
+                type: string
+                enum: ["Engineered", "Planned", "On Hold", "Under Construction"]
+          example: ["Engineered"]
+        iso_rto_region:
+          anyOf:
+            - type: string
+              enum: ["ERCOT", "MISO", "PJM"]
+            - type: array
+              items:
+                type: string
+                enum: ["ERCOT", "MISO", "PJM"]
+          example: ["ERCOT"]
+        sic_product:
+          anyOf:
+            - type: string
+              enum: ["Data Centers", "Hyperscale Data Center", "Co-Location Data Center", "Enterprise Data Center", "Crypto Mining Data Center"]
+            - type: array
+              items:
+                type: string
+                enum: ["Data Centers", "Hyperscale Data Center", "Co-Location Data Center", "Enterprise Data Center", "Crypto Mining Data Center"]
+          example: ["Hyperscale Data Center"]
+        unit_capacity_min:
+          type: number
+          format: float
+          description: Minimum unit capacity in megawatts (MW)
+          example: 50
+        unit_capacity_max:
+          type: number
+          format: float
+          description: Maximum unit capacity in megawatts (MW)
+          example: 200
+        latitude_min:
+          type: number
+          format: float
+          description: Minimum latitude (global)
+          example: -90
+        latitude_max:
+          type: number
+          format: float
+          description: Maximum latitude (global)
+          example: 90
+        longitude_min:
+          type: number
+          format: float
+          description: Minimum longitude (global)
+          example: -180
+        longitude_max:
+          type: number
+          format: float
+          description: Maximum longitude (global)
+          example: 180
+
+    # Response schemas
+    DatacenterResponse:
+      type: object
+      properties:
+        datacenters:
+          type: array
+          items:
+            $ref: '#/components/schemas/Datacenter'
+      required:
+        - datacenters
+
+    # Example schemas
+    ExampleResponse:
+      type: object
+      properties:
+        current_timestamp: { $ref: '#/components/schemas/Date' }
+    item:
+      type: string
+      example: taco
+      enum: [ taco, enchilada, burrito, fajita, chalupa, gordita ]
+    items:
+      anyOf:
+        - type: array
+          items: { $ref: '#/components/schemas/item' }
+        - $ref: '#/components/schemas/item'
+    other_item:
+      type: integer
+      example: 7
+      minimum: 3
+      maximum: 10
+    date: { type: string, format: date }
+
+    AllFuelsConsumptionNetgen:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        year:
+          type: integer
+        month:
+          type: integer
+        plant_id:
+          type: integer
+        plant_name:
+          type: string
+        reported_fuel_type_code:
+          type: string
+        physical_unit_label:
+          type: string
+        consumed:
+          type: number
+        netgen:
+          type: number
+        state:
+          type: string
+        first_generation:
+          type: string
+          format: date
+
+    CoalPricesNew:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        region:
+          type: string
+        price:
+          type: number
+          format: float
+
+    CoalProdWeeklyNew:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        region:
+          type: string
+        production:
+          type: integer
+
+    UnderConstructionResponse:
+      type: object
+      description: |
+        Response schema for the under construction datacenters endpoint.
+        Contains detailed information about each datacenter under construction,
+        including construction status, timelines, and geographical data.
+      nullable: true
+      properties:
+        code:
+          type: string
+          description: Unique code for the api response
+          example: "[AT54U]"
+        records:
+          type: object
+          properties:
+            column_types:
+              type: array
+              items:
+                type: object
+                properties:
+                  column_name:
+                    type: string
+                    example: "plant_it"
+                  type:
+                    type: string
+                    example: "INTEGER"
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  balancing_authority_code:
+                    type: string
+                    example: "SWPP"
+                    description: EIA balancing authority responisble for grid reliability in plant's service area
+                    nullable: true
+                  construction_start:
+                    type: string
+                    format: date-time
+                    example: "2025-03-09T00:00:00Z"
+                    description: Start date of construction for a given plant
+                    nullable: true
+                  eia_false_negative:
+                    type: boolean
+                    example: false
+                    nullable: true
+                  eia_false_positive:
+                    type: boolean
+                    example: true
+                    nullable: true
+                  eia_minus_vulcan_earliest:
+                    type: integer
+                    example: 108
+                    description: The difference in days between the EIA online date and the Vulcan earliest date
+                    nullable: true
+                  eia_minus_vulcan_latest:
+                    type: integer
+                    example: -1155
+                    description: The difference in days between the EIA online date and the Vulcan latest date
+                    nullable: true
+                  eia_online_date:
+                    type: string
+                    format: date-time
+                    example: "2026-05-15T00:00:00Z"
+                    description: The EIA online month and year with each date assigned to the 15th of the given month to normalize data.
+                    nullable: true
+                  eia_status:
+                    type: string
+                    example: "(L) Regulatory approvals pending. Not under construction"
+                    description: EIA plants operational status, or its stage of construction
+                    nullable: true
+                  entity_name:
+                    type: string
+                    example: "1000 Mile Solar, LLC"
+                    description: EIA plant operating entity
+                    nullable: true
+                  generator_id:
+                    type: string
+                    example: "PV1"
+                    description: EIA ID given to each generator for a given plant
+                    nullable: true
+                  image_dates:
+                    type: string
+                    format: date-time
+                    example: "2025-04-14T00:00:00Z"
+                    description: Date of the latest available satellite image
+                    nullable: true
+                  latitude:
+                    type: number
+                    format: float
+                    example: 33.0225
+                    description: EIA plant latitude
+                    nullable: true
+                  longitude:
+                    type: number
+                    format: float
+                    example: -102.709
+                    description: EIA plant longitude
+                    nullable: true
+                  nameplate_capacity_mw:
+                    type: number
+                    format: float
+                    example: 200.0
+                    description: EIA plant generator capacity in megawatts (MW)
+                    nullable: true
+                  notes:
+                    type: string
+                    example: "land cleared"
+                    description: Observations or relevant plant comments after reviewing satellite images
+                    nullable: true
+                  permission:
+                    type: string
+                    example: "1"
+                    description: Indicates if a plant has been observed to be under construction
+                    nullable: true
+                  planned_operation_month:
+                    type: integer
+                    example: 7
+                    description: EIA reported operation month
+                    nullable: true
+                  planned_operation_year:
+                    type: integer
+                    example: 2026
+                    description: EIA reported operation year
+                    nullable: true
+                  plant_id:
+                    type: string
+                    example: "68847"
+                    description: EIA plant id
+                    nullable: true
+                  plant_name:
+                    type: string
+                    example: "1000 Mile Solar"
+                    description: EIA plant name
+                    nullable: true
+                  plant_state:
+                    type: string
+                    example: "TX"
+                    description: EIA plant state
+                    nullable: true
+                  technology:
+                    type: string
+                    example: "Solar Photovoltaic"
+                    description: EIA primary generation technology
+                    nullable: true
+                  total_generators:
+                    type: integer
+                    example: 2
+                    description: Count of generators for a given plant id
+                    nullable: true
+                  vulcan_construction_status:
+                    type: string
+                    example: "Confirmed"
+                    description: Indicates if a plant has been observed to be under construction
+                    nullable: true
+                  vulcan_earliest_online:
+                    type: string
+                    format: date-time
+                    example: "2024-02-07T00:00:00Z"
+                    description: The earliest possible date a plant is projected to be operational
+                    nullable: true
+                  vulcan_earliest_plus_7:
+                    type: string
+                    format: date-time
+                    example: "2026-01-27T00:00:00Z"
+                    description: The earliest possible date a plant could be operational if construction were to start 1 week after the last update.
+                    nullable: true
+                  vulcan_latest_online:
+                    type: string
+                    format: date-time
+                    example: "2027-07-24T00:00:00Z"
+                    description: The latest possible date a plant is projected to be operational
+                    nullable: true
+                  vulcan_status_change_date:
+                    type: string
+                    format: date-time
+                    example: "2025-06-03T00:00:00Z"
+                    description: Date of which a plants status was changed to under construction
+                    nullable: true
+                  vulcan_tech:
+                    type: string
+                    example: "Solar"
+                    description: The generalized technology assigned by Vulcan. Used to estimate construction times
+                    nullable: true
+        request:
+          type: string
+          description: The api requested.
+        status:
+          type: boolean
+          description: The status of the api request (true or false).
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+          description: The timestamp of the api request.
+          example: "2025-04-28T12:34:56Z"
+
+    LNGProjectsResponse:
+      type: object
+      description: |
+        Response schema for the LNG projects endpoint.
+        Contains detailed information about each LNG project, including construction status,
+        timelines, and geographical data.
+      properties:
+        code:
+          type: string
+          description: Unique code for the api response
+          example: "[LNG123]"
+        records:
+          type: object
+          properties:
+            columns:
+              type: array
+              items:
+                type: string
+                example: "project_id"
+            column_types:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "project_id"
+                  type:
+                    type: string
+                    example: "INTEGER"
+            rows:
+              type: array
+              items:
+                type: object
+                properties:
+                  completed:
+                    type: string
+                    format: date
+                    example: "4/15/2025"
+                    description: Date where plant has been deemed complete based on satellite observations
+                    nullable: true
+                  construction_start:
+                    type: string
+                    format: date
+                    example: "3/9/2025"
+                    description: Start date of construction for a given plant
+                    nullable: true
+                  entity:
+                    type: string
+                    example: "1000 Mile Solar, LLC"
+                    description: EIA plant operating entity
+                    nullable: true
+                  expected_operation:
+                    type: integer
+                    example: 2026
+                    nullable: true
+                  first_structures:
+                    type: string
+                    format: date
+                    example: "7/12/2023"
+                    description: Date where the first permanent structures are identified for a given plant
+                    nullable: true
+                  image_dates:
+                    type: string
+                    format: date
+                    example: "4/14/2025"
+                    description: Date of the latest available satellite image
+                    nullable: true
+                  land_cleared:
+                    type: string
+                    format: date
+                    example: "5/7/2022"
+                    description: Date of first land cleared for a given plant
+                    nullable: true
+                  latitude:
+                    type: number
+                    format: float
+                    example: 33.0225
+                    description: EIA plant latitude
+                    nullable: true
+                  longitude:
+                    type: number
+                    format: float
+                    example: -102.709
+                    description: EIA plant longitude
+                    nullable: true
+                  nameplate_capacity_mtpa:
+                    type: number
+                    format: float
+                    example: 200.0
+                    description: EIA plant generator capacity in megawatts (MW)
+                    nullable: true
+                  notes:
+                    type: string
+                    example: "land cleared"
+                    description: Observations or relevant plant comments after reviewing satellite images
+                    nullable: true
+                  phase_number:
+                    type: integer
+                    example: 1
+                    nullable: true
+                  plant_name:
+                    type: string
+                    example: "1000 Mile Solar"
+                    description: EIA plant name
+                    nullable: true
+                  technology:
+                    type: string
+                    example: "Solar Photovoltaic"
+                    description: EIA primary generation technology
+                    nullable: true
+                  trains:
+                    type: integer
+                    example: 2
+                    nullable: true
+                  vulcan_construction_status:
+                    type: string
+                    example: "Confirmed"
+                    description: Indicates if a plant has been observed to be under construction
+                    nullable: true
+                  vulcan_earliest_online:
+                    type: string
+                    format: date
+                    example: "2/7/2024"
+                    description: The earliest possible date a plant is projected to be operational
+                    nullable: true
+                  vulcan_latest_online:
+                    type: string
+                    format: date
+                    example: "7/24/2027"
+                    description: The latest possible date a plant is projected to be operational
+                    nullable: true
+                  vulcan_status_change_date:
+                    type: string
+                    format: date
+                    example: "6/3/2025"
+                    description: Date of which a plants status was changed to under construction
+                    nullable: true
+
+    MetadataHistoryResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Unique code for the api response
+          example: "[MH123]"
+        records:
+          type: object
+          properties:
+            columns:
+              type: array
+              items:
+                type: string
+              example: ["date", "entity_id", "entity_name", "plant_id", "plant_name", "sector", "plant_state", "generator_id", "nameplate_capacity_mw", "net_summer_capacity_mw", "technology", "energy_source_code", "prime_mover_code", "operating_month", "operating_year", "planned_retirement_month", "planned_retirement_year", "status", "planned_derate_year", "planned_derate_month", "planned_derate_of_summer_capacity_mw", "planned_uprate_year", "planned_uprate_month", "planned_uprate_of_summer_capacity_mw", "county", "latitude", "longitude", "planned_operation_month", "planned_operation_year", "retirement_month", "retirement_year", "net_winter_capacity_mw", "balancing_authority_code", "unit_code", "nameplate_energy_capacity_mwh", "dc_net_capacity_mw", "sector_name", "first_seen", "last_seen", "operating_date", "planned_retirement_date", "planned_operation_date", "retirement_date", "last_seen_minus_first_seen", "first_seen_status", "last_seen_status", "first_seen_planned_operation_date", "operation_minus_first_seen", "current_planned_operation_minus_first_seen_planned_operation"]
+            column_types:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Name of the column
+                    example: "plant_id"
+                  type:
+                    type: string
+                    description: Data type of the column
+                    example: "INTEGER"
+            n:
+              type: integer
+              description: Number of records returned
+              example: 503
+            rows:
+              type: array
+              items:
+                type: array
+                description: |
+                  A single data row containing values for all columns in the order defined by the columns array.
+                  Values can be strings, numbers, dates, or null depending on the column type.
+                items:
+                  anyOf:
+                    - type: string
+                      description: String values (dates, text, etc.)
+                      nullable: true
+                    - type: number
+                      format: float
+                      description: Numeric values (capacities, coordinates, etc.)
+                      nullable: true
+                    - type: integer
+                      description: Integer values (IDs, years, months, etc.)
+                      nullable: true
+              example: [
+                ["2024-04-01", 12345, "Sample Entity", 68847, "Sample Plant", "Electric Power", "TX", "GEN1", 100.5, 95.2, "Solar Photovoltaic", "SUN", "PV", 7, 2024, null, null, "Operating", null, null, null, null, null, null, "Sample County", 33.0225, -102.709, 7, 2024, null, null, 90.1, "ERCOT", "U1", null, null, "Electric Power", "2023-01-01", "2024-04-01", "2024-01-15", null, "2024-07-31", null, 456, "Operating", "Operating", "2024-07-31", 105, 0],
+                ["2024-04-01", 12346, "Another Entity", 68848, "Another Plant", "Electric Power", "VA", "GEN2", 200.0, 190.0, "Natural Gas", "NG", "CT", 8, 2024, null, null, "Under Construction", null, null, null, null, null, null, "Another County", 37.7749, -78.6569, 8, 2024, null, null, 180.0, "PJM", "U2", null, null, "Electric Power", "2023-02-01", "2024-04-01", null, null, "2024-08-31", null, 425, "Under Construction", "Under Construction", "2024-08-31", 180, 0]
+              ]
+
+
+    ProjectRankingResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Unique code for the api response
+          example: "[PR123]"
+        records:
+          type: object
+          properties:
+            columns:
+              type: array
+              items:
+                type: string
+              example: ["plant_id", "generator_id", "synmax_id", "plant_name", "plant_state", "balancing_authority_code", "technology", "eia_status", "vulcan_construction_status", "final_rank", "vulcan_proposed_online_date", "vulcan_proposed_v2_online_date", "planned_operation_date", "vulcan_earliest_online", "vulcan_earliest_plus_7", "vulcan_latest_online", "land_cleared", "first_structures", "nameplate_capacity_mw"]
+            column_types:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Name of the column
+                    example: "plant_id"
+                  type:
+                    type: string
+                    description: Data type of the column
+                    example: "BIGINT"
+            rows:
+              type: array
+              items:
+                type: array
+                description: |
+                  A single data row containing values for all columns in the order defined by the columns array.
+                  Values can be strings, numbers, integers, or null depending on the column type.
+                items:
+                  anyOf:
+                    - type: string
+                      description: String values (dates, text, status codes, etc.)
+                      nullable: true
+                    - type: number
+                      format: float
+                      description: Numeric values (ranks, capacities, etc.)
+                      nullable: true
+                    - type: integer
+                      description: Integer values (plant IDs, etc.)
+                      nullable: true
+              example: [
+                [3492281, "PV1", "3492281-PV1", "1000 Mile Solar", "TX", "SWPP", "Solar Photovoltaic", "(L) Regulatory approvals pending. Not under construction", "Confirmed", 1.0, "2025-10-01T00:00:00.000000Z", "2025-10-01T00:00:00.000000Z", "2026-07-31T00:00:00.000000Z", "2024-02-07", "2026-01-27", "2027-07-24", "2022-05-07", "2023-07-12", 200.0],
+                [3492282, "GEN2", "3492282-GEN2", "Another Solar Plant", "VA", "PJM", "Solar Photovoltaic", "(U) Under construction, less than or equal to 50 percent complete", "Confirmed", 2.5, "2026-03-15T00:00:00.000000Z", "2026-03-15T00:00:00.000000Z", "2026-08-31T00:00:00.000000Z", "2024-01-15", "2025-12-20", "2027-05-10", "2022-08-20", "2023-09-05", 150.0]
+              ]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "bad_request"
+        message:
+          type: string
+          example: "The 'from_timestamp' field is required."
