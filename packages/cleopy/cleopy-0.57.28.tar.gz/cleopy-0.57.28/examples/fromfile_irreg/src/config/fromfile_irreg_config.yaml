@@ -1,0 +1,63 @@
+# ----- CLEO -----
+# File: fromfile_irreg_config.txt
+# Project: config
+# Created Date: Thursday 18th April 2024
+# Author: Clara Bayley (CB)
+# Additional Contributors:
+# -----
+# License: BSD 3-Clause "New" or "Revised" License
+# https://opensource.org/licenses/BSD-3-Clause
+# -----
+# Copyright (c) 2023 MPI-M, Clara Bayley
+# -----
+# File Description:
+# Configuration file for contol example of 3D time varying thermodyanamics read from a file.
+# Note: The initial superdroplets data read from file "initsupers_filename" can be made with
+# CLEO's cleopy module (see Python script "create_initsuperdropsbinary_script.py" for example of usage).
+# Likewise the "grid_filename" can be made using cleopy (see "create_gbxboundariesbinary_script.py"),
+# and so can the thermodynamics files when using coupled thermodynamics "fromfile_irreg".
+#
+
+### Kokkos Initialization Parameters ###
+kokkos_settings:
+  num_threads: 16                                          # number of threads for host parallel backend
+
+### SDM Runtime Parameters ###
+domain:
+  nspacedims : 3                                          # no. of spatial dimensions to model
+  ngbxs : 780                                             # total number of Gbxs
+  maxnsupers: 1440                                        # maximum number of SDs
+
+timesteps:
+  CONDTSTEP : 2                                           # time between SD condensation [s]
+  COLLTSTEP : 2                                           # time between SD collision [s]
+  MOTIONTSTEP : 3                                         # time between SDM motion [s]
+  COUPLTSTEP : 100                                        # time between dynamic couplings [s]
+  OBSTSTEP : 100                                          # time between SDM observations [s]
+  T_END : 10800                                           # time span of integration from 0s to T_END [s]
+
+### Initialisation Parameters ###
+inputfiles:
+  constants_filename : ./libs/cleoconstants.hpp          # name of file for values of physical constants
+  grid_filename : ./build/share/fromfile_irreg_dimlessGBxboundaries.dat   # binary filename for initialisation of GBxs / GbxMaps
+
+initsupers:
+  type: frombinary                                        # type of initialisation of super-droplets
+  initsupers_filename : ./build/share/fromfile_irreg_dimlessSDsinit.dat   # binary filename for initialisation of SDs
+
+### Output Parameters ###
+outputdata:
+  setup_filename : ./build/bin/fromfile_irreg_setup.txt                   # .txt filename to copy configuration to
+  zarrbasedir : ./build/bin/fromfile_irreg_sol.zarr                       # zarr store base directory
+  maxchunk : 2500000                                      # maximum no. of elements in chunks of zarr store array
+
+### Coupled Dynamics Parameters ###
+coupled_dynamics:
+  type : fromfile                                         # type of coupled dynamics to configure
+  press : ./build/share/fromfile_irreg_dimlessthermo_press.dat            # binary filename for pressure
+  temp : ./build/share/fromfile_irreg_dimlessthermo_temp.dat              # binary filename for temperature
+  qvap : ./build/share/fromfile_irreg_dimlessthermo_qvap.dat              # binary filename for vapour mixing ratio
+  qcond : ./build/share/fromfile_irreg_dimlessthermo_qcond.dat            # binary filename for liquid mixing ratio
+  wvel : ./build/share/fromfile_irreg_dimlessthermo_wvel.dat              # binary filename for vertical (coord3) velocity
+  uvel : ./build/share/fromfile_irreg_dimlessthermo_uvel.dat              # binary filename for eastwards (coord1) velocity
+  vvel : ./build/share/fromfile_irreg_dimlessthermo_vvel.dat              # binary filename for eastwards (coord1) velocity

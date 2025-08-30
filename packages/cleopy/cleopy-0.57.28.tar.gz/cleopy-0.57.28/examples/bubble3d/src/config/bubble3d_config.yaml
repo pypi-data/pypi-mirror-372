@@ -1,0 +1,68 @@
+# ----- CLEO -----
+# File: bubble3d_config.txt
+# Project: config
+# Created Date: Thursday 18th April 2024
+# Author: Clara Bayley (CB)
+# Additional Contributors:
+# -----
+# License: BSD 3-Clause "New" or "Revised" License
+# https://opensource.org/licenses/BSD-3-Clause
+# -----
+# Copyright (c) 2023 MPI-M, Clara Bayley
+# -----
+# File Description:
+# Configuration file for test of YAC with 3D time varying thermodynamics example.
+# Note: The initial superdroplets data read from file "initsupers_filename" can be made with
+# CLEO's cleopy module (see Python script "create_initsuperdropsbinary_script.py" for example of usage).
+# Likewise the "grid_filename" can be made using cleopy (see "create_gbxboundariesbinary_script.py"),
+# and so can the thermodynamics files when using coupled thermodynamics "fromfile".
+#
+
+### ICON-YAC initialisation parameters ###
+### Note: yac_bubble_data_reader.py reads icon_yac_config, including orginal_icon_[XXX] files ###
+icon_yac_config:
+  orginal_icon_grid_file: /work/bm1183/m300950/icon/build/experiments/aes_bubble/aes_bubble_atm_cgrid_ml.nc
+  orginal_icon_data_file: /work/bm1183/m300950/icon/build/experiments/aes_bubble/aes_bubble_atm_3d_ml_20080801T000000Z.nc
+  icon_grid_name: icon_atmos_grid                         # must match CLEO (see yac_cartesian_dynamics.cpp)
+  icon_data_timestep: 30                                  # must match ICON data file [seconds]
+  num_vertical_levels: 24                                 # number of vertical levels in CLEO (<= ICON)
+
+### Kokkos Initialization Parameters ###
+kokkos_settings:
+  num_threads: 32                                          # number of threads for host parallel backend
+
+### SDM Runtime Parameters ###
+domain:
+  nspacedims : 3                                          # no. of spatial dimensions to model
+  ngbxs : 1440                                            # total number of Gbxs
+  maxnsupers: 1440                                        # maximum number of SDs
+
+timesteps:
+  CONDTSTEP : 2                                           # time between SD condensation [s]
+  COLLTSTEP : 2                                           # time between SD collision [s]
+  MOTIONTSTEP : 3                                         # time between SDM motion [s]
+  COUPLTSTEP : 60                                         # time between dynamic couplings [s]
+  OBSTSTEP : 60                                           # time between SDM observations [s]
+  T_END : 7200                                            # time span of integration from 0s to T_END [s]
+
+### Initialisation Parameters ###
+inputfiles:
+  constants_filename : ./libs/cleoconstants.hpp          # name of file for values of physical constants
+  grid_filename : ./build/share/bubble3d_dimlessGBxboundaries.dat   # binary filename for initialisation of GBxs / GbxMaps
+
+initsupers:
+  type: frombinary                                        # type of initialisation of super-droplets
+  initsupers_filename : ./build/share/bubble3d_dimlessSDsinit.dat   # binary filename for initialisation of SDs
+
+### Output Parameters ###
+outputdata:
+  setup_filename : ./build/bin/bubble3d_setup.txt    # .txt filename to copy configuration to
+  zarrbasedir : ./build/bin/bubble3d_sol.zarr        # zarr store base directory
+  maxchunk : 2500000                                          # maximum no. of elements in chunks of zarr store array
+
+coupled_dynamics:
+  type: yac
+  lower_longitude: -0.989601687                               # must match xgrid domain delta_x
+  upper_longitude: 0.895353906
+  lower_latitude: -0.392699082                                # must match ygrid domain delta_y
+  upper_latitude: 0.392699082
