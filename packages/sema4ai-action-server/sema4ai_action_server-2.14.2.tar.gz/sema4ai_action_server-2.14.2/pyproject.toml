@@ -1,0 +1,91 @@
+[tool.poetry]
+name = "sema4ai-action-server"
+version = "2.14.2"
+description = """Sema4AI Action Server"""
+authors = ["Fabio Z. <fabio@robocorp.com>"]
+readme = "README.md"
+repository = "https://github.com/sema4ai/actions/"
+license = "Apache-2.0"
+packages = [{ include = "sema4ai", from = "src" }]
+include = [
+	"src/sema4ai/action_server/_static_contents.py",
+	"src/sema4ai/action_server/_oauth2_config.py",
+	"src/sema4ai/action_server/bin/rcc*",
+]
+homepage = "https://github.com/sema4ai/actions/"
+
+[tool.poetry.scripts]
+action-server = "sema4ai.action_server.cli:main"
+
+
+[tool.poetry.dependencies]
+aiohttp = "^3.11.16"
+fastapi-slim = "^0.116.1"
+jsonschema = "^4.23.0"
+# This one needs a `_fix_jsonschema_specifications` hack
+# See: https://github.com/python-jsonschema/jsonschema-specifications/issues/61
+jsonschema-specifications = "^2024.10.1"
+msgspec = "^0.18"
+psutil = ">=5.0,<7.0"
+pydantic = "^2.9.2"
+pyyaml = "^6"
+python = ">=3.12,<3.14"
+requests = "^2"
+sema4ai-actions = "^1.4.2"
+termcolor = "^2.4.0"
+uvicorn = "^0.34.0"
+websockets = "^13.1"
+cryptography = "^44.0.1"
+requests_oauthlib = "^2.0"
+watchfiles = "^0.24.0"
+sema4ai-common = "^0.2.1"
+mcp = "^1.10.0"
+
+[tool.poetry.group.dev.dependencies]
+sema4ai-devutils = { path = "../devutils/", develop = true }
+sema4ai-build-common = { path = "../build_common/", develop = true }
+types-requests = "^2"
+types-PyYAML = "^6"
+robocorp-log-pytest = "^0.0.2"
+types-psutil = "^5"
+pyoxidizer = "^0.24.0"
+types-jsonschema = "^4.22.0"
+sema4ai-data = "^0.0.5"
+pyinstaller = "6.12.0" # Upgrading to 6.13.0 broke the build on Mac (it seemed to complete but the build didn't finish).
+pyinstaller-hooks-contrib = "2025.2"
+sema4ai-mcp = { path = "../mcp/", develop = true }
+
+[tool.mypy]
+mypy_path = "src:tests"
+
+[tool.black]
+skip-string-normalization = false
+skip-magic-trailing-comma = false
+
+[tool.isort]
+profile = "black"
+
+[build-system]
+requires = ["poetry-core", "setuptools"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.build]
+script = "build.py"
+generate-setup-file = true
+
+[tool.pytest.ini_options]
+norecursedirs = "tests/action_server_tests/test_devenv/*"
+
+# This is for backward compatibility.
+[[tool.mypy.overrides]]
+module = "robocorp.actions.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "robocorp.tasks.*"
+ignore_missing_imports = true
+
+
+[tool.robocorp.log]
+default_library_filter_kind = "exclude"
+log_filter_rules = [{ name = "sema4ai", kind = "full_log" }]
