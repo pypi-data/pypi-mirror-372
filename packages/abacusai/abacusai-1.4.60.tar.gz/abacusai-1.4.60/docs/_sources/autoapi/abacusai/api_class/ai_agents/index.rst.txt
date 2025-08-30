@@ -1,0 +1,838 @@
+abacusai.api_class.ai_agents
+============================
+
+.. py:module:: abacusai.api_class.ai_agents
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   abacusai.api_class.ai_agents.MIN_AGENT_SLEEP_TIME
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   abacusai.api_class.ai_agents.FieldDescriptor
+   abacusai.api_class.ai_agents.JSONSchema
+   abacusai.api_class.ai_agents.WorkflowNodeInputMapping
+   abacusai.api_class.ai_agents.WorkflowNodeInputSchema
+   abacusai.api_class.ai_agents.WorkflowNodeOutputMapping
+   abacusai.api_class.ai_agents.WorkflowNodeOutputSchema
+   abacusai.api_class.ai_agents.TriggerConfig
+   abacusai.api_class.ai_agents.WorkflowGraphNode
+   abacusai.api_class.ai_agents.DecisionNode
+   abacusai.api_class.ai_agents.WorkflowGraphEdge
+   abacusai.api_class.ai_agents.WorkflowGraph
+   abacusai.api_class.ai_agents.AgentConversationMessage
+   abacusai.api_class.ai_agents.WorkflowNodeTemplateConfig
+   abacusai.api_class.ai_agents.WorkflowNodeTemplateInput
+   abacusai.api_class.ai_agents.WorkflowNodeTemplateOutput
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   abacusai.api_class.ai_agents.validate_input_dict_param
+
+
+Module Contents
+---------------
+
+.. py:data:: MIN_AGENT_SLEEP_TIME
+   :value: 300
+
+
+.. py:function:: validate_input_dict_param(dict_object, friendly_class_name, must_contain=[])
+
+.. py:class:: FieldDescriptor
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Configs for vector store indexing.
+
+   :param field: The field to be extracted. This will be used as the key in the response.
+   :type field: str
+   :param description: The description of this field. If not included, the response_field will be used.
+   :type description: str
+   :param example_extraction: An example of this extracted field.
+   :type example_extraction: Union[str, int, bool, float]
+   :param type: The type of this field. If not provided, the default type is STRING.
+   :type type: FieldDescriptorType
+
+
+   .. py:attribute:: field
+      :type:  str
+
+
+   .. py:attribute:: description
+      :type:  str
+      :value: None
+
+
+
+   .. py:attribute:: example_extraction
+      :type:  Union[str, int, bool, float, list, dict]
+      :value: None
+
+
+
+   .. py:attribute:: type
+      :type:  abacusai.api_class.enums.FieldDescriptorType
+
+
+.. py:class:: JSONSchema
+
+   .. py:method:: from_fields_list(fields_list)
+      :classmethod:
+
+
+
+   .. py:method:: to_fields_list(json_schema)
+      :classmethod:
+
+
+
+.. py:class:: WorkflowNodeInputMapping
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Represents a mapping of inputs to a workflow node.
+
+   :param name: The name of the input variable of the node function.
+   :type name: str
+   :param variable_type: The type of the input. If the type is `IGNORE`, the input will be ignored.
+   :type variable_type: Union[WorkflowNodeInputType, str]
+   :param variable_source: The name of the node this variable is sourced from.
+                           If the type is `WORKFLOW_VARIABLE`, the value given by the source node will be directly used.
+                           If the type is `USER_INPUT`, the value given by the source node will be used as the default initial value before the user edits it.
+                           Set to `None` if the type is `USER_INPUT` and the variable doesn't need a pre-filled initial value.
+   :type variable_source: str
+   :param is_required: Indicates whether the input is required. Defaults to True.
+   :type is_required: bool
+   :param description: The description of this input.
+   :type description: str
+   :param constant_value: The constant value of this input if variable type is CONSTANT. Only applicable for template nodes.
+   :type constant_value: str
+
+
+   .. py:attribute:: name
+      :type:  str
+
+
+   .. py:attribute:: variable_type
+      :type:  abacusai.api_class.enums.WorkflowNodeInputType
+
+
+   .. py:attribute:: variable_source
+      :type:  str
+      :value: None
+
+
+
+   .. py:attribute:: source_prop
+      :type:  str
+      :value: None
+
+
+
+   .. py:attribute:: is_required
+      :type:  bool
+      :value: True
+
+
+
+   .. py:attribute:: description
+      :type:  str
+      :value: None
+
+
+
+   .. py:attribute:: constant_value
+      :type:  str
+      :value: None
+
+
+
+   .. py:method:: __post_init__()
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: from_dict(mapping)
+      :classmethod:
+
+
+
+.. py:class:: WorkflowNodeInputSchema
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`, :py:obj:`JSONSchema`
+
+
+   A schema conformant to react-jsonschema-form for workflow node input.
+
+   To initialize a WorkflowNodeInputSchema dependent on another node's output, use the from_workflow_node method.
+
+   :param json_schema: The JSON schema for the input, conformant to react-jsonschema-form specification. Must define keys like "title", "type", and "properties". Supported elements include Checkbox, Radio Button, Dropdown, Textarea, Number, Date, and file upload. Nested elements, arrays, and other complex types are not supported.
+   :type json_schema: dict
+   :param ui_schema: The UI schema for the input, conformant to react-jsonschema-form specification.
+   :type ui_schema: dict
+
+
+   .. py:attribute:: json_schema
+      :type:  dict
+
+
+   .. py:attribute:: ui_schema
+      :type:  dict
+
+
+   .. py:attribute:: schema_source
+      :type:  str
+      :value: None
+
+
+
+   .. py:attribute:: schema_prop
+      :type:  str
+      :value: None
+
+
+
+   .. py:attribute:: runtime_schema
+      :type:  bool
+      :value: False
+
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: from_dict(schema)
+      :classmethod:
+
+
+
+   .. py:method:: from_workflow_node(schema_source, schema_prop)
+      :classmethod:
+
+
+      Creates a WorkflowNodeInputSchema instance which references the schema generated by a WorkflowGraphNode.
+
+      :param schema_source: The name of the source WorkflowGraphNode.
+      :type schema_source: str
+      :param schema_prop: The name of the input schema parameter which source node outputs.
+      :type schema_prop: str
+
+
+
+   .. py:method:: from_input_mappings(input_mappings)
+      :classmethod:
+
+
+      Creates a json_schema for the input schema of the node from it's input mappings.
+
+      :param input_mappings: The input mappings for the node.
+      :type input_mappings: List[WorkflowNodeInputMapping]
+
+
+
+   .. py:method:: from_tool_variable_mappings(tool_variable_mappings)
+      :classmethod:
+
+
+      Creates a WorkflowNodeInputSchema for the given tool variable mappings.
+
+      :param tool_variable_mappings: The tool variable mappings for the node.
+      :type tool_variable_mappings: List[dict]
+
+
+
+.. py:class:: WorkflowNodeOutputMapping
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Represents a mapping of output from a workflow node.
+
+   :param name: The name of the output.
+   :type name: str
+   :param variable_type: The type of the output in the form of an enum or a string.
+   :type variable_type: Union[WorkflowNodeOutputType, str]
+   :param description: The description of this output.
+   :type description: str
+
+
+   .. py:attribute:: name
+      :type:  str
+
+
+   .. py:attribute:: variable_type
+      :type:  Union[abacusai.api_class.enums.WorkflowNodeOutputType, str]
+
+
+   .. py:attribute:: description
+      :type:  str
+      :value: None
+
+
+
+   .. py:method:: __post_init__()
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: from_dict(mapping)
+      :classmethod:
+
+
+
+.. py:class:: WorkflowNodeOutputSchema
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`, :py:obj:`JSONSchema`
+
+
+   A schema conformant to react-jsonschema-form for a workflow node output.
+
+   :param json_schema: The JSON schema for the output, conformant to react-jsonschema-form specification.
+   :type json_schema: dict
+
+
+   .. py:attribute:: json_schema
+      :type:  dict
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: from_dict(schema)
+      :classmethod:
+
+
+
+.. py:class:: TriggerConfig
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Represents the configuration for a trigger workflow node.
+
+   :param sleep_time: The time in seconds to wait before the node gets executed again.
+   :type sleep_time: int
+
+
+   .. py:attribute:: sleep_time
+      :type:  int
+      :value: None
+
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: from_dict(configs)
+      :classmethod:
+
+
+
+.. py:class:: WorkflowGraphNode(name, function = None, input_mappings = None, output_mappings = None, function_name = None, source_code = None, input_schema = None, output_schema = None, template_metadata = None, trigger_config = None)
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Represents a node in an Agent workflow graph.
+
+   :param name: A unique name for the workflow node.
+   :type name: str
+   :param input_mappings: List of input mappings for the node. Each arg/kwarg of the node function should have a corresponding input mapping.
+   :type input_mappings: List[WorkflowNodeInputMapping]
+   :param output_mappings: List of outputs for the node. Each field in the returned dict/AgentResponse must have a corresponding output in the list.
+   :type output_mappings: List[str]
+   :param function: The callable node function reference.
+   :type function: callable
+   :param input_schema: The react json schema for the user input variables. This should be empty for CHAT interface.
+   :type input_schema: WorkflowNodeInputSchema
+   :param output_schema: The list of outputs to be shown on UI. Each output corresponds to a field in the output mappings of the node.
+   :type output_schema: List[str]
+
+   Additional Attributes:
+       function_name (str): The name of the function.
+       source_code (str): The source code of the function.
+       trigger_config (TriggerConfig): The configuration for a trigger workflow node.
+
+
+   .. py:attribute:: template_metadata
+      :value: None
+
+
+
+   .. py:attribute:: trigger_config
+      :value: None
+
+
+
+   .. py:attribute:: node_type
+      :value: 'workflow_node'
+
+
+
+   .. py:method:: _raw_init(name, input_mappings = None, output_mappings = None, function = None, function_name = None, source_code = None, input_schema = None, output_schema = None, template_metadata = None, trigger_config = None)
+      :classmethod:
+
+
+
+   .. py:method:: from_template(template_name, name, configs = None, input_mappings = None, input_schema = None, output_schema = None, sleep_time = None)
+      :classmethod:
+
+
+
+   .. py:method:: from_tool(tool_name, name, configs = None, input_mappings = None, input_schema = None, output_schema = None)
+      :classmethod:
+
+
+      Creates and returns a WorkflowGraphNode based on an available user created tool.
+      Note: DO NOT specify the output mapping for the tool; it will be inferred automatically. Doing so will raise an error.
+
+      :param tool_name: The name of the tool. There should already be a tool created in the platform with tool_name.
+      :param name: The name to assign to the WorkflowGraphNode instance.
+      :param configs: The configuration state of the tool to use (if necessary). If not specified, will use the tool's default configuration.
+      :type configs: optional
+      :param input_mappings: The WorkflowNodeInputMappings for this node.
+      :type input_mappings: optional
+      :param input_schema: The WorkflowNodeInputSchema for this node.
+      :type input_schema: optional
+      :param output_schema: The WorkflowNodeOutputSchema for this node.
+      :type output_schema: optional
+
+
+
+   .. py:method:: from_system_tool(tool_name, name, configs = None, input_mappings = None, input_schema = None, output_schema = None)
+      :classmethod:
+
+
+      Creates and returns a WorkflowGraphNode based on the name of an available system tool.
+      Note: DO NOT specify the output mapping for the tool; it will be inferred automatically. Doing so will raise an error.
+
+      :param tool_name: The name of the tool. There should already be a tool created in the platform with tool_name.
+      :param name: The name to assign to the WorkflowGraphNode instance.
+      :param configs: The configuration state of the tool to use (if necessary). If not specified, will use the tool's default configuration.
+      :type configs: optional
+      :param input_mappings: The WorkflowNodeInputMappings for this node.
+      :type input_mappings: optional
+      :param input_schema: The WorkflowNodeInputSchema for this node.
+      :type input_schema: optional
+      :param output_schema: The WorkflowNodeOutputSchema for this node.
+      :type output_schema: optional
+
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: is_template_node()
+
+
+   .. py:method:: is_trigger_node()
+
+
+   .. py:method:: from_dict(node)
+      :classmethod:
+
+
+
+   .. py:method:: __setattr__(name, value)
+
+
+   .. py:method:: __getattribute__(name)
+
+
+   .. py:class:: Outputs(node)
+
+      .. py:attribute:: node
+
+
+      .. py:method:: __getattr__(name)
+
+
+
+   .. py:property:: outputs
+
+
+.. py:class:: DecisionNode(name, condition, input_mappings)
+
+   Bases: :py:obj:`WorkflowGraphNode`
+
+
+   Represents a decision node in an Agent workflow graph. It is connected between two workflow nodes and is used to determine if subsequent nodes should be executed.
+
+
+   .. py:attribute:: node_type
+      :value: 'decision_node'
+
+
+
+   .. py:attribute:: name
+
+
+   .. py:attribute:: source_code
+
+
+   .. py:attribute:: output_mappings
+
+
+   .. py:attribute:: template_metadata
+      :value: None
+
+
+
+   .. py:attribute:: trigger_config
+      :value: None
+
+
+
+   .. py:attribute:: input_schema
+      :value: None
+
+
+
+   .. py:attribute:: output_schema
+      :value: None
+
+
+
+   .. py:attribute:: function_name
+      :value: None
+
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: from_dict(node)
+      :classmethod:
+
+
+
+.. py:class:: WorkflowGraphEdge(source, target, details = None)
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Represents an edge in an Agent workflow graph.
+
+   To make an edge conditional, provide {'EXECUTION_CONDITION': '<condition>'} key-value in the details dictionary.
+   The condition should be a Pythonic expression string that evaluates to a boolean value and only depends on the outputs of the source node of the edge.
+
+   :param source: The name of the source node of the edge.
+   :type source: str
+   :param target: The name of the target node of the edge.
+   :type target: str
+   :param details: Additional details about the edge. Like the condition for edge execution.
+   :type details: dict
+
+
+   .. py:attribute:: source
+      :type:  Union[str, WorkflowGraphNode]
+
+
+   .. py:attribute:: target
+      :type:  Union[str, WorkflowGraphNode]
+
+
+   .. py:attribute:: details
+      :type:  dict
+
+
+   .. py:method:: to_nx_edge()
+
+
+   .. py:method:: from_dict(input_dict)
+      :classmethod:
+
+
+
+.. py:class:: WorkflowGraph
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Represents an Agent workflow graph.
+
+   :param nodes: A list of nodes in the workflow graph.
+   :type nodes: List[Union[WorkflowGraphNode, DecisionNode]]
+   :param primary_start_node: The primary node to start the workflow from.
+   :type primary_start_node: Union[str, WorkflowGraphNode]
+   :param common_source_code: Common source code that can be used across all nodes.
+   :type common_source_code: str
+
+
+   .. py:attribute:: nodes
+      :type:  List[Union[WorkflowGraphNode, DecisionNode]]
+      :value: []
+
+
+
+   .. py:attribute:: edges
+      :type:  List[Union[WorkflowGraphEdge, Tuple[WorkflowGraphNode, WorkflowGraphNode, dict], Tuple[str, str, dict]]]
+      :value: []
+
+
+
+   .. py:attribute:: primary_start_node
+      :type:  Union[str, WorkflowGraphNode]
+      :value: None
+
+
+
+   .. py:attribute:: common_source_code
+      :type:  str
+      :value: None
+
+
+
+   .. py:attribute:: specification_type
+      :type:  str
+      :value: 'data_flow'
+
+
+
+   .. py:method:: __post_init__()
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: from_dict(graph)
+      :classmethod:
+
+
+
+.. py:class:: AgentConversationMessage
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Message format for agent conversation
+
+   :param is_user: Whether the message is from the user.
+   :type is_user: bool
+   :param text: The message's text.
+   :type text: str
+   :param document_contents: Dict of document name to document text in case of any document present.
+   :type document_contents: dict
+
+
+   .. py:attribute:: is_user
+      :type:  bool
+      :value: None
+
+
+
+   .. py:attribute:: text
+      :type:  str
+      :value: None
+
+
+
+   .. py:attribute:: document_contents
+      :type:  dict
+      :value: None
+
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+.. py:class:: WorkflowNodeTemplateConfig
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Represents a WorkflowNode template config.
+
+   :param name: A unique name of the config.
+   :type name: str
+   :param description: The description of this config.
+   :type description: str
+   :param default_value: Default value of the config to be used if value is not provided during node initialization.
+   :type default_value: str
+   :param is_required: Indicates whether the config is required. Defaults to False.
+   :type is_required: bool
+
+
+   .. py:attribute:: name
+      :type:  str
+
+
+   .. py:attribute:: description
+      :type:  str
+      :value: None
+
+
+
+   .. py:attribute:: default_value
+      :type:  str
+      :value: None
+
+
+
+   .. py:attribute:: is_required
+      :type:  bool
+      :value: False
+
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: from_dict(mapping)
+      :classmethod:
+
+
+
+.. py:class:: WorkflowNodeTemplateInput
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Represents an input to the workflow node generated using template.
+
+   :param name: A unique name of the input.
+   :type name: str
+   :param is_required: Indicates whether the input is required. Defaults to False.
+   :type is_required: bool
+   :param description: The description of this input.
+   :type description: str
+
+
+   .. py:attribute:: name
+      :type:  str
+
+
+   .. py:attribute:: is_required
+      :type:  bool
+      :value: False
+
+
+
+   .. py:attribute:: description
+      :type:  str
+      :value: ''
+
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: from_dict(mapping)
+      :classmethod:
+
+
+
+.. py:class:: WorkflowNodeTemplateOutput
+
+   Bases: :py:obj:`abacusai.api_class.abstract.ApiClass`
+
+
+   Represents an output returned by the workflow node generated using template.
+
+   :param name: The name of the output.
+   :type name: str
+   :param variable_type: The type of the output.
+   :type variable_type: WorkflowNodeOutputType
+   :param description: The description of this output.
+   :type description: str
+
+
+   .. py:attribute:: name
+      :type:  str
+
+
+   .. py:attribute:: variable_type
+      :type:  abacusai.api_class.enums.WorkflowNodeOutputType
+
+
+   .. py:attribute:: description
+      :type:  str
+      :value: ''
+
+
+
+   .. py:method:: to_dict()
+
+      Standardizes converting an ApiClass to dictionary.
+      Keys of response dictionary are converted to camel case.
+      This also validates the fields ( type, value, etc ) received in the dictionary.
+
+
+
+   .. py:method:: from_dict(mapping)
+      :classmethod:
+
+
+
