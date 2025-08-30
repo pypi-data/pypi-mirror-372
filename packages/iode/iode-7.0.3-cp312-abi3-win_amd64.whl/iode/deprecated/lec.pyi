@@ -1,0 +1,3 @@
+from iode import execute_lec as execute_lec
+
+def exec_lec(lec: str, t: int = -1) -> float | list[float]: ...
