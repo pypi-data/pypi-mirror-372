@@ -1,0 +1,3 @@
+WIKI_HOST = ""
+PROJECT_HOST = "prom.ua"
+PROJECT_PORT = ""
