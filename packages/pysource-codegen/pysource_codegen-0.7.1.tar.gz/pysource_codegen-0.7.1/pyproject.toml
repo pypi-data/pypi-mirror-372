@@ -1,0 +1,106 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pysource-codegen"
+version= "0.7.1"
+description = 'generate random python code to test linter/formatter/and other tools'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Frank Hoffmann", email = "15r10nk-git@polarbit.de" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+  "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+"astunparse >=1.6.3; python_version<'3.9' ",
+"typing-extensions>=4.7.1"
+]
+
+[project.urls]
+Documentation = "https://github.com/15r10nk/pysource-codegen#readme"
+Issues = "https://github.com/15r10nk/pysource-codegen/issues"
+Source = "https://github.com/15r10nk/pysource-codegen"
+
+[tool.hatch.version]
+path = "pysource_codegen/__init__.py"
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python=["3.8","3.9","3.10","3.11","3.12","3.13","3.14"]
+
+[tool.hatch.envs.hatch-test]
+extra-dependencies=[
+"rich>=12.0.0",
+"inline-snapshot>=0.4.0",
+"pysource-minimize>=0.5.0"
+]
+
+[[tool.hatch.envs.types.matrix]]
+python=["3.8","3.9","3.10","3.11","3.12","3.13","3.14"]
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+    "mypy>=1.0.0",
+    "rich>=12.0.0",
+    "inline-snapshot>=0.4.0",
+    "pysource-minimize>=0.5.0",
+    "pytest"
+]
+
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:pysource_codegen tests}"
+
+[tool.coverage.run]
+source_pkgs = ["pysource_codegen", "tests"]
+branch = true
+parallel = true
+omit = [
+  "pysource_codegen/__about__.py",
+]
+
+[tool.coverage.paths]
+pysource_codegen = ["pysource_codegen", "*/pysource-codegen/pysource_codegen"]
+tests = ["tests", "*/pysource-codegen/tests"]
+
+[tool.coverage.report]
+exclude_lines = ["assert False", "raise NotImplemented"]
+
+[tool.commitizen]
+changelog_incremental = true
+major_version_zero = true
+tag_format = "v$major.$minor.$patch$prerelease"
+update_changelog_on_bump = true
+version_files = [
+  "pysource_codegen/__init__.py:__version__"
+]
+version_provider = "pep621"
+
+[tool.scriv]
+format = "md"
+version = "command: cz bump --get-next"
+
+[tool.mypy]
+exclude="tests/.*_samples"
+[tool.hatch.envs.release.scripts]
+create=[
+    "cz bump",
+    "git push --force-with-lease origin main $(git describe main --tags)",
+]
+
+[project.scripts]
+pysource-codegen = "pysource_codegen.__main__:run"
