@@ -1,0 +1,70 @@
+[run]
+# In coverage 4.0b3, concurrency=gevent is exactly equivalent to
+# concurrency=greenlet, except it causes coverage itself to import
+# gevent. That messes up our coverage numbers for top-level
+# statements, so we use greenlet instead. See https://github.com/gevent/gevent/pull/655#issuecomment-141198002
+# See also .coveragerc-pypy
+concurrency = greenlet
+# In 7.9.1, the default trace engine changed to ``sys.monitoring``
+# for Python 3.14rc1+, but that breaks us:
+#   ConfigError: Can't support concurrency=greenlet with SysMonitor, only threads
+# so force it to always be ctrace.
+core = ctrace
+parallel = True
+source = gevent
+omit =
+    # This is for <= 2.7.8, which we don't test
+    */gevent/_ssl2.py
+    */gevent/libev/_corecffi_build.py
+    */gevent/libuv/_corecffi_build.py
+    */gevent/win32util.py
+    # having concurrency=greenlet means that the Queue class
+    # which is used from multiple real threads doesn't
+    # properly get covered.
+    */gevent/_threading.py
+    # local.so sometimes gets included, and it can't be parsed
+    # as source, so it fails the whole process.
+    *.so
+    */gevent/libev/*.so
+    */gevent/libuv/*.so
+    */gevent/resolver/*.so
+# New in 5.0; required for the GHA coveralls submission.
+# Perhaps this obsoletes the source section in [paths]?
+relative_files = True
+
+[report]
+# Coverage is run on Linux under cPython 2/3 and pypy
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    except ImportError:
+    if __name__ == .__main__.:
+    if sys.platform == 'win32':
+    if mswindows:
+    if is_windows:
+    if WIN:
+    self.fail
+omit =
+    # local.so sometimes gets included, and it can't be parsed
+    # as source, so it fails the whole process.
+    # coverage 4.5 needs this specified here, 4.4.2 needed it in [run]
+    *.so
+    /tmp/test_*
+    # Third-party vendored code
+    src/gevent/_tblib.py
+
+# [paths]
+# # Combine source and paths from the Travis CI installs so they all get
+# # collapsed during combining. Otherwise, coveralls.io reports
+# # many different files (/lib/pythonX.Y/site-packages/gevent/...) and we don't
+# # get a good aggregate number.
+# source =
+#      src/
+#      */lib/*/site-packages/
+#      */pypy*/site-packages/
+
+# Local Variables:
+# mode: conf
+# End:
