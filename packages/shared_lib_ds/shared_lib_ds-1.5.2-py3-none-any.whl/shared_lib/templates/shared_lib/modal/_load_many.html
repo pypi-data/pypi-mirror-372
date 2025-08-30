@@ -1,0 +1,79 @@
+{# modal/_load_many.html #}
+{% load static %}
+{% if items %}
+<style>
+.modal-title { color:#777; line-height:1; transition:.3s; text-decoration:none; }
+.modal .modal-dialog .modal-footer .popup-check { color:#777; line-height:1; transition:.3s; text-decoration:none; }
+.modal-body { padding:0; }
+</style>
+
+{# ----- 모달 DOM들 렌더 ----- #}
+{% for it in items %}
+<div class="modal fade" id="popupModal_{{ it.uid }}" tabindex="-1" aria-labelledby="popupModalLabel_{{ it.uid }}" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="popupModalLabel_{{ it.uid }}">{{ it.popup.modal_title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        {% if it.type == 'ModalRotateBG' %}
+          {% include 'shared_lib/modal/rotate_bg.html' with popup=it.popup %}
+        {% elif it.type == 'ModalLinkVideo' %}
+          {% include 'shared_lib/modal/link_video.html' with popup=it.popup %}
+        {% elif it.type == 'ModalSingleBG' %}
+          {% include 'shared_lib/modal/single_bg.html' with popup=it.popup section_id=it.modal_id %}
+        {% elif it.type == 'ModalImageOnly' %}
+          {% include 'shared_lib/modal/image_only.html' with popup=it.popup %}
+        {% endif %}
+      </div>
+
+      <div class="modal-footer justify-content-start">
+        <div class="popup-check">
+          <input type="checkbox" class="epopup_suppress" data-modal-id="popupModal_{{ it.uid }}" id="epopup_suppress_{{ it.uid }}" />
+          <label for="epopup_suppress_{{ it.uid }}" data-id="checkbox_text">
+            {{ dont_show_again }}
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{# ----- 스크립트: 큐로 순차 오픈 + 쿠키 처리 ----- #}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+  jQuery(function($) {
+    // 렌더된 모달 id 배열
+    var ids = [
+      {% for it in items %}'popupModal_{{ it.uid }}'{% if not forloop.last %}, {% endif %}{% endfor %}
+    ];
+    // 쿠키 없는 것만 큐에 적재
+    var queue = ids.filter(function(id){ return !$.cookie('ecacher-modal_' + id); });
+
+    function openNext() {
+      if (queue.length === 0) return;
+      var id = queue.shift();
+      var $m = $('#' + id);
+      $m.modal('show').one('hidden.bs.modal', openNext);
+    }
+
+    // "다시 보지 않기" 체크 → 쿠키 저장 + 닫기
+    $(document).on('click', '.epopup_suppress', function() {
+      var modalId = $(this).data('modalId');
+      if ($(this).is(':checked')) {
+        $('#' + modalId).modal('hide');
+        $.cookie('ecacher-modal_' + modalId, true);
+      } else {
+        $.cookie('ecacher-modal_' + modalId, false);
+      }
+    });
+
+    // 시작!
+    openNext();
+  });
+</script>
+{% endif %}
