@@ -1,0 +1,81 @@
+FROM {{ base_image_name }}
+
+ENV ODOO_CONFIG_FILE="/home/odoo/.openerp_serverrc" \
+{% for variable, value in variables.items() %}
+    {{ variable.upper() }}={{ value }} \
+{% endfor %}
+    ODOO_FILESTORE_PATH="/home/odoo/.local/share/Odoo/filestore" \
+    XDG_DATA_HOME="/home/odoo/.local/share"
+
+RUN apt-get update \
+    && apt-get install postgresql-common postgresql-${PSQL_VERSION} postgresql-client-${PSQL_VERSION} \
+       postgresql-contrib-${PSQL_VERSION} pgbadger rsync \
+       {% if variables.get('version') in ["8.0", "9.0"] %}
+       postgresql-server-dev-${PSQL_VERSION} \
+       {% endif %}
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && echo "include = '/etc/postgresql-common/common-vauxoo.conf'" >> /etc/postgresql/${PSQL_VERSION}/main/postgresql.conf \
+    && echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/${PSQL_VERSION}/main/pg_hba.conf \
+    && sed -i "s/port = [[:digit:]]\+/port = 5432/g" /etc/postgresql/${PSQL_VERSION}/main/postgresql.conf \
+    && echo "odoo        hard nofile 50000" >> /etc/security/limits.conf \
+    && echo "odoo        soft nofile 50000" >> /etc/security/limits.conf \
+    && wget -q https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64.deb -O /tmp/dumb-init.deb \
+    && dpkg -i /tmp/dumb-init.deb \
+    && rm /tmp/dumb-init.deb
+
+RUN id -u odoo 2>/dev/null || adduser --home=/home/odoo --disabled-password --gecos "" --shell=/bin/bash odoo
+RUN echo "root:odoo" | chpasswd \
+    && chown -R odoo:odoo /home/odoo
+
+COPY files/odoo_service.conf /etc/supervisor/conf.d/odoo_service.conf
+COPY files/postgres_service.conf /etc/supervisor/conf.d/postgres_service.conf
+COPY files/supervisord_service.conf /etc/supervisor/supervisord.conf
+COPY files/openerp_serverrc /external_files/openerp_serverrc
+COPY files/install_deps.py /tmp/install_deps.py
+COPY files/getaddons.py /home/odoo/getaddons.py
+COPY files/get_release_data.py /tmp/get_release_data.py
+COPY files/entrypoint_image /entrypoint_image
+COPY files/apt_dependencies.txt  /tmp/apt_dependencies.txt
+COPY files/config_lc_collate.sql /tmp/config_lc_collate.sql
+
+RUN [ $(getent group supervisor) ] || groupadd supervisor
+RUN  if [ -h /etc/supervisord.conf ]; then echo "This image has already been build with deployv";fi; ln -s /etc/supervisor/supervisord.conf /etc/supervisord.conf \
+    && usermod -a -G supervisor odoo \
+    && sed -ri "s%(chmod).*$%\1 = 0770\nchown=root:supervisor%g" /etc/supervisor/supervisord.conf \
+    && mkdir -p /var/log/supervisor
+
+USER odoo
+
+COPY --chown=odoo:odoo instance /home/odoo/instance
+COPY --chown=odoo:odoo files/openerp_serverrc /home/odoo/.openerp_serverrc
+
+USER root
+
+{% if variables.get('version') in ["8.0", "9.0", "10.0", "saas-14"] %}
+RUN pip2 install reqgen branchesv -U \
+    && pip2 install pstats_print2list click-odoo-contrib \
+    && python2 /tmp/install_deps.py
+{% else %}
+RUN pip3 install reqgen branchesv -U \
+    && pip3 install pstats_print2list click-odoo-contrib \
+    && python3 /tmp/install_deps.py
+{% endif %}
+
+RUN chmod +x /entrypoint_image \
+    && /etc/init.d/postgresql start ${PSQL_VERSION} \
+    && su postgres -c "psql -f /tmp/config_lc_collate.sql postgres" \
+    && su postgres -c "psql -c \"create user {{ db_user if db_user else 'odoo' }} with createdb password '{{ db_password if db_password else 'odoo' }}';\"" \
+    && /etc/init.d/postgresql stop \
+    && rm -rf /tmp/* \
+    && find /var/tmp -type f -print0 | xargs -0r rm -rf \
+    && find /var/log -type f -print0 | xargs -0r rm -rf \
+    && find /var/lib/apt/lists -type f -print0 | xargs -0r rm -rf
+
+## The volumes we want to use
+VOLUME ["/var/log/supervisor", "/home/odoo/.local/share/Odoo", "/tmp", "/home/odoo/.ssh"]
+
+## Expose xmlrpc and longpolling ports
+EXPOSE 8069 8072
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/entry_point", "start"]
