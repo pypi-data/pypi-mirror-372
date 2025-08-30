@@ -1,0 +1,76 @@
+name: Publish to PyPI
+
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  check_version:
+    runs-on: ubuntu-latest
+    outputs:
+      package_name: ${{ steps.pkg.outputs.package_name }}
+      pyproject_version: ${{ steps.pkg.outputs.pyproject_version }}
+      tag_version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Extract package name and version from pyproject.toml
+        id: pkg
+        run: |
+          PACKAGE_NAME=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])")
+          PYPROJECT_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "pyproject_version=$PYPROJECT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure tag matches pyproject.toml version
+        run: |
+          if [ "${{ steps.pkg.outputs.pyproject_version }}" != "${{ steps.tag.outputs.version }}" ]; then
+            echo "❌ Version mismatch:"
+            echo "Tag:        v${{ steps.tag.outputs.version }}"
+            echo "pyproject:  ${{ steps.pkg.outputs.pyproject_version }}"
+            exit 1
+          fi
+
+  check_pypi:
+    needs: check_version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if version already exists on PyPI
+        run: |
+          PACKAGE_NAME="${{ needs.check_version.outputs.package_name }}"
+          VERSION="${{ needs.check_version.outputs.pyproject_version }}"
+
+          echo "Checking if $PACKAGE_NAME==$VERSION is already on PyPI..."
+          CURRENT_VERSION=$(curl -s https://pypi.org/pypi/$PACKAGE_NAME/json | jq -r '.info.version')
+
+          if [ "$CURRENT_VERSION" = "$VERSION" ]; then
+            echo "❌ Version $VERSION already exists on PyPI!"
+            exit 1
+          fi
+
+  publish:
+    needs: [check_version, check_pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Build package with uv
+        run: uv build
+
+      - name: Publish to PyPI
+        env:
+          UV_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish --token $UV_PYPI_TOKEN
