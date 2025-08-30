@@ -1,0 +1,69 @@
+# copilotcloud-rl
+
+Python client for CopilotCloud Reinforcement Learning context API.
+
+## Installation
+
+Build and install the package from source:
+
+```bash
+pip install .
+```
+
+or using a wheel built via:
+
+```bash
+python -m build
+pip install dist/copilotcloud_rl-*.whl
+```
+
+## Configuration
+
+The client requires your CopilotCloud API keys and base URL to the API service.
+
+- Environment variables (recommended):
+  - `COPILOTCLOUD_API_URL` (e.g. `https://api.copilotcloud.ai` or your self-hosted base URL)
+  - `COPILOTCLOUD_PUBLIC_API_KEY` (your public API key)
+  - `COPILOTCLOUD_PRIVATE_API_KEY` (your private API key)
+
+You can also pass these values explicitly to the functions.
+
+## Usage
+
+```python
+from copilotcloud_rl import getLearningContext
+
+# Provide explicitly or rely on env vars
+context = getLearningContext(
+    prompt="User asked to summarize quarterly KPIs",
+    agentName="sample_agent",
+    api_url="https://your-cloud.example.com",     # optional if env is set
+    public_api_key="ck_public_xxx",              # optional if env is set
+    private_api_key="ck_private_xxx",            # optional if env is set
+    limit=10,                                    # optional, limits number of examples
+    timeout_seconds=15                           # optional, request timeout
+)
+
+print(context["learningContext"])  # string prepared for few-shot priming
+```
+
+## API
+
+### getLearningContext(prompt: str, agentName: str, *, api_url: str | None = None, public_api_key: str | None = None, private_api_key: str | None = None, limit: int | None = None, timeout_seconds: int = 15) -> dict
+
+Sends a POST request to `/reinforcement-learning/v1/context` with body `{ agentName, prompt, limit }` and headers `X-CopilotCloud-Public-Api-Key` and `X-CopilotCloud-Private-Api-Key`.
+
+**Parameters:**
+- `prompt` (str): The user prompt or query to get learning context for
+- `agentName` (str): Name of the agent to get context for
+- `api_url` (str, optional): CopilotCloud API base URL (defaults to `COPILOTCLOUD_API_URL` env var)
+- `public_api_key` (str, optional): Public API key (defaults to `COPILOTCLOUD_PUBLIC_API_KEY` env var)
+- `private_api_key` (str, optional): Private API key (defaults to `COPILOTCLOUD_PRIVATE_API_KEY` env var)
+- `limit` (int, optional): Maximum number of learning examples to return
+- `timeout_seconds` (int, optional): Request timeout in seconds (default: 15)
+
+**Returns:** Dictionary containing the parsed JSON response, typically `{ "learningContext": str }`
+
+**Raises:**
+- `ValueError`: If required parameters are missing or invalid
+- `RuntimeError`: If the API request fails or returns invalid data
