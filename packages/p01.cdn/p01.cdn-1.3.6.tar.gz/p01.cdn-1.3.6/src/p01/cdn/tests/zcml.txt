@@ -1,0 +1,184 @@
+====
+ZCML
+====
+
+p01.cdnResource
+---------------
+
+You can define a cdn resource like:
+
+  <p01:cdnResource
+      name="foo.gif"
+      file="foo.gif"
+      layer="your layer"
+      />
+
+You also need to setup a product configuration for p01.cdn like
+  
+  <product-config p01.cdn>
+    uri = http://localhost/cdn/*
+  </product-config>
+  
+this will generate a resource url with a version manager set to 0.5.0 like:
+
+  http://localhost/cdn/0.5.0/foo.gif
+
+or you can also override the resource uri for this reasource and let other
+resource uri stay with a default uri:
+  
+  <product-config p01.cdn>
+    uri http://localhost/cdn/*
+    foo.gif http://foobar/cdn/*
+  </product-config>
+  
+this will generate a resource url with a version manager set to 0.5.0 like:
+
+  http://foobar/cdn/0.5.0/foo.gif
+  
+Note: the * is used as a marker and will get replaced with the version
+managers version. If you need a local uri and deliver your files still
+from zope without a version manager, probably for devmode, you can define
+an uri like:
+  
+  <product-config p01.cdn>
+    uri http://localhost/cdn/*
+    foo.gif http://localhost:8080/@@
+  </product-config>
+  
+this will generate a resource url with a version manager set to 0.5.0 like:
+
+  http://localhost:8080/@@/foo.gif
+  
+or you can use such local uris for all cdn resources e.g. for devmode with:
+  
+  <product-config p01.cdn>
+    uri http://localhost:8080/@@
+  </product-config>
+  
+this will also generate a resource url with a version manager set to 0.5.0
+like:
+
+  http://localhost:8080/@@/foo.gif
+
+
+p01.cdnZRTResource
+------------------
+
+Oh, yes, the nice thing is ZRT (zope resource templates) can also get used as
+CDN resources. We are able to extract ZRT within our p01.recipe.cdn extract
+method and resolve the template resources e.g. image path etc.
+
+The zrt cdn resource directive allows to register a file as resource like:
+
+  <p01:cdnZRTResource
+      name="foo.gif"
+      file="foo.gif"
+      manager="your.layer.cdnVersionManager"
+      layer="your layer"
+      />
+
+You also need to setup a product configuration for p01.cdn like:
+    
+  <product-config p01.cdn>
+    uri = http://localhost/bar/*
+  </product-config>
+  
+The cdnResource will generate a resource url with a version manager set to
+0.5.0 like:
+  
+  http://localhost/bar/0.5.0/foo.gif
+
+
+p01.cdnResourceDirectory
+------------------------
+
+The i18n cdn resource directive allows to register folders as resources like:
+
+  <p01:cdnResourceDirectory
+      name="foo.gif"
+      directory="images"
+      excludeNames="source.js not.minified.js"
+      manager="your.layer.cdnVersionManager"
+      layer="your layer"
+      />
+
+You also need to setup a product configuration for p01.cdn like:
+    
+  <product-config p01.cdn>
+    uri = http://localhost/bar
+  </product-config>
+
+If the directory contains resources like:
+
+  foo.gif
+  bar.gif
+
+The cdnResourceDirectory will generate resource urls like:
+
+  http://localhost/bar/foo.gif
+  http://localhost/bar/bar.gif
+
+
+p01.cdnI18NResource
+-------------------
+
+The i18n cdn resource directive allows to register folders as resources like:
+
+  <p01:cdnI18NResource
+      name="foo.gif"
+      directory="images"
+      defaultLanguage="de"
+      excludeNames="source.png"
+      manager="your.layer.cdnVersionManager"
+      layer="your.layer"
+      />
+
+The i18n resource directory must conatin files with a language locale 
+as the last part of the name. This language locale will get extracted and
+the relevant images will get registered within the language locale. Such
+file names could look like:
+
+  foo-de.gif
+  foo-fr.gif
+
+You also need to setup a product configuration for p01.cdn like:
+    
+  <product-config p01.cdn>
+    uri = http://localhost/bar/*
+  </product-config>
+  
+The cdnI18NResource will generate resource urls with a version manager set to
+0.5.0 like:
+  
+  http://localhost/bar/0.5.0/foo-de.gif
+  http://localhost/bar/0.5.0/foo-fr.gif
+
+This means each resource provides an additional language locales as name with
+a file type extension. This per language unique uris allows us to simply cache
+every uri for each language.
+
+
+testing support
+---------------
+
+You can defined a P01_CDN_URI for testing in your buildout.cfg like:
+
+[testenv]
+P01_CDN_URI = http://localhost:8080/@@
+
+and use it like:
+
+[test]
+recipe = zc.recipe.testrunner
+eggs = foobar
+environment = testenv
+
+
+[coverage-test]
+recipe = zc.recipe.testrunner
+eggs = foobar
+defaults = ['--coverage', '../../coverage']
+environment = testenv
+
+This will force to serve all resources from http://localhost:8080/@@ like zope
+whould normaly do for testing.
