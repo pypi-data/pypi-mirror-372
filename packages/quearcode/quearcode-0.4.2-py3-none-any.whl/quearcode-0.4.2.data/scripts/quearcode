@@ -1,0 +1,331 @@
+#!python
+""" GUI for python-qrcode """
+
+# Copyright (C) 2025 Gwyn Ciesla
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+import gettext
+import glob
+import os
+import tempfile
+from shutil import copyfile
+
+import gi
+import qrcode
+
+gi.require_version("Gtk", "4.0")
+
+# pylint: disable=wrong-import-position
+from gi.repository import GLib, Gtk
+
+import pyquearcode
+
+VERSION = "0.4.2"
+
+LOCALEDIR = os.path.dirname(pyquearcode.__file__) + "/locales"
+LANGUAGE = os.environ["LANG"]
+
+if not os.path.isdir(LOCALEDIR + "/" + LANGUAGE):
+    LANGUAGE = "en"
+
+TRANS = gettext.translation("quearcode", localedir=LOCALEDIR, languages=[LANGUAGE])
+TRANS.install()
+
+_ = TRANS.gettext
+
+LOGO_PATH = os.path.dirname(pyquearcode.__file__) + "/logo.png"
+
+
+class QUEARCODE(Gtk.ApplicationWindow):
+    """Main block"""
+
+    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=unused-argument
+    def delete_event(self, data=None):
+        """Quit button"""
+        for temp in glob.glob(tempfile.gettempdir() + "/quearcode*.png"):
+            os.unlink(temp)
+        self.close()
+        return False
+
+    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-positional-arguments
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
+    def runthing(self, widget, data, error, box, border, result):
+        """Generate a QR code from a file"""
+        try:
+            filename = data.open_finish(result).get_path()
+        except GLib.Error as exception:
+            return exception
+
+        errorval = error.get_value()
+
+        # check file size
+        fileinfo = os.stat(filename)
+        filesize = fileinfo.st_size
+        toobig = 0
+        sizelimit = 2953
+        if filesize > 2953 and errorval == 1:
+            toobig = 1
+        if filesize > 2331 and errorval == 2:
+            toobig = 1
+            sizelimit = 2331
+        if filesize > 1663 and errorval == 3:
+            toobig = 1
+            sizelimit = 1663
+        if filesize > 1273 and errorval == 4:
+            toobig = 1
+            sizelimit = 1273
+
+        if toobig == 1:
+            message = (
+                _("Too large to create valid QR code. File is ")
+                + str(filesize)
+                + _(" bytes, must be less than ")
+                + str(sizelimit)
+            )
+            # pylint: disable=attribute-defined-outside-init
+            self.messdial = Gtk.AlertDialog()
+            self.messdial.set_modal(True)
+            self.messdial.set_message(message)
+            self.messdial.show()
+        else:
+            try:
+                with open(filename, "r", encoding="utf-8") as file:
+                    filedata = file.read()
+            except UnicodeDecodeError as exception:
+                # pylint: disable=attribute-defined-outside-init
+                self.faildial = Gtk.AlertDialog()
+                self.faildial.set_modal(True)
+                self.faildial.set_message(_("Invalid file type"))
+                self.faildial.show()
+                return exception
+
+            errorcol = 0
+            if errorval == 1:
+                errorcol = qrcode.constants.ERROR_CORRECT_L
+            if errorval == 2:
+                errorcol = qrcode.constants.ERROR_CORRECT_M
+            if errorval == 3:
+                errorcol = qrcode.constants.ERROR_CORRECT_Q
+            if errorval == 4:
+                errorcol = qrcode.constants.ERROR_CORRECT_H
+            boxval = box.get_value()
+            borderval = border.get_value()
+            qr_image = qrcode.QRCode(
+                version=None,
+                error_correction=errorcol,
+                box_size=boxval,
+                border=borderval,
+            )
+            qr_image.add_data(filedata)
+            qr_image.make(fit=True)
+
+            img = qr_image.make_image()
+
+            for temp in glob.glob(tempfile.gettempdir() + "/quearcode*.png"):
+                os.unlink(temp)
+            tempf, name = tempfile.mkstemp(suffix=".png", prefix="quearcode")
+            img.save(name)
+            self.imagepath = name
+            self.imgdial("clicked", name)
+            os.close(tempf)
+
+        return False
+
+    def open_file(self, dialog, result):
+        """Pass file dialog output to QR generator"""
+        self.runthing(
+            self, self.files, self.errorscale, self.boxscale, self.borderscale, result
+        )
+
+    def filehomedial(self, widget, event, data=None):
+        """File selection"""
+        # pylint: disable=attribute-defined-outside-init
+        self.files = Gtk.FileDialog.new()
+        self.files.set_initial_name("~/")
+        self.files.open(self, None, self.open_file)
+
+    def save_image(self, dialog, result):
+        """Copy tempfile to final save location if one is chosen"""
+        try:
+            file = self.saves.save_finish(result)
+            copyfile(self.imagepath, file.get_path())
+            return False
+        except GLib.Error as exception:
+            return exception
+
+    def savedial(self, widget, event, imagepath):
+        """File selection"""
+        # pylint: disable=attribute-defined-outside-init
+        self.saves = Gtk.FileDialog.new()
+        self.saves.set_initial_name("quearcode.png")
+        self.saves.save(self, None, self.save_image)
+        return False
+
+    def imgdial(self, event, imagepath):
+        """Image display dialog"""
+        # pylint: disable=attribute-defined-outside-init
+        qrs = Gtk.MessageDialog(transient_for=self, modal=True)
+        qrs.set_title("Quearcode © 2025 Gwyn Ciesla")
+        generated = Gtk.Picture.new_for_filename(imagepath)
+
+        dbox = Gtk.Box(
+            homogeneous=False, spacing=0, orientation=Gtk.Orientation.VERTICAL
+        )
+        qrs.set_child(dbox)
+
+        self.savebutton = Gtk.Button(label=_("Save..."))
+        self.savebutton.connect("clicked", self.savedial, None, imagepath)
+        self.savebutton.set_tooltip_markup(_("Save QR code to file"))
+
+        self.closebutton = Gtk.Button(label=_("Close"))
+        self.closebutton.connect("clicked", lambda _: qrs.close())
+        dbox.append(generated)
+        dbox.append(self.savebutton)
+        dbox.append(self.closebutton)
+
+        qrs.present()
+
+        return False
+
+    def generate_qrcode(self, widget, text, error, box, border):
+        """Generate a QR code from text"""
+        textract = text.get_text()
+        errorval = error.get_value()
+        errorcol = 0
+        if errorval == 1:
+            errorcol = qrcode.constants.ERROR_CORRECT_L
+        if errorval == 2:
+            errorcol = qrcode.constants.ERROR_CORRECT_M
+        if errorval == 3:
+            errorcol = qrcode.constants.ERROR_CORRECT_Q
+        if errorval == 4:
+            errorcol = qrcode.constants.ERROR_CORRECT_H
+        boxval = box.get_value()
+        borderval = border.get_value()
+        qr_image = qrcode.QRCode(
+            version=None, error_correction=errorcol, box_size=boxval, border=borderval
+        )
+        qr_image.add_data(textract)
+        qr_image.make(fit=True)
+
+        img = qr_image.make_image()
+
+        for temp in glob.glob(tempfile.gettempdir() + "/quearcode*.png"):
+            os.unlink(temp)
+        tempf, name = tempfile.mkstemp(suffix=".png", prefix="quearcode")
+        img.save(name)
+        self.imagepath = name
+        self.imgdial("clicked", name)
+        os.close(tempf)
+
+    def __init__(self, **kargs):
+        """Main loop"""
+        super().__init__(**kargs, title="quearcode " + VERSION)
+
+        self.mainbox = Gtk.Box(
+            homogeneous=False, spacing=0, orientation=Gtk.Orientation.VERTICAL
+        )
+        self.set_child(self.mainbox)
+
+        self.logo = Gtk.Picture.new_for_filename(LOGO_PATH)
+        self.logo.set_tooltip_markup(_("So meta it hurts."))
+        self.mainbox.append(self.logo)
+
+        self.textentry = Gtk.Entry()
+        self.textentry.set_max_length(4296)
+        self.textentry.set_activates_default(True)
+        self.textentry.set_text("quearcode")
+        self.textentry.set_tooltip_markup(_("Content for QR Code"))
+        self.mainbox.append(self.textentry)
+
+        self.errorlabel = Gtk.Label(label=_("Error correction"))
+        self.errorlabel.set_tooltip_markup(
+            _("Amount of error correction to build into the code")
+        )
+        self.mainbox.append(self.errorlabel)
+
+        self.errorscale = Gtk.Scale.new_with_range(0, 1.0, 4.0, 1.0)
+        self.errorscale.set_tooltip_markup(
+            _("Amount of error correction to build into the code")
+        )
+        self.errorscale.set_value(1.0)
+        self.mainbox.append(self.errorscale)
+
+        self.boxlabel = Gtk.Label(label=_("Box size in pixels"))
+        self.boxlabel.set_tooltip_markup(
+            _("Size of boxes, make huge files, eats RAM like candy")
+        )
+        self.mainbox.append(self.boxlabel)
+
+        self.boxscale = Gtk.Scale.new_with_range(0, 1.0, 50.0, 1.0)
+        self.boxscale.set_tooltip_markup(
+            _("Size of boxes, make huge files, eats RAM like candy")
+        )
+        self.boxscale.set_value(10.0)
+        self.mainbox.append(self.boxscale)
+
+        self.borderlabel = Gtk.Label(label=_("Border size in boxes"))
+        self.borderlabel.set_tooltip_markup(
+            _("Size of border, specification minimum is 4.")
+        )
+        self.mainbox.append(self.borderlabel)
+
+        self.borderscale = Gtk.Scale.new_with_range(0, 4.0, 100.0, 1.0)
+        self.borderscale.set_tooltip_markup(
+            _("Size of border, specification minimum is 4.")
+        )
+        self.borderscale.set_value(4.0)
+        self.mainbox.append(self.borderscale)
+
+        self.imagepath = ""
+
+        self.genbutton = Gtk.Button(label=_("Generate"))
+        self.genbutton.connect(
+            "clicked",
+            self.generate_qrcode,
+            self.textentry,
+            self.errorscale,
+            self.boxscale,
+            self.borderscale,
+        )
+        self.genbutton.set_tooltip_markup(_("Generate QR Code"))
+        self.set_default_widget(self.genbutton)
+        self.mainbox.append(self.genbutton)
+
+        self.filehomebutton = Gtk.Button(label=_("Encode file..."))
+        self.filehomebutton.connect("clicked", self.filehomedial, None, self.errorscale)
+        self.filehomebutton.set_tooltip_markup(_("Encode a file"))
+        self.mainbox.append(self.filehomebutton)
+
+        self.quitbutton = Gtk.Button.new_with_label(_("Quit"))
+        self.quitbutton.connect("clicked", self.delete_event)
+        self.quitbutton.set_tooltip_markup(_("Exit quearcode"))
+        self.mainbox.append(self.quitbutton)
+
+
+def on_activate(app):
+    """Create window"""
+    win = QUEARCODE(application=app)
+    win.present()
+
+
+APP = Gtk.Application(application_id="org.esrum.Quearcode")
+APP.connect("activate", on_activate)
+APP.run(None)
