@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block headers %}
+{% if event.parent %}<h3> <a href='{{ event.parent.url() }}'>{{ event.parent.title }}</a></h3>{% endif %}
+<h2>{{ event.title }}{% if event.hidden %} [hidden]{% endif %}</h2>
+<form method="POST">
+{{ event.html_admin_buttons() }}
+{% if event.editable and event.crm_id %}
+<input type="submit" value="update from CRM" name="crm_update" />
+{% endif %}
+</form>
+{% endblock %}
+
+{% block info %}
+{{ event.html_timestamps() }}<br />
+{{ facebook_like(event.get_absolute_url()) }}
+{% endblock info %}
+
+{% block content %}
+
+<p><strong>{{ event.date_from|date }}{% if not event.date_to == event.date_from %} - {{ event.date_to|date }}{% endif %}</strong>
+  {% if event.google_id %}&nbsp;&nbsp;<a class="external" target="_blank" href="?redirect_to_google_calendar">[open in google calendar]</a>{% endif %}
+</p>
+
+{% if event.place %}<p>{{ event.place }}</p>{% endif %}
+
+
+{% if event.description %}<p>{{ event.description|simpletags }}</p>{% endif %}
+
+{% if event.organizers.all() %}
+<p><strong>Organizers:</strong>
+{% for person in event.organizers.all() %}
+{% if person.user %}<a href="{{ person.url() }}">{{ person.firstname }} {{person.lastname}}</a>{% else %}{{ person.firstname }} {{ person.lastname }}{% endif %}{% if not loop.last %}, {% else %}.{% endif %}{% endfor %}
+</p>
+{% endif %}
+
+{% if sub_events %}
+<p><strong>Activities:</strong></p>
+<ul>
+{% for e in sub_events %}
+<li>
+  <a href="{{ e.url() }}"><b>{{ e.title }}</b></a> {{ e.date_from|date }} - {{ e.date_to|date }}
+{% if e.organizers.all() %} <br />
+organizers: {% for p in e.organizers.all() %}
+{{ p.lastname }}{% if not loop.last %}, {% endif %}
+{% endfor %}
+{% endif %}
+</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if event.registration_is_open() %}
+<p>If you are interested in participating to the event, please <a href='registration'>fill in the registration form</a>.
+  {% if event.grant_application_enabled %}
+  {% if event.grant_description %}<p>{{ event.grant_description|simpletags }}</p>{% endif %}
+  {% if event.grant_request_deadline %}<p>deadline for grant requests: {{ event.grant_request_deadline|date }}.</p>{% endif %}
+  {% endif %}
+  {% if event.registration_deadline %}
+  <p>Deadline for application: {{ event.registration_deadline|date }}.</p>
+  {% endif %}
+</p>
+{% else %}<!-- EVENT {{ event.id }} registration is closed -->
+{% endif %}
+
+{% if event.confirmed_participants() %}
+  <p><strong><a href='participants'>Participants ({{ event.confirmed_participants().count()}}).</a></strong></p>
+{% else %}
+  {% if event.editable and event.pending_registrations() %}
+  <p><a class="admin" href="participants">[manage registrations]</a></p>
+  {% endif %}
+{% endif %}
+
+{% if event.timetable_enabled %}
+<p><strong><a href="timetable">Timetable.</a></strong></p>
+{% endif %}
+{% set courses=event.seminars.filter(type='course').order_by('date','time') %}
+{% if courses %}
+<p><strong>Courses:</strong>
+{% for seminar in courses %}
+<br /><a href="{{ seminar.url() }}">{{ seminar.html() }}</a>
+{% endfor %}
+</p>
+{% endif %}
+{% set seminars=event.seminars.filter(type='seminar').order_by('date','time') %}
+{% if seminars %}
+<p><strong>Seminars:</strong>
+{% for seminar in seminars %}
+{% if loop.changed(seminar.date) %}<br /><strong>{{ seminar.date.strftime('%e %b %Y') }}</strong>{% endif %}
+<br /><a href="{{ seminar.url() }}">
+  {% if seminar.time %}{{ seminar.time.strftime("%H:%M") }} -{% endif %}
+  {% for speaker in seminar.speakers.all() %}{{ speaker.short() }}{% if loop.last %}:{% else %},{% endif %}{% endfor %}
+  {{ seminar.title }}
+  </a>
+{% endfor %}
+</p>
+{% endif %}
+{% if event.has_not_confirmed_seminars() %}
+<p> (*) to be confirmed</p>
+{% endif %}
+{% if event.editable %}
+<p><a class="admin" href="{{ root_url }}add/seminar/?event={{ event.id }}">[add seminar/course]</a></p>
+{% endif %}
+
+{% if event.speakers.all() %}
+<p><strong>Speakers:</strong>
+{% for person in event.speakers.all() %}
+{% if person.user %}<a href="{{ person.url() }}">{{ person.firstname }} {{person.lastname}}</a>{% else %}{{ person.firstname }} {{ person.lastname }}{% endif %}{% if not loop.last %}, {% else %}.{% endif %}{% endfor %}
+  {% if event.editable %}
+  <a class='admin' href='speakers?csv'>[download]</a>
+  {% endif %}
+{% endif %}
+
+{% if event.links.all() %}
+<ul>
+{% for link in event.links.all() %}
+<li> <a class="external" href="{{ link.url }}">{{ link.description }}</a> </li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if documents %}
+<p><br><strong>Download:</strong>
+<ul>
+{% for document in documents %}
+<li><a href='{{ document.file.url }}'>{{ document.description }}</a>
+</li>
+{% endfor %}
+</ul>
+</p>
+{% endif %}
+{% if event.editable %}
+<p><a class="admin" href="{{ root_url}}upload/event/{{ event.pk }}/">[add/manage documents]</a></p>
+{% endif %}
+
+{% endblock %}

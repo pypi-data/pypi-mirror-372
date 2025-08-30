@@ -1,0 +1,91 @@
+Subject: [{{ settings.SITE_NAME }}] weekly bulletin
+
+Weekly bulletin for {{ settings.SERVER_URL }}
+
+
+--- Summary ---
+{% if seminars %}
+* Seminars by: {% for seminar in seminars %}
+{% if not loop.first %}, {% endif %}
+{% for speaker in seminar.speakers.all() %}{{ speaker.lastname }}{% endfor %}
+{% endfor %}
+
+{% endif %}
+{% if new_papers %}
+* New papers by: {% for author in new_papers_authors %}{% if not loop.first %}, {% endif %}{{ author.lastname }}{% endfor %}
+
+{% endif %}
+{% if modified_papers %}
+* Modified papers by: {% for author in modified_papers_authors %}{% if not loop.first %}, {% endif %}{{ author.lastname }}{% endfor %}
+
+{% endif %}
+{% if news %}
+
+
+--- News ---
+{% for item in news %}
+* {{ item.title }}
+  {{ settings.SERVER_URL + item.url() }}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+{% endif %}{% if events %}
+
+
+--- Events next week ---
+{% for event in events %}
+* {{ event.title }}
+  {{ event.date_from|date("D j F Y") }} - {{ event.date_to|date("D j F Y") }}
+  {% if event.place %}{{ event.place }}{% endif %}
+
+  {{ settings.SERVER_URL + event.url() }}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}{% endif %}{% if seminars %}
+
+
+--- Seminars next week ---
+{% for group in seminars|groupby('date') %}
+{{ group.grouper|date("D j F Y") }}
+{% for seminar in group.list %}
+* {% if seminar.description %}{{ seminar.description }}
+  {% endif %}
+{% for speaker in seminar.speakers.all() %}{% if not loop.first %}, {% endif %}{{ speaker.firstname }} {{ speaker.lastname }}{% if speaker.affiliation %} ({{ speaker.affiliation }}){% endif %}{% endfor %}{% if seminar.speakers.all() %}: {% endif %}{{ seminar.title }}
+  {{ seminar.place }}{% if seminar.time %}, {{ seminar.time|time("H:i") }}
+{% endif %}
+  {{ settings.SERVER_URL + seminar.url() }}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}{% endif %}
+{% if new_papers %}
+
+
+--- New Papers ---
+{% for paper in new_papers %}
+* {% for author in paper.authors.all() %}{% if not loop.first %}, {% endif %}{{ author.lastname }}{% endfor %}: {{ paper.title }}
+{% endfor %}{% endif %}{% if modified_papers %}
+
+
+--- Modified Papers ---
+{% for paper in modified_papers %}
+* {% for author in paper.authors.all() %}{% if not loop.first %}, {% endif %}{{ author.lastname }}{% endfor %}: {{ paper.title }}
+{% endfor %}{% endif %}{% if positions %}
+
+
+--- Open Positions ---
+{% for item in positions %}
+* {% if item.creation_time.date() >= last_week_start %}(NEW) {% endif %}{{ item.title }} (deadline: {{ item.deadline|date("D j F Y") }})
+  {{ settings.SERVER_URL + item.url() }}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+{% endif %}
+

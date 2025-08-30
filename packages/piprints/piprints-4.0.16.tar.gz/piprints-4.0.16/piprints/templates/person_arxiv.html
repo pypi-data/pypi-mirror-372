@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ person.firstname }} {{ person.lastname }}{% endblock %}
+{% block headers %}
+{% if person.user %}
+<p align="right">[{{ person.user.username }}]</p>
+{% endif %}
+<h2>{{ person.firstname }} {{ person.lastname }}</h2>
+<a class="admin" href=".">[back to personal page]</a>
+<form method="POST">
+  <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+  <p><b>arxiv author id:</b> <input name="arxiv_id" value="{{ person.arxiv_id}}">
+    <input type="submit" name="set_arxiv_id" value="{% if person.arxiv_id %}change{% else %}set{% endif %}">
+    (See <a href="https://arxiv.org/help/author_identifiers" class="external">arXiv author identifiers</a>) 
+  </p>
+</form>
+  {% endblock headers %}
+{% block content %}
+<h2>ArXiv papers ({{ person_arxiv_query }})</h2>
+<form method="POST">
+  <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+  <p>
+  <table border="1" bgcolor="white">
+    <tr bgcolor="lightgray">
+      {% if person.editable %}
+      <th></th>
+      {% endif %}
+      <th>arxiv</th>
+      <th>piprints<Yh>
+      <th>authors</th>
+      <th>title</th>
+    </tr>
+    {% for abs in abstracts %}
+    <tr>
+      {% if person.editable %}<td><input type="checkbox" name="arxiv_id" value="{{ abs.id }}"></td>{% endif %}
+      <td><a href='http://arxiv.org/abs/{{ abs.id }}' class="external">{{ abs.id }}</a></td>
+      {% if abs.id in arxiv_papers %}
+      {% if arxiv_papers[abs.id].arxiv_id %}
+      <td bgcolor="lightgreen"><a href='{{ arxiv_papers[abs.id].url() }}'>linked</a></td>
+      {% else %}
+      <td bgcolor="yellow"><a href='{{ arxiv_papers[abs.id].url() }}'>match</a></td>
+      {% endif %}
+      {% else %}
+      <td bgcolor="red">missing</td>
+      {% endif %}
+      <td>
+	{% for author in abs.authors %}{% if not loop.first %}<br />{% endif %}{{ author }}{% endfor %}
+      </td>
+      <td>
+	<i>{{ abs.title }}</i>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </p>
+  {% if abstracts %}
+  <p>with selected abstract: <input type="submit" name="update" value="load/link" />.
+  The corresponding abstract will be loaded from arxiv (if missing) and the arXiv PDF will be linked (no file upload performed).
+  </p>
+  {% else %}
+  <p>
+  No abstract found on arXiv.
+  </p>
+  {% endif %}
+    
+</form>
+{% endblock %}
+  

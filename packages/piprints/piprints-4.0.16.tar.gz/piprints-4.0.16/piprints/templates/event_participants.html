@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }}: participants{% endblock %}
+
+{% block headers %}
+{% if event.parent %}<h3> <a href='{{ event.parent.url() }}'>{{ event.parent.title }}</a></h3>{% endif %}
+<h2>{{ event.title }}</h2>
+<h3>Participants</h3>
+{% endblock %}
+
+{% block content %}
+{% if event.confirmed_participants() %}
+<table>
+{% for participant in event.confirmed_participants() %}
+<tr><td><b>{{ participant.lastname }} {{ participant.firstname }}</b>{% if participant.affiliation %} ({{ participant.affiliation }}){% endif %}</td></tr>
+{% endfor %}
+</table>
+{% else %}
+<p>No information available.</p>
+{% endif %}
+
+{% if admin_participants %}
+<h2>admin</h2>
+<form method="POST">
+<table border="1">
+<tr bgcolor='#fff'><th></th><th>name</th><th>timestamp</th></th><th>email</th><th>period</th><th>state</th><th>grant</th><!--th width="50%">notes &amp; curriculum</th--></tr>
+{% for participant in admin_participants %}
+<tr bgcolor="{{ loop.cycle('#ccc','#eee') }}">
+  <td rowspan="2"><input type="checkbox" name="p{{ participant.id }}" /></td>
+  <td rowspan="2" width="200px"><b>{{ participant.lastname }} {{ participant.firstname }}</b><br>
+    {{ participant.affiliation }}
+  </td>
+  <td>{{ participant.creation_time|date("j.m") }} {{ participant.creation_time|time }}</td>
+  <td>{{ participant.email }}</td>
+  <td>{{ participant.date_from|date("j.m") }}&nbsp;-&nbsp;{{ participant.date_to|date("j.m") }}</td>
+  <td bgcolor="{{ {'accepted': loop.cycle('#ccc','#eee'), 'requested': 'yellow', 'cancelled': 'red'}[participant.state] }}">{{ participant.state }}</td>
+  <td bgcolor="{{ {'accepted': 'green', 'requested': 'yellow', 'no': loop.cycle('#ccc','#eee'), 'rejected': 'red'}[participant.grant_state] }}">{{ participant.grant_state }}</td>
+</tr>
+<tr bgcolor="{{ loop.cycle('#ccc','#eee') }}">
+  <td colspan="5">{{ participant.notes }} {% if participant.notes and participant.documents.all() %}<br />{% endif %}
+      {% for document in participant.documents.all() %}
+      <a href='{{ document.url() }}'>[{{ document }}]</a>
+      {% if not loop.last %}<br />{% endif %}{% endfor %}</td>
+</tr>
+{% endfor %}
+</table>
+With selected persons: 
+<select name="action">
+<option value="">** choose action **</option>
+<option value="confirm">accept participation request</option>
+<option value="ignore">ignore participation request</option>
+<option value="confirm_grant">confirm grant</option>
+<option value="reject_grant">reject grant request</option>
+</select>
+<input type="checkbox" name="send_email" value="send_email">send notification email
+<input type="submit" value="go" />
+</form>
+<p>
+<!-- a href='?xls'>[download excel file]</a> <br /-->
+all: {{ admin_participants.count() }},
+grant requested: {{ admin_participants.exclude(grant_state='no').count() }},
+granted: {{ admin_participants.filter(grant_state='granted').count() }},
+grant rejected: {{ admin_participants.filter(grant_state='rejected').count() }}
+</p>
+{% endif %}
+
+{% endblock %}

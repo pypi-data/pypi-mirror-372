@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<script type="text/javascript" src="{{ STATIC_URL }}js/edit_form.js"></script>
+{% endblock head %}
+
+{% block headers %}
+{% if object %}
+<h2>Edit {{ name }}</h2>
+{% else %}
+<form action="" method="POST">
+{% if name == "Event" %} 
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+<p>Import new event from crm page:
+<input type="hidden" name="action" value="crm_import">
+<i>http://crm.sns.it/event/<input name="crm_id" size="4" value="{{ crm_id }}">/</i>&nbsp;&nbsp;&nbsp;
+<select name="confirm"><option value='0'>simulate</option><option value='1'>really</option></select>
+<input type="submit" value="import!">
+</p>
+<p><pre>{{ import_message }}</pre>
+</p>
+{% endif %}
+{% if name == "Paper" %}
+<p>Import new paper from arXiv:
+  <input type="hidden" name="action" value="arxiv_import">
+  <i>http://arxiv.org/abs/<input name="arxiv_id" size="20"></i>
+  <input type="submit" value="import!">
+</p>
+{% endif %}
+</form>
+<h2>Create New {{ name }}</h2>
+{% endif %}
+<p class="tex2jax_ignore">The site is LaTeX friendly. You can use LaTeX notations for formulas inside $...$ or \[...\].</p>
+<p>In every multi-line input fields you can get italics, boldface and links by enclosing text with simple delimiters: <i>/italics/</i>, <b>*boldface*</b>, <a href='/'>[{{ settings.SERVER_URL }}/]</a>, <a href='/'>[alternate text|{{ settings.SERVER_URL }}/]</a>. To force a new paragraph leave a blank line, to break a line without a new paragraph use the vertical bar: |.
+</p>
+<p>
+When copying and pasting announcements from external communications
+(webpages, emails, ...), please consider the possibility of adding the
+following statement at the top: *{{ '{{' }}the content of this page
+was copy and pasted from the origin announcement email or website;
+please refer to the links for updates and inquiries{{ '}}' }}*
+</p>
+{{ super() }}
+{% endblock headers %}
+
+{% block content %}
+
+{% if object %}
+  {% if name == "Paper" or name == "Seminar" or name == "Event" %}
+<p>You may want to <a href="{{ root_url }}upload/{{ name.lower() }}/{{ object.pk }}/">[add/manage]</a> documents.</p>
+  {% endif %}
+{% endif %}
+
+
+<form action="" method="POST" enctype="multipart/form-data">
+<table class="edit_form">
+{{ form.as_table() }}
+<tr><td></td><td>
+{% if object %}
+<input type="submit" value="save changes" />
+{% else %}
+<input type="submit" value="create new {{ name }}" />
+{% endif %}
+<input type="submit" name="cancel" value="cancel" />
+</td></tr>
+</table>
+</form>
+{% endblock %}
