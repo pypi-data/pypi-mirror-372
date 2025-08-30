@@ -1,0 +1,5 @@
+enum
+{
+    _SENTINEL_
+}
+
