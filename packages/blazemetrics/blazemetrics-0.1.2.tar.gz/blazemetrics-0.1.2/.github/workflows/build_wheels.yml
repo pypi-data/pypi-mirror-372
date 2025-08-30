@@ -1,0 +1,89 @@
+name: Build and Publish Wheels
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build-wheels:
+    name: Build wheels (${{ matrix.os }}-py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-2022, macos-13]
+        python: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install maturin
+        run: pip install maturin==1.9.4
+
+      - name: Build wheels
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            maturin build --release --compatibility manylinux2014 -o dist
+          else
+            maturin build --release -o dist
+          fi
+
+      - name: Create virtual environment
+        shell: bash
+        run: |
+          python -m venv .venv
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            VENV_PY=".venv\\Scripts\\python.exe"
+            VENV_PIP=".venv\\Scripts\\pip.exe"
+          else
+            VENV_PY=".venv/bin/python"
+            VENV_PIP=".venv/bin/pip"
+          fi
+          $VENV_PIP install -U pip
+          # Install the wheel we just built
+          $VENV_PIP install dist/*.whl
+          # Verify import
+          $VENV_PY -c "import blazemetrics; print('Import OK', blazemetrics.__version__)"
+          # Run basic smoke tests
+          $VENV_PY - <<'PY'
+from blazemetrics import rouge_score, bleu
+candidates = ['the cat sat on the mat']
+references = [['the cat was on the mat']]
+print('ROUGE:', rouge_score(candidates, references, score_type='rouge_n', n=1))
+print('BLEU:', bleu(candidates, references))
+print('Smoke tests passed!')
+PY
+
+      - name: Upload wheels artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-py${{ matrix.python }}
+          path: dist/*
+
+  publish:
+    name: Publish to PyPI
+    needs: [build-wheels]
+    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Flatten wheel artifacts
+        run: |
+          mkdir -p upload
+          find dist -type f -name "*.whl" -exec cp {} upload/ \;
+      - name: Publish
+        uses: PyO3/maturin-action@v1
+        with:
+          command: upload
+          args: --non-interactive upload/*
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }} 
