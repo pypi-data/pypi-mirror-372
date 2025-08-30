@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2025 Laurent Modolo <laurent@modolo.fr>
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# pages:
+#   stage: deploy
+#   image: registry.gitlab.com/quarto-forge/docker/polyglot
+#   script:
+#     - cd doc/
+#     - sudo apt-get install libfontconfig1-dev
+#     - R -e 'install.packages("renv", dependencies=TRUE, repos="http://cran.rstudio.com/")'
+#     - R -e 'renv::restore(prompt = FALSE)'
+#     - quarto render ./doc/presentation.qmd
+#   interruptible: true
+#   artifacts:
+#     paths:
+#       - public
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+tests: # Defines a job named tests. It includes the scripts and settings you want to apply to that specific task.
+  image: pytorch/pytorch:2.7.1-cuda11.8-cudnn9-runtime # Docker image used to run the job tests
+  before_script: # Commands to execute before the script section
+    - pip install pytest-cov
+    - pip install uv
+  script: # commands that trigger the tests
+    - uv run pytest --cov --cov-report term --cov-report xml:coverage.xml
+  coverage: /TOTAL.* (\d+)\%$/
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml

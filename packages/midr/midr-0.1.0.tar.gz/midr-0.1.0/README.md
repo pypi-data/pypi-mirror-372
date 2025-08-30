@@ -1,0 +1,87 @@
+<!--
+SPDX-FileCopyrightText: 2025 Laurent Modolo <laurent@modolo.fr>
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
+[![pipeline status](http://gitbio.ens-lyon.fr/LBMC/physbio/idrpy/badges/main/pipeline.svg)](http://gitbio.ens-lyon.fr/LBMC/physbio/idrpy/-/commits/main)
+[![coverage report](http://gitbio.ens-lyon.fr/LBMC/physbio/idrpy/badges/main/coverage.svg)](http://gitbio.ens-lyon.fr/LBMC/physbio/idrpy/-/commits/main)
+
+IDR: To identify which part of the signal is reproducible between $n$ samples, we can model the data as a mixture of two $n$ dimensional distributions. The copula framework allows us to decompose each of these two multidimensional distribution as the product of their marginal distribution on each dimension and a copula to model the dependency structure between the marginals. By imposing, one of these copula to be the independence copula, we can then compute the probability of each observation to be reproducible across samples.
+
+## Installation
+
+```bash
+pip install uv
+uv pip install git+https://gitbio.ens-lyon.fr/LBMC/physbio/idrpy
+```
+
+## Usage
+
+### Command line
+
+```bash
+midr --help
+```
+
+```bash
+*  --csv_input      TEXT                                  csv file with data, observation as rows and dimensions as columns [required]
+*  --csv_output     TEXT                                  csv file with data, and two additional columns for IDR and FDR [required]
+--ecdf           [adjustedDistributionalTransform|distributionalTransform|linear] (default: adjustedDistributionalTransform) choise of eCDF method, to handle ties, linear use the data order, distributional transform randomize ties between upper and lower non-tie values, adjusted distributional transform randomize while keeping ties closer together than their are to the upper and lower values
+--copula         [empiricalBeta|archmixture|gaussian]  (default: empiricalBeta) copula model to use
+--pseudo_data                                          use pseudo data (prior to consider higher values more reproducible)
+--gpu                                                  run on GPU if available
+--no_header                                            do not use header in csable header parsing in csv input file
+--help                                                 Show this message and exit.
+```
+
+
+### Example
+
+```
+midr --csv_input data/input.csv --csv_output results/output.csv
+```
+
+with `data/input.csv` containing:
+
+```
+V1,V2
+0.9250749250749251,0.9040959040959041
+0.13586413586413587,0.11288711288711288
+0.9820179820179821,0.975024975024975
+0.7772227772227772,0.7842157842157842
+0.6463536463536463,0.6053946053946054
+0.8851148851148851,0.8861138861138861
+0.17382617382617382,0.18081918081918083
+0.6563436563436563,0.6123876123876124
+0.03196803196803197,0.030969030969030968
+```
+
+and `results/output.csv` containing:
+
+```
+V1,V2,idr,fdr
+0.9250749250749251,0.9040959040959041,2.8943635779323093e-11,3.413164596618289e-11
+0.13586413586413587,0.11288711288711288,1.0884731099315595e-11,2.6764499871550515e-11
+0.9820179820179821,0.975024975024975,3.788097008249572e-12,2.6764499871550515e-11
+0.7772227772227772,0.7842157842157842,1.2833902510801593e-11,2.6764499871550515e-11
+0.6463536463536463,0.6053946053946054,1.8825313694123784e-11,2.6970363458630062e-11
+0.8851148851148851,0.8861138861138861,1.0859802750229041e-11,2.6764499871550515e-11
+0.17382617382617382,0.18081918081918083,9.586860680232651e-12,2.6764499871550515e-11
+0.6563436563436563,0.6123876123876124,2.2037240785360618e-11,2.8731735052621405e-11
+0.03196803196803197,0.030969030969030968,4.258939258330211e-12,2.6764499871550515e-11
+```
+
+## Python Example
+
+You can also use the Python API:
+
+```python
+import torch
+import polars as pl
+import midr
+
+data = torch.from_numpy(pl.read_csv("data/input.csv").to_numpy())
+idr, fdr = mdr.compute_idr(data, copula="archmmixture", pseudo_data=True)
+ecdf_data = midr.ecdf(data).detach().numpy()
+```
