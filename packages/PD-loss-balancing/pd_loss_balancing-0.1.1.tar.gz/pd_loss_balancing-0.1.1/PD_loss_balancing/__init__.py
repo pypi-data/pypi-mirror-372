@@ -1,0 +1,9 @@
+__version__ = "0.1.1"
+
+from .main import (
+    LossBalancer,
+    LinearTrajectoryTarget,
+    ConstantTarget,
+    RelativeTarget,
+    Target,
+)
