@@ -1,0 +1,924 @@
+---
+title: "IDRs"
+author: "laurent modolo"
+bibliography: lib.bib
+format: 
+    revealjs:
+        html-math-method: mathjax
+        transition: none
+        highlight-style: monokai
+        theme: white
+        footer: "laurent.modolo@ens-lyon.fr"
+        slide-number: c/t
+        fontsize: 22pt
+---
+
+# IDR
+
+## IDR [@li2011measuring]
+
+**Irreproducible Discoverie Rate**: model the irreproducibility in the signals to detect which observations are reproducible
+
+Can be applied to any ranking systems that produce scores ${\bf x} \in \mathbb{R}^{n \times 2}$ without ties, with $n$ the number of observations and 2 the number of replicates.
+
+
+::::{.columns}
+::: {.column width="60%"}
+```{r corr_coef, include=T, echo=F, warning=F, message=F, fig.width=4, fig.height=4}
+library(tidyverse)
+cop <- copula::normalCopula(param = 0.8, dim = 2) 
+x <- copula::rMvdc(
+  1000,
+  copula::mvdc( 
+    cop,
+    margins = c("norm", "gamma"),
+    paramMargins = list(c(0, 1), c(3, 5))
+  )) %>% 
+  tibble(
+    x1 = .[, 1],
+    x2 = .[, 2],
+  )
+x %>% 
+ggplot(aes(x = x1, y = x2)) +
+  geom_point(alpha = 0.5) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+:::
+::: {.column width="40%"}
+Correlation coefficient:
+
+- Pearson: `r cor(x = x$x1, y = x$x2, method = "pearson")`
+- Spearman: `r cor(x = x$x1, y = x$x2, method = "spearman")`
+- Kendall: `r cor(x = x$x1, y = x$x2, method = "kendall")`
+
+The IDR will give a measure of the reproducibility for each $(x_{i1}, x_{i2})$
+:::
+::::
+
+
+
+
+## IDR model [@li2011measuring]
+
+$$u_{ij} = F_j\left(x_{ij}\right)$$
+
+with $F_j$ the marginal CDF of $X_j$
+
+::::{.columns}
+
+::: {.column width="50%"}
+Original distribution
+```{r copula_approach, include=T, echo=F, warning=F, message=F, fig.width=4, fig.height=4}
+library(tidyverse)
+library(ggside)
+cop <- copula::normalCopula(param = 0.8, dim = 2) 
+copula::rMvdc(
+  1000,
+  copula::mvdc( 
+    cop,
+    margins = c("norm", "gamma"),
+    paramMargins = list(c(0, 1), c(3, 5))
+  )) %>% 
+  tibble(
+    x1 = .[, 1],
+    x2 = .[, 2],
+  ) %>% 
+  ggplot(aes(x = x1, y = x2)) +
+  geom_point(alpha = 0.5) +
+  geom_xsidehistogram(aes(y = after_stat(density))) +
+  geom_ysidehistogram(aes(x = after_stat(density))) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+:::
+
+::: {.column width="50%"}
+Dependence structure
+
+```{r copula_approach_marginal, include=T, echo=F, warning=F, message=F, fig.width=4, fig.height=4}
+library(tidyverse)
+library(ggside)
+cop <- copula::normalCopula(param = 0.8, dim = 2) 
+copula::rCopula(1000, cop) %>% 
+  tibble(
+    u1 = .[, 1],
+    u2 = .[, 2],
+  ) %>% 
+  ggplot(aes(x = u1, y = u2)) +
+  geom_point(alpha = 0.5) +
+  geom_xsidehistogram(aes(y = after_stat(density))) +
+  geom_ysidehistogram(aes(x = after_stat(density))) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+:::
+::::
+
+## IDR model [@li2011measuring]
+
+Let $z_{ij}$ be the $i$'th transformed observation of the $j$'th samples such that
+
+$${z}_{ij} = G^{-1}\left(u_{ij}, \mu, \sigma\right)$$
+with $G\left(z_{ij}, \mu, \sigma\right) = \pi g\left(z_{ij}, 0, 1\right) + (1-\pi) g\left(z_{ij}, \mu, \sigma\right)$
+
+::::{.columns}
+
+::: {.column width="50%"}
+The $z$-transformed values follow a mixture of two Gaussian distributions.
+
+Let $K_i \sim Bernouilli\left(\pi_0\right)$
+
+$${\bf z}_i | K_i = k \sim \mathcal{N}\left(\boldsymbol\mu_k, \Sigma_k\right), \text{ for } k \in [0,1]$$
+where ${\bf \mu}_0 = 0^d$ and $\Sigma_0 = I^d$
+
+:::
+
+::: {.column width="50%"}
+```{r gaussian mixture_marginal, include=T, echo=F, warning=F, message=F, fig.width=4, fig.height=4}
+library(tidyverse)
+  tibble(
+    x = c(rnorm(1e5, 3, 1), rnorm(1e5, 0, 1)),
+    h = c(rep(1, 1e5), rep(0, 1e5))
+  ) %>% 
+  ggplot(aes(x = x, color = h, group = h)) +
+  geom_density() +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+:::
+::::
+
+
+## IDR model [@li2011measuring]
+
+The IDR of observation ${\bf u}_i = [u_1, \dots, u_d]$ can be computed as follows:
+
+$$IDR\left({\bf x}_i\right) = \frac{\pi_{0} h_{0}\left(G^{-1}\left(u_{i1}\right), G^{-1}\left(u_{i2}\right)\right)}{\pi h_{0}\left(G^{-1}\left(u_{i1}\right), G^{-1}\left(u_{i2}\right)\right) + (1 - \pi) h_{1}\left(G^{-1}\left(u_{i1}\right), G^{-1}\left(u_{i2}\right)\right)}$$
+
+
+::::{.columns}
+::: {.column width="50%"}
+with 
+$$h_{0} \sim \mathcal{N}\left([0, 0], I^2\right) \text{ and } h_{1} \sim \mathcal{N}\left([\mu, \mu], \Sigma^{2\times2}\right)$$
+
+### $h_k\left(G^{-1}_{k}\left({\bf u}_i\right)\right)$ is the Gaussian **Copula**
+:::
+::: {.column width="20%"}
+:::
+::: {.column width="30%"}
+```{r copula_approach_marginal_bis, include=T, echo=F, warning=F, message=F, fig.width=4, fig.height=4}
+library(tidyverse)
+library(ggside)
+cop <- copula::normalCopula(param = 0.8, dim = 2) 
+indep <- copula::indepCopula(dim = 2) 
+data <- rbind(copula::rCopula(1000, cop), copula::rCopula(1000, indep))
+data <- tibble(
+    u1 = data[, 1],
+    u2 = data[, 2],
+    h = c(rep(1, 1e3), rep(0, 1e3))
+  )
+data %>% 
+  ggplot(aes(x = u1, y = u2, color = h,)) +
+  geom_point(alpha = 0.5) +
+  geom_xsidehistogram(aes(y = after_stat(density), group = h, fill = h)) +
+  geom_ysidehistogram(aes(x = after_stat(density), group = h, fill = h)) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+:::
+::::
+
+## Copula [@li2011measuring]
+
+$$C=C(u_1,\dots,u_d)$$
+
+is called a copula if it is a continuous distribution function and each marginal is a uniform distribution function on $\left[0, 1\right]$.
+
+By Sklar’s [@sklar1959fonctions] theorem, every continuous multivariate probability distribution can be represented by its univariate marginal distributions and a copula.
+
+$$C(u_1,\dots,u_d) = F\left(F_{1}^{-1}\left(u_1\right), \dots, F_{d}^{-1}\left(u_d\right)\right)$$
+with $F$ the joint CDF, $F_j$ the marginal CDF for $X_j$ and $F_{j}^{-1}$ the right continuous inverse of $F_j$.
+
+In practice the $F_j\left(X_j\right)$'s are unobservable but estimable by the normalized rank $\hat{F_j}\left(X_j\right)$ where $\hat{F_{j}}$'s are the empirical CDF.
+
+## Copula [@sklar1959fonctions]
+
+![[@ding7214copula]](img/copula_example.png){width=100%}
+
+
+$$f\left({\bf x}_i\right) = c(F_{1}\left(x_{i1}\right),\dots,F_{1}\left(x_{i1}\right)) \prod_{j=1}^{d} f_{j}\left({\bf x}_i\right)$$
+
+with $f$ the joint PDF, $f_j$ the marginal PDF in $j$ and  $c\left(u_{i1}, \dots, u_{id} \right) = \frac{\partial C\left(u_{i1}, \dots, u_{id}\right)}{\partial u_{i1}, \dots, u_{id}}$ the copula *PDF*
+
+## Gaussian Copula
+
+::::{.columns}
+::: {.column width="40%"}
+![[@hu2006dependence]](img/gaussian_cop_vs_gumel_cop.png){width=100%}
+
+:::
+::: {.column width="60%"}
+### The Gaussian Copula model a symmetric dependency structure: 
+
+- we can expect significantly stronger dependence when values are at their extremes.
+- higher correlations conditional on large movements
+
+### The Gumbel Copula model an asymmetric dependency structure: 
+
+- Put more density on the right tails
+:::
+::::
+
+# SaMiC
+
+## SaMiC [@zhang2013measuring]
+
+Instead of using a given Copula use a mixture of copula $C_{m}\left({\bf u}_i\right) = \sum_{j=1}^m\alpha_j C_j\left({\bf u}_i\right)$
+
+$$SaMiC\left({\bf x}_i, \boldsymbol\theta\right) = \frac{\pi h_{0}\left(\hat{F}_{1}\left(x_{i1}\right), \hat{F}_{2}\left(x_{i2}\right)\right)}{\pi h_{0}\left(\hat{F}_{1}\left(x_{i1}\right), \hat{F}_{2}\left(x_{i2}\right)\right) + (1-\pi) h_{1}\left((\hat{F}_{1}\left(x_{i1}\right), \hat{F}_{2}\left(x_{i2}\right), \boldsymbol\theta\right)}$$
+
+
+:::: {.columns}
+::: {.column width="60%"}
+with 
+$$h_{0} \sim Indep\left(\right) \text{ and } h_{1} \sim c_{m}\left({\bf u}_i, \boldsymbol\theta\right) = \sum_{j=1}^m\alpha_j c_j\left({\bf u}_i, \theta_j\right)$$
+
+where $C_j$ is an **Archimedean** copula
+:::
+::: {.column width="10%"}
+:::
+::: {.column width="30%"}
+```{r copula_approach_marginal_bis_bis, include=T, echo=F, warning=F, message=F, fig.width=4, fig.height=4}
+library(tidyverse)
+library(ggside)
+cop <- copula::normalCopula(param = 0.8, dim = 2) 
+copula::rCopula(1000, cop) %>% 
+  tibble(
+    u1 = .[, 1],
+    u2 = .[, 2],
+  ) %>% 
+  ggplot(aes(x = u1, y = u2)) +
+  geom_point(alpha = 0.5) +
+  geom_xsidehistogram(aes(y = after_stat(density))) +
+  geom_ysidehistogram(aes(x = after_stat(density))) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+:::
+::::
+
+## SaMiC vs IDR
+
+![[@ding7214copula]](img/samic_vs_idr.png){width=100%}
+
+### The original IDR and SaMiC methods were developed for the 2D cases ($d=2$)
+
+# IDRs a $d$-dimensional IDR
+
+## IDRs
+
+IDRs a $d$-dimensional IDR:
+
+### Previous implementation: using the [`copula`](https://CRAN.R-project.org/package=copula) R package
+
+- Numerically unstable for large $n$
+- Slow for large $n$
+- Difficult to optimize (more)
+
+### IDRs project: Rust implementation of the model ![Niko Matsakis](img/rust-logo-256x256.png){width=50px}
+
+- We have the hand on everything
+- We can optimize everything
+- It's in Rust so it's fast
+- It's in Rust so it's safe
+
+
+## IDRs model
+
+Like in SaMiC we propose to model the dependency structure of the data with a mixture of the Frank, Clayton and Gumbel copula.
+
+The IDR of observation ${\bf x}_i = [x_1, \dots, x_d]$ can be computed as follows:
+
+$$IDR\left({\bf x}_i, \pi, \boldsymbol\theta\right) = \frac{\pi h_{0}\left(\hat{F}_{1}\left(x_{i1}\right), \dots, \hat{F}_{d}\left(x_{id}\right)\right)}{\pi h_{0}\left(\hat{F}_{1}\left(x_{i1}\right), \dots, \hat{F}_{d}\left(x_{id}\right)\right) + (1-\pi) h_{1}\left((\hat{F}_{1}\left(x_{i1}\right), \dots, \hat{F}_{d}\left(x_{id}\right), \boldsymbol\theta\right)}$$
+with 
+$$h_{0} \sim Indep\left({\bf u}_i\right) \prod_{j=1}^{d} g_0\left(G^{-1}({\bf u}_i, \boldsymbol\theta), \boldsymbol\theta\right) \text{ and } h_{1} \sim c_{m}\left({\bf u}_i, \boldsymbol\theta\right) \prod_{j=1}^{d} g_1\left(G^{-1}({\bf u}_i, \boldsymbol\theta), \boldsymbol\theta\right)$$
+
+## IDRs model
+
+Compared to SaMiC model:
+
+- We retain the **$\bf z$-transformation** proposed in the original IDR method
+- We use the ML estimator of $\boldsymbol\theta$
+
+Compared to IDR model:
+
+- We use a mixture of Archimedean copula
+- We can work in $d$ dimensions
+
+Compared to both:
+
+- We work in $n$ dimentions
+
+## Archimedean Copula [@hofert2013archimedean]
+
+A $d$-dimensional copula $C$ is called Archimedean if it permits the representation
+
+$$C({\bf u}) = \psi\left(t\left({\bf u}\right)\right), \text{ where } t\left({\bf u}\right) = \sum_{j=1}^d \psi^{-1}\left(u_j\right), {\bf u} \in \left[0,1\right]^d$$
+
+:::: {.columns}
+::: {.column width="60%"}
+- Frank :
+  - $\psi(t) = -\log(1 - (1 - e^{-\theta})e^{-t}) / \theta$
+  - $\psi^{-1}\left(t\right) = -\log\left(\frac{e^{-\theta t} - 1}{e^{-\theta} - 1}\right)$
+- Clayton :
+  - $\psi(t) = (1 + t)^{-\frac{1}{\theta}}$
+  - $\psi^{-1}\left(t\right) = \frac{1}{\theta}\left(t^{-\theta}-1\right)$
+:::
+::: {.column width="40%"}
+- Gumbel :
+  - $\psi(t) = exp\left(-t^{\frac{1}{\theta}}\right)$
+  - $\psi^{-1}\left(t\right) = \left(-log\left(t\right)\right)^{\theta}$
+:::
+::::
+
+## Frank PDF [@hofert2013archimedean]
+
+The reproducibility structures of Frank Copula and the variables drawn from Frank Copula are symmetric in both tails of their distributions [@ding7214copula]
+
+$$c_{\theta}\left(t\right) = \left(\frac{\theta}{1 - e^{-\theta}}\right)^{d - 1}\text{Li}_{\left(d-1\right)}\left(h_{\theta}^{F}\left(\bf{u}\right)\right)\frac{\exp\left(-\theta \sum_{j=1}^{d}u_j\right)}{h_{\theta}^{F}\left(\bf{u}\right)}$$
+where $h_{\theta}^{F}\left(\bf{u}\right) = \left(1 - e^{-\theta}\right)^{1-d}\prod_{j=1}^{d}\left(1 - \exp\left(-\theta u_j\right)\right)$
+
+and $\text{Li}_{-s}\left(z\right) = \sum_{k=1}^{\infty}\frac{z^k}{z^s}$ the polylogarithm of order $s$ at $z$
+
+
+## Clayton PDF [@hofert2013archimedean]
+
+Clayton Copula is sensitive to the low tail dependence of random variables, and can easily capture the changes around the low tail [@ding7214copula]
+
+$$c_{\theta}\left(t\right) = \prod_{k=0}^{d-1} \left(\theta k + 1\right)\left(\prod_{j=1}^{d}u_j\right)^{-(1+\theta)}\left(1 + t_{\theta}\left(\bf{u}\right)\right)^{-(d+\alpha)}$$
+
+with $\alpha = \frac{1}{\theta}$
+
+## Gumbel PDF [@hofert2013archimedean]
+
+Gumbel Copula is sensitive to the upper tail dependence of random variables [@ding7214copula]
+
+$$c_{\theta}\left(t\right) = \theta^{d}\exp\left(-t_{\theta}\left(\bf{u}\right)^{\alpha}\right)\frac{\prod_{j=1}^{d}\left(-\log\left(u_j\right)\right)^{\theta-1}}{t_{\theta}\left(\bf{u}\right)^{d}\prod_{j=1}^{d}u_j} P_{d,\alpha}^{G}\left(t\left(\bf{u}\right)^{\alpha}\right)$$
+where: $P_{d,\alpha}^{G}\left(x\right) = \sum_{k=1}^{d} a_{dk}^G\left(\alpha\right)x^k$
+
+with: $a_{dk}^G\left(\alpha\right) = \left(-1\right)^{d-k} \sum_{j=k}^{d}\alpha^{j}s\left(d, j\right)S\left(j, k\right)$
+
+with $s$ and $S$ denoting the Stirling number of the first and second kind give by:
+
+$$s\left(n + 1, k\right) = s\left(n, k - 1\right) - n s\left(n, k\right)$$
+$$S\left(n + 1, k\right) = S\left(n, k - 1\right) + k S\left(n, k\right)$$
+with $s\left(0, 0\right) = S\left(0, 0\right) = 1$ and $s\left(n, 0\right) = s\left(0, n\right) = S\left(0, n\right) = S\left(n, 0\right) = 0$
+
+# Solving numerical problem with Copula densities
+
+The closed form Archimedian densities implementation leads to numerical instabilities
+
+**Solution:** Compute directly the partial derivatives
+
+$$c\left(u_{i1}, \dots, u_{id} \right) = \frac{\partial C\left(u_{i1}, \dots, u_{id}\right)}{\partial u_{i1}, \dots, u_{id}}$$
+with 
+
+$$C({\bf u}) = \psi\left(t\left({\bf u}\right)\right), \text{ where } t\left({\bf u}\right) = \sum_{j=1}^d \psi^{-1}\left(u_j\right), {\bf u} \in \left[0,1\right]^d$$
+
+# 3 type of Differentiations
+
+## Numeric Differentiation
+
+using the limit definition of a derivative:
+
+$$\frac{df}{dx} = \lim_{h\rightarrow0} \frac{f\left(x + h\right) - f\left(x\right)}{h}$$
+In practice, it wouldn't make sense to programmatically take the limit, so we discard the limit and rewrite the expression for vector:
+
+$$\frac{\partial f}{\partial\theta_i} \simeq \frac{f\left(x + h \cdot {\bf e_i}\right) - f\left(x\right)}{h} + O\left(h\right)$$
+
+$$\frac{\partial f}{\partial\theta_i} \simeq \frac{f\left(x + h \cdot {\bf e_i}\right) - f\left(x - h \cdot {\bf e_i}\right)}{2h} + O\left(h^2\right)$$
+
+${\bf e_i}$ is a unit vector, where the $i$-th $i$-th element is one while all other elements are zero
+$O(h)$ is a function on $h$ that expresses the truncation error
+
+## Numeric Differentiation problem
+
+![https://huggingface.co/blog/andmholm/what-is-automatic-differentiation](./img/errors.png)
+
+## Symbolic Differentiation
+
+Systematic process that transforms an expression composed of arithmetic operations and symbols, into an expression representing its derivative
+Done by applying the derivative rules of Calculus (e.g. sum rule) to closed-form expressions
+
+```python
+from sympy import symbols, cos, exp, diff
+
+x = symbols("x")
+fog = 4 * (cos(x) + 2 * x - exp(x)) ** 2
+dfdx = diff(fog, x)
+print(dfdx)
+```
+
+```python
+4*(2*x - exp(x) + cos(x))*(-2*exp(x) - 2*sin(x) + 4)
+```
+
+## Symbolic Differentiation problems
+
+1. expression swell (ex: chain rule)
+
+$$f(x) = \frac{e^{wx+b} + e^{-(wx+b)}}{e^{wx+b} - e^{-(wx+b)}}$$
+$$\frac{\partial f}{\partial w} = \frac{(- x e^{- b - w x} - x e^{b + w x}) (e^{- b - w x} + e^{b + w x})}{(- e^{- b - w x} + e^{b + w x})^{2}} + \frac{- x e^{- b - w x} + x e^{b + w x}}{- e^{- b - w x} + e^{b + w x}}$$
+not always easy to simplify the expression $\rightarrow$ **where we were**
+
+## Symbolic Differentiation problems
+
+2. No control flow
+
+```python
+from sympy import symbols, diff
+
+def f(x):
+    if x > 2:
+        return x * 2 + 5
+    return x / 2 + 5
+
+x = symbols("x")
+dfdx = diff(f(x))
+print(dfdx)
+```
+
+```python
+TypeError: cannot determine truth value of Relational
+```
+
+
+## Automatic Differentiation (AD)
+
+Decompote Functions into the variables and **elementary operations**. We know **their derivatives**, we can chain them together to get at the derivative for the entire function
+
+evaluation trace: $f(x_1, x_2) = x_1x_2 + x_2 - \ln(x_1) = y$ for $x_1 = 3$ and $x_2 = -4$
+
+|Primal Trace | Output
+|--------------|-------
+| $v_{-1} = x_1$ | 3
+| $v_0 = x_2$ | -4
+| $v_1 = v_{-1}v_0$ | 3 x -4 = -12
+| $v_2 = \ln(v_{-1})$ | ln(3) = 1.10
+| $v_3 = v_1 + v_0$ | -12 + -4 = -16
+| $v_4 = v_3 - v_2$ | -16 - 1.10 = -17.10
+| $y = v_4$ | -17.10
+
+$v_i$ are called **primals**
+
+## Forward Mode AD
+
+We introduces the **tangent**, denoted $\dot{v_i}$, corresponding to a primal $v_i$
+
+If we want to find $\frac{\partial y}{ \partial x_2}$: $\dot{v_i} = \frac{\partial v_i}{\partial x_2}$
+
+|Primal Trace | Output | Tangent Trace | Output
+|-------------|--------|---------------|-------
+| $v_{-1} = x_1$ | 3 | $\dot{v_{-1}} = \dot{x_1}$ | 0
+| $v_0 = x_2$ | -4 | $\dot{v_0} = \dot{x_2}$ | 1
+| $v_1 = v_{-1}v_0$ | 3 x -4 = -12 | $\dot{v_1} = \dot{v_{-1}}v_0 + v_{-1}\dot{v_0}$ |   0 x -4 + 1 ⋅ 3 = 3
+| $v_2 = \ln(v_{-1})$ | ln(3) = 1.10 | $\dot{v_2} = \dot{v_{-1}} (1/v_{-1})$ | 0 x (1 / 3) = 0
+| $v_3 = v_1 + v_0$ | -12 + -4 = -16 | $\dot{v_3} = \dot{v_1} + \dot{v_0}$ | 3 + 1 
+| $v_4 = v_3 - v_2$ | -16 - 1.10 = -17.10 | $\dot{v_4} = \dot{v_3} - \dot{v_2}$ | 4 - 0 = 4
+| $y = v_4$ | -17.10 | $\dot{y} = \dot{v_4}$ | 4
+
+## Forward Mode AD
+
+To compute the Jacobian of a function $f : \mathbb{R}^n \rightarrow \mathbb{R}^m$ we need $n$ forward pass (one by column)
+
+$$
+J_{\mathbf{f}} =
+\begin{bmatrix}
+\frac{\partial f_1}{\partial x_1} & \cdots & \frac{\partial f_1}{\partial x_m} \\
+\vdots & \ddots & \vdots \\
+\frac{\partial f_n}{\partial x_1} & \cdots & \frac{\partial f_n}{\partial x_m}
+\end{bmatrix}
+$$
+Jacobian-vector product (JVP) in one pass:
+$$
+\mathbf{J} \cdot \mathbf{r} =
+\begin{bmatrix}
+\frac{\partial f_1}{\partial x_1} & \cdots & \frac{\partial f_1}{\partial x_m} \\
+\vdots & \ddots & \vdots \\
+\frac{\partial f_n}{\partial x_1} & \cdots & \frac{\partial f_n}{\partial x_m}
+\end{bmatrix}
+\begin{bmatrix}
+r_1 \\
+\vdots \\
+r_m
+\end{bmatrix}.
+$$
+describes the change in the outputs when the inputs are directionally nudged by $\mathbf{r}$
+
+
+## Reverse Mode AD
+
+We introduce adjoints $\bar{v_i}$ representing the partial derivative of an output $y_i$
+
+$$\bar{v_i} = \frac{\partial y_i}{\partial v_i}$$
+We do a forward pass and store any dependencies required for the derivative computation of $\bar{v_i}$ in the computational graph.
+
+![https://huggingface.co/blog/andmholm/what-is-automatic-differentiation](img/comp-graph-dark.png)
+
+## Reverse Mode AD
+
+|Primal Trace | Output | Reverse Adjoint Trace | Output
+|-------------|--------|-----------------------|-------
+| $v_{-1} = x_1$ | 3 | $\bar{v_{-1}} = \bar{x_1} = \bar{v_2} \cdot (1/v_1) + \bar{v_1} \cdot v_0$ | -1 x (1 / 3) + 1 ⋅ -4 = -4.33
+| $v_0 = x_2$ | -4 | $\bar{v_0} = \bar{x_2} = \bar{v_3} \cdot 1 + \bar{v_1} \cdot v_{-1}$ | 1 x 1 + 1 ⋅ 3 = 4
+| $v_1 = v_{-1}v_0$ | 3 x -4 = -12 | $\bar{v_1} = \bar{v_3} \cdot 1$ | 1 x 1 = 1
+| $v_2 = \ln(v_{-1})$ | ln(3) = 1.10 | $\bar{v_2} = \bar{v_4} \cdot -1$ | 1 x -1 = -1
+| $v_3 = v_1 + v_0$ | -12 + -4 = -16 | $\bar{v_3} = \bar{v_4} \cdot 1$ | 1 x 1 = 1
+| $v_4 = v_3 - v_2$ | -16 - 1.10 = -17.10 | $\bar{v_4} = \bar{y}$ | 1
+| $y = v_4$ | -17.10 | $\bar{y}$ | 1
+
+## Reverse Mode AD
+
+To compute the Jacobian of a function $f : \mathbb{R}^n \rightarrow \mathbb{R}^m$ we need $m$ reverse pass (one by row)
+
+$$
+J_{\mathbf{f}} =
+\begin{bmatrix}
+\frac{\partial f_1}{\partial x_1} & \cdots & \frac{\partial f_1}{\partial x_m} \\
+\vdots & \ddots & \vdots \\
+\frac{\partial f_n}{\partial x_1} & \cdots & \frac{\partial f_n}{\partial x_m}
+\end{bmatrix}
+$$
+
+Vector-Jacobian Product in one pass
+
+$$
+\mathbf{r} \cdot \mathbf{J} =
+\begin{bmatrix}
+r_1 & \cdots & r_n
+\end{bmatrix}
+\begin{bmatrix}
+\frac{\partial f_1}{\partial x_1}  & \cdots & \frac{\partial f_1}{\partial x_m} \\
+\vdots & \ddots & \vdots \\
+\frac{\partial f_n}{\partial x_1} & \cdots & \frac{\partial f_n}{\partial x_m}
+\end{bmatrix}
+$$
+
+partial derivatives of an output w.r.t. all its inputs when perturbed by $\mathbf{r}^T$
+
+# Archimedean copula *density* with AD
+
+```python
+def pdf(self, u: torch.Tensor|List[torch.Tensor], theta: torch.Tensor, log: bool=False)
+  -> torch.Tensor:
+  if theta == self.lower_bound():
+      return IndependenceCopula(self._dim).pdf(u, log)
+  
+  if isinstance(u, torch.Tensor):
+      u.requires_grad_(True)
+      u = [u[:, i] for i in range(u.shape[1])]
+  
+  pdf = self.cdf(u, theta)
+  for i in range(len(u)):
+      pdf = torch.autograd.grad(
+          pdf,
+          u[i],
+          grad_outputs=torch.ones_like(u[i]),
+          create_graph=True
+          )[0]
+  if log:
+      return torch.log(pdf)
+  return pdf
+```
+
+# IDRs estimation
+
+## Dealing with ties in ranks
+
+The IDR can be applied to any ranking systems that produce scores ${\bf x} \in \mathbb{R}^{n \times d}$ without ties which is not the case for most NGS data.
+
+### We propose the following algorithm $\text{solve_ties_and_rank}\left({\bf x}\right)$:
+
+We compute $r_{ij}' = \frac{x_{ij}}{\max {\bf x}_j}$
+
+Let $r_{(i),j}'$ the $i$th ordered $\bf{r}'$ value
+
+if $r_{(i), j}' = ... = r_{(k), j}'$ then we set $r_{(\ell \in [i, k], k)} = z$ with $z \sim U\left[r_{(i), j}', r_{(i), j}' + \frac{r_{(k+1), j}' - r_{(i), j}'}{2}\right]$
+
+else $r_{(i), j} = r_{(i), j}'$
+
+get the final $\bf r$ without ties, with ranks corresponding to ties in $\bf r'$ closer together than they are to upper or lower ranks.
+
+```
+x = [2, 3, 4, 5, 2]
+r = [0.427252, 0.6, 0.8, 1.0, 0.487538] 
+```
+
+## EM algorithm
+
+0. init $\hat{\boldsymbol\theta}$
+1. ${\bf r} = \text{solve_ties_and_rank}\left({\bf x}\right)$
+2. ${\bf \hat{z}} = G^{-1}\left({\bf r}, \hat{\bf \pi}, \hat{\bf \mu}, \hat{\bf \sigma}\right)$
+3. ${\bf \hat{x}} = \text{rank}\left(\bf \hat{z}\right)$
+4. Expectation step
+5. Maximisation step
+10. Go back to 2. until convergence
+
+## Computing $G^{-1}\left({\bf r}, \hat{\bf \pi}, \hat{\bf \mu}, \hat{\bf \sigma}\right)$
+
+We only have $G\left(z_{ij}, \hat{\bf \pi}, \hat{\bf \mu}, \hat{\bf \sigma}\right) = (1 - \pi) \phi\left(z_{ij}, 0, \sigma_0\right) + \pi \phi\left(z_{ij}, \mu_1, \sigma_1\right)$
+
+::::{.columns}
+::: {.column width="50%"}
+![](img/g_m1.png){width=100%}
+:::
+::: {.column width="50%"}
+![](img/g_m1_zoom.png){width=100%}
+:::
+::::
+
+We perform a linear grid interpolation to compute the value of $G^{-1}\left({\bf r}, \hat{\bf \pi}, \hat{\bf \mu}, \hat{\bf \sigma}\right)$
+
+
+## EM algorithm: Expectation step
+
+1. For $\ell \in \left\{0,1\right\}, k \in \left\{F,C,G\right\}$
+$$P\left(J_i = \ell | H_i, {\bf \hat{x}}_i, {\bf \hat{z}}_i, \hat{\boldsymbol\theta} \right) = \frac{\pi_{\ell}h_{\ell}\left({\bf \hat{x}}_i, \theta_k\right)\prod_{j=1}^{d} g\left({\bf \hat{z}}_i, \hat{\boldsymbol\pi}, \hat{\mu_j}, \hat{\sigma_j}\right)}{\sum_{\ell = 0}^{1}\left(\pi_{\ell}h_{\ell}\left({\bf \hat{x}}_i, \theta_k\right)\prod_{j=1}^{d} g\left({\bf \hat{z}}_i, \hat{\boldsymbol\pi}, \hat{\mu_j}, \hat{\sigma_j}\right)\right)}$$
+2. For $k \in \left\{F,C,G\right\}$
+$$P\left(H_i = k | J_i = 1, {\bf \hat{x}}_i, {\bf \hat{z}}_i, \hat{\boldsymbol\theta} \right) = \frac{w_kc_k\left({\bf \hat{x}}_i, \theta_k\right) \prod_{j=1}^{d} g\left({\bf \hat{z}}_i, \hat{\boldsymbol\pi}, \hat{\mu_j}, \hat{\sigma_j}\right)}{\sum_{\ell \in {F,C,G}}\left(w_kc_{\ell}\left({\bf \hat{x}}_i, \theta_k\right) \prod_{j=1}^{d} g\left({\bf \hat{z}}_i, \hat{\boldsymbol\pi}, \hat{\mu_j}, \hat{\sigma_j}\right)\right)}$$
+
+## EM algorithm: Maximisation step
+
+1. For $k \in \left\{F,C,G\right\}$, $\hat{w}_{k}^{(t+1)} = \frac{1}{n}\sum_{i=1}^{n} H_{ik}$
+2. For $k \in \left\{0,1\right\}$, $\hat{\pi}_{k}^{(t+1)} = \frac{1}{n}\sum_{i=1}^{n} J_{i}$
+3. $\hat{\sigma}_{0}^{(t+1)} = \frac{\sum_{i=1}^{n} \left( \left(1 - J_{i0}\right)  \left(\sum_{j=1}^{d}\left(\hat{z}_{ij}\right)^2\right)\right)}{d\sum_{i=1}^{n} \left( 1 - J_{i0}\right)}$
+4. $\hat{\mu}_1^{(t+1)} = \frac{\sum_{i=1}^{n} \left( \left(1 - J_{i0}\right)  \left(\sum_{j=1}^{d}\hat{z}_{ij}\right)\right)}{d\sum_{i=1}^{n} \left( 1 - J_{i0}\right)}$ $\hat{\sigma}_{1}^{(t+1)} = \frac{\sum_{i=1}^{n} \left( \left(1 - J_{i0}\right)  \left(\sum_{j=1}^{d}\left(\hat{z}_{ij} - \hat{\mu}_1^{(t+1)}\right)^2\right)\right)}{d\sum_{i=1}^{n} \left( 1 - J_{i0}\right)}$
+5. For $k \in \left\{F,C,G\right\}$, $\hat{\theta}_{k}^{(t+1)} = \underset{\theta}{\max} \text{ } \prod_{i=1}^{n} J_{i}w_{k}c_k({\bf x}_i, \hat{\theta}_k)$
+
+## EM algorithm: Maximisation step
+
+The Archimedean mixture is **very** flexible for modeling various dependencies structures but we don't want to model the independence copula.
+
+ 
+> We have a race problem between the computation of $w_k$ and $\theta_k$ for $c_k({\bf \hat{x}}_i, \theta_k)$:
+>
+> - For an Archimedean copula: higher value of $\theta$ corresponds to a greater dependency between the variables
+> - For the mixture a higher value of $w_k$ with $k \in \left\{F,G,C\right\}$ means more dependency (less weight for the Independent copula)
+
+
+5. For $k \in \left\{F,C,G\right\}$, $\hat{\theta}_{k}^{(t+1)} = \underset{\theta}{\max} \text{ } \prod_{i=1}^{n} J_{i}w_{k}c_k({\bf x}_i, \hat{\theta}_k)$
+
+We mess with the classical EM implementation, instead of maximizing $J_{i}\prod_{i=1}^{n} H_{ik} c_k({\bf \hat{x}}_i, \theta_k)$ we replace $H_{ik}$ by the average estimate $w_k$.
+
+Therefore the Archimedean mixture $h_1$ will model the average distribution of the dependency structure.
+
+## Estimating the copula $\hat{\theta}_k$'s
+
+For $k \in \left\{F,C,G\right\}$, $\hat{\theta}_{k}^{(t+1)} = \underset{\theta}{\max} \text{ } J_{i}\prod_{i=1}^{n} w_{k}c_k({\bf x}_i, \hat{\theta}_k)$
+
+
+::::{.columns}
+::: {.column width="20%"}
+```{r copula_frank_max_theta, include=T, echo=F, warning=F, message=F, fig.width=3, fig.height=3}
+library(tidyverse)
+library(ggside)
+cop <- copula::frankCopula(param = 10, dim = 4) 
+data <- copula::rCopula(1000, cop)
+data <- tibble(
+    theta = 0:80
+  ) %>% 
+  mutate(
+    loglikelihood = map(.x = theta, .f = function(x){
+      sum(copula::dCopula(data, copula::frankCopula(param = x, dim = 4), log = T))
+                })
+  ) %>% 
+  unnest(loglikelihood)
+data %>% 
+  ggplot(aes(x = theta, y = loglikelihood)) +
+  geom_line() +
+  theme_bw() +
+  ggtitle("Frank")
+```
+$$\theta \in \mathbb{R}\setminus0$$
+:::
+::: {.column width="20%"}
+```{r copula_gumbel_max_theta, include=T, echo=F, warning=F, message=F, fig.width=3, fig.height=3}
+library(tidyverse)
+library(ggside)
+cop <- copula::gumbelCopula(param = 8, dim = 4) 
+data <- copula::rCopula(1000, cop)
+data <- tibble(
+    theta = 1:80
+  ) %>% 
+  mutate(
+    loglikelihood = map(.x = theta, .f = function(x){
+      sum(copula::dCopula(data, copula::gumbelCopula(param = x, dim = 4), log = T))
+                })
+  ) %>% 
+  unnest(loglikelihood)
+data %>% 
+  ggplot(aes(x = theta, y = loglikelihood)) +
+  geom_line() +
+  theme_bw() +
+  ggtitle("Gumbel")
+```
+$$\theta \in \left[1, \infty\right]$$
+:::
+::: {.column width="20%"}
+```{r copula_clayton_max_theta, include=T, echo=F, warning=F, message=F, fig.width=3, fig.height=3}
+library(tidyverse)
+library(ggside)
+cop <- copula::claytonCopula(param = 10, dim = 4) 
+data <- copula::rCopula(1000, cop)
+data <- tibble(
+    theta = 0:80
+  ) %>% 
+  mutate(
+    loglikelihood = map(.x = theta, .f = function(x){
+      sum(copula::dCopula(data, copula::claytonCopula(param = x, dim = 4), log = T))
+                })
+  ) %>% 
+  unnest(loglikelihood)
+data %>% 
+  ggplot(aes(x = theta, y = loglikelihood)) +
+  geom_line() +
+  theme_bw() +
+  ggtitle("Clayton")
+```
+$$\theta \in \left[-1, \infty\right]\setminus0$$
+:::
+::::
+
+
+## Estimating the copula $\hat{\theta}_k$'s
+
+Gradient Descent algorithm
+
+::::{.columns}
+::: {.column width="50%"}
+
+$$\hat{\theta}_{t+1} = \hat{\theta}_t - \alpha \nabla LL({\bf u, \hat{\boldsymbol\theta}_t)}$$
+
+$\alpha$ is the learning rate
+
+
+:::
+::: {.column width="50%"}
+
+![[https://gbhat.com](https://gbhat.com/machine_learning/gradient_descent.html)](img/gradient_descent.gif)
+:::
+::::
+
+## Estimating the copula $\hat{\theta}_k$'s
+
+We can choose $\alpha$ smartly: **Adagrad**
+
+with 
+
+$$\nabla LL({\bf u, \hat{\theta}_k)} = \left[\frac{\partial LL({\bf u, \hat{\theta}_F)}}{\partial \theta_F}, \dots, \frac{\partial LL({\bf u, \hat{\theta}_G)}}{\partial \theta_G}\right]$$
+
+we keep a memory $\boldsymbol\nu$ :  $\nu_{t+1, k} = \nu_{k,t} + \frac{\partial LL({\bf u, \hat{\theta}_{k, t})}}{\partial \theta_{k,t}}^2$
+
+and 
+
+$$\alpha_{t+1} = \alpha_{t} \boldsymbol\nu_t$$
+
+We could use a convex problem minimizer algorithm, but:
+
+- we perform a minimization step ($n$ iteration) for each maximization step (also $n$ iteration)
+
+## Estimating the copula weights $\hat{w}_k$'s and $\hat{\theta}_k$'s
+
+We can use a simple gradient descent algorithm to solve the following in one go:
+$$\hat{\boldsymbol\theta}^{(t+1)},\hat{\bf w}^{(t+1)} = \underset{\boldsymbol\theta, {\bf w}}{\max} \text{ } \sum_{i=1}^{n} \log\left(J_{i}\sum_{k \in \left\{F,C,G\right\}}w_{k}c_k({\bf x}_i, \hat{\theta_k})\right)$$
+
+But
+
+- $\boldsymbol\theta$ is not defined on $\mathbb{R}^3$
+- numerical instabilities for large $\theta$ (for Franck copula)
+- $\sum_{k \in \left\{F,C,G\right\}} w_k = 1$ ($\sum_{k \in \left\{F,C\right\}} w_k \leq 1$)
+
+## Constrained problem optimization
+
+We add penalties to our convex problem: **barrier method** to respect inequalities constrains.
+
+$$\hat{\boldsymbol\theta}^{(t+1)},\hat{\bf w}^{(t+1)} = \underset{\boldsymbol\theta, {\bf w}}{\max} \log h_1\left({\bf x}, \hat{\boldsymbol\theta}, \hat{{\bf w}} \right) - \sum_{i=1}^{n_g} \xi \left(g(\boldsymbol\theta, {\bf w})\right)$$
+$g(\boldsymbol\theta, {\bf w}) \leq 0$
+
+- if $g_i(\boldsymbol\theta, {\bf w}) \leq 0$ then $\xi \left(g(\boldsymbol\theta, {\bf w})\right) = 0$
+- if $g_i(\boldsymbol\theta, {\bf w}) > 0$ then $\xi \left(g(\boldsymbol\theta, {\bf w})\right) = \infty$
+
+- If a constrain is not met, the objective function goes to $\infty$
+- the objective function becomes nondifferentiable
+
+## Constrained problem optimization
+
+We add penalties to our convex problem: **barrier method** to respect inequalities constrains.
+
+$$\hat{\boldsymbol\theta}^{(t+1)},\hat{\bf w}^{(t+1)} = \underset{\boldsymbol\theta, {\bf w}}{\max} \log h_1\left({\bf x}, \hat{\boldsymbol\theta}, \hat{{\bf w}} \right) - \frac{1}{t}\sum_{i=1}^{n_g} \log \left(-g(\boldsymbol\theta, {\bf w})\right)$$
+
+
+::::{.columns}
+::: {.column width="50%"}
+
+$g(\boldsymbol\theta, {\bf w}) \leq 0$
+
+- $g_i(\boldsymbol\theta, {\bf w})^{-} \rightarrow 0$
+- $\log\left(g_i(\boldsymbol\theta, {\bf w})\right) \rightarrow -\infty$
+- For $t > 0$ $\frac{1}{t} log(-u)$ is a smooth approximation of $\xi(u)$ (improve as $t \rightarrow \infty$)
+
+
+:::
+::: {.column width="50%"}
+```{r log_barier, include=T, echo=F, warning=F, message=F, fig.width=4, fig.height=4}
+library(tidyverse)
+library(ggside)
+tibble(
+    x = rep(seq(from = 0.5, to = 2, length.out = 1000), 4),
+    t = rep(c(1, 10, 50, 100), each = 1000)
+  ) %>% 
+  mutate(
+    y = -1/t * log(x - .5),
+    t = as.factor(t)
+  ) %>% 
+  ggplot(aes(x = x, y = y, group = t, color = t)) +
+  geom_line() +
+  theme_bw() +
+  ggtitle("log barrier x >= 1/2")
+```
+:::
+::::
+
+## Constrained problem optimization
+
+For numerical stability we have to start with a small $t$ for the barrier method
+
+- The objective function evolve with the algorithm step
+- Harder problem to solve
+- We have to perform numerical differentiation at each step
+
+## Constrained problem optimization
+
+**Newton’s method**
+
+We can speed up the gradient method while by using the Hessian of the objective function.
+
+::::{.columns}
+::: {.column width="50%"}
+$$(H_f)_{i,j} = \frac{\partial^2 f}{\partial \theta_i \partial \theta_j}$$
+$$\hat{\theta}_{t+1} = \hat{\theta}_t - \alpha H^{-1} \nabla f({\bf u, \hat{\boldsymbol\theta}_t)}$$
+:::
+::: {.column width="50%"}
+![[https://gbhat.com](https://gbhat.com/machine_learning/sgd_vs_lbfgsb.html)](img/sgd_vs_lbfgsb.gif)
+:::
+::::
+
+In practice computing $H$ is impractical
+
+## Constrained problem optimization
+
+**quasi-Newton method**
+
+Instead of computing $H$ at each step we can estimate it with a positive-definite matrix from previous $S = \left[\hat{\boldsymbol\theta}_t, \dots, \hat{\boldsymbol\theta}_{t-m}\right]$ and $Y = \left[\nabla f({\bf u, \hat{\boldsymbol\theta}_t)}, \dots, \nabla f({\bf u, \hat{\boldsymbol\theta}_{t-m})} \right]$ values.
+
+[**BFGS** algorithm](https://towardsdatascience.com/bfgs-in-a-nutshell-an-introduction-to-quasi-newton-methods-21b0e13ee504) from Broyden, Fletcher, Goldfarb, and Shanno, who each came up with the algorithm independently in 1970.
+
+Implemented in the [argmin](https://www.argmin-rs.org/) rust library
+
+- Don't work well with the constraints
+
+## Constrained problem optimization [@byrd1995limited]
+
+**L-BFGS-B** optimized version of the **BFGS** algorithm that can handle boundaries
+
+- No more penalty for the $\boldsymbol\theta$'s in the objective function
+- No rust implementation.
+
+![](img/down_the_rabit_hole.jpg)
+
+## Constrained problem optimization
+
+**L-BFGS-B** implemented:
+
+- Compute Cauchy’s point (find the first local minimizer of the quadratic model)
+- Minimize model (minimize the quadratic model over the space of free variables and impose the bounds on the problem, find the search direction $\mathbf{p}_k$)
+- Max allowed step length
+- Line search (using More & Thuente [argmin](https://www.argmin-rs.org/) implementation)
+A step length $\alpha_k$ is said to satisfy the **Wolfe conditions** with $0 < c_1 < c_2 < 1$ if:
+  - $f(\mathbf{x}_k+\alpha_k\mathbf{p}_k)\leq f(\mathbf{x}_k) + c_1\alpha_k \mathbf{p}_k^{\mathrm T} \nabla f(\mathbf{x}_k)$ (ensures that $\alpha_k$ decreases $f$  *sufficiently*)
+  - ${-\mathbf{p}}_k^{\mathrm T}\nabla f(\mathbf{x}_k+\alpha_k\mathbf{p}_k) \leq -c_2\mathbf{p}_k^{\mathrm T}\nabla f(\mathbf{x}_k)$ (ensures that the slope has been reduced sufficiently)
+- Update $SY$
+    - from the $S$ and $M$ compute the new Hessian approximation
+
+## Todo
+
+- Write the README
+- Test the l-BFGS-b algorithm for the model with the $z$-transformation of the data
+- Implement stochastic gradient descent for large datasets
+- Implement automatic differentiation for Archcopula
+
+## References
+
+::: {#refs}
+:::
