@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2024 UL Research Institutes
+# SPDX-License-Identifier: Apache-2.0
+
+stages:
+  - test
+  - build
+  - deploy
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - when: always
+
+include:
+  - project: saferatday0/library/detect-secrets
+    ref: 0.7.1
+    file:
+      - detect-secrets.yml
+  - project: saferatday0/library/gitlab
+    ref: 0.17.0
+    file:
+      - gitlab-release.yml
+  - project: saferatday0/library/prettier
+    ref: 0.6.0
+    file:
+      - prettier.yml
+  - project: saferatday0/library/python
+    ref: 0.21.1
+    file:
+      - python-autoflake.yml
+      - python-black.yml
+      - python-isort.yml
+      - python-build-sdist.yml
+      - python-build-wheel.yml
+      - python-pyroma.yml
+      - python-twine-upload.yml
+  - project: saferatday0/library/skywalking-eyes
+    ref: 0.7.0
+    file:
+      - license-eye-header-check.yml
+
+variables:
+  PYTHON_REQUIREMENTS: .
+  # prettier-ignore
+  PYTHON_TAG_VERSION_INJECTION: ''
+
+python-twine-upload-pypi:
+  extends: python-twine-upload
+  variables:
+    TWINE_USERNAME: __token__
+    TWINE_PASSWORD: $PYPI_API_TOKEN
+    TWINE_REPOSITORY_URL: https://upload.pypi.org/legacy/
