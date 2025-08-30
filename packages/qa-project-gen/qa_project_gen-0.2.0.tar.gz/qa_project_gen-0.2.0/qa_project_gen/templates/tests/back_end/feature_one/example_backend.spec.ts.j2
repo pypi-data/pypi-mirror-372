@@ -1,0 +1,28 @@
+import { test, expect, request, APIResponse } from '@playwright/test';
+
+const BASE_URL = process.env.TARGET_BASE_URL ?? 'https://webamboos.com';
+
+test.describe('Webamboos backend smoke', () => {
+  test('GET / (homepage) returns 200 and looks like HTML', async ({ request }) => {
+    const res = await request.get("/", { failOnStatusCode: false });
+    expect(res.status(), 'homepage status').toBe(200);
+
+    const ctype = res.headers()['content-type'] ?? '';
+    expect(ctype.toLowerCase(), 'content-type should be HTML').toContain('text/html');
+
+    const body = await res.text();
+    expect(body).toMatch(/Webamboos|Trusted Software Development Partner/i);
+  });
+
+  test('HEAD / has basic headers', async ({ request }) => {
+    const res = await request.fetch(`${BASE_URL}/`, { method: 'HEAD', failOnStatusCode: false });
+    expect(res.status(), 'HEAD / status').toBe(200);
+
+    const ctype = res.headers()['content-type'];
+    expect(ctype, 'content-type present').toBeTruthy();
+
+    const cache = res.headers()['cache-control'];
+    expect(cache, 'cache-control present').toBeTruthy();
+  });
+
+});
