@@ -1,0 +1,91 @@
+[project]
+name = "namer"
+version = "1.19.16"
+description = "A namer of video files based on metadata from the porndb."
+readme = "readme.rst"
+authors = [
+    { name = "4c0d3r", email = "4c0d3r@protonmail.com" },
+    { name = "DirtyRacer", email = "DirtyRacer@ya.ru" }
+]
+dynamic = ["dependencies"]
+requires-python = ">=3.11,<3.15"
+
+[tool.poetry]
+include = [
+    { path = "namer/web/public/assets/**/*", format = ["sdist", "wheel"] },
+    { path = "namer/web/templates/**/*", format = ["sdist", "wheel"] },
+    { path = "namer/tools/videohashes*", format = ["sdist", "wheel"] },
+    { path = "namer/namer.cfg.default", format = ["sdist", "wheel"] }
+]
+
+[tool.poetry.dependencies]
+rapidfuzz = "^3.9"
+watchdog = "^6.0"
+pathvalidate = "^3.2"
+requests = "^2.32"
+mutagen = "^1.47"
+schedule = "^1.2"
+loguru = "^0.7"
+Unidecode = "^1.3"
+flask = "^3.1"
+waitress = "^3.0"
+Flask-Compress = "^1.15"
+Pillow = "^11.1"
+requests-cache = "^1.2"
+ffmpeg-python = "^0.2"
+jsonpickle = "^4.0"
+ConfigUpdater = "^3.2"
+oshash = "^0.1"
+pony = "^0.7"
+numpy = "^2.1"
+scipy = "^1.13"
+orjson = "^3.10"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-cov = "^6.0"
+coverage = "^7.0"
+ruff = "^0.12"
+selenium = "^4.21"
+assertpy = "^1.1"
+poethepoet = "^0.37"
+pony-stubs = "^0.5"
+scipy-stubs = "^1.13"
+
+[tool.ruff]
+exclude = [".git", "__pycache__", "docs/source/conf.py", "old", "build", "dist", "*migrations*", "init", "node_modules"]
+line-length = 320
+indent-width = 4
+target-version = "py310"
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501", "E722"]
+
+[tool.poe.tasks]
+install_npm = { shell = "pnpm install" }
+build_node = { shell = "pnpm run build" }
+install_videohashes_src = { shell = "command -v git >/dev/null && git submodule update || echo 'Skipping git sub module update'" }
+build_videohashes = { shell = "make build -C ./videohashes" }
+move_videohashes = { "script" = "shutil:copytree('./videohashes/dist', './namer/tools', dirs_exist_ok=True)" }
+build_namer = { shell = "poetry build" }
+build_deps = ["install_npm", "build_node", "install_videohashes_src", "build_videohashes", "move_videohashes"]
+test_format = { shell = "poetry run ruff check ." }
+test_namer = { shell = "poetry run pytest --log-cli-level=info --capture=no" }
+test = ["test_format", "test_namer"]
+build_all = ["build_deps", "test", "build_namer"]
+
+[tool.poetry.build]
+generate-setup-file = true
+
+[project.scripts]
+namer = "namer.__main__:main"
+
+[build-system]
+requires = ["poetry-core>=2.1"]
+build-backend = "poetry.core.masonry.api"
