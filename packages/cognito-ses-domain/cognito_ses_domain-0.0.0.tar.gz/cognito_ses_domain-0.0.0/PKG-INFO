@@ -1,0 +1,279 @@
+Metadata-Version: 2.1
+Name: cognito-ses-domain
+Version: 0.0.0
+Summary: cognito-ses-domain
+Home-page: https://github.com/pablocano/cognito-ses-domain.git
+Author: Pablo Cano<pablo.cano@merapar.com>
+License: MIT
+Project-URL: Source, https://github.com/pablocano/cognito-ses-domain.git
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: JavaScript
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Typing :: Typed
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: License :: OSI Approved
+Requires-Python: ~=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: aws-cdk-lib<3.0.0,>=2.200.0
+Requires-Dist: constructs<11.0.0,>=10.0.5
+Requires-Dist: jsii<2.0.0,>=1.113.0
+Requires-Dist: publication>=0.0.3
+Requires-Dist: ses-cloudwatch<2.0.0,>=1.2.1
+Requires-Dist: typeguard<4.3.0,>=2.13.3
+
+# cognito-ses-domain
+
+CDK construct that:
+
+* Verifies an SES domain identity (Route53 hosted zone lookup & DNS records)
+* (Optionally) Creates a Cognito Identity Pool + IAM Role permitting SES send actions
+* (Optionally) Enables SES sending event logging to CloudWatch via the companion [`ses-cloudwatch`](https://www.npmjs.com/package/ses-cloudwatch) construct (Configuration Set + EventBridge rule + LogGroup)
+
+The defaults are intentionally minimal: only the SES domain identity is created unless you opt-in to other capabilities.
+
+> ℹ️ This repository is managed by **[projen](https://github.com/projen/projen)**. Do not edit generated files (like `package.json`, GitHub workflows, eslint configs) directly—make changes in `.projenrc.ts` and run `npx projen` to re-synthesize.
+
+## Features
+
+| Capability | Enabled By | Notes |
+|------------|------------|-------|
+| SES Domain Identity | always | Creates `AWS::SES::EmailIdentity` for the domain. |
+| Cognito Identity Pool + Role/Policy | `createIdentityPool: true` | Grants authenticated users SES `Send*` permissions for the verified domain. Default is `false`. |
+| SES Sending Event Logging | `sendingLogs` props provided | Wraps `ses-cloudwatch` to capture SES sending events to CloudWatch Logs. |
+
+## Install
+
+Add as a dependency to your construct library or CDK app (peer deps `aws-cdk-lib` and `constructs` required):
+
+```bash
+npm install cognito-ses-domain
+# or
+yarn add cognito-ses-domain
+```
+
+## Quick Start
+
+```python
+import { Stack } from 'aws-cdk-lib';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
+import { SesDomainIdentity } from 'cognito-ses-domain';
+import { aws_ses as ses } from 'aws-cdk-lib';
+
+class MyStack extends Stack {
+	constructor(scope: Construct, id: string) {
+		super(scope, id, { env: { account: '123456789012', region: 'us-east-1' } });
+
+		const userPool = new cognito.UserPool(this, 'UserPool');
+		const client = userPool.addClient('Client');
+
+		new SesDomainIdentity(this, 'SesDomainIdentity', {
+			domain: 'example.com', // must exist in Route53 in this account/region
+			userPool,
+			userPoolClientId: client.userPoolClientId,
+			// Optional: provision Identity Pool & role (defaults to false)
+			createIdentityPool: true,
+			// Optional: enable logging of SES sending events
+			sendingLogs: {
+				configurationSetName: 'my-ses-config',
+				events: [ses.EmailSendingEvent.SEND, ses.EmailSendingEvent.DELIVERY],
+			},
+		});
+	}
+}
+```
+
+## Props
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `domain` | `string` | (required) | Domain to verify (must have a public hosted zone in Route53). |
+| `userPool` | `cognito.IUserPool` | (required) | User Pool associated with email sending context. |
+| `userPoolClientId` | `string` | (required) | User Pool client ID (used when creating Identity Pool). |
+| `createIdentityPool` | `boolean` | `false` | Whether to create Identity Pool + role/policy for SES sending. |
+| `sendingLogs` | `SesCloudWatchProps?` | `undefined` | Provide to enable SES sending event logging (Configuration Set + EventBridge rule + LogGroup). |
+
+`sendingLogs` is passed directly to the `ses-cloudwatch` construct. See its README for full option docs (`logGroupName`, `configurationSetName`, `eventRuleName`, `events`).
+
+## Outputs
+
+| Output | Description |
+|--------|-------------|
+| `SesIdentityArnOutput` | ARN of the created SES identity. |
+| `IdentityPoolIdOutput` | Identity Pool ID (only if `createIdentityPool: true`). |
+| `SesConfigurationSetName` | Configuration set name (only if `sendingLogs.configurationSetName` provided). |
+
+## Identity Pool Permissions
+
+When `createIdentityPool` is true:
+
+* A `Cognito::IdentityPool` is created referencing the supplied User Pool & client.
+* An IAM Role is created with a policy granting: `ses:SendEmail`, `ses:SendRawEmail`, `ses:SendTemplatedEmail` on the verified domain identity.
+
+Adjust or extend permissions by adding statements to the returned role (future enhancement: expose role as a property; contributions welcome).
+
+## Logging SES Sending Events
+
+Provide `sendingLogs` to create a configuration set and route selected SES sending events (default from `ses-cloudwatch`) through EventBridge into a CloudWatch LogGroup. Useful for deliverability monitoring and troubleshooting.
+
+Example enabling only default SEND event:
+
+```python
+sendingLogs: {}
+```
+
+Example customizing events & log group name:
+
+```python
+sendingLogs: {
+	logGroupName: 'ses-sending-events',
+	events: [ses.EmailSendingEvent.SEND, ses.EmailSendingEvent.DELIVERY, ses.EmailSendingEvent.REJECT],
+}
+```
+
+## Example Apps
+
+TypeScript example: [`examples/typescript/`](./examples/typescript/)
+
+Python example: [`examples/python/`](./examples/python/) (install the generated Python dist after running `npx projen package`).
+
+The TypeScript example demonstrates:
+
+* Creating a User Pool & client
+* Using the construct with sending logs enabled and Identity Pool disabled by default
+
+Examples are intentionally outside projen management (ignored via `.projenrc.ts`) so you can add multiple examples without affecting the library build.
+
+Run the example (ensure you have a matching hosted zone and bootstrapped environment):
+
+```bash
+cd examples/typescript
+npm install
+export CDK_DEFAULT_ACCOUNT=123456789012
+export CDK_DEFAULT_REGION=us-east-1
+npm run synth
+npm run deploy
+```
+
+To customize account/region you can also pass context: `npx cdk synth -c account=123456789012 -c region=us-east-1`.
+
+## Contributing
+
+This project is generated & maintained with [projen](https://github.com/projen/projen).
+
+### Projen Overview
+
+`/.projenrc.ts` defines the construct library configuration (jsii, publishing, dependencies). Running `npx projen` regenerates:
+
+* `package.json` (scripts, deps, peer deps)
+* `.projen/*` task & dependency metadata
+* Lint/test configuration
+* GitHub Actions (if enabled later)
+
+Never hand-edit those generated files—your changes will be overwritten. Instead:
+
+1. Edit `.projenrc.ts`
+2. Run `npx projen`
+3. Commit both your `.projenrc.ts` change and the synthesized outputs
+
+To inspect available options for the construct project type, see the `AwsCdkConstructLibrary` API docs or run `npx projen new awscdk-construct --help` in a scratch directory.
+
+### Contribution Workflow (Using Projen)
+
+1. Fork & clone the repo.
+2. Install dependencies: `npm install` (always do this before running any task).
+3. Make changes:
+
+   * For library logic – edit files under `src/`.
+   * For generated config (lint rules, release settings, tasks) – edit `.projenrc.ts` (never hand-edit the generated artifacts).
+4. Re-synthesize after modifying `.projenrc.ts`:
+
+   ```bash
+   npx projen
+   ```
+5. Fast feedback while coding:
+
+   ```bash
+   npx projen compile   # just jsii compile (fast, no tests)
+   npx projen test      # jest + eslint
+   ```
+6. Before pushing / opening a PR run the full pipeline:
+
+   ```bash
+   npx projen build     # synth -> compile -> test -> docgen -> package
+   ```
+7. Commit BOTH your source changes and any regenerated files (e.g. `package.json`, `API.md`, `.projen/*`).
+8. Open a pull request with a concise description and rationale.
+
+Tip: Use `npx projen watch` during development to continuously recompile on change.
+
+Common pitfalls:
+
+* Forgetting to run `npx projen` after editing `.projenrc.ts` (CI will show drift).
+* Editing generated files directly – they will be overwritten.
+* Introducing constructs or aws-cdk-lib version drift in examples – rely on root versions when possible.
+
+### Build & Test
+
+```bash
+git clone https://github.com/pablocano/cognito-ses-domain.git
+cd cognito-ses-domain
+npm install   # installs dev deps
+npm run build # full projen build pipeline
+
+# Or granular:
+npm run compile   # jsii compile
+npm test          # jest + eslint
+```
+
+### Common Tasks
+
+| Task | Command | Description |
+|------|---------|-------------|
+| Synthesize project files | `npx projen` | Regenerates config files. |
+| Compile | `npm run compile` | jsii compile to `lib/`. |
+| Test | `npm test` | Jest + ESLint. |
+| Package | `npm run package` | Builds distributable. |
+| Upgrade deps | `npm run upgrade` | Applies dependency upgrades. |
+
+### Adding Features
+
+1. Modify source in `src/`.
+2. Add/adjust tests in `test/` (100% coverage enforced in current setup).
+3. Run `npm test`.
+4. Open PR with a concise description and motivation.
+
+### Releasing
+
+Releases are automated through projen tasks (semantic versioning). A maintainer will run the release workflow; external contributors only need to focus on code + tests.
+
+## Design Notes
+
+* `createIdentityPool` defaults to `false` to avoid provisioning auth infrastructure unless explicitly required.
+* Logging is opt-in via `sendingLogs` to keep minimal footprint by default.
+* Hosted zone lookup uses `HostedZone.fromLookup` which requires the domain hosted zone to exist in the target account/region; for unit tests this is mocked.
+
+## Development Workflow with Examples
+
+The example app consumes the library via a relative file dependency (`file:../..`). After changing the library:
+
+```bash
+npm run compile   # at repo root
+cd examples/typescript
+npm run synth
+```
+
+If you add more examples, place them under `examples/<name>` and ensure they are not published (already excluded by `.npmignore`).
+
+## License
+
+Apache-2.0 © Merapar Technologies Group B.V.
+
+---
+
+
+Questions or ideas? Open an issue or PR — contributions are welcome.
