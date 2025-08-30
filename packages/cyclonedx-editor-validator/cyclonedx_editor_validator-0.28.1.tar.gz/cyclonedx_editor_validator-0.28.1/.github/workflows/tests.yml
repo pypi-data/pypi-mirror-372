@@ -1,0 +1,87 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: tests
+
+on:
+  workflow_call:
+
+jobs:
+  test_pages:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.10'
+      - name: Install uv
+        uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
+      - name: Install dependencies
+        run: uv sync --only-group docs --frozen
+      - name: Test build of documentation
+        run: uv run sphinx-build -a -E docs/source/ docs/build/
+
+  static_analysis:
+
+      runs-on: ubuntu-latest
+
+      steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.10'
+      - name: Install uv
+        uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
+        with:
+          enable-cache: true
+      - name: Install dependencies for development
+        run: uv sync --only-dev --frozen
+      - name: Run black
+        run: uv run black cdxev tests --check
+      - name: Run isort
+        run: uv run isort cdxev/ tests/ --check-only
+      - name: Run flake8
+        run: uv run flake8 cdxev tests
+      - name: Run mypy
+        run: uv run mypy --install-types --non-interactive --config-file=pyproject.toml
+      - name: Run bandit
+        run: uv run bandit -c pyproject.toml -r cdxev
+
+  pytest:
+    runs-on: ubuntu-latest
+
+    needs: static_analysis
+
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      with:
+        python-version: '3.10'
+    - name: Install uv
+      uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
+    - name: Install package
+      run: uv sync --no-group docs --frozen
+    - name: Run pytest
+      run: uv run coverage run -m pytest --junitxml=reports/unittest.xml
+    - name: Check coverage
+      run: uv run coverage report --fail-under=95
+    - name: Save test results
+      run: uv run coverage xml -o reports/py-coverage.cobertura.xml
+    - name: Archive test results
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: test-report
+        path: reports/unittest.xml
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: code-coverage-report
+        path: reports/py-coverage.cobertura.xml
+    - name: Coverage commit
+      if: ${{ success() && GITHUB.EVENT_NAME == 'pull_request' && !github.event.pull_request.head.repo.fork }}
+      uses: MishaKav/pytest-coverage-comment@9638e4b1448019aba40c4aaaa1ade87a9f211aa1 # v1.1.56
+      with:
+        junitxml-path: reports/unittest.xml
+        pytest-xml-coverage-path: reports/py-coverage.cobertura.xml
+        report-only-changed-files: true
