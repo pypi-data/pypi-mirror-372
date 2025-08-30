@@ -1,0 +1,131 @@
+#!/usr/bin/env python
+
+"""
+
+Generate mock cluster catalogs - runs on output from nemo
+
+"""
+
+import os
+import sys
+import resource
+import glob
+import numpy as np
+import pylab as plt
+import astropy.table as atpy
+from astLib import *
+from scipy import stats
+from scipy import interpolate
+from scipy import ndimage
+from scipy import optimize
+import nemo
+from nemo import signals
+from nemo import maps
+from nemo import catalogs
+from nemo import MockSurvey
+from nemo import plotSettings
+from nemo import startUp
+from nemo import pipelines
+from nemo import completeness
+import argparse
+import types
+import pickle
+import astropy.io.fits as pyfits
+import time
+import yaml
+
+#------------------------------------------------------------------------------------------------------------
+def makeParser():
+    
+    parser=argparse.ArgumentParser("nemoMock")
+    parser.add_argument("selFnDir", help="Directory containing files needed for computing the selection\
+                        function.")
+    parser.add_argument("mocksDir", help="Output directory where mock catalogs will be written.")
+    parser.add_argument("-c", "--config", dest = "configFileName", help="A .yml configuration file. If\
+                        this is not given, the config.yml file in selFnDir will be used.",
+                        default = None)
+    parser.add_argument("-N", "--number-of-mocks", dest = "numMocks", help="Number of mock catalogs to\
+                        make. If this is not given, the value from makeMockCatalogs parameter in the\
+                        config file will be used.", default = None, type = int)
+    parser.add_argument("-C", "--combine-mocks", dest="combineMocks", action="store_true", 
+                        help="Combine the mocks into one large catalog (use this to make oversampled\
+                        mock catalogs).", default = False)
+    #parser.add_argument("-f", "--footprint", dest = "footprint", help="""Footprint to use, e.g., DES,
+                        #HSC, KiDS (default: full).""", default = None)
+    parser.add_argument("-S", "--SNR-cut", dest = "SNRCut", help="Include only clusters with\
+                        fixed_SNR > this value.", default = 4.0, type = float)
+    parser.add_argument("-Q", "--Q-source", dest="QSource", help = "Source of the Q function data - either\
+                        'fit' (the 'classic' method) or 'injection' (for Q based on source injection test\
+                        results).", default = 'fit', choices = ['fit', 'injection'])
+    parser.add_argument("-f", "--bias-model", dest = "biasModel", default = 'power',
+                        help = "Function to use for optimization bias model. One of:\
+                        'power' (the default), 'series', or 'exp'.")
+    parser.add_argument("-p", "--bias-model-parameters", dest = "biasModelParams", default = None,
+                        help = "If given, apply optimization bias model (chosen with --bias-model)\
+                        to the mock catalog, with parameter values delimited by commas.")
+    parser.add_argument("-t", "--theory-code", dest = 'theoryCode', choices = ['CCL', 'CLASS-SZ'], default = 'CCL',
+                        help = "Code to use for mass function calculations. CLASS-SZ is currently much\
+                        faster for generating mock cluster samples than CCL.")
+    #parser.add_argument("-M", "--mpi", dest="MPIEnabled", action="store_true", help="""Enable MPI. If you 
+                        #want to use this, run with e.g., mpiexec -np 4 nemoMock selFnDir mocksDir -M""", 
+                        #default = False)
+    parser.add_argument("-v", "--version", action = 'version', version = '%(prog)s' + ' %s' % (nemo.__version__))
+    
+    return parser
+    
+#------------------------------------------------------------------------------------------------------------
+if __name__ == '__main__':
+
+    parser = makeParser()
+    args = parser.parse_args()
+    
+    selFnDir=args.selFnDir
+    mocksDir=args.mocksDir
+    configFileName=args.configFileName
+    numMocksToMake=args.numMocks
+    combineMocks=args.combineMocks
+    SNRCut=args.SNRCut
+    MPIEnabled=False
+    #zStep=args.zStep
+    #footprintLabel=args.footprint
+    QSource=args.QSource
+    biasModelParams=args.biasModelParams
+    if biasModelParams is not None:
+        biasModelParams=np.array(biasModelParams.split(","), dtype = float)
+        if len(biasModelParams) == 1:
+            biasModelParams=biasModelParams[0]
+
+    if configFileName is None:
+        configFileName=args.selFnDir+os.path.sep+"config.yml"
+    config=startUp.NemoConfig(configFileName, MPIEnabled = MPIEnabled, makeOutputDirs = False, 
+                              selFnDir = selFnDir, setUpMaps = False, verbose = False)
+    config.mocksDir=mocksDir
+    config.parDict['thresholdSigma']=args.SNRCut
+    
+    if numMocksToMake is None:
+        if 'makeMockCatalogs' in config.parDict.keys():
+            numMocksToMake=config.parDict['makeMockCatalogs']
+        else:
+            numMocksToMake=1
+
+    # Remove this once we re-jig for MPI
+    if config.MPIEnabled == True and numMocksToMake > 1:
+        raise Exception("NemoMock needs to be adapted for MPI if making multiple mocks - not done yet.")
+
+    # Optimization bias model setup
+    if args.biasModelParams is None:
+        biasModelDict=None
+    else:
+        if args.biasModel == 'power':
+            biasModel=completeness.optBiasPowerModelFunc
+        elif args.biasModel == 'series':
+            biasModel=completeness.optBiasModelFunc
+        elif args.biasModel == 'exp':
+            biasModel=completeness.optBiasFuncExpModel
+        else:
+            raise Exception("biasModel must be 'series' or 'exp'")
+        biasModelDict={'func': biasModel, 'params': biasModelParams}
+
+    pipelines.makeMockClusterCatalog(config, numMocksToMake = numMocksToMake, combineMocks = combineMocks,
+                                     writeCatalogs = True, verbose = True, QSource = QSource,
+                                     biasModel = biasModelDict, theoryCode = args.theoryCode)
