@@ -1,0 +1,112 @@
+Metadata-Version: 2.4
+Name: smalldi
+Version: 0.1.1
+Summary: Small, annotation-driven dependency injection for Python.
+Project-URL: Homepage, https://github.com/0xf104a/smalldi
+Project-URL: Documentation, https://github.com/0xf104a/smalldi#readme
+Project-URL: Source, https://github.com/0xf104a/smalldi
+Project-URL: Issues, https://github.com/0xf104a/smalldi/issues
+Author-email: Anna-Sofia Kasierocka <f104a@f104a.io>
+License: MIT License
+        
+        Copyright (c) 2025 Anna-Sofia Kasierocka
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Keywords: annotations,dependency injection,di,typing
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Typing :: Typed
+Requires-Python: >=3.11
+Requires-Dist: typing-extensions>=4.5; python_version >= '3.11'
+Description-Content-Type: text/markdown
+
+# Small DI
+The smallest dependency injection mechanism possible in python.
+SmallDI provides you with intuitive and simple interface for doing dependency
+injections in your project.
+
+# Example usage
+```python
+import random
+
+from smalldi import Injector
+from smalldi.annotation import Provide
+
+# Lets create some service
+@Injector.singleton
+class MeowService:
+    _MEOWS = ["Meow", "Meow-meow", "Meowwwwww", "Mrromeowww", "Meeeeoooow"]
+    def __init__(self):
+        print("Meow-meow! Meowing service is initialized")
+    
+    def meow(self):
+        print(random.choice(self._MEOWS))
+
+# Now lets make purring service.
+# But cats do not purr without telling meow!(at least in this test)
+# So its time to inject dependency
+@Injector.singleton
+class PurrService:
+    _PURRS = ["Purrrrr", "Purr-purr"]
+    
+    @Injector.inject
+    def __init__(self, meow_service: Provide[MeowService]):
+        self.meow_service = meow_service
+        print("Purr-purr! Purring service is initialized")
+
+    def purr(self):
+        self.meow_service.meow()
+        print(random.choice(self._PURRS))
+
+# Now lets put it all together. 
+# Ask our services to meow and then purr
+@Injector.inject
+def main(meow_service: Provide[MeowService], purr_service: Provide[PurrService]):
+    meow_service.meow()
+    purr_service.purr()
+
+if __name__ == '__main__':
+    main()
+```
+
+# Library logic
+## Injector
+Injector is a static class(i.e., one that should never be instantiated) which is the main (and currently the only)
+DI container inside the library. Injector provides two decorators:
+* `@Injector.singleton` creates an instance of a class which may further be injected in functions
+* `@Injector.inject` replaces parameters annotated with type `Provide[Singleton]` with actual instances of Singleton
+
+### Singletons
+Singletons are classes having a single instance. In `smalldi` singletons may not take constructor(`__init__`) other
+than annotated with `Provide[]` type. Only singletons may be decorated with `@Injector.singleton`. As a consequence, 
+only singleton classes may be injected at the current state of library development.
+
+## Provide
+`Provide[T]` is an annotation for injector telling it that instead of this argument
+instance of `T` should be passed. Caller of function with `Provide[T]` may explicitly
+override argument annotated with `Provide[T]` by directly passing `annotated_di_arg=my_value`.
