@@ -1,0 +1,38 @@
+# This workflow updates the API_BUILD_VERSION repository variable when an SDK update PR is merged.
+
+name: Update API Build Version Variable on Merge
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  update-variable:
+    # This job will only run if the push to main was from our specific SDK commit.
+    # The commit message is created by the first workflow: "feat(sdk): Regenerate SDK for API version ..."
+    if: "startsWith(github.event.head_commit.message, 'feat(sdk): Regenerate SDK')"
+    runs-on: ubuntu-latest
+
+    # Permissions for a `push` trigger are respected, allowing us to write variables.
+    permissions:
+      actions: write
+
+    steps:
+      - name: Get version from commit message
+        id: get_version
+        run: |
+          # The commit message is "feat(sdk): Regenerate SDK for API version 1.2.3"
+          # This command extracts the last word ("1.2.3") from the commit message.
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          VERSION=$(echo "$COMMIT_MESSAGE" | awk '{print $NF}')
+          echo "Extracted version from commit message: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Repository Variable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Updating repository variable API_BUILD_VERSION to ${{ steps.get_version.outputs.version }}"
+          gh variable set API_BUILD_VERSION \
+            --body "${{ steps.get_version.outputs.version }}"

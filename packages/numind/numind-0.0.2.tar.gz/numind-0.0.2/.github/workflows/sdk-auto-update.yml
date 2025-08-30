@@ -1,0 +1,128 @@
+# This workflow regularly check for the API version (`build_version`)
+
+name: Check for API Updates and Generate SDK
+
+on:
+  # Runs every hour from 8:00 to 20:00 (UTC+1) on weekdays (Monday to Friday)
+  schedule:
+    # CHANGE 1: Added '1-5' to the end of the cron string to specify weekdays.
+    - cron: '0 7-19 * * 1-5'
+  # Allows to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  check-and-generate:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      contents: write
+      pull-requests: write
+
+    steps:
+      # Step 1: Check out the repository's code
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Step 2: Fetch the latest buildVersion from the API
+      - name: Fetch latest API version
+        id: fetch_version
+        run: |
+          LATEST_VERSION=$(curl -s -X 'GET' 'https://nuextract.ai/api/version' -H 'accept: application/json' | jq -r '.buildVersion')
+          echo "Latest API version: $LATEST_VERSION"
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      # Step 3: Get the last MERGED version from the Repository Variable
+      - name: Get current version from Repository Variable
+        id: current_version
+        env:
+          # Natively inject the variable into an environment variable for the script
+          STORED_VERSION: ${{ vars.API_BUILD_VERSION }}
+        run: |
+          # The variable is now available directly in the shell environment.
+          # Add a check to ensure the variable was actually found.
+          if [[ -z "$STORED_VERSION" ]]; then
+            echo "Error: Repository variable 'API_BUILD_VERSION' is not set or is empty."
+            exit 1
+          fi
+          echo "Stored (merged) version: $STORED_VERSION"
+          echo "version=$STORED_VERSION" >> $GITHUB_OUTPUT
+
+      # Step 4: Check if a PR for the NEW version already exists
+      - name: Check for existing Pull Request for new version
+        id: check_pr
+        # This check is crucial: only run if the API version is newer than our last merged version
+        if: steps.fetch_version.outputs.version != steps.current_version.outputs.version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: "bot/regenerate-sdk-${{ steps.fetch_version.outputs.version }}"
+        run: |
+          if gh pr list --head "$BRANCH_NAME" --state open | grep -q "."; then
+            echo "A pull request for version ${{ steps.fetch_version.outputs.version }} already exists. Halting workflow."
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "No existing pull request found for version ${{ steps.fetch_version.outputs.version }}. Proceeding."
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 5: Setup Python
+      - name: Set up Python
+        if: steps.check_pr.outputs.pr_exists == 'false'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      # Step 6: Install dependencies
+      - name: Install dependencies
+        if: steps.check_pr.outputs.pr_exists == 'false'
+        run: pip install -e .[build]
+
+      # Step 7: Generate SDK (no version file is touched)
+      - name: Generate SDK
+        if: steps.check_pr.outputs.pr_exists == 'false'
+        run: |
+          set -e # Exit immediately if a command exits with a non-zero status.
+          echo "Generating new SDK for version ${{ steps.fetch_version.outputs.version }}..."
+          sh gen_sdk.sh
+
+      # Step 8: Create a Pull Request if there are any changes
+      - name: Create Pull Request
+        id: create_pr
+        if: steps.check_pr.outputs.pr_exists == 'false'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "feat(sdk): Regenerate SDK for API version ${{ steps.fetch_version.outputs.version }}"
+          branch: "bot/regenerate-sdk-${{ steps.fetch_version.outputs.version }}"
+          delete-branch: true
+          title: "feat(sdk): Regenerate SDK for API version ${{ steps.fetch_version.outputs.version }}"
+          body: |
+            The API has been updated to version `${{ steps.fetch_version.outputs.version }}`.
+            This PR contains the newly generated SDK code.
+          labels: bot,sdk-update,automated
+
+      # Step 9: Close Stale Pull Requests if a new one was created
+      - name: Close Stale PRs
+        if: steps.create_pr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW_PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
+          CURRENT_BRANCH: "bot/regenerate-sdk-${{ steps.fetch_version.outputs.version }}"
+        run: |
+          echo "Closing stale SDK update PRs..."
+          gh pr list --label "sdk-update" --state "open" --json "number,headRefName" --jq '.[] | select(.headRefName | startswith("bot/regenerate-sdk-"))' | \
+          while read -r pr; do
+            PR_NUMBER=$(echo "$pr" | jq -r '.number')
+            BRANCH_NAME=$(echo "$pr" | jq -r '.headRefName')
+            if [[ "$BRANCH_NAME" != "$CURRENT_BRANCH" ]]; then
+              echo "Closing stale PR #$PR_NUMBER as it is superseded by #${NEW_PR_NUMBER}."
+              gh pr close "$PR_NUMBER" --comment "This PR has been superseded by #${NEW_PR_NUMBER}."
+              echo "Deleting stale branch '$BRANCH_NAME'."
+              git push origin --delete "$BRANCH_NAME"
+            fi
+          done
+
+      # Step 10: Report no changes
+      - name: Report no changes
+        if: steps.fetch_version.outputs.version == steps.current_version.outputs.version
+        run: echo "API version is up to date with last merged version. No action needed."
